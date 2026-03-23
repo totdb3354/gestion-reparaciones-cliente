@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      xmlns="http://javafx.com/javafx/25"
+      fx:controller="com.reparaciones.controllers.PendientesTecnicoController"
+      spacing="8" prefWidth="700" prefHeight="400"
+      style="-fx-padding: 8;">
+
+    <Label text="Mis asignaciones pendientes"
+           style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+
+    <TableView fx:id="tablaPendientes" VBox.vgrow="ALWAYS" prefHeight="300">
+        <columns>
+            <TableColumn fx:id="cId"     text="Id Asignación"   minWidth="130"/>
+            <TableColumn fx:id="cImei"   text="IMEI"            minWidth="150"/>
+            <TableColumn fx:id="cFecha"  text="Fecha asignación" minWidth="160"/>
+            <TableColumn fx:id="cAccion" text=""                 minWidth="160"/>
+        </columns>
+        <placeholder><Label text="No tienes asignaciones pendientes"/></placeholder>
+    </TableView>
+
+</VBox>

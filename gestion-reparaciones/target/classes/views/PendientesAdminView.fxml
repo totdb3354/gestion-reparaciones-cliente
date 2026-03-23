@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      xmlns="http://javafx.com/javafx/25"
+      fx:controller="com.reparaciones.controllers.PendientesAdminController"
+      spacing="10" prefWidth="750" prefHeight="450"
+      style="-fx-padding: 8;">
+
+    <Label text="Asignaciones pendientes"
+           style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+
+    <TableView fx:id="tablaPendientes" VBox.vgrow="ALWAYS" prefHeight="250">
+        <columns>
+            <TableColumn fx:id="cId"      text="Id Asignación"    minWidth="130"/>
+            <TableColumn fx:id="cTecnico" text="Técnico"          minWidth="120"/>
+            <TableColumn fx:id="cImei"    text="IMEI"             minWidth="150"/>
+            <TableColumn fx:id="cFecha"   text="Fecha asignación" minWidth="160"/>
+            <TableColumn fx:id="cAccion"  text=""                 minWidth="80"/>
+        </columns>
+        <placeholder><Label text="No hay asignaciones pendientes"/></placeholder>
+    </TableView>
+
+    <Button fx:id="btnAsignar"
+            text="Asignar reparación +"
+            onAction="#abrirFormularioAsignacion"
+            style="-fx-background-color: #8AC7AF; -fx-text-fill: white;
+                   -fx-font-weight: bold; -fx-font-size: 12px;
+                   -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 6 14 6 14;"/>
+
+</VBox>

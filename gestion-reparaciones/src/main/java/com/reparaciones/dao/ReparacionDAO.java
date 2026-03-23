@@ -1,0 +1,568 @@
+package com.reparaciones.dao;
+
+import com.reparaciones.models.Reparacion;
+import com.reparaciones.models.ReparacionResumen;
+import com.reparaciones.models.FilaReparacion;
+import java.sql.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ReparacionDAO {
+
+    // ─── Queries base ─────────────────────────────────────────────────────────
+
+    private static final String SQL_RESUMEN = """
+            SELECT r.ID_REP, r.IMEI, r.FECHA_ASIG, r.FECHA_FIN, r.ID_TEC,
+                   t.NOMBRE AS nombre_tecnico,
+                   c.TIPO AS tipo_componente,
+                   rc.OBSERVACIONES,
+                   rc.ES_INCIDENCIA,
+                   rc.ES_RESUELTO,
+                   rc.INCIDENCIA,
+                   r.ID_REP_ANTERIOR AS id_rep_nueva
+            FROM Reparacion r
+            JOIN Tecnico t ON r.ID_TEC = t.ID_TEC
+            LEFT JOIN Reparacion_componente rc ON r.ID_REP = rc.ID_REP
+            LEFT JOIN Componente c ON rc.ID_COM = c.ID_COM
+            """;
+
+    private static final String ORDER_BY_ID = """
+             ORDER BY SUBSTRING_INDEX(r.ID_REP, '_', 1),
+                      CAST(SUBSTRING_INDEX(r.ID_REP, '_', -1) AS UNSIGNED) ASC
+            """;
+
+    private static final String SQL_ASIGNACIONES = """
+            SELECT r.ID_REP, r.IMEI, r.FECHA_ASIG, r.FECHA_FIN, r.ID_TEC,
+                   t.NOMBRE AS nombre_tecnico,
+                   r.ID_REP_ANTERIOR AS id_rep_nueva,
+                   EXISTS (
+                       SELECT 1 FROM Reparacion r2
+                       JOIN Reparacion_componente rc2 ON r2.ID_REP = rc2.ID_REP
+                       WHERE r2.IMEI = r.IMEI
+                         AND r2.ID_TEC = r.ID_TEC
+                         AND rc2.ES_INCIDENCIA = TRUE
+                         AND rc2.ES_RESUELTO = FALSE
+                   ) AS ES_INCIDENCIA
+            FROM Reparacion r
+            JOIN Tecnico t ON r.ID_TEC = t.ID_TEC
+            WHERE r.ID_REP LIKE 'A%'
+            """;
+
+    // ─── Métodos de lectura ───────────────────────────────────────────────────
+
+    public List<ReparacionResumen> getReparacionesResumen() throws SQLException {
+        List<ReparacionResumen> lista = new ArrayList<>();
+        String sql = SQL_RESUMEN + " WHERE r.ID_REP LIKE 'R%'" + ORDER_BY_ID;
+        try (Connection con = Conexion.getConexion();
+                Statement st = con.createStatement();
+                ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next())
+                lista.add(mapearResumen(rs));
+        }
+        return lista;
+    }
+
+    public List<ReparacionResumen> getReparacionesPorTecnico(int idTec) throws SQLException {
+        List<ReparacionResumen> lista = new ArrayList<>();
+        String sql = SQL_RESUMEN + " WHERE r.ID_REP LIKE 'R%' AND r.ID_TEC = ?" + ORDER_BY_ID;
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idTec);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next())
+                lista.add(mapearResumen(rs));
+        }
+        return lista;
+    }
+
+    public List<ReparacionResumen> getResumenPorImei(long imei) throws SQLException {
+        List<ReparacionResumen> lista = new ArrayList<>();
+        String sql = SQL_RESUMEN + " WHERE r.IMEI = ? AND r.ID_REP LIKE 'R%'" + ORDER_BY_ID;
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next())
+                lista.add(mapearResumen(rs));
+        }
+        return lista;
+    }
+
+    public List<ReparacionResumen> getAsignaciones() throws SQLException {
+        List<ReparacionResumen> lista = new ArrayList<>();
+        String sql = SQL_ASIGNACIONES + " ORDER BY r.FECHA_ASIG ASC";
+        try (Connection con = Conexion.getConexion();
+                Statement st = con.createStatement();
+                ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next())
+                lista.add(mapearAsignacion(rs));
+        }
+        return lista;
+    }
+
+    public List<ReparacionResumen> getAsignacionesPorTecnico(int idTec) throws SQLException {
+        List<ReparacionResumen> lista = new ArrayList<>();
+        String sql = SQL_ASIGNACIONES + " AND r.ID_TEC = ? ORDER BY r.FECHA_ASIG ASC";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idTec);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next())
+                lista.add(mapearAsignacion(rs));
+        }
+        return lista;
+    }
+
+    public List<Reparacion> getAll() throws SQLException {
+        List<Reparacion> lista = new ArrayList<>();
+        String sql = "SELECT * FROM Reparacion";
+        try (Connection con = Conexion.getConexion();
+                Statement st = con.createStatement();
+                ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next())
+                lista.add(mapear(rs));
+        }
+        return lista;
+    }
+
+    public List<Reparacion> getByImei(long imei) throws SQLException {
+        List<Reparacion> lista = new ArrayList<>();
+        String sql = "SELECT * FROM Reparacion WHERE IMEI = ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next())
+                lista.add(mapear(rs));
+        }
+        return lista;
+    }
+
+    public int countByImei(long imei) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM Reparacion WHERE IMEI = ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+                return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    // ─── Métodos de escritura ─────────────────────────────────────────────────
+
+    public String insertar(Reparacion r) throws SQLException {
+        String idRep = generarId();
+        String sql = "INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC) VALUES (?, ?, ?, ?, ?)";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, idRep);
+            ps.setTimestamp(2, Timestamp.valueOf(r.getFechaAsig()));
+            if (r.getFechaFin() != null)
+                ps.setTimestamp(3, Timestamp.valueOf(r.getFechaFin()));
+            else
+                ps.setNull(3, Types.TIMESTAMP);
+            ps.setLong(4, r.getImei());
+            ps.setInt(5, r.getIdTec());
+            ps.executeUpdate();
+        }
+        return idRep;
+    }
+
+    public String insertarAsignacion(long imei, int idTec) throws SQLException {
+        String idAsig = generarIdAsignacion();
+        String sql = "INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC) VALUES (?, NOW(), NULL, ?, ?)";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, idAsig);
+            ps.setLong(2, imei);
+            ps.setInt(3, idTec);
+            ps.executeUpdate();
+        }
+        return idAsig;
+    }
+
+    public void eliminarAsignacion(String idAsig) throws SQLException {
+        String sqlGetImei    = "SELECT IMEI FROM Reparacion WHERE ID_REP = ?";
+        String sqlBorrar     = "DELETE FROM Reparacion WHERE ID_REP = ?";
+        String sqlContarImei = "SELECT COUNT(*) FROM Reparacion WHERE IMEI = ?";
+        String sqlBorrarTel  = "DELETE FROM Telefono WHERE IMEI = ?";
+
+        try (Connection con = Conexion.getConexion()) {
+            con.setAutoCommit(false);
+            try {
+                long imei = 0;
+                try (PreparedStatement ps = con.prepareStatement(sqlGetImei)) {
+                    ps.setString(1, idAsig);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next())
+                        imei = rs.getLong("IMEI");
+                }
+                try (PreparedStatement ps = con.prepareStatement(sqlBorrar)) {
+                    ps.setString(1, idAsig);
+                    ps.executeUpdate();
+                }
+                if (imei != 0) {
+                    try (PreparedStatement ps = con.prepareStatement(sqlContarImei)) {
+                        ps.setLong(1, imei);
+                        ResultSet rs = ps.executeQuery();
+                        if (rs.next() && rs.getInt(1) == 0) {
+                            try (PreparedStatement psDel = con.prepareStatement(sqlBorrarTel)) {
+                                psDel.setLong(1, imei);
+                                psDel.executeUpdate();
+                            }
+                        }
+                    }
+                }
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        }
+    }
+
+    public void completar(String idRep) throws SQLException {
+        String sql = "UPDATE Reparacion SET FECHA_FIN = NOW() WHERE ID_REP = ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, idRep);
+            ps.executeUpdate();
+        }
+    }
+
+    // ─── Generadores de ID ────────────────────────────────────────────────────
+
+    public String generarId() throws SQLException {
+        String fechaHoy = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijo = "R" + fechaHoy + "_";
+        String sql = "SELECT MAX(CAST(SUBSTRING_INDEX(ID_REP, '_', -1) AS UNSIGNED)) " +
+                     "FROM Reparacion WHERE ID_REP LIKE ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, prefijo + "%");
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int max = rs.getInt(1); // 0 si no hay ninguno (rs devuelve NULL -> getInt = 0)
+                return prefijo + (max + 1);
+            }
+        }
+        return prefijo + "1";
+    }
+
+    public String generarIdAsignacion() throws SQLException {
+        String fechaHoy = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefijo = "A" + fechaHoy + "_";
+        String sql = "SELECT MAX(CAST(SUBSTRING_INDEX(ID_REP, '_', -1) AS UNSIGNED)) " +
+                     "FROM Reparacion WHERE ID_REP LIKE ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, prefijo + "%");
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int max = rs.getInt(1);
+                return prefijo + (max + 1);
+            }
+        }
+        return prefijo + "1";
+    }
+
+    // ─── Utilidades ───────────────────────────────────────────────────────────
+
+    public String getReferenciadora(String idRep) throws SQLException {
+        String sql = "SELECT ID_REP FROM Reparacion WHERE ID_REP_ANTERIOR = ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, idRep);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+                return rs.getString("ID_REP");
+        }
+        return null;
+    }
+
+    public void eliminar(String idRep) throws SQLException {
+        String sqlGetInfo    = "SELECT ID_REP_ANTERIOR, IMEI FROM Reparacion WHERE ID_REP = ?";
+        String sqlComp       = "DELETE FROM Reparacion_componente WHERE ID_REP = ?";
+        String sqlRep        = "DELETE FROM Reparacion WHERE ID_REP = ?";
+        String sqlRevertir   = "UPDATE Reparacion_componente SET ES_RESUELTO = FALSE WHERE ID_REP = ?";
+        String sqlContarImei = "SELECT COUNT(*) FROM Reparacion WHERE IMEI = ?";
+        String sqlBorrarTel  = "DELETE FROM Telefono WHERE IMEI = ?";
+
+        try (Connection con = Conexion.getConexion()) {
+            con.setAutoCommit(false);
+            try {
+                // 1. Leer IMEI e ID_REP_ANTERIOR antes de borrar
+                String idRepAnterior = null;
+                long imei = 0;
+                try (PreparedStatement ps = con.prepareStatement(sqlGetInfo)) {
+                    ps.setString(1, idRep);
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        idRepAnterior = rs.getString("ID_REP_ANTERIOR");
+                        imei = rs.getLong("IMEI");
+                    }
+                }
+                // 2. Borrar componentes y reparación
+                try (PreparedStatement ps = con.prepareStatement(sqlComp)) {
+                    ps.setString(1, idRep);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = con.prepareStatement(sqlRep)) {
+                    ps.setString(1, idRep);
+                    ps.executeUpdate();
+                }
+                // 3. Revertir incidencia de la reparación anterior si la había
+                if (idRepAnterior != null) {
+                    try (PreparedStatement ps = con.prepareStatement(sqlRevertir)) {
+                        ps.setString(1, idRepAnterior);
+                        ps.executeUpdate();
+                    }
+                }
+                // 4. Si ya no quedan reparaciones con ese IMEI, borrar el Telefono
+                if (imei != 0) {
+                    try (PreparedStatement ps = con.prepareStatement(sqlContarImei)) {
+                        ps.setLong(1, imei);
+                        ResultSet rs = ps.executeQuery();
+                        if (rs.next() && rs.getInt(1) == 0) {
+                            try (PreparedStatement psDel = con.prepareStatement(sqlBorrarTel)) {
+                                psDel.setLong(1, imei);
+                                psDel.executeUpdate();
+                            }
+                        }
+                    }
+                }
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        }
+    }
+
+    public void insertarCompleta(List<FilaReparacion> filas, long imei, int idTec,
+            String idRepAnterior, String idAsignacion) throws SQLException {
+
+        String sqlRep = """
+                INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC, ID_REP_ANTERIOR)
+                VALUES (?, NOW(), NOW(), ?, ?, ?)
+                """;
+        String sqlComp = """
+                INSERT INTO Reparacion_componente
+                (ID_REP, ID_COM, ES_REUTILIZADO, ES_INCIDENCIA, ES_RESUELTO, INCIDENCIA, OBSERVACIONES)
+                VALUES (?, ?, ?, FALSE, FALSE, NULL, ?)
+                """;
+        String sqlStock = "UPDATE Componente SET STOCK = STOCK - ? WHERE ID_COM = ? AND TIPO NOT LIKE 'otro%'";
+        String sqlResolver = "UPDATE Reparacion_componente SET ES_RESUELTO = TRUE WHERE ID_REP = ?";
+        String sqlBorrarAsig = "DELETE FROM Reparacion WHERE ID_REP = ?";
+
+        // Calcular base del contador fuera de la transacción
+        String fechaHoy = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int contadorBase;
+        String sqlCount = "SELECT COUNT(*) FROM Reparacion WHERE ID_REP LIKE ?";
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sqlCount)) {
+            ps.setString(1, "R" + fechaHoy + "_%");
+            ResultSet rs = ps.executeQuery();
+            contadorBase = rs.next() ? rs.getInt(1) : 0;
+        }
+
+        try (Connection con = Conexion.getConexion()) {
+            con.setAutoCommit(false);
+            try {
+                int indice = 0;
+                for (FilaReparacion fila : filas) {
+                    String nuevoId = "R" + fechaHoy + "_" + (contadorBase + 1 + indice);
+                    indice++;
+
+                    try (PreparedStatement ps = con.prepareStatement(sqlRep)) {
+                        ps.setString(1, nuevoId);
+                        ps.setLong(2, imei);
+                        ps.setInt(3, idTec);
+                        if (idRepAnterior != null)
+                            ps.setString(4, idRepAnterior);
+                        else
+                            ps.setNull(4, Types.VARCHAR);
+                        ps.executeUpdate();
+                    }
+
+                    try (PreparedStatement ps = con.prepareStatement(sqlComp)) {
+                        ps.setString(1, nuevoId);
+                        ps.setInt(2, fila.getIdCom());
+                        ps.setBoolean(3, fila.isReutilizado());
+                        ps.setString(4, fila.getObservacion());
+                        ps.executeUpdate();
+                    }
+
+                    if (!fila.isReutilizado() && fila.getCantidad() > 0
+                            && !fila.getPrefijo().equals("otro")) {
+                        try (PreparedStatement ps = con.prepareStatement(sqlStock)) {
+                            ps.setInt(1, fila.getCantidad());
+                            ps.setInt(2, fila.getIdCom());
+                            ps.executeUpdate();
+                        }
+                    }
+                }
+
+                if (idRepAnterior != null) {
+                    try (PreparedStatement ps = con.prepareStatement(sqlResolver)) {
+                        ps.setString(1, idRepAnterior);
+                        ps.executeUpdate();
+                    }
+                }
+
+                if (idAsignacion != null) {
+                    try (PreparedStatement ps = con.prepareStatement(sqlBorrarAsig)) {
+                        ps.setString(1, idAsignacion);
+                        ps.executeUpdate();
+                    }
+                }
+
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        }
+    }
+
+    // ─── Mapeos ───────────────────────────────────────────────────────────────
+
+    private ReparacionResumen mapearResumen(ResultSet rs) throws SQLException {
+        Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
+        Timestamp tsFin = rs.getTimestamp("FECHA_FIN");
+        return new ReparacionResumen(
+                rs.getString("ID_REP"),
+                rs.getLong("IMEI"),
+                rs.getString("nombre_tecnico"),
+                tsAsig != null ? tsAsig.toLocalDateTime() : null,
+                tsFin != null ? tsFin.toLocalDateTime() : null,
+                rs.getString("tipo_componente"),
+                rs.getString("OBSERVACIONES"),
+                rs.getBoolean("ES_INCIDENCIA"),
+                rs.getBoolean("ES_RESUELTO"),
+                rs.getString("INCIDENCIA"),
+                rs.getString("id_rep_nueva"),
+                rs.getInt("ID_TEC"));
+    }
+
+    private ReparacionResumen mapearAsignacion(ResultSet rs) throws SQLException {
+        Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
+        Timestamp tsFin = rs.getTimestamp("FECHA_FIN");
+        return new ReparacionResumen(
+                rs.getString("ID_REP"),
+                rs.getLong("IMEI"),
+                rs.getString("nombre_tecnico"),
+                tsAsig != null ? tsAsig.toLocalDateTime() : null,
+                tsFin != null ? tsFin.toLocalDateTime() : null,
+                null,
+                null,
+                rs.getBoolean("ES_INCIDENCIA"),
+                false,
+                null,
+                rs.getString("id_rep_nueva"),
+                rs.getInt("ID_TEC"));
+    }
+
+    private Reparacion mapear(ResultSet rs) throws SQLException {
+        Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
+        Timestamp tsFin = rs.getTimestamp("FECHA_FIN");
+        return new Reparacion(
+                rs.getString("ID_REP"),
+                tsAsig != null ? tsAsig.toLocalDateTime() : null,
+                tsFin != null ? tsFin.toLocalDateTime() : null,
+                rs.getLong("IMEI"),
+                rs.getInt("ID_TEC"));
+    }
+
+    public void marcarIncidenciaYAsignar(String idRep, String comentario,
+            long imei, int idTec) throws SQLException {
+        String sqlIncidencia = "UPDATE Reparacion_componente " +
+                "SET ES_INCIDENCIA = TRUE, INCIDENCIA = ? WHERE ID_REP = ?";
+        String sqlAsignacion = "INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC) " +
+                "VALUES (?, NOW(), NULL, ?, ?)";
+
+        try (Connection con = Conexion.getConexion()) {
+            con.setAutoCommit(false);
+            try {
+                try (PreparedStatement ps = con.prepareStatement(sqlIncidencia)) {
+                    ps.setString(1, comentario);
+                    ps.setString(2, idRep);
+                    ps.executeUpdate();
+                }
+                String idAsig = generarIdAsignacion();
+                try (PreparedStatement ps = con.prepareStatement(sqlAsignacion)) {
+                    ps.setString(1, idAsig);
+                    ps.setLong(2, imei);
+                    ps.setInt(3, idTec);
+                    ps.executeUpdate();
+                }
+                con.commit();
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        }
+    }
+
+    public boolean existeAsignacionParaTecnico(long imei, int idTec) throws SQLException {
+        String sql = """
+                SELECT COUNT(*) FROM Reparacion
+                WHERE IMEI = ? AND ID_TEC = ? AND ID_REP LIKE 'A%'
+                """;
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            ps.setInt(2, idTec);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1) > 0;
+        }
+        return false;
+    }
+
+    public String getIncidenciaActivaPorImei(long imei) throws SQLException {
+        String sql = """
+                SELECT r.ID_REP FROM Reparacion r
+                JOIN Reparacion_componente rc ON r.ID_REP = rc.ID_REP
+                WHERE r.IMEI = ?
+                  AND rc.ES_INCIDENCIA = TRUE
+                  AND rc.ES_RESUELTO = FALSE
+                LIMIT 1
+                """;
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+                return rs.getString("ID_REP");
+        }
+        return null;
+    }
+
+    public void borrarIncidenciaPorImei(long imei) throws SQLException {
+        String sql = """
+                UPDATE Reparacion_componente SET ES_INCIDENCIA = FALSE
+                WHERE ID_REP = (
+                    SELECT idRep FROM (
+                        SELECT r.ID_REP AS idRep
+                        FROM Reparacion r
+                        JOIN Reparacion_componente rc ON r.ID_REP = rc.ID_REP
+                        WHERE r.IMEI = ?
+                          AND rc.ES_INCIDENCIA = TRUE
+                          AND rc.ES_RESUELTO = FALSE
+                        LIMIT 1
+                    ) AS subquery
+                )
+                """;
+        try (Connection con = Conexion.getConexion();
+                PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, imei);
+            int filasAfectadas = ps.executeUpdate();
+            System.out.println(">>> borrarIncidenciaPorImei — IMEI=" + imei
+                    + " | filas afectadas=" + filasAfectadas);
+        }
+    }
+}

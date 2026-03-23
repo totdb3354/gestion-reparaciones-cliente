@@ -1,0 +1,78 @@
+.vista-container {
+    -fx-background-color: #FFFFFF;
+}
+
+.vista-titulo {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #A9A9A9;
+}
+
+.buscador {
+    -fx-background-color: #F3F3F3;
+    -fx-border-color: #A9A9A9;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 10;
+    -fx-font-size: 12px;
+    -fx-text-fill: #A9A9A9;
+}
+
+.btn-primary {
+    -fx-background-color: #A9A9A9;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4;
+    -fx-font-size: 12px;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+}
+
+.btn-secondary {
+    -fx-background-color: #E7E7E7;
+    -fx-text-fill: #A9A9A9;
+    -fx-background-radius: 4;
+    -fx-font-size: 12px;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+}
+
+.tabla-reparaciones {
+    -fx-background-color: #F3F3F3;
+    -fx-border-color: transparent;
+}
+
+.tabla-reparaciones .column-header {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent transparent #A9A9A9 transparent;
+    -fx-border-width: 0 0 0.2 0;
+}
+
+.tabla-reparaciones .column-header-background {
+    -fx-background-color: #FFFFFF;
+}
+
+.tabla-reparaciones .column-header .label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #A9A9A9;
+}
+
+.tabla-reparaciones .table-row-cell {
+    -fx-background-color: #F3F3F3;
+    -fx-border-color: transparent transparent #A9A9A9 transparent;
+    -fx-border-width: 0 0 0.2 0;
+    -fx-cell-size: 35px;
+}
+
+.btn-cargar-mas {
+    -fx-background-color: #A9A9A9;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4;
+    -fx-font-size: 12px;
+    -fx-padding: 10;
+    -fx-cursor: hand;
+}
+
+.paginacion-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #A9A9A9;
+}

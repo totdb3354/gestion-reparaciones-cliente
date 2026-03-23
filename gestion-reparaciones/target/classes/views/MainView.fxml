@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.reparaciones.controllers.MainController"
+            stylesheets="@../styles/main.css">
+
+    <top>
+        <HBox fx:id="navbar" styleClass="navbar" alignment="CENTER_LEFT" spacing="10">
+            <padding>
+                <Insets top="0" right="20" bottom="0" left="20"/>
+            </padding>
+
+            <!-- Logo + Título -->
+            <ImageView fitHeight="30" fitWidth="30" preserveRatio="true">
+                <image>
+                    <Image url="@/images/logo.png"/>
+                </image>
+            </ImageView>
+            <Label text="FSGSGestión de Stock v0.1" styleClass="navbar-title"/>
+
+            <!-- Espaciador -->
+            <HBox HBox.hgrow="ALWAYS"/>
+
+            <!-- Botones de navegación -->
+            <Button fx:id="btnReparaciones" text="Reparaciones"
+                    styleClass="nav-btn"
+                    onAction="#mostrarReparaciones"/>
+            <Button fx:id="btnStock" text="Stock"
+                    styleClass="nav-btn"
+                    onAction="#mostrarStock"/>
+
+            <!-- Espaciador -->
+            <HBox HBox.hgrow="ALWAYS"/>
+
+            <!-- Usuario + Logout -->
+            <Label fx:id="lblUsuario" styleClass="navbar-user"/>
+            <Button fx:id="btnLogout" text="Cerrar sesión"
+                    styleClass="navbar-change-user"
+                    onAction="#cerrarSesion"/>
+        </HBox>
+    </top>
+
+    <center>
+        <StackPane fx:id="contenedor"/>
+    </center>
+
+</BorderPane>
