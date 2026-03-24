@@ -58,12 +58,18 @@ VALUES ('R20260216_1', '2026-02-16 09:00:00', '2026-02-16 10:00:00', 12232352556
 INSERT INTO Reparacion_componente (ID_REP, ID_COM, ES_REUTILIZADO, ES_INCIDENCIA, ES_RESUELTO, INCIDENCIA, OBSERVACIONES)
 VALUES ('R20260216_1', 70, FALSE, FALSE, FALSE, NULL, 'Incidencia resuelta, pantalla recolocada y retroiluminación restaurada');
 
--- ── Escenario 4: Asignaciones pendientes (teléfonos nuevos sin historial) ──
+-- ── Escenario 4: Asignaciones pendientes ───────────────────────────────────
+-- A1: Ángelo, teléfono nuevo → fila blanca en pendientes
 INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC, ID_REP_ANTERIOR)
 VALUES ('A20260313_1', '2026-03-13 09:00:00', NULL, 111111111111111, 1, NULL);
 
+-- A2: Daniel, teléfono nuevo → fila blanca en pendientes
 INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC, ID_REP_ANTERIOR)
 VALUES ('A20260313_2', '2026-03-13 09:30:00', NULL, 222222222222222, 2, NULL);
+
+-- A3: Daniel, mismo IMEI que R20260211_1 (incidencia abierta) → fila roja en pendientes
+INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC, ID_REP_ANTERIOR)
+VALUES ('A20260313_3', '2026-03-13 10:00:00', NULL, 345234532340002, 2, NULL);
 
 -- Usuarios
 INSERT INTO Usuario (NOMBRE_USUARIO, PASSWORD, ROL, ID_TEC)

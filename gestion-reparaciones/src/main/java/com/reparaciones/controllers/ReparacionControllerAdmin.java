@@ -4,6 +4,7 @@ import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
+import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import javafx.collections.FXCollections;
@@ -79,16 +80,16 @@ public class ReparacionControllerAdmin {
         cargarDatos();
     }
 
-    // ─── Tooltip solo para observaciones e incidencia ─────────────────────────
+    // ─── Label expandible (click abre popup de lectura) ───────────────────────
 
-    private Label labelConTooltip(String texto) {
+    private Label labelExpandible(String titulo, String texto) {
         Label lbl = new Label(texto != null ? texto : "");
         lbl.setMaxWidth(Double.MAX_VALUE);
         lbl.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
-        Tooltip tip = new Tooltip(texto != null ? texto : "");
-        tip.setWrapText(true);
-        tip.setMaxWidth(300);
-        lbl.setTooltip(tip);
+        if (texto != null && !texto.isEmpty()) {
+            lbl.setStyle("-fx-cursor: hand;");
+            lbl.setOnMouseClicked(e -> ConfirmDialog.mostrarTexto(titulo, texto));
+        }
         return lbl;
     }
 
@@ -172,7 +173,7 @@ public class ReparacionControllerAdmin {
                     setGraphic(null);
                     return;
                 }
-                setGraphic(labelConTooltip(getTableView().getItems().get(getIndex()).getObservaciones()));
+                setGraphic(labelExpandible("Observaciones", getTableView().getItems().get(getIndex()).getObservaciones()));
             }
         });
 
@@ -299,11 +300,10 @@ public class ReparacionControllerAdmin {
                 if (rep.isEsIncidencia()) {
                     String texto = rep.getIncidencia() != null ? rep.getIncidencia() : "";
                     lblComentario.setText(texto);
-                    Tooltip tip = new Tooltip(texto);
-                    tip.setWrapText(true);
-                    tip.setMaxWidth(300);
-                    lblComentario.setTooltip(tip);
-                    lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #000000;");
+                    lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #000000;" +
+                            (!texto.isEmpty() ? " -fx-cursor: hand;" : ""));
+                    lblComentario.setOnMouseClicked(texto.isEmpty() ? null :
+                            e -> ConfirmDialog.mostrarTexto("Incidencia", texto));
                     if (rep.isEsResuelto()) {
                         casoDos.setStyle("-fx-background-color: #E7E7E7;");
                         btnBorrarIncidencia.setVisible(false);
@@ -648,10 +648,12 @@ public class ReparacionControllerAdmin {
 
         // ── Campo comentario ──────────────────────────────────────────────────
         Label lblComentario = new Label("Comentario de incidencia");
-        TextField tfComentario = new TextField(rep.getIncidencia() != null ? rep.getIncidencia() : "");
+        TextArea tfComentario = new TextArea(rep.getIncidencia() != null ? rep.getIncidencia() : "");
         tfComentario.setPromptText("Describe la incidencia...");
+        tfComentario.setWrapText(true);
+        tfComentario.setPrefRowCount(4);
         tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #A9A9A9;" +
-                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;");
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 13px;");
 
         // ── Selector técnico ──────────────────────────────────────────────────
         Label lblTecnico = new Label("Técnico asignado");
@@ -741,20 +743,19 @@ public class ReparacionControllerAdmin {
     }
 
     private void borrarIncidencia(ReparacionResumen rep) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Borrar incidencia");
-        confirm.setHeaderText("¿Seguro que quieres borrar esta incidencia?");
-        confirm.setContentText("Esta acción solo es válida si fue un error al añadirla.");
-        confirm.showAndWait().ifPresent(r -> {
-            if (r == ButtonType.OK) {
-                try {
-                    reparacionComponenteDAO.borrarIncidencia(rep.getIdRep());
-                    cargarDatos();
-                } catch (SQLException e) {
-                    e.printStackTrace();
+        ConfirmDialog.mostrar(
+                "Borrar incidencia",
+                "Esta acción solo es válida si fue un error al añadirla.",
+                "Borrar incidencia",
+                () -> {
+                    try {
+                        reparacionComponenteDAO.borrarIncidencia(rep.getIdRep());
+                        cargarDatos();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-        });
+        );
     }
 
     private void borrarReparacion(ReparacionResumen rep) {
@@ -768,20 +769,19 @@ public class ReparacionControllerAdmin {
                 alerta.showAndWait();
                 return;
             }
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Borrar reparación");
-            confirm.setHeaderText("¿Seguro que quieres borrar esta reparación?");
-            confirm.setContentText("Se borrará " + rep.getIdRep() + " y no se podrá recuperar.");
-            confirm.showAndWait().ifPresent(r -> {
-                if (r == ButtonType.OK) {
-                    try {
-                        reparacionDAO.eliminar(rep.getIdRep());
-                        cargarDatos();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
+            ConfirmDialog.mostrar(
+                    "Borrar reparación",
+                    "Se borrará " + rep.getIdRep() + " y no se podrá recuperar.",
+                    "Borrar reparación",
+                    () -> {
+                        try {
+                            reparacionDAO.eliminar(rep.getIdRep());
+                            cargarDatos();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-            });
+            );
         } catch (SQLException e) {
             e.printStackTrace();
         }
