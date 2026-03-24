@@ -41,8 +41,7 @@
         <DatePicker fx:id="filtroFechaDesde" prefWidth="140"/>
         <Label text="Hasta:" style="-fx-font-size: 12px;"/>
         <DatePicker fx:id="filtroFechaHasta" prefWidth="140"/>
-        <CheckBox fx:id="filtroIncidencias" text="Solo incidencias" style="-fx-font-size: 12px;"/>
-        <HBox HBox.hgrow="ALWAYS"/>
+        <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="150"/>
         <Button fx:id="btnLimpiarFiltros" onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
     </HBox>
 
