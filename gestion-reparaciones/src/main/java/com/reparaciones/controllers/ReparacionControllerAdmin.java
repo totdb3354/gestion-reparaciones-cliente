@@ -848,10 +848,24 @@ public class ReparacionControllerAdmin {
                     d.getValue().getTipoComponente() != null ? d.getValue().getTipoComponente() : "—"));
             cObs.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                     d.getValue().getObservaciones() != null ? d.getValue().getObservaciones() : ""));
+            cObs.setCellFactory(col -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null || item.isBlank()) { setText(null); setTooltip(null); }
+                    else { setText(item); setTooltip(new javafx.scene.control.Tooltip(item)); }
+                }
+            });
             cIncid.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                     d.getValue().isEsIncidencia() && d.getValue().getIncidencia() != null
                             ? d.getValue().getIncidencia()
                             : ""));
+            cIncid.setCellFactory(col -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null || item.isBlank()) { setText(null); setTooltip(null); }
+                    else { setText(item); setTooltip(new javafx.scene.control.Tooltip(item)); }
+                }
+            });
 
             TableView<ReparacionResumen> tabla = new TableView<>();
             tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);

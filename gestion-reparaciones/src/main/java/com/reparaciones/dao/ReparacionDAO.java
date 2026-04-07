@@ -215,6 +215,7 @@ public class ReparacionDAO {
 
     public void eliminarAsignacion(String idAsig) throws SQLException {
         String sqlGetImei    = "SELECT IMEI FROM Reparacion WHERE ID_REP = ?";
+        String sqlBorrarComp = "DELETE FROM Reparacion_componente WHERE ID_REP = ?";
         String sqlBorrar     = "DELETE FROM Reparacion WHERE ID_REP = ?";
         String sqlContarImei = "SELECT COUNT(*) FROM Reparacion WHERE IMEI = ?";
         String sqlBorrarTel  = "DELETE FROM Telefono WHERE IMEI = ?";
@@ -228,6 +229,10 @@ public class ReparacionDAO {
                     ResultSet rs = ps.executeQuery();
                     if (rs.next())
                         imei = rs.getString("IMEI");
+                }
+                try (PreparedStatement ps = con.prepareStatement(sqlBorrarComp)) {
+                    ps.setString(1, idAsig);
+                    ps.executeUpdate();
                 }
                 try (PreparedStatement ps = con.prepareStatement(sqlBorrar)) {
                     ps.setString(1, idAsig);
