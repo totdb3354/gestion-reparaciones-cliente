@@ -16,6 +16,14 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Controlador del modal de gestión de técnicos.
+ * <p>Permite al administrador registrar nuevos técnicos, activar/desactivar
+ * cuentas existentes y eliminarlas cuando no tienen reparaciones asociadas.</p>
+ * <p>La tabla se recarga tras cada operación sin cerrar el modal.</p>
+ *
+ * @role ADMIN
+ */
 public class RegisterController {
 
     @FXML private TextField     campoNombreTecnico;
@@ -138,6 +146,7 @@ public class RegisterController {
         tablaUsuarios.setItems(datos);
     }
 
+    /** Recarga la lista de técnicos desde BD y actualiza la tabla. */
     private void cargarUsuarios() {
         try {
             List<Usuario> lista = usuarioDAO.getUsuariosTecnicos();
@@ -262,6 +271,7 @@ public class RegisterController {
         ((Stage) btnRegistrar.getScene().getWindow()).close();
     }
 
+    /** Muestra el mensaje de error bajo el formulario. */
     private void mostrarError(String mensaje) {
         lblError.setText(mensaje);
         lblError.setVisible(true);

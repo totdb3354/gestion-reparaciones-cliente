@@ -7,12 +7,26 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Acceso a datos de usuarios del sistema.
+ * <p>Gestiona autenticación (con BCrypt), altas, bajas lógicas y eliminaciones
+ * definitivas de cuentas de técnicos. Los administradores no se gestionan desde
+ * aquí; sus cuentas se crean directamente en BD.</p>
+ *
+ * @role ADMIN (gestión de cuentas); login accesible a todos los roles
+ */
 public class UsuarioDAO {
 
     /**
-     * Busca el usuario por nombre y verifica la password con BCrypt.
-     * Devuelve el Usuario si las credenciales son correctas, null si no.
-     * Rechaza el login si el técnico asociado está desactivado (ACTIVO = false).
+     * Autentica al usuario verificando nombre y contraseña con BCrypt.
+     * <p>Rechaza el login si el técnico asociado está desactivado
+     * ({@code ACTIVO = false} en la tabla Tecnico).</p>
+     *
+     * @param nombreUsuario nombre de inicio de sesión
+     * @param password      contraseña en texto plano (se verifica contra el hash en BD)
+     * @return el {@link com.reparaciones.models.Usuario} autenticado,
+     *         o {@code null} si las credenciales son incorrectas o la cuenta está inactiva
+     * @throws SQLException si falla la consulta a BD
      */
     public Usuario login(String nombreUsuario, String password) throws SQLException {
         String sql = """
@@ -43,8 +57,11 @@ public class UsuarioDAO {
     }
 
     /**
-     * Devuelve todos los técnicos (con credenciales) para la tabla de gestión.
-     * Hace JOIN con Tecnico para incluir nombre visible y estado activo/inactivo.
+     * Devuelve todos los usuarios con rol {@code TECNICO} para la tabla de gestión.
+     * <p>Hace JOIN con {@code Tecnico} para incluir nombre visible y estado activo/inactivo.</p>
+     *
+     * @return lista de técnicos ordenada alfabéticamente por nombre
+     * @throws SQLException si falla la consulta
      */
     public List<Usuario> getUsuariosTecnicos() throws SQLException {
         List<Usuario> lista = new ArrayList<>();
@@ -72,7 +89,14 @@ public class UsuarioDAO {
         return lista;
     }
 
-    /** Desactiva el técnico (ACTIVO = false). No afecta sus reparaciones históricas. */
+    /**
+     * Desactiva la cuenta del técnico ({@code ACTIVO = false}).
+     * <p>El técnico deja de aparecer en el gráfico de estadísticas y no puede
+     * iniciar sesión, pero sus reparaciones históricas se conservan intactas.</p>
+     *
+     * @param idTec ID del técnico a desactivar
+     * @throws SQLException si falla el update
+     */
     public void desactivarTecnico(int idTec) throws SQLException {
         String sql = "UPDATE Tecnico SET ACTIVO = FALSE WHERE ID_TEC = ?";
         try (Connection con = Conexion.getConexion();
@@ -82,7 +106,12 @@ public class UsuarioDAO {
         }
     }
 
-    /** Reactiva el técnico (ACTIVO = true). */
+    /**
+     * Reactiva la cuenta del técnico ({@code ACTIVO = true}).
+     *
+     * @param idTec ID del técnico a reactivar
+     * @throws SQLException si falla el update
+     */
     public void activarTecnico(int idTec) throws SQLException {
         String sql = "UPDATE Tecnico SET ACTIVO = TRUE WHERE ID_TEC = ?";
         try (Connection con = Conexion.getConexion();
@@ -93,8 +122,13 @@ public class UsuarioDAO {
     }
 
     /**
-     * Comprueba si el técnico tiene alguna reparación asociada (histórica o activa).
-     * Si las tiene, no se puede eliminar.
+     * Comprueba si el técnico tiene alguna reparación asociada (activa o histórica).
+     * <p>Si devuelve {@code true}, el técnico no puede eliminarse definitivamente;
+     * solo puede desactivarse.</p>
+     *
+     * @param idTec ID del técnico a comprobar
+     * @return {@code true} si existe al menos una reparación para este técnico
+     * @throws SQLException si falla la consulta
      */
     public boolean tieneReparaciones(int idTec) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Reparacion WHERE ID_TEC = ?";
@@ -107,8 +141,14 @@ public class UsuarioDAO {
     }
 
     /**
-     * Elimina completamente el técnico: borra Usuario y Tecnico en transacción.
-     * Solo llamar si tieneReparaciones() devuelve false.
+     * Elimina completamente el técnico: borra {@code Usuario} y {@code Tecnico}
+     * en una sola transacción.
+     * <p>Solo llamar cuando {@link #tieneReparaciones(int)} devuelve {@code false};
+     * de lo contrario usar {@link #desactivarTecnico(int)}.</p>
+     *
+     * @param idUsu ID del usuario a eliminar
+     * @param idTec ID del técnico a eliminar
+     * @throws SQLException si falla alguno de los deletes (se hace rollback automático)
      */
     public void eliminarTecnico(int idUsu, int idTec) throws SQLException {
         String sqlUsu = "DELETE FROM Usuario WHERE ID_USU = ?";
@@ -135,8 +175,14 @@ public class UsuarioDAO {
     }
 
     /**
-     * Registra un nuevo técnico — inserta en Tecnico y en Usuario en transacción.
-     * Si falla cualquiera de los dos inserts, se hace rollback de ambos.
+     * Registra un nuevo técnico: inserta en {@code Tecnico} y en {@code Usuario}
+     * en una sola transacción. La contraseña se hashea con BCrypt antes de persistir.
+     * <p>Si falla cualquiera de los dos inserts se hace rollback de ambos.</p>
+     *
+     * @param nombreTecnico  nombre visible del técnico
+     * @param nombreUsuario  nombre de inicio de sesión
+     * @param password       contraseña en texto plano (se hashea antes de persistir)
+     * @throws SQLException si el nombre de usuario ya existe o falla la transacción
      */
     public void registrarTecnico(String nombreTecnico, String nombreUsuario, String password) throws SQLException {
         String sqlTecnico = "INSERT INTO Tecnico (NOMBRE) VALUES (?)";

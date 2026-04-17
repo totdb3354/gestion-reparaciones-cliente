@@ -1,10 +1,18 @@
 package com.reparaciones.utils;
 
 /**
- * Se lanza cuando un UPDATE detecta que el registro fue modificado
- * por otro usuario desde que se cargó (optimistic locking).
+ * Excepción de control de concurrencia optimista.
+ * <p>Se lanza cuando un {@code UPDATE} con comprobación de {@code UPDATED_AT}
+ * no afecta a ninguna fila, lo que indica que otro usuario modificó el registro
+ * entre la última lectura y el intento de escritura.</p>
+ * <p>El controlador que la recibe debe informar al usuario y pedirle que
+ * recargue los datos antes de reintentar la operación.</p>
  */
 public class StaleDataException extends Exception {
+
+    /**
+     * @param mensaje descripción del conflicto, mostrable directamente al usuario
+     */
     public StaleDataException(String mensaje) {
         super(mensaje);
     }

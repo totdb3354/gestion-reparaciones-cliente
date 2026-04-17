@@ -24,6 +24,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Controlador de la vista de stock y pedidos.
+ * <p>Presenta dos secciones accesibles desde el sidebar:</p>
+ * <ul>
+ *   <li><b>Stock</b> — tabla de componentes con stock actual, mínimo y unidades en camino.
+ *       Permite editar umbrales, hacer pedidos y ver el histórico de pedidos.</li>
+ *   <li><b>Pedidos</b> — tabla de pedidos con acciones de confirmación (total/parcial/resto),
+ *       cancelación y edición.</li>
+ * </ul>
+ * <p>Implementa {@link com.reparaciones.utils.Recargable} y
+ * {@link com.reparaciones.utils.Exportable}.</p>
+ *
+ * @role ADMIN
+ */
 public class StockController implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
     // ── Sidebar ──────────────────────────────────────────────────────────────

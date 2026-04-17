@@ -5,8 +5,24 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Acceso a datos de la tabla {@code Reparacion_componente}.
+ * <p>Gestiona la relación entre reparaciones y componentes, incluyendo
+ * el descuento automático de stock al insertar y el control de incidencias.</p>
+ * <p>Las operaciones de escritura usan transacciones para garantizar la
+ * consistencia entre {@code Reparacion_componente} y {@code Componente.STOCK}.</p>
+ *
+ * @role ADMIN; TECNICO (insertar y marcar incidencias)
+ */
 public class ReparacionComponenteDAO {
 
+    /**
+     * Devuelve todos los componentes vinculados a una reparación.
+     *
+     * @param idRep ID de la reparación
+     * @return lista de componentes de la reparación (puede estar vacía)
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionComponente> getByReparacion(String idRep) throws SQLException {
         List<ReparacionComponente> lista = new ArrayList<>();
         String sql = "SELECT * FROM Reparacion_componente WHERE ID_REP = ?";
@@ -29,10 +45,13 @@ public class ReparacionComponenteDAO {
     }
 
     /**
-     * Inserta un componente en una reparación y descuenta stock si no es
-     * reutilizado.
-     * Usa transacción para garantizar que el INSERT y el UPDATE de stock
-     * ocurran juntos o ninguno — evita stock inconsistente si falla a mitad.
+     * Vincula un componente a una reparación y descuenta stock si no es reutilizado.
+     * <p>El INSERT en {@code Reparacion_componente} y el UPDATE de stock se ejecutan
+     * en una transacción: o los dos tienen éxito o ninguno.</p>
+     *
+     * @param rc       datos de la relación reparación-componente
+     * @param cantidad número de unidades a descontar del stock
+     * @throws SQLException si falla la transacción
      */
     public void insertar(ReparacionComponente rc, int cantidad) throws SQLException {
         String sqlInsert = "INSERT INTO Reparacion_componente " +
@@ -67,6 +86,13 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Elimina la relación entre una reparación y un componente.
+     *
+     * @param idRep ID de la reparación
+     * @param idCom ID del componente
+     * @throws SQLException si falla el delete
+     */
     public void eliminar(String idRep, int idCom) throws SQLException {
         String sql = "DELETE FROM Reparacion_componente WHERE ID_REP = ? AND ID_COM = ?";
         try (Connection con = Conexion.getConexion();
@@ -78,8 +104,13 @@ public class ReparacionComponenteDAO {
     }
 
     /**
-     * Marca una incidencia como activa y guarda el comentario.
-     * ES_INCIDENCIA pasa a TRUE y se rellena el campo INCIDENCIA.
+     * Marca una incidencia activa en el componente de la reparación.
+     * <p>{@code ES_INCIDENCIA} pasa a {@code TRUE} y se guarda el comentario
+     * en el campo {@code INCIDENCIA}.</p>
+     *
+     * @param idRep     ID de la reparación
+     * @param comentario descripción de la incidencia
+     * @throws SQLException si falla el update
      */
     public void marcarIncidencia(String idRep, String comentario) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ES_INCIDENCIA = TRUE, INCIDENCIA = ? WHERE ID_REP = ?";
@@ -92,8 +123,12 @@ public class ReparacionComponenteDAO {
     }
 
     /**
-     * Borra una incidencia — solo permitido si ES_RESUELTO=FALSE.
-     * ES_INCIDENCIA vuelve a FALSE e INCIDENCIA se pone a NULL.
+     * Cancela la incidencia de una reparación, solo si aún no está resuelta.
+     * <p>{@code ES_INCIDENCIA} vuelve a {@code FALSE} e {@code INCIDENCIA} a {@code NULL}.
+     * Si ya está resuelta ({@code ES_RESUELTO = TRUE}) no hace nada.</p>
+     *
+     * @param idRep ID de la reparación cuya incidencia se cancela
+     * @throws SQLException si falla el update
      */
     public void borrarIncidencia(String idRep) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ES_INCIDENCIA = FALSE, INCIDENCIA = NULL WHERE ID_REP = ? AND ES_RESUELTO = FALSE";

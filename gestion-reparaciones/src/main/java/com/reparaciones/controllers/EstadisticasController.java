@@ -34,6 +34,29 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Controlador de la vista de estadísticas.
+ * <p>Muestra un gráfico de líneas ({@code LineChart}) con las reparaciones finalizadas
+ * por técnico a lo largo del tiempo, con granularidades: día, semana, mes y año.</p>
+ *
+ * <p><b>Funcionalidades principales:</b></p>
+ * <ul>
+ *   <li>Checkbox "Todos" — línea negra con la suma de todos los técnicos.</li>
+ *   <li>Checkbox "Actividad" — muestra/oculta las líneas continuas de datos.</li>
+ *   <li>Checkbox "Media" — muestra/oculta las líneas de media discontinuas por técnico.</li>
+ *   <li>Línea de referencia (gris punteada) — media del total / nTécnicos, para evaluar
+ *       la performance individual respecto al benchmark del equipo.</li>
+ *   <li>Ventana deslizante (slider) — limita los puntos visibles en periodos con muchos datos.</li>
+ *   <li>Clic en vértice — navega al historial de reparaciones con el filtro de fecha y
+ *       técnico pre-aplicado, vía callback {@link com.reparaciones.utils.Navegable}.</li>
+ *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Todos".</li>
+ * </ul>
+ *
+ * <p>El doble {@code Platform.runLater} en el flujo de renderizado garantiza que el eje Y
+ * y las líneas de media se dibujen con las coordenadas correctas tras los dos pases de layout.</p>
+ *
+ * @role ADMIN
+ */
 public class EstadisticasController {
 
     @FXML private Button   btnTabReparaciones;
