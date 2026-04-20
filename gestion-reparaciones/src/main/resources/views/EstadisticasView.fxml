@@ -45,13 +45,18 @@
                     <CheckBox fx:id="chkMedia" text="Media"
                               style="-fx-font-weight: bold;"/>
                 </HBox>
-                <LineChart fx:id="chartReparaciones" animated="false" VBox.vgrow="ALWAYS"
-                           style="-fx-background-color: white; -fx-background-radius: 6;
-                                  -fx-border-color: #C2C8D0; -fx-border-radius: 6;">
-                    <xAxis><CategoryAxis fx:id="ejeX" label="Periodo" tickLabelRotation="-45"/></xAxis>
-                    <yAxis><NumberAxis fx:id="ejeY" label="Reparaciones" minorTickCount="0" autoRanging="false" lowerBound="0" upperBound="10" tickUnit="1"/></yAxis>
-                </LineChart>
-                <HBox fx:id="hboxSlider" visible="false" managed="false"
+                <StackPane VBox.vgrow="ALWAYS">
+                    <LineChart fx:id="chartReparaciones" animated="false"
+                               style="-fx-background-color: white; -fx-background-radius: 6;
+                                      -fx-border-color: #C2C8D0; -fx-border-radius: 6;">
+                        <xAxis><CategoryAxis fx:id="ejeX" label="Periodo" tickLabelRotation="-45"/></xAxis>
+                        <yAxis><NumberAxis fx:id="ejeY" label="Reparaciones" minorTickCount="0" autoRanging="false" lowerBound="0" upperBound="10" tickUnit="1"/></yAxis>
+                    </LineChart>
+                    <Label fx:id="lblSinDatos" text="Sin datos en el rango seleccionado"
+                           visible="false"
+                           style="-fx-font-size:14px; -fx-text-fill:#7A8A9A;"/>
+                </StackPane>
+<HBox fx:id="hboxSlider" visible="false" managed="false"
                       alignment="CENTER_LEFT" spacing="8">
                     <Label fx:id="lblSliderDesde" style="-fx-font-size:11px; -fx-text-fill:#7A8A9A; -fx-min-width:70px;"/>
                     <Slider fx:id="sliderVentana" HBox.hgrow="ALWAYS"
@@ -63,9 +68,22 @@
 
             <!-- ══ Panel: Estadísticas de Stock ═════════════════════════════════ -->
             <VBox fx:id="pnlStock" spacing="12" visible="false" managed="false">
-                <Label text="Estadísticas de stock" styleClass="vista-titulo"/>
-                <Label text="Próximamente…"
-                       style="-fx-font-size: 14px; -fx-text-fill: #7A8A9A;"/>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Stock actual por componente" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <Label text="Modelo:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
+                    <ComboBox fx:id="cmbModeloFiltro" prefWidth="140" onAction="#filtrarComponentes"/>
+                </HBox>
+                <StackPane VBox.vgrow="ALWAYS">
+                    <BarChart fx:id="chartStock" animated="false" barGap="4"
+                              style="-fx-background-color: white; -fx-background-radius: 6;
+                                     -fx-border-color: #C2C8D0; -fx-border-radius: 6;">
+                        <xAxis><CategoryAxis fx:id="ejeXStock" label="Componente"/></xAxis>
+                        <yAxis><NumberAxis fx:id="ejeYStock" label="Unidades" minorTickCount="0" autoRanging="false" lowerBound="0" upperBound="20" tickUnit="1"/></yAxis>
+                    </BarChart>
+                    <Label fx:id="lblSinDatosStock" text="Sin datos para el modelo seleccionado"
+                           visible="false"
+                           style="-fx-font-size:14px; -fx-text-fill:#7A8A9A;"/>
+                </StackPane>
             </VBox>
 
         </StackPane>
