@@ -4,6 +4,17 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/**
+ * Fábrica de conexiones JDBC a la base de datos MySQL local.
+ * <p>Las credenciales están hardcodeadas porque la BD solo escucha en
+ * {@code 127.0.0.1}, por lo que nadie externo puede conectarse aunque
+ * las conozca. Ver comentario en el código para las opciones seguras
+ * de cara a una migración a producción.</p>
+ *
+ * <p><b>Nota:</b> cada llamada a {@link #getConexion()} abre una nueva
+ * conexión; no hay pool. Aceptable para uso de escritorio monousuario;
+ * reemplazar por HikariCP al migrar a servidor.</p>
+ */
 public class Conexion {
 
     /*
@@ -54,6 +65,13 @@ public class Conexion {
     private static final String USUARIO  = "root";
     private static final String PASSWORD = "2017";
 
+    /**
+     * Abre y devuelve una nueva conexión JDBC.
+     * <p>El llamador es responsable de cerrarla (idealmente con try-with-resources).</p>
+     *
+     * @return conexión activa a la BD
+     * @throws SQLException si el driver no puede conectarse
+     */
     public static Connection getConexion() throws SQLException {
         return DriverManager.getConnection(URL, USUARIO, PASSWORD);
     }

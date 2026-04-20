@@ -8,6 +8,17 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Acceso a datos de la tabla {@code Compra_componente}.
+ * <p>Gestiona el ciclo de vida completo de los pedidos de componentes:
+ * creación, edición, recepción total/parcial y cancelación.</p>
+ * <p>Todas las operaciones que modifican stock se ejecutan en transacciones
+ * para garantizar consistencia entre {@code Compra_componente} y {@code Componente.STOCK}.
+ * Las operaciones de edición y confirmación usan control de concurrencia optimista
+ * ({@link com.reparaciones.utils.StaleDataException}) comparando {@code UPDATED_AT}.</p>
+ *
+ * @role ADMIN
+ */
 public class CompraComponenteDAO {
 
     private static final String SQL_BASE = """
@@ -19,6 +30,12 @@ public class CompraComponenteDAO {
 
     // ─── Lectura ──────────────────────────────────────────────────────────────
 
+    /**
+     * Devuelve todos los pedidos ordenados por fecha descendente.
+     *
+     * @return lista completa de pedidos
+     * @throws SQLException si falla la consulta
+     */
     public List<CompraComponente> getAll() throws SQLException {
         List<CompraComponente> lista = new ArrayList<>();
         String sql = SQL_BASE + " ORDER BY cc.FECHA_PEDIDO DESC, cc.ID_COMPRA DESC";
@@ -30,6 +47,12 @@ public class CompraComponenteDAO {
         return lista;
     }
 
+    /**
+     * Devuelve los pedidos en estado {@code pendiente}, ordenados por urgencia y fecha.
+     *
+     * @return lista de pedidos pendientes (urgentes primero, luego por fecha ascendente)
+     * @throws SQLException si falla la consulta
+     */
     public List<CompraComponente> getPendientes() throws SQLException {
         List<CompraComponente> lista = new ArrayList<>();
         String sql = SQL_BASE + " WHERE cc.ESTADO = 'pendiente' ORDER BY cc.ES_URGENTE DESC, cc.FECHA_PEDIDO ASC";
@@ -43,6 +66,18 @@ public class CompraComponenteDAO {
 
     // ─── Insertar ─────────────────────────────────────────────────────────────
 
+    /**
+     * Inserta un nuevo pedido en estado {@code pendiente}.
+     *
+     * @param idCom       ID del componente pedido
+     * @param idProv      ID del proveedor
+     * @param cantidad    número de unidades a pedir
+     * @param esUrgente   {@code true} si el pedido es urgente
+     * @param precioUnidad precio por unidad en la divisa elegida
+     * @param divisa      código ISO 4217 de la divisa
+     * @param precioEur   precio por unidad convertido a EUR
+     * @throws SQLException si falla el insert
+     */
     public void insertar(int idCom, int idProv, int cantidad, boolean esUrgente,
                          double precioUnidad, String divisa, double precioEur) throws SQLException {
         String sql = """
@@ -66,6 +101,21 @@ public class CompraComponenteDAO {
 
     // ─── Editar pedido ────────────────────────────────────────────────────────
 
+    /**
+     * Edita los campos principales de un pedido con control de concurrencia optimista.
+     * <p>Si el pedido ya estaba {@code recibido}, ajusta el stock por la diferencia entre
+     * la cantidad anterior y la nueva, y sincroniza {@code CANTIDAD_RECIBIDA}.</p>
+     *
+     * @param pedido       pedido original con {@code updatedAt} para la comparación optimista
+     * @param idProv       nuevo proveedor
+     * @param cantidad     nueva cantidad
+     * @param esUrgente    nuevo flag de urgencia
+     * @param precioUnidad nuevo precio por unidad
+     * @param divisa       nuevo código de divisa
+     * @param precioEur    nuevo precio en EUR
+     * @throws SQLException      si falla la transacción o el stock quedaría negativo
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void editar(CompraComponente pedido, int idProv, int cantidad, boolean esUrgente,
                        double precioUnidad, String divisa, double precioEur)
             throws SQLException, StaleDataException {
@@ -145,6 +195,14 @@ public class CompraComponenteDAO {
 
     // ─── Confirmar llegada ────────────────────────────────────────────────────
 
+    /**
+     * Marca el pedido como {@code recibido} e incrementa el stock con toda la cantidad pedida.
+     * <p>Opera en transacción; usa {@code UPDATED_AT} para control optimista.</p>
+     *
+     * @param pedido pedido a confirmar
+     * @throws SQLException       si falla la transacción
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void confirmarRecibido(CompraComponente pedido)
             throws SQLException, StaleDataException {
         String sqlUpdate = """
@@ -184,6 +242,15 @@ public class CompraComponenteDAO {
         }
     }
 
+    /**
+     * Cierra un pedido {@code parcial} marcándolo como {@code recibido}.
+     * <p>No modifica el stock porque ya se incrementó al registrar el parcial.
+     * Usa {@code UPDATED_AT} para control optimista.</p>
+     *
+     * @param pedido pedido parcial a cerrar
+     * @throws SQLException       si falla el update
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void confirmarAlterado(CompraComponente pedido)
             throws SQLException, StaleDataException {
         // Solo cambia estado a recibido — el stock ya fue incrementado al registrar el parcial
@@ -204,7 +271,15 @@ public class CompraComponenteDAO {
 
     // ─── Recepción parcial ────────────────────────────────────────────────────
 
-    /** Llegan X de Y unidades. Se suman X al stock, el pedido queda como 'parcial' (abierto). */
+    /**
+     * Registra la llegada parcial de un pedido: suma {@code cantidadRecibida} al stock
+     * y cambia el estado a {@code parcial} (pedido permanece abierto).
+     *
+     * @param pedido           pedido del que llega la parte
+     * @param cantidadRecibida unidades que han llegado en esta entrega
+     * @throws SQLException       si falla la transacción
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void confirmarParcial(CompraComponente pedido, int cantidadRecibida)
             throws SQLException, StaleDataException {
         String sqlUpdate = """
@@ -242,7 +317,16 @@ public class CompraComponenteDAO {
         }
     }
 
-    /** Llegan X unidades más de un pedido parcial. Si completan el total, se cierra como 'recibido'; si no, sigue 'parcial'. */
+    /**
+     * Añade más unidades a un pedido {@code parcial}.
+     * <p>Si la nueva suma total alcanza la cantidad pedida, el pedido se cierra
+     * como {@code recibido}; en caso contrario sigue {@code parcial}.</p>
+     *
+     * @param pedido        pedido parcial al que llegan más unidades
+     * @param cantidadExtra número de unidades adicionales recibidas
+     * @throws SQLException       si falla la transacción
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void recibirResto(CompraComponente pedido, int cantidadExtra)
             throws SQLException, StaleDataException {
         String sqlUpdate = """
@@ -287,6 +371,15 @@ public class CompraComponenteDAO {
 
     // ─── Cancelar ─────────────────────────────────────────────────────────────
 
+    /**
+     * Cancela un pedido en estado {@code pendiente}.
+     * <p>No modifica stock porque aún no se había recibido nada.
+     * Usa {@code UPDATED_AT} para control optimista.</p>
+     *
+     * @param pedido pedido a cancelar (debe estar en estado {@code pendiente})
+     * @throws SQLException       si falla el update
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
     public void cancelar(CompraComponente pedido) throws SQLException, StaleDataException {
         String sql = "UPDATE Compra_componente SET ESTADO = 'cancelado' WHERE ID_COMPRA = ? AND ESTADO = 'pendiente' AND UPDATED_AT = ?";
         try (Connection con = Conexion.getConexion();
@@ -302,6 +395,13 @@ public class CompraComponenteDAO {
 
     // ─── Consultas auxiliares ─────────────────────────────────────────────────
 
+    /**
+     * Suma las unidades pendientes de recibir para un componente concreto.
+     *
+     * @param idCom ID del componente
+     * @return total de unidades en estado {@code pendiente} para este componente
+     * @throws SQLException si falla la consulta
+     */
     public int getCantidadPendientePorComponente(int idCom) throws SQLException {
         String sql = "SELECT COALESCE(SUM(CANTIDAD), 0) FROM Compra_componente WHERE ID_COM = ? AND ESTADO = 'pendiente'";
         try (Connection con = Conexion.getConexion();
@@ -314,6 +414,7 @@ public class CompraComponenteDAO {
 
     // ─── Mapeo ────────────────────────────────────────────────────────────────
 
+    /** Mapea una fila del {@code ResultSet} a un {@link com.reparaciones.models.CompraComponente}. */
     private CompraComponente mapear(ResultSet rs) throws SQLException {
         Timestamp tsLlegada = rs.getTimestamp("FECHA_LLEGADA");
         return new CompraComponente(

@@ -13,6 +13,17 @@ import javafx.stage.Stage;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Controlador del formulario de edición de un pedido existente.
+ * <p>Permite modificar proveedor, cantidad, urgencia y precio de un pedido en estado
+ * {@code pendiente} o {@code recibido}. Para pedidos ya recibidos, ajusta el stock
+ * automáticamente por la diferencia de cantidad.</p>
+ *
+ * <p>Usa control de concurrencia optimista ({@link com.reparaciones.utils.StaleDataException})
+ * y convierte el precio a EUR vía {@link com.reparaciones.dao.TipoCambioDAO}.</p>
+ *
+ * @role ADMIN
+ */
 public class FormularioCompraEditarController {
 
     @FXML private Label            lblTitulo;

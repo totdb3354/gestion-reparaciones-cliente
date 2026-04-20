@@ -25,6 +25,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Controlador de la tabla de asignaciones pendientes (vista del administrador).
+ * <p>Incrustado como controlador anidado en {@link ReparacionControllerAdmin}.
+ * Muestra todas las asignaciones ({@code A*}) con estado pendiente y permite:</p>
+ * <ul>
+ *   <li>Crear nuevas asignaciones para cualquier técnico y IMEI.</li>
+ *   <li>Reasignar asignaciones a otro técnico.</li>
+ *   <li>Eliminar asignaciones sin reparación asociada.</li>
+ *   <li>Filtrar por IMEI, técnico y solicitudes pendientes de componente.</li>
+ * </ul>
+ *
+ * @role ADMIN
+ */
 public class PendientesAdminController {
 
     @FXML private TableView<ReparacionResumen>           tablaPendientes;

@@ -32,6 +32,24 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Controlador raíz de la aplicación tras el login.
+ * <p>Gestiona la barra de navegación superior y el {@code StackPane} central donde
+ * se cargan dinámicamente las vistas secundarias (Reparaciones, Stock, Estadísticas).</p>
+ *
+ * <p><b>Responsabilidades principales:</b></p>
+ * <ul>
+ *   <li>Cargar la vista adecuada según el rol del usuario (admin / técnico).</li>
+ *   <li>Delegar la recarga al controlador activo cuando la ventana recupera el foco.</li>
+ *   <li>Pasar el callback {@link com.reparaciones.utils.Navegable} a {@link EstadisticasController}
+ *       para habilitar la navegación desde el gráfico hasta el historial de reparaciones.</li>
+ *   <li>Almacenar temporalmente el filtro de navegación ({@code filtroNav*}) y aplicarlo
+ *       al cargar la vista de reparaciones.</li>
+ *   <li>Mostrar el diálogo de alertas de stock al inicio si hay componentes bajo mínimo.</li>
+ * </ul>
+ *
+ * @role ADMIN; TECNICO (con vistas distintas)
+ */
 public class MainController {
 
     @FXML private StackPane contenedor;
@@ -52,6 +70,10 @@ public class MainController {
     private java.time.LocalDate filtroNavHasta;
     private String              filtroNavTecnico;
 
+    /**
+     * Inicializa la barra de navegación, muestra la vista de reparaciones por defecto
+     * y configura la recarga automática al recuperar el foco de la ventana.
+     */
     @FXML
     public void initialize() {
         lblUsuario.setText("Hola, " + Sesion.getUsuario().getNombreUsuario());
@@ -73,6 +95,11 @@ public class MainController {
         });
     }
 
+    /**
+     * Comprueba si hay componentes con stock bajo o sin stock y, de haberlos,
+     * activa el indicador visual y muestra el diálogo de alertas al arrancar.
+     * <p>Solo se llama para el rol ADMIN.</p>
+     */
     private void verificarStockAlertas() {
         try {
             List<Componente> todos = new ComponenteDAO().getAllGestionados();
@@ -91,6 +118,7 @@ public class MainController {
         Platform.runLater(this::mostrarDialogoAlerta);
     }
 
+    /** Muestra el popup modal con la lista de componentes sin stock y bajo mínimo. */
     private void mostrarDialogoAlerta() {
         List<Componente> sinStock = alertasCriticas.stream().filter(c -> c.getStock() == 0).collect(Collectors.toList());
         List<Componente> bajoMin  = alertasCriticas.stream().filter(c -> c.getStock() > 0).collect(Collectors.toList());
@@ -180,6 +208,7 @@ public class MainController {
         ventana.showAndWait();
     }
 
+    /** Navega a la vista de reparaciones (admin o técnico según el rol). */
     @FXML
     private void mostrarReparaciones() {
         String vista = Sesion.esAdmin()
@@ -188,16 +217,24 @@ public class MainController {
         mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas);
     }
 
+    /** Navega a la vista de stock. */
     @FXML
     private void mostrarStock() {
         mostrarVista("/views/StockView.fxml", btnStock, btnReparaciones, btnEstadisticas);
     }
 
+    /** Navega a la vista de estadísticas. */
     @FXML
     private void mostrarEstadisticas() {
         mostrarVista("/views/EstadisticasView.fxml", btnEstadisticas, btnReparaciones, btnStock);
     }
 
+    /**
+     * Construye el menú contextual del botón de usuario.
+     * <p>Para ADMIN incluye "Gestionar técnicos". Para todos incluye
+     * "Descargar CSV" (activo solo si la vista actual implementa {@link com.reparaciones.utils.Exportable})
+     * y "Cerrar Sesión".</p>
+     */
     private void inicializarMenuUsuario() {
         MenuItem itemDescargar = new MenuItem("Descargar CSV");
         SeparatorMenuItem sep  = new SeparatorMenuItem();
@@ -215,12 +252,14 @@ public class MainController {
         menuUsuario.getItems().addAll(itemDescargar, sep, itemCerrar);
     }
 
+    /** Delega la exportación CSV al controlador activo si implementa {@link com.reparaciones.utils.Exportable}. */
     private void descargarCSV() {
         if (controladorActivo instanceof com.reparaciones.utils.Exportable exp) {
             exp.exportarCSV((Stage) btnUsuario.getScene().getWindow());
         }
     }
 
+    /** Abre el modal de gestión de técnicos ({@code RegisterView.fxml}). */
     private void abrirGestionTecnicos() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/RegisterView.fxml"));
@@ -237,6 +276,7 @@ public class MainController {
         }
     }
 
+    /** Despliega el menú contextual bajo el botón de usuario. */
     @FXML
     private void mostrarMenuUsuario() {
         menuUsuario.show(btnUsuario,
@@ -244,6 +284,7 @@ public class MainController {
                 0, 4);
     }
 
+    /** Detiene el polling, limpia la sesión y vuelve a la pantalla de login. */
     @FXML
     private void cerrarSesion() {
         try {
@@ -267,6 +308,17 @@ public class MainController {
         }
     }
 
+    /**
+     * Carga una vista FXML en el {@code StackPane} central, actualiza el estado visual de los
+     * botones de navegación y gestiona el ciclo de vida del controlador anterior.
+     * <p>Si la nueva vista es {@link EstadisticasController}, le inyecta el callback de
+     * navegación. Si hay un filtro pendiente ({@code filtroNav*}) y la vista es de
+     * reparaciones, lo aplica y lo limpia.</p>
+     *
+     * @param ruta      ruta al FXML de la vista a cargar (relativa a resources)
+     * @param activo    botón de navegación que debe quedar marcado como activo
+     * @param inactivos resto de botones que deben quedar inactivos
+     */
     private void mostrarVista(String ruta, Button activo, Button... inactivos) {
         btnReparaciones.setDisable(true);
         btnStock.setDisable(true);
@@ -311,6 +363,13 @@ public class MainController {
         }
     }
 
+    /**
+     * Aplica las clases CSS {@code nav-btn-active} / {@code nav-btn} a los botones
+     * de la barra de navegación para reflejar la sección actual.
+     *
+     * @param activo    botón que representa la vista activa
+     * @param inactivos resto de botones de navegación
+     */
     private void setActivo(Button activo, Button... inactivos) {
         activo.getStyleClass().remove("nav-btn");
         if (!activo.getStyleClass().contains("nav-btn-active"))

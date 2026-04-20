@@ -21,12 +21,14 @@ import javafx.util.Duration;
 
 /**
  * Diálogo de confirmación reutilizable con cuenta atrás de seguridad.
- * El botón de acción destructiva se habilita solo cuando el contador llega a 0,
- * evitando confirmaciones accidentales.
- *
- * Uso:
- *   ConfirmDialog.mostrar("Título", "Descripción", "Texto acción", "Texto cancelar", () -> accion());
- *   ConfirmDialog.mostrar("Título", "Descripción", "Texto acción", () -> accion()); // cancelar = "Cancelar"
+ * <p>El botón de acción destructiva se habilita solo cuando el contador llega a 0
+ * ({@value #SEGUNDOS} segundos), evitando confirmaciones accidentales por clic rápido.</p>
+ * <p>Se muestra como ventana modal sin decoración (arrastrable). Uso típico:</p>
+ * <pre>{@code
+ * ConfirmDialog.mostrar("Eliminar", "¿Seguro?", "Eliminar", () -> borrar());
+ * ConfirmDialog.mostrar("Eliminar", "¿Seguro?", "Eliminar", "No borrar", () -> borrar());
+ * ConfirmDialog.mostrarTexto("Incidencia", comentario);
+ * }</pre>
  */
 public class ConfirmDialog {
 
@@ -41,6 +43,15 @@ public class ConfirmDialog {
             "-fx-background-color: " + Colores.CREMA + ";" +
             "-fx-border-color: #C2C8D0; -fx-border-width: 1;";
 
+    /**
+     * Muestra el diálogo de confirmación con cuenta atrás.
+     *
+     * @param titulo       texto del encabezado (en rojo)
+     * @param descripcion  texto explicativo de la acción
+     * @param textoAccion  etiqueta del botón de confirmación
+     * @param textoCancel  etiqueta del botón de cancelación
+     * @param onConfirm    acción a ejecutar si el usuario confirma
+     */
     public static void mostrar(String titulo, String descripcion,
                                String textoAccion, String textoCancel,
                                Runnable onConfirm) {
@@ -136,13 +147,27 @@ public class ConfirmDialog {
         ventana.showAndWait();
     }
 
-    // Sobrecarga con texto de cancelar por defecto
+    /**
+     * Sobrecarga con texto de cancelación por defecto ({@code "Cancelar"}).
+     *
+     * @param titulo      texto del encabezado
+     * @param descripcion texto explicativo
+     * @param textoAccion etiqueta del botón de confirmación
+     * @param onConfirm   acción a ejecutar si el usuario confirma
+     */
     public static void mostrar(String titulo, String descripcion,
                                String textoAccion, Runnable onConfirm) {
         mostrar(titulo, descripcion, textoAccion, "Cancelar", onConfirm);
     }
 
-    // ── Popup de lectura (read-only, seleccionable, copiable) ─────────────────
+    /**
+     * Muestra un popup de solo lectura con el texto dado seleccionable y copiable.
+     * <p>Útil para mostrar notas de incidencias, observaciones largas o cualquier
+     * texto que el usuario pueda necesitar copiar al portapapeles.</p>
+     *
+     * @param titulo texto del encabezado del popup
+     * @param texto  contenido a mostrar (puede ser {@code null}, se muestra como vacío)
+     */
     public static void mostrarTexto(String titulo, String texto) {
         Stage ventana = new Stage();
         ventana.initModality(Modality.APPLICATION_MODAL);

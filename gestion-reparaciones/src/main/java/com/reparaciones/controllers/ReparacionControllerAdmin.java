@@ -31,6 +31,23 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 
+/**
+ * Controlador de la vista de reparaciones para el rol ADMIN.
+ * <p>Presenta tres secciones accesibles desde el sidebar:</p>
+ * <ul>
+ *   <li><b>Historial</b> — tabla con todas las reparaciones finalizadas, filtrable por IMEI,
+ *       técnico, rango de fechas e incidencias. Permite editar y eliminar reparaciones.</li>
+ *   <li><b>Asignaciones pendientes</b> — gestionadas por {@link PendientesAdminController}
+ *       (incrustado como controlador anidado).</li>
+ *   <li><b>Mis pendientes</b> — reparaciones pendientes asignadas al propio admin,
+ *       gestionadas por {@link PendientesTecnicoController}.</li>
+ * </ul>
+ * <p>Implementa {@link com.reparaciones.utils.Recargable} para el ciclo de vida controlado
+ * por {@link MainController}, y {@link com.reparaciones.utils.Exportable} para la exportación
+ * contextual a CSV.</p>
+ *
+ * @role ADMIN
+ */
 public class ReparacionControllerAdmin implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
     @FXML
@@ -107,11 +124,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
     }
 
+    /** Detiene el poller periódico al salir de la vista. */
     @Override
     public void detenerPolling() { poller.shutdownNow(); }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
+    /**
+     * Recarga los datos de la sección visible: asignaciones, mis pendientes o historial.
+     * Invocado por {@link MainController} cuando la ventana recupera el foco.
+     */
     @Override
     public void recargar() {
         if (pnlPendientes.isVisible())        pendientesAdminController.cargar();
@@ -570,10 +592,14 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     }
 
     /**
-     * Aplica un filtro inicial de fecha y técnico. Llamado por MainController cuando
-     * se navega desde la vista de estadísticas. Debe invocarse tras initialize().
+     * Aplica un filtro inicial de fecha y técnico.
+     * <p>Llamado por {@link MainController} cuando se navega desde la vista de
+     * estadísticas (clic en un vértice del gráfico). Debe invocarse después de
+     * que el controlador esté completamente inicializado.</p>
      *
-     * @param tecnico nombre del técnico a pre-seleccionar, o {@code null} para todos.
+     * @param desde   fecha de inicio del filtro
+     * @param hasta   fecha de fin del filtro
+     * @param tecnico nombre del técnico a pre-seleccionar, o {@code null} para todos
      */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
         // Navegar al historial antes de aplicar filtros

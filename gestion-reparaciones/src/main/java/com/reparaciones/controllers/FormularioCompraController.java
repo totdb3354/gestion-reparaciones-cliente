@@ -27,6 +27,19 @@ import javafx.stage.Stage;
 import java.sql.SQLException;
 import java.util.List;
 
+/**
+ * Controlador del formulario de nuevo pedido de componentes.
+ * <p>Permite al administrador crear pedidos multi-línea: cada línea incluye
+ * componente, cantidad, proveedor, precio y opción de urgente.</p>
+ *
+ * <p>Al guardar, inserta un registro en {@code Compra_componente} por cada línea
+ * mediante {@link com.reparaciones.dao.CompraComponenteDAO#insertar}.</p>
+ *
+ * <p>Consulta el tipo de cambio en tiempo real vía {@link com.reparaciones.dao.TipoCambioDAO}
+ * para convertir automáticamente el precio a EUR al cambiar la divisa.</p>
+ *
+ * @role ADMIN
+ */
 public class FormularioCompraController {
 
     @FXML private Label                                   lblTitulo;

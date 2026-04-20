@@ -28,6 +28,22 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 
+/**
+ * Controlador de la vista de reparaciones para el rol TECNICO.
+ * <p>Presenta dos secciones accesibles desde el sidebar:</p>
+ * <ul>
+ *   <li><b>Historial</b> — tabla con las reparaciones propias del técnico, filtrable
+ *       por IMEI, rango de fechas e incidencias. Solo lectura (sin edición ni eliminación).</li>
+ *   <li><b>Mis pendientes</b> — asignaciones del técnico, gestionadas por
+ *       {@link PendientesTecnicoController} (incrustado como controlador anidado).</li>
+ * </ul>
+ * <p>Incluye un poller periódico que recarga en segundo plano para detectar nuevas
+ * asignaciones sin que el técnico tenga que navegar manualmente.</p>
+ * <p>Implementa {@link com.reparaciones.utils.Recargable} y
+ * {@link com.reparaciones.utils.Exportable}.</p>
+ *
+ * @role TECNICO
+ */
 public class ReparacionControllerTecnico implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
     @FXML
@@ -97,11 +113,16 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
     }
 
+    /** Detiene el poller periódico al salir de la vista. */
     @Override
     public void detenerPolling() { poller.shutdownNow(); }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
+    /**
+     * Recarga la sección visible: mis pendientes o historial.
+     * Invocado por {@link MainController} cuando la ventana recupera el foco.
+     */
     @Override
     public void recargar() {
         if (pnlMisPendientes.isVisible()) misPendientesController.cargar();
@@ -500,7 +521,14 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         });
     }
 
-    /** Aplica un filtro inicial de fecha. Llamado por MainController al navegar desde estadísticas. */
+    /**
+     * Aplica un filtro inicial de fecha.
+     * <p>Llamado por {@link MainController} al navegar desde la vista de estadísticas
+     * (clic en un vértice del gráfico). Navega al historial antes de aplicar el filtro.</p>
+     *
+     * @param desde fecha de inicio del filtro
+     * @param hasta fecha de fin del filtro
+     */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta) {
         mostrarHistorial();
         filtroFechaDesde.setValue(desde);

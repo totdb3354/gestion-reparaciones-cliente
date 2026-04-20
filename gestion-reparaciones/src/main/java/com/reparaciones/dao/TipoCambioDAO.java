@@ -8,6 +8,15 @@ import java.net.http.HttpResponse;
 import java.sql.*;
 import java.time.LocalDate;
 
+/**
+ * Acceso a datos de tipos de cambio de divisas.
+ * <p>Implementa una caché diaria en la tabla {@code TipoCambio}: la primera
+ * petición del día para una divisa concreta consulta la API pública
+ * <a href="https://www.frankfurter.app">Frankfurter</a> y guarda el resultado;
+ * las peticiones posteriores del mismo día leen directamente de BD.</p>
+ *
+ * @role ADMIN
+ */
 public class TipoCambioDAO {
 
     private static final String API_URL = "https://api.frankfurter.app/latest?from=%s&to=EUR";
@@ -16,8 +25,13 @@ public class TipoCambioDAO {
 
     /**
      * Devuelve la tasa de conversión divisa→EUR para hoy.
-     * Si ya existe en BD la reutiliza. Si no, consulta Frankfurter y la guarda.
-     * Si la divisa es EUR devuelve 1.0 directamente sin consultar nada.
+     * <p>Si la tasa ya está en caché (BD) la reutiliza directamente.
+     * Si no, consulta la API Frankfurter, la persiste y la devuelve.
+     * Para {@code "EUR"} devuelve {@code 1.0} sin ninguna consulta.</p>
+     *
+     * @param divisa código ISO 4217 de la divisa origen (p. ej. {@code "CNY"})
+     * @return tasa de conversión: unidades de {@code divisa} equivalentes a 1 EUR
+     * @throws SQLException si falla la BD o la llamada HTTP a la API
      */
     public double getTasa(String divisa) throws SQLException {
         if ("EUR".equalsIgnoreCase(divisa)) return 1.0;
@@ -56,6 +70,14 @@ public class TipoCambioDAO {
 
     // ─── Llamada a Frankfurter ────────────────────────────────────────────────
 
+    /**
+     * Consulta la tasa divisa→EUR a la API pública Frankfurter.
+     * <p>Parsea el JSON manualmente para evitar dependencias externas adicionales.</p>
+     *
+     * @param divisa código ISO 4217 de la divisa
+     * @return tasa de conversión hacia EUR
+     * @throws SQLException si la respuesta es inesperada o hay error de red
+     */
     private double consultarApi(String divisa) throws SQLException {
         try {
             HttpClient client = HttpClient.newBuilder()

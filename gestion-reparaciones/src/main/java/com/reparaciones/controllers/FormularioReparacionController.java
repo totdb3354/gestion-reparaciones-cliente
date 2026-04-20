@@ -31,6 +31,21 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Controlador del formulario de finalización de reparación.
+ * <p>Abierto desde {@link PendientesTecnicoController} al pulsar el botón de finalizar
+ * de una asignación ({@code A*}). Permite al técnico seleccionar el componente utilizado,
+ * indicar si es reutilizado, añadir observaciones y solicitar componentes adicionales.</p>
+ *
+ * <p>Agrupa los componentes en filas por tipo (batería, pantalla, etc.) y marca en verde
+ * los tipos ya reparados en el mismo IMEI para evitar duplicados.</p>
+ *
+ * <p>Al guardar, llama a {@link com.reparaciones.dao.ReparacionDAO#insertarCompleta}
+ * en transacción: crea los registros {@code R*} para las filas normales, guarda las
+ * solicitudes sobre la {@code A*} y descuenta el stock.</p>
+ *
+ * @role TECNICO; ADMIN (si tiene técnico asignado)
+ */
 public class FormularioReparacionController {
 
     @FXML private Label lblImei;

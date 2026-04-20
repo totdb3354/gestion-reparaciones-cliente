@@ -12,6 +12,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Acceso a datos de la tabla {@code Reparacion} y sus relaciones.
+ * <p>Gestiona el ciclo de vida completo de las reparaciones: asignaciones ({@code A*}),
+ * finalizaciones ({@code R*}), ediciones, eliminaciones e incidencias.</p>
+ *
+ * <p><b>Nomenclatura de IDs:</b></p>
+ * <ul>
+ *   <li>{@code R[yyyyMMdd]_N} — reparación finalizada</li>
+ *   <li>{@code A[yyyyMMdd]_N} — asignación pendiente (sin fecha de fin)</li>
+ * </ul>
+ *
+ * <p>Las operaciones de escritura complejas (insertar completa, eliminar, etc.)
+ * usan transacciones para mantener la consistencia entre {@code Reparacion},
+ * {@code Reparacion_componente}, {@code Componente.STOCK} y {@code Telefono}.</p>
+ *
+ * @role ADMIN (operaciones completas); TECNICO (lectura y finalización de sus propias asignaciones)
+ */
 public class ReparacionDAO {
 
     // ─── Queries base ─────────────────────────────────────────────────────────
@@ -63,6 +80,12 @@ public class ReparacionDAO {
 
     // ─── Métodos de lectura ───────────────────────────────────────────────────
 
+    /**
+     * Devuelve todas las reparaciones finalizadas ({@code ID_REP LIKE 'R%'}) como resúmenes.
+     *
+     * @return lista de reparaciones ordenadas por ID
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionResumen> getReparacionesResumen() throws SQLException {
         List<ReparacionResumen> lista = new ArrayList<>();
         String sql = SQL_RESUMEN + " WHERE r.ID_REP LIKE 'R%'" + ORDER_BY_ID;
@@ -75,6 +98,13 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve las reparaciones finalizadas de un técnico concreto.
+     *
+     * @param idTec ID del técnico
+     * @return lista de reparaciones del técnico, ordenadas por ID
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionResumen> getReparacionesPorTecnico(int idTec) throws SQLException {
         List<ReparacionResumen> lista = new ArrayList<>();
         String sql = SQL_RESUMEN + " WHERE r.ID_REP LIKE 'R%' AND r.ID_TEC = ?" + ORDER_BY_ID;
@@ -88,6 +118,13 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve las reparaciones finalizadas de un IMEI concreto.
+     *
+     * @param imei IMEI del dispositivo
+     * @return lista de reparaciones para ese IMEI, ordenadas por ID
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionResumen> getResumenPorImei(String imei) throws SQLException {
         List<ReparacionResumen> lista = new ArrayList<>();
         String sql = SQL_RESUMEN + " WHERE r.IMEI = ? AND r.ID_REP LIKE 'R%'" + ORDER_BY_ID;
@@ -101,6 +138,12 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve todas las asignaciones pendientes ({@code ID_REP LIKE 'A%'}).
+     *
+     * @return lista de asignaciones ordenadas por fecha de asignación ascendente
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionResumen> getAsignaciones() throws SQLException {
         List<ReparacionResumen> lista = new ArrayList<>();
         String sql = SQL_ASIGNACIONES + " ORDER BY r.FECHA_ASIG ASC";
@@ -113,6 +156,13 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Busca una asignación por ID.
+     *
+     * @param idRep ID de la asignación (formato {@code A[yyyyMMdd]_N})
+     * @return la asignación envuelta en {@code Optional}, o vacío si no existe
+     * @throws SQLException si falla la consulta
+     */
     public java.util.Optional<ReparacionResumen> getAsignacionById(String idRep) throws SQLException {
         String sql = SQL_ASIGNACIONES + " AND r.ID_REP = ?";
         try (Connection con = Conexion.getConexion();
@@ -124,6 +174,13 @@ public class ReparacionDAO {
         return java.util.Optional.empty();
     }
 
+    /**
+     * Devuelve las asignaciones pendientes de un técnico concreto.
+     *
+     * @param idTec ID del técnico
+     * @return lista de asignaciones del técnico ordenadas por fecha ascendente
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionResumen> getAsignacionesPorTecnico(int idTec) throws SQLException {
         List<ReparacionResumen> lista = new ArrayList<>();
         String sql = SQL_ASIGNACIONES + " AND r.ID_TEC = ? ORDER BY r.FECHA_ASIG ASC";
@@ -137,6 +194,15 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve las solicitudes de componente pendientes de una asignación.
+     * <p>Las solicitudes son componentes marcados con {@code ES_SOLICITUD = 1}
+     * que el técnico ha pedido al admin para poder finalizar la reparación.</p>
+     *
+     * @param idAsignacion ID de la asignación ({@code A*})
+     * @return lista de filas con ID de componente y descripción de solicitud
+     * @throws SQLException si falla la consulta
+     */
     public List<FilaReparacion> getSolicitudesPorAsignacion(String idAsignacion) throws SQLException {
         List<FilaReparacion> lista = new ArrayList<>();
         String sql = """
@@ -156,6 +222,12 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve todas las reparaciones (asignaciones y finalizadas) sin ningún filtro.
+     *
+     * @return lista completa de reparaciones
+     * @throws SQLException si falla la consulta
+     */
     public List<Reparacion> getAll() throws SQLException {
         List<Reparacion> lista = new ArrayList<>();
         String sql = "SELECT * FROM Reparacion";
@@ -168,6 +240,13 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Devuelve todas las reparaciones (finalizadas y asignaciones) de un IMEI.
+     *
+     * @param imei IMEI del dispositivo
+     * @return lista de reparaciones para ese IMEI
+     * @throws SQLException si falla la consulta
+     */
     public List<Reparacion> getByImei(String imei) throws SQLException {
         List<Reparacion> lista = new ArrayList<>();
         String sql = "SELECT * FROM Reparacion WHERE IMEI = ?";
@@ -181,6 +260,14 @@ public class ReparacionDAO {
         return lista;
     }
 
+    /**
+     * Cuenta el total de registros en {@code Reparacion} para un IMEI.
+     * <p>Usado para decidir si borrar el {@code Telefono} al eliminar la última reparación.</p>
+     *
+     * @param imei IMEI del dispositivo
+     * @return número de reparaciones (cualquier tipo) con ese IMEI
+     * @throws SQLException si falla la consulta
+     */
     public int countByImei(String imei) throws SQLException {
         String sql = "SELECT COUNT(*) FROM Reparacion WHERE IMEI = ?";
         try (Connection con = Conexion.getConexion();
@@ -195,6 +282,13 @@ public class ReparacionDAO {
 
     // ─── Métodos de escritura ─────────────────────────────────────────────────
 
+    /**
+     * Inserta una nueva reparación y devuelve el ID generado.
+     *
+     * @param r reparación a insertar
+     * @return ID asignado con formato {@code R[yyyyMMdd]_N}
+     * @throws SQLException si falla el insert
+     */
     public String insertar(Reparacion r) throws SQLException {
         String idRep = generarId();
         String sql = "INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC) VALUES (?, ?, ?, ?, ?)";
@@ -213,6 +307,14 @@ public class ReparacionDAO {
         return idRep;
     }
 
+    /**
+     * Crea una nueva asignación pendiente y devuelve su ID.
+     *
+     * @param imei  IMEI del dispositivo
+     * @param idTec ID del técnico asignado
+     * @return ID de la asignación con formato {@code A[yyyyMMdd]_N}
+     * @throws SQLException si falla el insert
+     */
     public String insertarAsignacion(String imei, int idTec) throws SQLException {
         String idAsig = generarIdAsignacion();
         String sql = "INSERT INTO Reparacion (ID_REP, FECHA_ASIG, FECHA_FIN, IMEI, ID_TEC) VALUES (?, NOW(), NULL, ?, ?)";
@@ -226,6 +328,13 @@ public class ReparacionDAO {
         return idAsig;
     }
 
+    /**
+     * Elimina una asignación pendiente y, si era el último registro del IMEI,
+     * también elimina el {@code Telefono} asociado. Opera en transacción.
+     *
+     * @param idAsig ID de la asignación a eliminar
+     * @throws SQLException si falla la transacción
+     */
     public void eliminarAsignacion(String idAsig) throws SQLException {
         String sqlGetImei    = "SELECT IMEI FROM Reparacion WHERE ID_REP = ?";
         String sqlBorrarComp = "DELETE FROM Reparacion_componente WHERE ID_REP = ?";
@@ -271,6 +380,12 @@ public class ReparacionDAO {
         }
     }
 
+    /**
+     * Registra la fecha de finalización de una reparación ({@code FECHA_FIN = NOW()}).
+     *
+     * @param idRep ID de la reparación a completar
+     * @throws SQLException si falla el update
+     */
     public void completar(String idRep) throws SQLException {
         String sql = "UPDATE Reparacion SET FECHA_FIN = NOW() WHERE ID_REP = ?";
         try (Connection con = Conexion.getConexion();
@@ -282,6 +397,13 @@ public class ReparacionDAO {
 
     // ─── Generadores de ID ────────────────────────────────────────────────────
 
+    /**
+     * Genera el siguiente ID de reparación disponible para hoy.
+     * <p>Formato: {@code R[yyyyMMdd]_N} donde {@code N} es el correlativo diario.</p>
+     *
+     * @return ID único para una nueva reparación finalizada
+     * @throws SQLException si falla la consulta del último correlativo
+     */
     public String generarId() throws SQLException {
         String fechaHoy = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "R" + fechaHoy + "_";
@@ -299,6 +421,13 @@ public class ReparacionDAO {
         return prefijo + "1";
     }
 
+    /**
+     * Genera el siguiente ID de asignación disponible para hoy.
+     * <p>Formato: {@code A[yyyyMMdd]_N} donde {@code N} es el correlativo diario.</p>
+     *
+     * @return ID único para una nueva asignación pendiente
+     * @throws SQLException si falla la consulta del último correlativo
+     */
     public String generarIdAsignacion() throws SQLException {
         String fechaHoy = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String prefijo = "A" + fechaHoy + "_";
@@ -316,6 +445,15 @@ public class ReparacionDAO {
         return prefijo + "1";
     }
 
+    /**
+     * Reasigna una asignación a otro técnico con control de concurrencia optimista.
+     *
+     * @param idRep     ID de la asignación
+     * @param idTec     nuevo ID del técnico
+     * @param updatedAt timestamp leído en la última carga (para detección de conflictos)
+     * @throws SQLException                               si falla el update
+     * @throws com.reparaciones.utils.StaleDataException si otro usuario modificó la asignación
+     */
     public void actualizarTecnico(String idRep, int idTec, java.time.LocalDateTime updatedAt)
             throws SQLException, com.reparaciones.utils.StaleDataException {
         String sql = "UPDATE Reparacion SET ID_TEC = ? WHERE ID_REP = ? AND UPDATED_AT = ?";
@@ -332,7 +470,10 @@ public class ReparacionDAO {
 
     // ─── Edición de reparación ────────────────────────────────────────────────
 
-    /** Datos del R* necesarios para abrir el modal de edición. */
+    /**
+     * DTO inmutable con los datos de una reparación finalizada necesarios para
+     * abrir el formulario de edición.
+     */
     public static class DetalleEdicion {
         public final String imei;
         public final int    idTec;
@@ -346,6 +487,13 @@ public class ReparacionDAO {
         }
     }
 
+    /**
+     * Carga los datos de edición de una reparación finalizada.
+     *
+     * @param idRep ID de la reparación
+     * @return datos para el formulario de edición, o {@code null} si no existe
+     * @throws SQLException si falla la consulta
+     */
     public DetalleEdicion getDetalleEdicion(String idRep) throws SQLException {
         String sql = """
                 SELECT r.IMEI, r.ID_TEC, rc.ID_COM, rc.ES_REUTILIZADO, rc.OBSERVACIONES
@@ -366,6 +514,20 @@ public class ReparacionDAO {
         return null;
     }
 
+    /**
+     * Edita el componente y observaciones de una reparación finalizada.
+     * <p>Gestiona el stock automáticamente: devuelve la pieza anterior si no era
+     * reutilizada y no está rota, y descuenta la nueva si no es reutilizada.
+     * Opera en transacción.</p>
+     *
+     * @param idRep             ID de la reparación a editar
+     * @param idComNuevo        nuevo ID del componente
+     * @param esReutilizadoNuevo {@code true} si la nueva pieza no resta stock
+     * @param observacionNueva  nuevas notas del técnico
+     * @param piezaViejaRota    {@code true} si la pieza anterior no se devuelve al stock
+     * @param nNuevas           unidades de la nueva pieza a descontar
+     * @throws SQLException si falla la transacción
+     */
     public void editarReparacion(String idRep, int idComNuevo, boolean esReutilizadoNuevo,
             String observacionNueva, boolean piezaViejaRota, int nNuevas) throws SQLException {
         String sqlGetActual  = """
@@ -434,6 +596,14 @@ public class ReparacionDAO {
 
     // ─── Utilidades ───────────────────────────────────────────────────────────
 
+    /**
+     * Busca si existe una reparación que tenga como {@code ID_REP_ANTERIOR} el ID dado.
+     * <p>Permite trazar la cadena de reincidencias hacia adelante.</p>
+     *
+     * @param idRep ID de la reparación anterior
+     * @return ID de la reparación que la referencia, o {@code null} si no existe ninguna
+     * @throws SQLException si falla la consulta
+     */
     public String getReferenciadora(String idRep) throws SQLException {
         String sql = "SELECT ID_REP FROM Reparacion WHERE ID_REP_ANTERIOR = ?";
         try (Connection con = Conexion.getConexion();
@@ -446,7 +616,16 @@ public class ReparacionDAO {
         return null;
     }
 
-    /** Devuelve los ID_COM ya reparados para un IMEI, excluyendo el R* que se está editando. */
+    /**
+     * Devuelve los IDs de componentes ya usados en reparaciones de un IMEI,
+     * excluyendo la reparación que se está editando.
+     * <p>Usado para marcar como "ya reparado" en el formulario de edición.</p>
+     *
+     * @param imei          IMEI del dispositivo
+     * @param idRepExcluir  ID de la reparación actualmente en edición (se excluye)
+     * @return conjunto de IDs de componentes ya utilizados para ese IMEI
+     * @throws SQLException si falla la consulta
+     */
     public Set<Integer> getIdComsYaReparados(String imei, String idRepExcluir) throws SQLException {
         String sql = """
                 SELECT DISTINCT rc.ID_COM
@@ -466,6 +645,19 @@ public class ReparacionDAO {
         return ids;
     }
 
+    /**
+     * Elimina una reparación finalizada y realiza todas las compensaciones necesarias
+     * en una sola transacción:
+     * <ol>
+     *   <li>Devuelve al stock los componentes no reutilizados</li>
+     *   <li>Borra {@code Reparacion_componente} y {@code Reparacion}</li>
+     *   <li>Si había una incidencia anterior, la revierte a no resuelta</li>
+     *   <li>Si era el último registro del IMEI, borra el {@code Telefono}</li>
+     * </ol>
+     *
+     * @param idRep ID de la reparación a eliminar
+     * @throws SQLException si falla la transacción
+     */
     public void eliminar(String idRep) throws SQLException {
         String sqlGetInfo    = "SELECT ID_REP_ANTERIOR, IMEI FROM Reparacion WHERE ID_REP = ?";
         String sqlGetComps   = """
@@ -543,6 +735,24 @@ public class ReparacionDAO {
         }
     }
 
+    /**
+     * Finaliza una reparación (o varias) a partir de las filas del formulario.
+     * <p>En una sola transacción:</p>
+     * <ul>
+     *   <li>Crea un registro {@code R*} por cada fila normal y descuenta stock</li>
+     *   <li>Guarda las filas solicitud como registros en {@code Reparacion_componente}
+     *       de la asignación ({@code A*})</li>
+     *   <li>Resuelve la incidencia anterior si había {@code idRepAnterior}</li>
+     *   <li>Borra la asignación si no quedan solicitudes pendientes</li>
+     * </ul>
+     *
+     * @param filas         filas del formulario (normales y/o solicitudes)
+     * @param imei          IMEI del dispositivo
+     * @param idTec         ID del técnico que finaliza
+     * @param idRepAnterior ID de la reparación anterior si es reincidencia, o {@code null}
+     * @param idAsignacion  ID de la asignación origen ({@code A*}), o {@code null}
+     * @throws SQLException si falla la transacción
+     */
     public void insertarCompleta(List<FilaReparacion> filas, String imei, int idTec,
             String idRepAnterior, String idAsignacion) throws SQLException {
 
@@ -668,6 +878,7 @@ public class ReparacionDAO {
 
     // ─── Mapeos ───────────────────────────────────────────────────────────────
 
+    /** Mapea una fila de {@code SQL_RESUMEN} a un {@link ReparacionResumen}. */
     private ReparacionResumen mapearResumen(ResultSet rs) throws SQLException {
         Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
         Timestamp tsFin = rs.getTimestamp("FECHA_FIN");
@@ -689,6 +900,7 @@ public class ReparacionDAO {
                 null);
     }
 
+    /** Mapea una fila de {@code SQL_ASIGNACIONES} a un {@link ReparacionResumen}. */
     private ReparacionResumen mapearAsignacion(ResultSet rs) throws SQLException {
         Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
         Timestamp tsFin  = rs.getTimestamp("FECHA_FIN");
@@ -710,6 +922,7 @@ public class ReparacionDAO {
                 rs.getTimestamp("UPDATED_AT").toLocalDateTime());
     }
 
+    /** Mapea una fila de {@code Reparacion} a un {@link Reparacion}. */
     private Reparacion mapear(ResultSet rs) throws SQLException {
         Timestamp tsAsig = rs.getTimestamp("FECHA_ASIG");
         Timestamp tsFin  = rs.getTimestamp("FECHA_FIN");
@@ -722,6 +935,16 @@ public class ReparacionDAO {
                 rs.getTimestamp("UPDATED_AT").toLocalDateTime());
     }
 
+    /**
+     * Marca una incidencia en la reparación y crea automáticamente una nueva asignación
+     * al mismo técnico. Opera en transacción.
+     *
+     * @param idRep     ID de la reparación con la incidencia
+     * @param comentario descripción de la incidencia
+     * @param imei      IMEI del dispositivo
+     * @param idTec     ID del técnico al que se reasigna
+     * @throws SQLException si falla la transacción
+     */
     public void marcarIncidenciaYAsignar(String idRep, String comentario,
             String imei, int idTec) throws SQLException {
         String sqlIncidencia = "UPDATE Reparacion_componente " +
@@ -752,6 +975,15 @@ public class ReparacionDAO {
         }
     }
 
+    /**
+     * Comprueba si ya existe una asignación pendiente del IMEI para el técnico dado.
+     * <p>Usado para evitar asignaciones duplicadas.</p>
+     *
+     * @param imei  IMEI del dispositivo
+     * @param idTec ID del técnico
+     * @return {@code true} si ya existe una asignación {@code A*} activa
+     * @throws SQLException si falla la consulta
+     */
     public boolean existeAsignacionParaTecnico(String imei, int idTec) throws SQLException {
         String sql = """
                 SELECT COUNT(*) FROM Reparacion
@@ -767,6 +999,13 @@ public class ReparacionDAO {
         return false;
     }
 
+    /**
+     * Busca si existe una incidencia activa (no resuelta) para el IMEI dado.
+     *
+     * @param imei IMEI del dispositivo
+     * @return ID de la reparación con la incidencia activa, o {@code null} si no hay ninguna
+     * @throws SQLException si falla la consulta
+     */
     public String getIncidenciaActivaPorImei(String imei) throws SQLException {
         String sql = """
                 SELECT r.ID_REP FROM Reparacion r
@@ -788,9 +1027,14 @@ public class ReparacionDAO {
 
     /**
      * Devuelve el conteo de reparaciones finalizadas agrupadas por técnico y periodo.
-     * @param granularidad "dia", "semana" o "mes"
+     * <p>Solo incluye reparaciones con {@code FECHA_FIN} no nula y {@code ID_REP LIKE 'R%'}.</p>
+     *
+     * @param granularidad agrupación temporal: {@code "dia"}, {@code "semana"},
+     *                     {@code "mes"} o {@code "ano"}
      * @param desde        fecha de inicio del rango (inclusive)
      * @param hasta        fecha de fin del rango (inclusive)
+     * @return lista de puntos de estadística ordenados por periodo y técnico
+     * @throws SQLException si falla la consulta
      */
     public List<PuntoEstadistica> getEstadisticasPorTecnico(
             String granularidad, java.time.LocalDate desde, java.time.LocalDate hasta)
@@ -833,6 +1077,12 @@ public class ReparacionDAO {
         return resultado;
     }
 
+    /**
+     * Cancela la incidencia activa (no resuelta) de un IMEI.
+     *
+     * @param imei IMEI del dispositivo
+     * @throws SQLException si falla el update
+     */
     public void borrarIncidenciaPorImei(String imei) throws SQLException {
         String sql = """
                 UPDATE Reparacion_componente SET ES_INCIDENCIA = FALSE

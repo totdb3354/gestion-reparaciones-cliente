@@ -15,6 +15,15 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.sql.SQLException;
 
+/**
+ * Controlador de la pantalla de inicio de sesión.
+ * <p>Autentica al usuario con {@link com.reparaciones.dao.UsuarioDAO#login} y, si
+ * las credenciales son correctas, guarda la sesión en {@link com.reparaciones.Sesion}
+ * y carga la vista principal ({@code MainView.fxml}) en la misma ventana.</p>
+ * <p>Incluye toggle de visibilidad de contraseña y soporte de tecla Enter en los campos.</p>
+ *
+ * @role todos (pantalla de acceso)
+ */
 public class LoginController {
 
     @FXML private TextField       campoUsuario;
@@ -34,6 +43,7 @@ public class LoginController {
 
     private final UsuarioDAO usuarioDAO = new UsuarioDAO();
 
+    /** Configura la ventana como no redimensionable y habilita Enter en los campos. */
     @FXML
     public void initialize() {
         Platform.runLater(() -> {
@@ -53,6 +63,7 @@ public class LoginController {
         });
     }
 
+    /** Alterna entre mostrar y ocultar la contraseña sincronizando el contenido de ambos campos. */
     @FXML
     private void togglePassword() {
         passwordVisible = !passwordVisible;
@@ -131,6 +142,7 @@ public class LoginController {
         }
     }
 
+    /** Muestra el mensaje de error bajo el formulario. */
     private void mostrarError(String mensaje) {
         lblError.setText(mensaje);
         lblError.setVisible(true);
