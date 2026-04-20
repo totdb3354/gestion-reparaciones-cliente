@@ -149,3 +149,27 @@ DELIMITER ;
 
 CALL gen_datos_stock();
 DROP PROCEDURE IF EXISTS gen_datos_stock;
+
+-- ── Ajustar STOCK para que sea coherente con los eventos generados ────────────
+-- stock_real = suma de todas las entradas recibidas - todas las salidas por reparación
+-- Así la reconstrucción histórica parte de 0 antes del primer evento y sube correctamente.
+UPDATE Componente c
+SET STOCK = (
+    SELECT COALESCE(SUM(delta), 0)
+    FROM (
+        SELECT cc.ID_COM AS id, COALESCE(cc.CANTIDAD_RECIBIDA, 0) AS delta
+        FROM Compra_componente cc
+        WHERE cc.ESTADO IN ('recibido','parcial') AND cc.FECHA_LLEGADA IS NOT NULL
+
+        UNION ALL
+
+        SELECT rc.ID_COM AS id, -rc.CANTIDAD AS delta
+        FROM Reparacion_componente rc
+        JOIN Reparacion r ON r.ID_REP = rc.ID_REP
+        WHERE r.FECHA_FIN IS NOT NULL
+          AND rc.ES_REUTILIZADO = FALSE
+          AND rc.ID_COM IS NOT NULL
+    ) e
+    WHERE e.id = c.ID_COM
+)
+WHERE c.TIPO IN ('bati13','bati14','lcdi13','lcdi14','chai13negro');
