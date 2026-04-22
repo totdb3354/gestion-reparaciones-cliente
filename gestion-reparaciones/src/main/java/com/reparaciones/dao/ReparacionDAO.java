@@ -210,7 +210,6 @@ public class ReparacionDAO {
                 SELECT rc.ID_COM, rc.DESCRIPCION_SOLICITUD, rc.ESTADO_SOLICITUD
                 FROM Reparacion_componente rc
                 WHERE rc.ID_REP = ? AND rc.ES_SOLICITUD = 1
-                  AND rc.ESTADO_SOLICITUD != 'RECHAZADA'
                 """;
         try (Connection con = Conexion.getConexion();
                 PreparedStatement ps = con.prepareStatement(sql)) {
@@ -843,7 +842,7 @@ public class ReparacionDAO {
                             estadosPrevios.put(rs.getInt("ID_COM"), rs.getString("ESTADO_SOLICITUD"));
                     }
                     String sqlLimpiarSol =
-                            "DELETE FROM Reparacion_componente WHERE ID_REP = ? AND ES_SOLICITUD = 1";
+                            "DELETE FROM Reparacion_componente WHERE ID_REP = ?";
                     try (PreparedStatement ps = con.prepareStatement(sqlLimpiarSol)) {
                         ps.setString(1, idAsignacion);
                         ps.executeUpdate();

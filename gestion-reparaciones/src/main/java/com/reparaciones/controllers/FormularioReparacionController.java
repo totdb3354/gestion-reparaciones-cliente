@@ -119,25 +119,31 @@ public class FormularioReparacionController {
             try {
                 List<FilaReparacion> solicitudes = reparacionDAO.getSolicitudesPorAsignacion(idAsignacion);
                 if (!solicitudes.isEmpty()) {
-                    tieneSolicitudesIniciales = true;
-                    solicitudesCargadas = solicitudes;
-                    // Primera pasada: activar para que configurarFiltroModelo detecte el modelo
-                    for (FilaReparacion sol : solicitudes)
+                    solicitudesCargadas = solicitudes; // todas (incluidas RECHAZADAS) para detección de modelo
+                    boolean hayActivas = solicitudes.stream()
+                            .anyMatch(s -> !"RECHAZADA".equals(s.getEstadoSolicitud()));
+                    tieneSolicitudesIniciales = hayActivas;
+                    // Primera pasada: activar solo las no-rechazadas
+                    for (FilaReparacion sol : solicitudes) {
+                        if ("RECHAZADA".equals(sol.getEstadoSolicitud())) continue;
                         for (FilaUI fila : filasUI)
                             fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud(),
                                     "PENDIENTE".equals(sol.getEstadoSolicitud()));
+                    }
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
         configurarFiltroModelo(); // el auto-filtro de modelo dispara aplicarFiltroModelo → resetea solicitudActiva
-        // Segunda pasada: re-activar solicitudes después del reset del filtro
+        // Segunda pasada: re-activar solo las no-rechazadas después del reset del filtro
         if (solicitudesCargadas != null) {
-            for (FilaReparacion sol : solicitudesCargadas)
+            for (FilaReparacion sol : solicitudesCargadas) {
+                if ("RECHAZADA".equals(sol.getEstadoSolicitud())) continue;
                 for (FilaUI fila : filasUI)
                     fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud(),
                             "PENDIENTE".equals(sol.getEstadoSolicitud()));
+            }
         }
     }
 
@@ -264,7 +270,7 @@ public class FormularioReparacionController {
             }
         });
 
-        if (tieneSolicitudesIniciales && solicitudesCargadas != null) {
+        if (solicitudesCargadas != null && !solicitudesCargadas.isEmpty()) {
             boolean hayPendientes = filasUI.stream().anyMatch(FilaUI::isSolicitud);
             solicitudesCargadas.stream()
                     .flatMap(sol -> filasUI.stream()
