@@ -31,6 +31,9 @@ public class FilaReparacion {
     /** Descripción de la solicitud de reposición, o {@code null} si no es solicitud. */
     private final String descripcionSolicitud;
 
+    /** Estado de la solicitud: "PENDIENTE", "GESTIONADA" o "RECHAZADA". {@code null} si no es solicitud. */
+    private final String estadoSolicitud;
+
     /**
      * @param idCom                ID del componente
      * @param cantidad             unidades utilizadas
@@ -39,10 +42,12 @@ public class FilaReparacion {
      * @param prefijo              prefijo del SKU
      * @param esSolicitud          {@code true} si solicita reposición
      * @param descripcionSolicitud descripción de la solicitud, o {@code null}
+     * @param estadoSolicitud      estado de la solicitud, o {@code null}
      */
     public FilaReparacion(int idCom, int cantidad, boolean reutilizado,
                           String observacion, String prefijo,
-                          boolean esSolicitud, String descripcionSolicitud) {
+                          boolean esSolicitud, String descripcionSolicitud,
+                          String estadoSolicitud) {
         this.idCom                = idCom;
         this.cantidad             = cantidad;
         this.reutilizado          = reutilizado;
@@ -50,6 +55,7 @@ public class FilaReparacion {
         this.prefijo              = prefijo;
         this.esSolicitud          = esSolicitud;
         this.descripcionSolicitud = descripcionSolicitud;
+        this.estadoSolicitud      = estadoSolicitud;
     }
 
     /** @return ID del componente */
@@ -72,4 +78,7 @@ public class FilaReparacion {
 
     /** @return descripción de la solicitud, o {@code null} */
     public String getDescripcionSolicitud() { return descripcionSolicitud; }
+
+    /** @return estado de la solicitud ("PENDIENTE", "GESTIONADA", "RECHAZADA"), o {@code null} */
+    public String getEstadoSolicitud() { return estadoSolicitud; }
 }

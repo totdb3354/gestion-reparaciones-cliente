@@ -7,7 +7,6 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.Tecnico;
-import com.reparaciones.utils.ConfirmDialog;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -57,6 +56,7 @@ public class FormularioReparacionController {
     @FXML private javafx.scene.layout.HBox zonaGuardar;
     @FXML private ComboBox<String> cbFiltroModelo;
     private boolean tieneSolicitudesIniciales = false;
+    private List<FilaReparacion> solicitudesCargadas = null;
     private boolean modoEdicion = false;
     private String  idRepEditar;
     private String  imeiEditar;
@@ -115,7 +115,6 @@ public class FormularioReparacionController {
         }
 
         cargarFilas();
-        List<FilaReparacion> solicitudesCargadas = null;
         if (idAsignacion != null) {
             try {
                 List<FilaReparacion> solicitudes = reparacionDAO.getSolicitudesPorAsignacion(idAsignacion);
@@ -125,7 +124,8 @@ public class FormularioReparacionController {
                     // Primera pasada: activar para que configurarFiltroModelo detecte el modelo
                     for (FilaReparacion sol : solicitudes)
                         for (FilaUI fila : filasUI)
-                            fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud());
+                            fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud(),
+                                    "PENDIENTE".equals(sol.getEstadoSolicitud()));
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -136,7 +136,8 @@ public class FormularioReparacionController {
         if (solicitudesCargadas != null) {
             for (FilaReparacion sol : solicitudesCargadas)
                 for (FilaUI fila : filasUI)
-                    fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud());
+                    fila.activarSolicitud(sol.getIdCom(), sol.getDescripcionSolicitud(),
+                            "PENDIENTE".equals(sol.getEstadoSolicitud()));
         }
     }
 
@@ -263,16 +264,21 @@ public class FormularioReparacionController {
             }
         });
 
-        if (tieneSolicitudesIniciales) {
-            // Auto-detectar modelo desde la solicitud y bloquearlo
-            filasUI.stream()
-                    .filter(FilaUI::isSolicitud)
-                    .map(f -> extraerModelo(f.getComponenteSeleccionado().getTipo(), f.getPrefijo()))
+        if (tieneSolicitudesIniciales && solicitudesCargadas != null) {
+            boolean hayPendientes = filasUI.stream().anyMatch(FilaUI::isSolicitud);
+            solicitudesCargadas.stream()
+                    .flatMap(sol -> filasUI.stream()
+                        .filter(f -> f.getSkus().stream().anyMatch(c -> c.getIdCom() == sol.getIdCom()))
+                        .map(f -> f.getSkus().stream()
+                            .filter(c -> c.getIdCom() == sol.getIdCom())
+                            .findFirst()
+                            .map(c -> extraerModelo(c.getTipo(), f.getPrefijo()))
+                            .orElse("")))
                     .filter(m -> !m.isEmpty() && cbFiltroModelo.getItems().contains(m))
                     .findFirst()
                     .ifPresent(modelo -> {
                         cbFiltroModelo.setValue(modelo);
-                        cbFiltroModelo.setDisable(true);
+                        cbFiltroModelo.setDisable(hayPendientes);
                     });
         } else if (modoEdicion) {
             // Auto-detectar modelo desde la fila en edición y bloquearlo
@@ -305,9 +311,11 @@ public class FormularioReparacionController {
             habilitado = cambioEnEdicion || filasNuevas;
         } else {
             boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva);
+            boolean solicitudCancelada = tieneSolicitudesIniciales
+                    && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
             boolean solicitudesPendientes = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitud);
-            habilitado = activa && !solicitudesPendientes;
+            habilitado = (activa && !solicitudesPendientes) || solicitudCancelada;
         }
         zonaGuardar.setVisible(habilitado);
         zonaGuardar.setManaged(habilitado);
@@ -364,7 +372,8 @@ public class FormularioReparacionController {
                         fila.getObservacion(),
                         fila.getPrefijo(),
                         fila.isSolicitud(),
-                        fila.getDescripcionSolicitud()));
+                        fila.getDescripcionSolicitud(),
+                        null));
             }
         }
         try {
@@ -406,7 +415,7 @@ public class FormularioReparacionController {
                                     fila.getIdComSeleccionado(), fila.getCantidad(),
                                     fila.isReutilizado(), fila.getObservacion(),
                                     fila.getPrefijo(), fila.isSolicitud(),
-                                    fila.getDescripcionSolicitud()));
+                                    fila.getDescripcionSolicitud(), null));
                 }
             }
             for (Map.Entry<Integer, List<FilaReparacion>> entry : porTecnico.entrySet()) {
@@ -543,6 +552,7 @@ public class FormularioReparacionController {
         private int cantidad = 0;
         private String observacion = null;
         private boolean solicitudActiva = false;
+        private boolean solicitudFueCancelada = false;
         private String descripcionSolicitud = null;
         private Runnable onCambio;
 
@@ -946,6 +956,10 @@ public class FormularioReparacionController {
             return solicitudActiva;
         }
 
+        boolean isSolicitudCancelada() {
+            return solicitudFueCancelada;
+        }
+
         String getDescripcionSolicitud() {
             return descripcionSolicitud;
         }
@@ -972,53 +986,26 @@ public class FormularioReparacionController {
             VBox content = new VBox(8, ta, btnGuardar);
 
             if (solicitudActiva) {
-                Button btnPiezaRecibida = new Button("Pieza recibida — instalar");
-                btnPiezaRecibida.setMaxWidth(Double.MAX_VALUE);
-                btnPiezaRecibida.setStyle("-fx-background-color: #8AC7AF; -fx-text-fill: white;" +
+                Button btnCancelarSol = new Button("Cancelar solicitud");
+                btnCancelarSol.setMaxWidth(Double.MAX_VALUE);
+                btnCancelarSol.setStyle("-fx-background-color: #E05252; -fx-text-fill: white;" +
                         "-fx-font-size: 12px; -fx-padding: 8; -fx-cursor: hand;");
-                btnPiezaRecibida.setOnAction(e -> {
+                btnCancelarSol.setOnAction(e -> {
                     solicitudActiva = false;
+                    solicitudFueCancelada = true;
                     descripcionSolicitud = null;
                     btnSolicitud.setText("⚠ Solicitud pieza");
                     btnSolicitud.setStyle(STYLE_SOL_INACTIVA);
+                    chkReutilizado.setDisable(false);
                     Componente sel = cbSku.getValue();
-                    int stock = (sel != null && !prefijo.equals("otro")) ? sel.getStock() : Integer.MAX_VALUE;
-                    if (prefijo.equals("otro") || stock > 0) {
-                        cantidad = 1;
-                        actualizarContador();
-                        btnMas.setDisable(!prefijo.equals("otro") && cantidad >= stock);
-                        btnMenos.setDisable(false);
-                        chkReutilizado.setDisable(true);
-                    } else {
-                        chkReutilizado.setDisable(false);
-                        btnMas.setDisable(true);
-                        btnMenos.setDisable(true);
+                    if (sel != null && !prefijo.equals("otro")) {
+                        btnMas.setDisable(sel.getStock() <= 0);
+                        btnMenos.setDisable(cantidad == 0);
                     }
                     dialog.close();
                     notificar();
                 });
-                Button btnCancelarSol = new Button("Cancelar solicitud de pieza");
-                btnCancelarSol.setMaxWidth(Double.MAX_VALUE);
-                btnCancelarSol.setStyle("-fx-background-color: #E7E7E7; -fx-text-fill: #555555;" +
-                        "-fx-font-size: 12px; -fx-padding: 8; -fx-cursor: hand;");
-                btnCancelarSol.setOnAction(e -> {
-                    dialog.close();
-                    Platform.runLater(() -> ConfirmDialog.mostrar("Cancelar solicitud",
-                            "¿Seguro que quieres cancelar la solicitud de pieza para " + traducirTipo(prefijo) + "?",
-                            "Sí, cancelar", () -> {
-                                solicitudActiva = false;
-                                descripcionSolicitud = null;
-                                btnSolicitud.setText("⚠ Solicitud pieza");
-                                btnSolicitud.setStyle(STYLE_SOL_INACTIVA);
-                                chkReutilizado.setDisable(false);
-                                Componente sel = cbSku.getValue();
-                                btnMas.setDisable(!prefijo.equals("otro") &&
-                                        (sel == null || sel.getStock() <= 0));
-                                btnMenos.setDisable(true);
-                                notificar();
-                            }));
-                });
-                content.getChildren().addAll(btnPiezaRecibida, btnCancelarSol);
+                content.getChildren().add(btnCancelarSol);
             }
 
             dialog.getDialogPane().setContent(content);
@@ -1067,21 +1054,34 @@ public class FormularioReparacionController {
             root.setOpacity(0.4);
         }
 
-        void activarSolicitud(int idCom, String descripcion) {
+        // Estado      | Stock>0 | Resultado
+        // PENDIENTE   |  sí/no  | Bloqueado (admin aún no gestionó)
+        // GESTIONADA  |   sí    | Desbloqueado (pedido llegó a stock)
+        // GESTIONADA  |   no    | Bloqueado (pedido hecho, pieza en camino)
+        // RECHAZADA   |   —     | No se carga (filtrado en SQL)
+        void activarSolicitud(int idCom, String descripcion, boolean esPendiente) {
             for (Componente c : skus) {
                 if (c.getIdCom() == idCom) {
                     cbSku.setValue(c);
-                    descripcionSolicitud = descripcion;
-                    solicitudActiva = true;
-                    cantidad = 0;
-                    actualizarContador();
-                    chkReutilizado.setSelected(false);
-                    chkReutilizado.setDisable(true);
-                    btnMas.setDisable(true);
-                    btnMenos.setDisable(true);
-                    btnSolicitud.setText("⚠ Pieza pendiente");
-                    btnSolicitud.setStyle(STYLE_SOL_ACTIVA);
-                    notificar();
+                    if (!esPendiente && c.getStock() > 0) {
+                        // GESTIONADA y ya hay stock — pre-seleccionar sin bloquear
+                        solicitudActiva = false;
+                        descripcionSolicitud = null;
+                        notificar();
+                    } else {
+                        // PENDIENTE (sin importar stock) o GESTIONADA sin stock aún
+                        descripcionSolicitud = descripcion;
+                        solicitudActiva = true;
+                        cantidad = 0;
+                        actualizarContador();
+                        chkReutilizado.setSelected(false);
+                        chkReutilizado.setDisable(true);
+                        btnMas.setDisable(true);
+                        btnMenos.setDisable(true);
+                        btnSolicitud.setText("⚠ Pieza pendiente");
+                        btnSolicitud.setStyle(STYLE_SOL_ACTIVA);
+                        notificar();
+                    }
                     return;
                 }
             }
