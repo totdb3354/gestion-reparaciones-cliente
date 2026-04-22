@@ -360,3 +360,86 @@ Para el contexto real de un taller de reparaciones, estos números son muy altos
 | Caché de lectura | Complejidad desproporcionada para el tamaño del taller |
 
 Estas mejoras quedan documentadas aquí para una futura migración si el sistema escala significativamente.
+
+---
+
+## 7. Validaciones pendientes para el escenario post-migración (API REST + MariaDB)
+
+Al migrar a una arquitectura API REST con múltiples clientes simultáneos, el optimistic locking actual no cubre todos los vectores de concurrencia. Las siguientes validaciones deberán implementarse:
+
+---
+
+### 7.1 Stock negativo
+
+**Problema:** dos técnicos abren el formulario de reparación a la vez con el mismo componente con stock = 1. Ambos lo consumen. Sin protección en BD, el stock queda en -1.
+
+**Solución:**
+- Restricción `CHECK (STOCK >= 0)` en la tabla `Componente` de MariaDB.
+- El endpoint de la API que descuenta stock atrapa el error de constraint y devuelve **409 Conflict**.
+- El cliente JavaFX lo presenta al usuario: *"Stock insuficiente. Otro usuario agotó las existencias."*
+
+---
+
+### 7.2 Asignaciones duplicadas (mismo IMEI asignado dos veces)
+
+**Problema:** dos admins asignan técnico al mismo IMEI al mismo tiempo. Sin control, se crean dos reparaciones activas para el mismo dispositivo.
+
+**Solución (una de las dos, o combinadas):**
+- Restricción `UNIQUE (IMEI)` en la tabla de asignaciones activas — el segundo INSERT falla a nivel de BD.
+- O bien: el endpoint de asignación ejecuta `SELECT ... FOR UPDATE` + comprueba si ya existe una asignación activa para ese IMEI en la misma transacción, antes de insertar. Si existe, devuelve **409 Conflict**.
+
+---
+
+### 7.3 Recepción simultánea de pedidos
+
+**Problema:** dos admins marcan el mismo pedido como `RECIBIDO` al mismo tiempo. El stock se incrementa dos veces.
+
+**Problema adicional:** el `UPDATED_AT` ya cubre el pedido, pero el descuento/incremento de stock ocurre en una operación separada. Si el pedido y la actualización de stock no van en la misma transacción de BD, se puede romper la consistencia aunque el optimistic locking del pedido funcione.
+
+**Solución:**
+- El endpoint de recepción envuelve en una única transacción: `UPDATE Pedido SET estado = RECIBIDO ... AND UPDATED_AT = ?` + `UPDATE Componente SET STOCK = STOCK + cantidad`.
+- Si el pedido ya fue recibido (UPDATED_AT cambió), rollback completo → **409 Conflict**.
+
+---
+
+### 7.4 Vistas desactualizadas en el cliente
+
+**Problema:** con la migración a API REST, el polling actual (60s) sigue funcionando, pero el cliente podría tomar decisiones basadas en datos con hasta 60 segundos de antigüedad sobre tablas críticas (stock, asignaciones).
+
+**Solución:**
+- Reducir el intervalo de polling a **30 segundos** para `Componente` (stock) y `Reparacion` (asignaciones activas).
+- A largo plazo: implementar **Server-Sent Events (SSE)** desde la API REST para notificaciones push. El servidor emite un evento cuando cambia stock o una asignación, eliminando el coste del polling y la latencia de 30–60s.
+
+---
+
+### 7.5 Expiración de sesión JWT
+
+**Problema:** con JWT, la sesión tiene un tiempo de vida fijo (p.ej. 8 horas). Si expira mientras el usuario trabaja, las llamadas a la API devuelven **401 Unauthorized**. Sin manejo centralizado, cada controlador fallará silenciosamente o lanzará una excepción sin contexto.
+
+**Solución:**
+- Interceptor central en `ApiClient` (la clase que envuelve `HttpClient`): si cualquier respuesta es 401, ejecuta `Sesion.cerrar()` y navega a la pantalla de login mostrando: *"Tu sesión ha expirado. Inicia sesión de nuevo."*
+- Esto garantiza que ningún controlador tenga que gestionar el 401 individualmente.
+
+```java
+// ApiClient.java — interceptor de respuesta
+if (response.statusCode() == 401) {
+    Platform.runLater(() -> {
+        Sesion.cerrar();
+        MainController.navegarA("LoginView.fxml");
+        Alertas.info("Sesión expirada", "Tu sesión ha expirado. Inicia sesión de nuevo.");
+    });
+    return; // no procesar el resultado
+}
+```
+
+---
+
+### Resumen de validaciones pendientes
+
+| Validación | Mecanismo | Capa |
+|---|---|---|
+| Stock negativo | `CHECK (STOCK >= 0)` + 409 en API | BD + API |
+| Asignaciones duplicadas | `UNIQUE (IMEI)` o `SELECT FOR UPDATE` + 409 | BD + API |
+| Recepción simultánea de pedidos | Transacción única pedido + stock + 409 | API |
+| Vistas desactualizadas | Polling 30s + SSE a largo plazo | Cliente + API |
+| Expiración JWT | Interceptor central en `ApiClient` | Cliente |
