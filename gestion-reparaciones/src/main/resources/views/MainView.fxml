@@ -38,6 +38,14 @@
             <Label fx:id="lblAlertaStock" text="⚠" visible="false" managed="false"
                    style="-fx-text-fill: #F1E356; -fx-font-size: 16px; -fx-cursor: hand;"/>
 
+            <!-- Campana solicitudes (solo admin) -->
+            <StackPane fx:id="campanaPane" visible="false" managed="false" alignment="TOP_RIGHT">
+                <Button fx:id="btnCampana" text="🔔" styleClass="navbar-bell-btn" onAction="#abrirSolicitudes"/>
+                <Label fx:id="lblBadge" styleClass="navbar-badge"
+                       visible="false" managed="false"
+                       StackPane.alignment="TOP_RIGHT"/>
+            </StackPane>
+
             <!-- Espaciador -->
             <HBox HBox.hgrow="ALWAYS"/>
 

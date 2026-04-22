@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -206,7 +207,7 @@ public class ReparacionDAO {
     public List<FilaReparacion> getSolicitudesPorAsignacion(String idAsignacion) throws SQLException {
         List<FilaReparacion> lista = new ArrayList<>();
         String sql = """
-                SELECT rc.ID_COM, rc.DESCRIPCION_SOLICITUD
+                SELECT rc.ID_COM, rc.DESCRIPCION_SOLICITUD, rc.ESTADO_SOLICITUD
                 FROM Reparacion_componente rc
                 WHERE rc.ID_REP = ? AND rc.ES_SOLICITUD = 1
                 """;
@@ -217,7 +218,8 @@ public class ReparacionDAO {
             while (rs.next())
                 lista.add(new FilaReparacion(
                         rs.getInt("ID_COM"), 0, false, null, null,
-                        true, rs.getString("DESCRIPCION_SOLICITUD")));
+                        true, rs.getString("DESCRIPCION_SOLICITUD"),
+                        rs.getString("ESTADO_SOLICITUD")));
         }
         return lista;
     }
@@ -828,9 +830,19 @@ public class ReparacionDAO {
                 }
 
                 // ── Limpiar solicitudes previas de la A* (se reemplazan) ─────
+                // Antes de borrar, conservar los estados que el admin ya gestionó
+                Map<Integer, String> estadosPrevios = new java.util.HashMap<>();
                 if (idAsignacion != null) {
+                    String sqlLeerEstados =
+                            "SELECT ID_COM, ESTADO_SOLICITUD FROM Reparacion_componente WHERE ID_REP = ? AND ES_SOLICITUD = 1";
+                    try (PreparedStatement ps = con.prepareStatement(sqlLeerEstados)) {
+                        ps.setString(1, idAsignacion);
+                        ResultSet rs = ps.executeQuery();
+                        while (rs.next())
+                            estadosPrevios.put(rs.getInt("ID_COM"), rs.getString("ESTADO_SOLICITUD"));
+                    }
                     String sqlLimpiarSol =
-                            "DELETE FROM Reparacion_componente WHERE ID_REP = ? AND ES_SOLICITUD = 1";
+                            "DELETE FROM Reparacion_componente WHERE ID_REP = ?";
                     try (PreparedStatement ps = con.prepareStatement(sqlLimpiarSol)) {
                         ps.setString(1, idAsignacion);
                         ps.executeUpdate();
@@ -839,6 +851,8 @@ public class ReparacionDAO {
 
                 // ── Filas solicitud → Reparacion_componente sobre A* ──────────
                 if (idAsignacion != null) {
+                    String sqlRestaurarEstado =
+                            "UPDATE Reparacion_componente SET ESTADO_SOLICITUD = ? WHERE ID_REP = ? AND ID_COM = ? AND ES_SOLICITUD = 1";
                     for (FilaReparacion fila : filasSolicitud) {
                         try (PreparedStatement ps = con.prepareStatement(sqlCompSolicitud)) {
                             ps.setString(1, idAsignacion);
@@ -848,6 +862,16 @@ public class ReparacionDAO {
                             else
                                 ps.setNull(3, Types.LONGVARCHAR);
                             ps.executeUpdate();
+                        }
+                        // Restaurar estado previo si el admin ya lo había gestionado
+                        String estadoPrevio = estadosPrevios.get(fila.getIdCom());
+                        if (estadoPrevio != null && !"PENDIENTE".equals(estadoPrevio)) {
+                            try (PreparedStatement ps = con.prepareStatement(sqlRestaurarEstado)) {
+                                ps.setString(1, estadoPrevio);
+                                ps.setString(2, idAsignacion);
+                                ps.setInt(3, fila.getIdCom());
+                                ps.executeUpdate();
+                            }
                         }
                     }
                 }

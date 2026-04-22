@@ -2,7 +2,9 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.Sesion;
 import com.reparaciones.dao.ComponenteDAO;
+import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.models.Componente;
+import com.reparaciones.models.SolicitudResumen;
 import com.reparaciones.utils.Colores;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -15,6 +17,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
@@ -29,6 +33,7 @@ import javafx.stage.StageStyle;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,7 +64,10 @@ public class MainController {
     @FXML private Button    btnUsuario;
     @FXML private Label     lblUsuario;
     @FXML private Label     lblAlertaStock;
+    @FXML private StackPane campanaPane;
+    @FXML private Label     lblBadge;
 
+    private final ReparacionComponenteDAO rcDAO = new ReparacionComponenteDAO();
     private ContextMenu menuUsuario;
 
     private List<Componente> alertasCriticas = List.of();
@@ -82,6 +90,9 @@ public class MainController {
         mostrarReparaciones();
         if (Sesion.esAdmin()) {
             verificarStockAlertas();
+            campanaPane.setVisible(true);
+            campanaPane.setManaged(true);
+            actualizarBadge();
         }
         // Recargar al recuperar el foco de la ventana principal
         contenedor.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -89,11 +100,201 @@ public class MainController {
             newScene.windowProperty().addListener((obs2, oldWin, win) -> {
                 if (win == null) return;
                 win.focusedProperty().addListener((obs3, wasFocused, isFocused) -> {
-                    if (isFocused && controladorActivo != null)
+                    if (isFocused && controladorActivo != null) {
                         controladorActivo.recargar();
+                        if (Sesion.esAdmin()) actualizarBadge();
+                    }
                 });
             });
         });
+    }
+
+    void actualizarBadge() {
+        try {
+            int pendientes = rcDAO.contarSolicitudesPendientes();
+            if (pendientes > 0) {
+                lblBadge.setText(String.valueOf(pendientes));
+                lblBadge.setVisible(true);
+                lblBadge.setManaged(true);
+            } else {
+                lblBadge.setVisible(false);
+                lblBadge.setManaged(false);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void abrirSolicitudes() {
+        Stage ventana = new Stage();
+        ventana.initModality(Modality.APPLICATION_MODAL);
+        ventana.initStyle(StageStyle.UNDECORATED);
+        ventana.setResizable(false);
+
+        // ── Cabecera ──────────────────────────────────────────────────────────
+        Label lblTitulo = new Label("Solicitudes de pieza");
+        lblTitulo.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label lblX = new Label("✕");
+        lblX.setStyle("-fx-font-size: 14px; -fx-cursor: hand; -fx-text-fill: #586376;");
+        lblX.setOnMouseClicked(e -> ventana.close());
+        HBox spacerH = new HBox(); HBox.setHgrow(spacerH, Priority.ALWAYS);
+        HBox cabecera = new HBox(8, lblTitulo, spacerH, lblX);
+        cabecera.setAlignment(Pos.CENTER_LEFT);
+        cabecera.setPadding(new Insets(0, 0, 12, 0));
+
+        // ── Listas de solicitudes ─────────────────────────────────────────────
+        VBox listaPendientes  = new VBox(6);
+        VBox listaRechazadas  = new VBox(6);
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+        Runnable recargar = () -> {
+            listaPendientes.getChildren().clear();
+            listaRechazadas.getChildren().clear();
+            try {
+                List<SolicitudResumen> pendientes  = rcDAO.getSolicitudes("PENDIENTE");
+                List<SolicitudResumen> rechazadas  = rcDAO.getSolicitudes("RECHAZADA");
+
+                for (SolicitudResumen s : pendientes)
+                    listaPendientes.getChildren().add(tarjetaSolicitud(s, ventana, fmt));
+                for (SolicitudResumen s : rechazadas)
+                    listaRechazadas.getChildren().add(tarjetaRechazada(s, ventana, fmt));
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        };
+
+        // guardamos la referencia para poder llamarla desde los botones
+        final Runnable[] recargarRef = { null };
+        recargarRef[0] = () -> { recargar.run(); actualizarBadge(); };
+        recargarRef[0].run();
+        ventana.setUserData(recargarRef[0]);
+
+        // ── Sección pendientes ────────────────────────────────────────────────
+        Label lblPend = new Label("Pendientes");
+        lblPend.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #586376;");
+
+        // ── Sección rechazadas ────────────────────────────────────────────────
+        Label lblRech = new Label("Rechazadas");
+        lblRech.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #9AA0AA;");
+
+        ScrollPane scroll = new ScrollPane();
+        VBox contenido = new VBox(10, lblPend, listaPendientes, lblRech, listaRechazadas);
+        contenido.setPadding(new Insets(4, 4, 4, 4));
+        scroll.setContent(contenido);
+        scroll.setFitToWidth(true);
+        scroll.setPrefHeight(400);
+        scroll.setStyle("-fx-background: #DDE1E7; -fx-background-color: #DDE1E7;");
+
+        // ── Botón pedir piezas ────────────────────────────────────────────────
+        Button btnPedir = new Button("Pedir piezas");
+        btnPedir.setMaxWidth(Double.MAX_VALUE);
+        btnPedir.getStyleClass().add("btn-primary");
+        btnPedir.setOnAction(e -> {
+            try {
+                List<SolicitudResumen> pendientes = rcDAO.getSolicitudes("PENDIENTE");
+                if (pendientes.isEmpty()) return;
+                // paso 7: pre-rellenar FormularioCompra
+                FormularioCompraController.abrirConSolicitudes(pendientes, () -> {
+                    for (SolicitudResumen s : pendientes) {
+                        try { rcDAO.actualizarEstadoSolicitud(s.getIdRc(), "GESTIONADA"); }
+                        catch (SQLException ex) { ex.printStackTrace(); }
+                    }
+                    recargarRef[0].run();
+                });
+                ventana.close();
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        });
+
+        VBox raiz = new VBox(12, cabecera, scroll, btnPedir);
+        raiz.setPadding(new Insets(20));
+        raiz.setPrefWidth(480);
+        raiz.setStyle("-fx-background-color: #DDE1E7; " +
+                      "-fx-border-color: #C4C9D4; -fx-border-width: 1;");
+
+        final double[] drag = new double[2];
+        raiz.setOnMousePressed(ev  -> { drag[0] = ev.getSceneX(); drag[1] = ev.getSceneY(); });
+        raiz.setOnMouseDragged(ev  -> {
+            ventana.setX(ev.getScreenX() - drag[0]);
+            ventana.setY(ev.getScreenY() - drag[1]);
+        });
+
+        Scene scene = new Scene(raiz);
+        scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        ventana.setScene(scene);
+        ventana.showAndWait();
+        actualizarBadge();
+    }
+
+    private HBox tarjetaSolicitud(SolicitudResumen s, Stage ventana, DateTimeFormatter fmt) {
+        Label lblComp   = new Label(s.getTipoComponente());
+        lblComp.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+        Label lblInfo   = new Label(s.getNombreTecnico() + " · " + s.getIdRep());
+        lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
+        Label lblFecha  = new Label(s.getFechaSolicitud().format(fmt));
+        lblFecha.setStyle("-fx-font-size: 10px; -fx-text-fill: #9AA0AA;");
+        String desc = s.getDescripcion() != null ? s.getDescripcion() : "";
+        Label lblDesc   = new Label(desc);
+        lblDesc.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
+        lblDesc.setWrapText(true);
+
+        VBox textos = new VBox(2, lblComp, lblInfo, lblDesc, lblFecha);
+        HBox.setHgrow(textos, Priority.ALWAYS);
+
+        Button btnRechazar = new Button("Rechazar");
+        btnRechazar.setStyle("-fx-background-color: #F5A0A0; -fx-text-fill: #7A2020; " +
+                             "-fx-font-size: 11px; -fx-background-radius: 4; -fx-cursor: hand;");
+        btnRechazar.setOnAction(e -> {
+            try {
+                rcDAO.actualizarEstadoSolicitud(s.getIdRc(), "RECHAZADA");
+                actualizarBadge();
+                // recargar panel
+                ((Runnable) ventana.getUserData()).run();
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        });
+
+        HBox card = new HBox(10, textos, btnRechazar);
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setPadding(new Insets(10));
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 6;");
+        return card;
+    }
+
+    private HBox tarjetaRechazada(SolicitudResumen s, Stage ventana, DateTimeFormatter fmt) {
+        Label lblComp  = new Label(s.getTipoComponente());
+        lblComp.setStyle("-fx-font-size: 12px; -fx-text-fill: #9AA0AA;");
+        Label lblInfo  = new Label(s.getNombreTecnico() + " · " + s.getIdRep());
+        lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #B0B5BF;");
+
+        VBox textos = new VBox(2, lblComp, lblInfo);
+        HBox.setHgrow(textos, Priority.ALWAYS);
+
+        Button btnRecuperar = new Button("Recuperar");
+        btnRecuperar.setStyle("-fx-background-color: #C8D8C8; -fx-text-fill: #2C4A2C; " +
+                              "-fx-font-size: 11px; -fx-background-radius: 4; -fx-cursor: hand;");
+        btnRecuperar.setOnAction(e -> {
+            try {
+                rcDAO.actualizarEstadoSolicitud(s.getIdRc(), "PENDIENTE");
+                actualizarBadge();
+                ((Runnable) ventana.getUserData()).run();
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        });
+
+        ImageView ivBorrar = new ImageView(
+                new Image(getClass().getResourceAsStream("/images/borrar.png")));
+        ivBorrar.setFitWidth(18); ivBorrar.setFitHeight(18); ivBorrar.setPreserveRatio(true);
+        ivBorrar.setStyle("-fx-cursor: hand; -fx-opacity: 0.5;");
+        ivBorrar.setOnMouseClicked(e -> {
+            try {
+                rcDAO.limpiarSolicitud(s.getIdRc());
+                ((Runnable) ventana.getUserData()).run();
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        });
+
+        HBox card = new HBox(10, textos, btnRecuperar, ivBorrar);
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.setPadding(new Insets(8));
+        card.setStyle("-fx-background-color: #F0F1F3; -fx-background-radius: 6;");
+        return card;
     }
 
     /**
