@@ -968,10 +968,12 @@ public class FormularioReparacionController {
             return solicitudActiva;
         }
 
+        /** @return {@code true} si el técnico canceló una solicitud existente en esta sesión */
         boolean isSolicitudCancelada() {
             return solicitudFueCancelada;
         }
 
+        /** @return {@code true} si el técnico marcó una nueva solicitud en esta sesión (no cargada de BD) */
         boolean isSolicitudNueva() {
             return solicitudNuevaEnEstaSesion;
         }

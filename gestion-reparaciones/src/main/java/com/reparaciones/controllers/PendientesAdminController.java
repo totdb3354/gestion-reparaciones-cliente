@@ -540,10 +540,18 @@ public class PendientesAdminController {
         }
     }
 
+    /** @return los ítems actualmente visibles en la tabla (respetando filtros activos) */
     public java.util.List<ReparacionResumen> getItemsVisibles() {
         return tablaPendientes.getItems();
     }
 
+    /**
+     * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
+     *
+     * @param rep datos de la fila
+     * @param col columna seleccionada
+     * @return texto de la celda, o {@code null} si la columna no es copiable
+     */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
         if (col == cId)    return rep.getIdRep();
         if (col == cImei)  return rep.getImei();
