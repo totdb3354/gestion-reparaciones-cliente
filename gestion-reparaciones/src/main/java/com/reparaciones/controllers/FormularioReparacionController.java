@@ -708,6 +708,10 @@ public class FormularioReparacionController {
             btnSolicitud.setMinHeight(27);
             btnSolicitud.setMaxHeight(27);
             btnSolicitud.setOnAction(e -> abrirSolicitud());
+            if (prefijo.equals("otro")) {
+                btnSolicitud.setVisible(false);
+                btnSolicitud.setManaged(false);
+            }
 
             mainRow = new HBox(wrapContador, lblNombre, cbSku, lblStock, chkReutilizado, wrapObs, btnSolicitud);
             mainRow.setAlignment(Pos.CENTER_LEFT);
