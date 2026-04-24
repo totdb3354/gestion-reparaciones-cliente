@@ -7,8 +7,21 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DAO para la tabla {@code Reparacion_componente}.
+ * <p>Gestiona la relación entre reparaciones y los componentes utilizados en ellas,
+ * incluyendo el ciclo de vida de las solicitudes de reposición de stock
+ * ({@code ES_SOLICITUD} / {@code ESTADO_SOLICITUD}).</p>
+ */
 public class ReparacionComponenteDAO {
 
+    /**
+     * Devuelve todos los componentes registrados para una reparación.
+     *
+     * @param idRep identificador de la reparación ({@code R*} o {@code A*})
+     * @return lista de componentes asociados, vacía si no hay ninguno
+     * @throws SQLException si falla la consulta
+     */
     public List<ReparacionComponente> getByReparacion(String idRep) throws SQLException {
         List<ReparacionComponente> lista = new ArrayList<>();
         String sql = "SELECT * FROM Reparacion_componente WHERE ID_REP = ?";
@@ -23,6 +36,14 @@ public class ReparacionComponenteDAO {
         return lista;
     }
 
+    /**
+     * Inserta un componente en la reparación y descuenta stock si corresponde.
+     * <p>La operación es atómica: si el descuento de stock falla, el INSERT se revierte.</p>
+     *
+     * @param rc      datos del componente a insertar
+     * @param cantidad unidades a descontar del stock (ignorado si {@code rc.isEsReutilizado()})
+     * @throws SQLException si falla la transacción
+     */
     public void insertar(ReparacionComponente rc, int cantidad) throws SQLException {
         String sqlInsert =
             "INSERT INTO Reparacion_componente " +
@@ -60,6 +81,13 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Elimina un componente concreto de una reparación.
+     *
+     * @param idRep identificador de la reparación
+     * @param idCom identificador del componente
+     * @throws SQLException si falla el DELETE
+     */
     public void eliminar(String idRep, int idCom) throws SQLException {
         String sql = "DELETE FROM Reparacion_componente WHERE ID_REP = ? AND ID_COM = ?";
         try (Connection con = Conexion.getConexion();
@@ -70,6 +98,13 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Marca todos los componentes de una reparación como incidencia abierta.
+     *
+     * @param idRep     identificador de la reparación
+     * @param comentario descripción de la incidencia
+     * @throws SQLException si falla el UPDATE
+     */
     public void marcarIncidencia(String idRep, String comentario) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ES_INCIDENCIA = TRUE, INCIDENCIA = ? WHERE ID_REP = ?";
         try (Connection con = Conexion.getConexion();
@@ -80,6 +115,12 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Cancela la incidencia abierta de una reparación (solo las no resueltas).
+     *
+     * @param idRep identificador de la reparación
+     * @throws SQLException si falla el UPDATE
+     */
     public void borrarIncidencia(String idRep) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ES_INCIDENCIA = FALSE, INCIDENCIA = NULL " +
                      "WHERE ID_REP = ? AND ES_RESUELTO = FALSE";
@@ -92,6 +133,13 @@ public class ReparacionComponenteDAO {
 
     // ── Solicitudes ───────────────────────────────────────────────────────────
 
+    /**
+     * Cuenta las solicitudes de pieza con estado {@code PENDIENTE}.
+     * <p>Usado para actualizar el badge de notificaciones en la barra de navegación.</p>
+     *
+     * @return número de solicitudes pendientes
+     * @throws SQLException si falla la consulta
+     */
     public int contarSolicitudesPendientes() throws SQLException {
         String sql = "SELECT COUNT(*) FROM Reparacion_componente " +
                      "WHERE ES_SOLICITUD = TRUE AND ESTADO_SOLICITUD = 'PENDIENTE'";
@@ -102,6 +150,14 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Devuelve las solicitudes de pieza filtradas por estado.
+     *
+     * @param estado {@code "PENDIENTE"}, {@code "GESTIONADA"}, {@code "RECHAZADA"},
+     *               o {@code null} para todas
+     * @return lista de resúmenes ordenada por fecha descendente
+     * @throws SQLException si falla la consulta
+     */
     public List<SolicitudResumen> getSolicitudes(String estado) throws SQLException {
         List<SolicitudResumen> lista = new ArrayList<>();
         String sql =
@@ -136,6 +192,13 @@ public class ReparacionComponenteDAO {
         return lista;
     }
 
+    /**
+     * Actualiza el estado de una solicitud de pieza.
+     *
+     * @param idRc   clave primaria del registro en {@code Reparacion_componente}
+     * @param estado nuevo estado: {@code "PENDIENTE"}, {@code "GESTIONADA"} o {@code "RECHAZADA"}
+     * @throws SQLException si falla el UPDATE
+     */
     public void actualizarEstadoSolicitud(int idRc, String estado) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ESTADO_SOLICITUD = ? WHERE ID_RC = ?";
         try (Connection con = Conexion.getConexion();
@@ -146,6 +209,13 @@ public class ReparacionComponenteDAO {
         }
     }
 
+    /**
+     * Desactiva una solicitud rechazada ({@code ES_SOLICITUD = FALSE}), eliminándola
+     * visualmente del panel de notificaciones sin borrar el registro histórico.
+     *
+     * @param idRc clave primaria del registro en {@code Reparacion_componente}
+     * @throws SQLException si falla el UPDATE
+     */
     public void limpiarSolicitud(int idRc) throws SQLException {
         String sql = "UPDATE Reparacion_componente SET ES_SOLICITUD = FALSE WHERE ID_RC = ?";
         try (Connection con = Conexion.getConexion();

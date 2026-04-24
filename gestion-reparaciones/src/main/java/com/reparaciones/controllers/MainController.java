@@ -64,8 +64,13 @@ public class MainController {
     @FXML private Button    btnUsuario;
     @FXML private Label     lblUsuario;
     @FXML private Label     lblAlertaStock;
-    @FXML private StackPane campanaPane;
-    @FXML private Label     lblBadge;
+    @FXML private StackPane  campanaPane;
+    @FXML private ImageView  ivCampana;
+    @FXML private StackPane  badgePane;
+    @FXML private Label      lblBadge;
+
+    private final Image imgCampanaOn  = new Image(getClass().getResourceAsStream("/images/NotfON.png"));
+    private final Image imgCampanaOff = new Image(getClass().getResourceAsStream("/images/NotifOFF.png"));
 
     private final ReparacionComponenteDAO rcDAO = new ReparacionComponenteDAO();
     private ContextMenu menuUsuario;
@@ -90,6 +95,7 @@ public class MainController {
         mostrarReparaciones();
         if (Sesion.esAdmin()) {
             verificarStockAlertas();
+            ivCampana.setImage(imgCampanaOff);
             campanaPane.setVisible(true);
             campanaPane.setManaged(true);
             actualizarBadge();
@@ -109,22 +115,34 @@ public class MainController {
         });
     }
 
+    /**
+     * Actualiza el badge de notificaciones y la imagen de la campana.
+     * <p>Cambia a {@code NotfON.png} y muestra el conteo si hay solicitudes
+     * {@code PENDIENTE}; vuelve a {@code NotifOFF.png} y oculta el badge si no.</p>
+     */
     void actualizarBadge() {
         try {
             int pendientes = rcDAO.contarSolicitudesPendientes();
             if (pendientes > 0) {
+                ivCampana.setImage(imgCampanaOn);
                 lblBadge.setText(String.valueOf(pendientes));
-                lblBadge.setVisible(true);
-                lblBadge.setManaged(true);
+                badgePane.setVisible(true);
+                badgePane.setManaged(true);
             } else {
-                lblBadge.setVisible(false);
-                lblBadge.setManaged(false);
+                ivCampana.setImage(imgCampanaOff);
+                badgePane.setVisible(false);
+                badgePane.setManaged(false);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Abre el panel flotante de solicitudes de pieza (solo admin).
+     * <p>Muestra las solicitudes {@code PENDIENTE} y {@code RECHAZADA} con opciones
+     * para gestionar, rechazar, recuperar o limpiar cada una.</p>
+     */
     @FXML
     private void abrirSolicitudes() {
         Stage ventana = new Stage();
@@ -225,6 +243,14 @@ public class MainController {
         actualizarBadge();
     }
 
+    /**
+     * Construye la tarjeta visual de una solicitud pendiente con botón de rechazo.
+     *
+     * @param s       datos de la solicitud
+     * @param ventana ventana padre (para acceder al callback de recarga via {@code getUserData})
+     * @param fmt     formateador de fecha
+     * @return HBox listo para insertar en el panel de solicitudes
+     */
     private HBox tarjetaSolicitud(SolicitudResumen s, Stage ventana, DateTimeFormatter fmt) {
         Label lblComp   = new Label(s.getTipoComponente());
         lblComp.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #2C3B54;");
@@ -259,6 +285,16 @@ public class MainController {
         return card;
     }
 
+    /**
+     * Construye la tarjeta visual de una solicitud rechazada con opciones de recuperar y limpiar.
+     * <p>Limpiar pone {@code ES_SOLICITUD = FALSE}, eliminando la solicitud del panel
+     * sin borrar el registro histórico en BD.</p>
+     *
+     * @param s       datos de la solicitud rechazada
+     * @param ventana ventana padre
+     * @param fmt     formateador de fecha
+     * @return HBox listo para insertar en el panel de solicitudes
+     */
     private HBox tarjetaRechazada(SolicitudResumen s, Stage ventana, DateTimeFormatter fmt) {
         Label lblComp  = new Label(s.getTipoComponente());
         lblComp.setStyle("-fx-font-size: 12px; -fx-text-fill: #9AA0AA;");

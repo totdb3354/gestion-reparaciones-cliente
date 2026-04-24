@@ -321,7 +321,8 @@ public class FormularioReparacionController {
                     && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
             boolean solicitudesPendientes = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitud);
-            habilitado = (activa && !solicitudesPendientes) || solicitudCancelada;
+            boolean hayNuevasSolicitudes = filasUI.stream().anyMatch(FilaUI::isSolicitudNueva);
+            habilitado = (activa && !solicitudesPendientes) || solicitudCancelada || hayNuevasSolicitudes;
         }
         zonaGuardar.setVisible(habilitado);
         zonaGuardar.setManaged(habilitado);
@@ -559,6 +560,7 @@ public class FormularioReparacionController {
         private String observacion = null;
         private boolean solicitudActiva = false;
         private boolean solicitudFueCancelada = false;
+        private boolean solicitudNuevaEnEstaSesion = false;
         private String descripcionSolicitud = null;
         private Runnable onCambio;
 
@@ -708,6 +710,10 @@ public class FormularioReparacionController {
             btnSolicitud.setMinHeight(27);
             btnSolicitud.setMaxHeight(27);
             btnSolicitud.setOnAction(e -> abrirSolicitud());
+            if (prefijo.equals("otro")) {
+                btnSolicitud.setVisible(false);
+                btnSolicitud.setManaged(false);
+            }
 
             mainRow = new HBox(wrapContador, lblNombre, cbSku, lblStock, chkReutilizado, wrapObs, btnSolicitud);
             mainRow.setAlignment(Pos.CENTER_LEFT);
@@ -962,8 +968,14 @@ public class FormularioReparacionController {
             return solicitudActiva;
         }
 
+        /** @return {@code true} si el técnico canceló una solicitud existente en esta sesión */
         boolean isSolicitudCancelada() {
             return solicitudFueCancelada;
+        }
+
+        /** @return {@code true} si el técnico marcó una nueva solicitud en esta sesión (no cargada de BD) */
+        boolean isSolicitudNueva() {
+            return solicitudNuevaEnEstaSesion;
         }
 
         String getDescripcionSolicitud() {
@@ -1020,6 +1032,7 @@ public class FormularioReparacionController {
                 String trimmed = ta.getText().trim();
                 descripcionSolicitud = trimmed.isEmpty() ? null : trimmed;
                 solicitudActiva = true;
+                solicitudNuevaEnEstaSesion = true;
                 cantidad = 0;
                 actualizarContador();
                 chkReutilizado.setSelected(false);
