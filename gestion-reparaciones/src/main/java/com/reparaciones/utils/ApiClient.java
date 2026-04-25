@@ -146,6 +146,18 @@ public class ApiClient {
     }
 
     /**
+     * GET que espera una respuesta escalar {@code {"value": double}}.
+     *
+     * @param path ruta relativa a la base URL
+     * @return valor decimal del campo {@code value}, o {@code 0.0} si la respuesta es nula
+     * @throws SQLException si hay error de red o el servidor devuelve un código de error
+     */
+    public static double getDouble(String path) throws SQLException {
+        JsonObject obj = get(path, JsonObject.class);
+        return obj == null ? 0.0 : obj.get("value").getAsDouble();
+    }
+
+    /**
      * GET que espera una respuesta escalar {@code {"value": "..."}} o {@code {"value": null}}.
      *
      * @param path ruta relativa a la base URL

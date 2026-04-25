@@ -1,12 +1,14 @@
 package com.reparaciones.dao;
 
 import com.reparaciones.models.Telefono;
-import java.sql.*;
-import java.util.ArrayList;
+import com.reparaciones.utils.ApiClient;
+
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Acceso a datos de la tabla {@code Telefono}.
+ * Acceso a datos de la tabla {@code Telefono} vía API REST.
  * <p>Un teléfono se registra automáticamente la primera vez que se le crea
  * una reparación y se elimina si queda sin ninguna reparación asociada.</p>
  *
@@ -15,53 +17,34 @@ import java.util.List;
 public class TelefonoDAO {
 
     /**
-     * Devuelve todos los teléfonos registrados en BD.
+     * Devuelve todos los teléfonos registrados.
      *
      * @return lista de todos los teléfonos
-     * @throws SQLException si falla la consulta
+     * @throws SQLException si falla la llamada al servidor
      */
     public List<Telefono> getAll() throws SQLException {
-        List<Telefono> lista = new ArrayList<>();
-        String sql = "SELECT * FROM Telefono";
-        try (Connection con = Conexion.getConexion();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) lista.add(new Telefono(rs.getString("IMEI")));
-        }
-        return lista;
+        return ApiClient.getList("/api/telefonos", Telefono.class);
     }
 
     /**
-     * Comprueba si un IMEI ya existe en BD.
+     * Comprueba si un IMEI ya existe.
      *
      * @param imei IMEI a buscar
      * @return {@code true} si el IMEI existe
-     * @throws SQLException si falla la consulta
+     * @throws SQLException si falla la llamada al servidor
      */
     public boolean exists(String imei) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM Telefono WHERE IMEI = ?";
-        try (Connection con = Conexion.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, imei);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1) > 0;
-        }
-        return false;
+        return ApiClient.getBoolean("/api/telefonos/" + imei + "/exists");
     }
 
     /**
-     * Inserta un nuevo teléfono en BD.
+     * Inserta un nuevo teléfono.
      *
      * @param imei IMEI del dispositivo
-     * @throws SQLException si falla el insert (p. ej. IMEI duplicado)
+     * @throws SQLException si falla la llamada al servidor
      */
     public void insertar(String imei) throws SQLException {
-        String sql = "INSERT INTO Telefono (IMEI) VALUES (?)";
-        try (Connection con = Conexion.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, imei);
-            ps.executeUpdate();
-        }
+        ApiClient.post("/api/telefonos", Map.of("imei", imei));
     }
 
     /**
@@ -69,14 +52,9 @@ public class TelefonoDAO {
      * <p>Solo llamar cuando no quedan reparaciones asociadas a este IMEI.</p>
      *
      * @param imei IMEI del dispositivo a eliminar
-     * @throws SQLException si falla el delete
+     * @throws SQLException si falla la llamada al servidor
      */
     public void eliminar(String imei) throws SQLException {
-        String sql = "DELETE FROM Telefono WHERE IMEI = ?";
-        try (Connection con = Conexion.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, imei);
-            ps.executeUpdate();
-        }
+        ApiClient.delete("/api/telefonos/" + imei);
     }
 }
