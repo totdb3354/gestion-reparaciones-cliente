@@ -431,3 +431,8 @@
 
 /* FormularioCompra — celda editable seleccionada */
 /* (estilos inline en FormularioCompraController via ESTILO_EDITABLE) */
+
+/* ── 12. Preview de stock (FormularioReparacion, modo edición) ──────────────── */
+/* stock-preview-down : #C94040  — stock baja tras guardar  */
+/* stock-preview-up   : #4CAF50  — stock sube tras guardar  */
+/* stock-preview-same : #586376  — sin cambio               */

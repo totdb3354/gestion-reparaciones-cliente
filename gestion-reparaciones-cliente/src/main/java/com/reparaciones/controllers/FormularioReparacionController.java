@@ -169,12 +169,12 @@ public class FormularioReparacionController {
             // para que configurarFiltroModelo pueda detectar el modelo
             for (FilaUI fila : filasUI)
                 if (fila.getSkus().stream().anyMatch(c -> c.getIdCom() == d.idCom))
-                    fila.activarModoEdicion(d.idCom, d.esReutilizado, d.observacion);
+                    fila.activarModoEdicion(d.idCom, d.esReutilizado, d.observacion, d.cantidad);
             configurarFiltroModelo();
             // Segunda pasada: re-aplicar tras el reset del filtro de modelo
             for (FilaUI fila : filasUI) {
                 if (fila.getSkus().stream().anyMatch(c -> c.getIdCom() == d.idCom))
-                    fila.activarModoEdicion(d.idCom, d.esReutilizado, d.observacion);
+                    fila.activarModoEdicion(d.idCom, d.esReutilizado, d.observacion, d.cantidad);
                 else if (!fila.isModoEdicion() && fila.getSkus().stream()
                         .anyMatch(c -> yaReparados.contains(c.getIdCom())))
                     fila.deshabilitarYaReparado();
@@ -310,11 +310,15 @@ public class FormularioReparacionController {
     private void actualizarBoton() {
         boolean habilitado;
         if (modoEdicion) {
+            boolean filaEditadaInvalida = filasUI.stream()
+                    .filter(FilaUI::isModoEdicion)
+                    .anyMatch(f -> f.hayCambio() && !f.tieneUso());
             boolean cambioEnEdicion = filasUI.stream()
-                    .filter(FilaUI::isModoEdicion).anyMatch(FilaUI::hayCambio);
+                    .filter(FilaUI::isModoEdicion)
+                    .anyMatch(f -> f.hayCambio() && f.tieneUso());
             boolean filasNuevas = filasUI.stream()
                     .filter(f -> !f.isModoEdicion()).anyMatch(FilaUI::isActiva);
-            habilitado = cambioEnEdicion || filasNuevas;
+            habilitado = !filaEditadaInvalida && (cambioEnEdicion || filasNuevas);
         } else {
             boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva);
             boolean solicitudCancelada = tieneSolicitudesIniciales
@@ -428,7 +432,6 @@ public class FormularioReparacionController {
                             fila.getIdComSeleccionado(),
                             fila.isReutilizado(),
                             fila.getObservacion(),
-                            fila.isPiezaViejaRota(),
                             fila.getCantidad());
                     break;
                 }
@@ -588,9 +591,9 @@ public class FormularioReparacionController {
         // ── Edición ───────────────────────────────────────────────────────────
         private boolean modoEdicion = false;
         private int idComOriginal = -1;
+        private int cantidadOriginal = 0;
         private boolean esReutilizadoOriginal = false;
         private String observacionOriginal = null;
-        private CheckBox chkPiezaViejaRota = null;
 
         FilaUI(String prefijo, List<Componente> skus, Image imgBorrar) {
             this.prefijo = prefijo;
@@ -679,16 +682,20 @@ public class FormularioReparacionController {
                 if (n != null) {
                     lblStock.setText(prefijo.equals("otro") ? "—" : String.valueOf(n.getStock()));
                     if (!prefijo.equals("otro")) {
-                        if (cantidad > n.getStock()) {
+                        // En edición con mismo componente, el stock visible ya no incluye
+                        // las piezas de esta reparación — no resetear cantidad por eso
+                        boolean mismoComponenteEnEdicion = modoEdicion && n.getIdCom() == idComOriginal;
+                        if (!mismoComponenteEnEdicion && cantidad > n.getStock()) {
                             cantidad = 0;
                             actualizarContador();
                             if (!chkReutilizado.isSelected())
                                 chkReutilizado.setDisable(false);
                         }
                         if (!chkReutilizado.isSelected()) {
-                            btnMas.setDisable(cantidad >= n.getStock());
+                            btnMas.setDisable(!mismoComponenteEnEdicion && cantidad >= n.getStock());
                         }
                     }
+                    if (modoEdicion) actualizarStockPreview();
                     notificar();
                 }
             });
@@ -781,6 +788,7 @@ public class FormularioReparacionController {
                 boolean marcado = chkReutilizado.isSelected();
                 btnMas.setDisable(marcado);
                 btnMenos.setDisable(marcado);
+                actualizarContador();
                 notificar();
             });
 
@@ -930,7 +938,35 @@ public class FormularioReparacionController {
         private void actualizarContador() {
             lblContador.setText(String.valueOf(cantidad));
             btnMenos.setDisable(cantidad == 0);
-            lblContador.setStyle("-fx-text-fill: " + (cantidad > 0 ? "#000000" : "#A9A9A9") + ";");
+            String color;
+            if (modoEdicion && cantidad == 0 && !chkReutilizado.isSelected())
+                color = "#C94040";
+            else
+                color = cantidad > 0 ? "#000000" : "#A9A9A9";
+            lblContador.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: " + (modoEdicion && cantidad == 0 && !chkReutilizado.isSelected() ? "bold" : "normal") + ";");
+            if (modoEdicion) actualizarStockPreview();
+        }
+
+        private void actualizarStockPreview() {
+            if (prefijo.equals("otro")) return;
+            Componente sel = cbSku.getValue();
+            if (sel == null) return;
+
+            int stockActual = sel.getStock();
+            boolean mismoComponente = sel.getIdCom() == idComOriginal;
+            boolean reutilizadoNuevo = chkReutilizado.isSelected();
+
+            int devuelto = (mismoComponente && !esReutilizadoOriginal) ? cantidadOriginal : 0;
+            int descontado = reutilizadoNuevo ? 0 : cantidad;
+            int preview = stockActual + devuelto - descontado;
+
+            String color;
+            if      (preview < stockActual) color = "#C94040";
+            else if (preview > stockActual) color = "#4CAF50";
+            else                            color = "#586376";
+
+            lblStock.setText(stockActual + " → " + preview);
+            lblStock.setStyle("-fx-font-size: 12px; -fx-text-fill: " + color + "; -fx-font-weight: bold;");
         }
 
         private void notificar() {
@@ -955,6 +991,10 @@ public class FormularioReparacionController {
 
         boolean isActiva() {
             return cantidad > 0 || chkReutilizado.isSelected() || solicitudNuevaEnEstaSesion;
+        }
+
+        boolean tieneUso() {
+            return cantidad > 0 || chkReutilizado.isSelected();
         }
 
         int getIdComSeleccionado() {
@@ -1129,9 +1169,10 @@ public class FormularioReparacionController {
 
         // ── Modo edición ──────────────────────────────────────────────────────
 
-        void activarModoEdicion(int idCom, boolean esReutilizado, String observacion) {
+        void activarModoEdicion(int idCom, boolean esReutilizado, String observacion, int cantOrig) {
             this.modoEdicion = true;
             this.idComOriginal = idCom;
+            this.cantidadOriginal = cantOrig;
             this.esReutilizadoOriginal = esReutilizado;
             this.observacionOriginal = observacion;
 
@@ -1139,13 +1180,18 @@ public class FormularioReparacionController {
             skus.stream().filter(c -> c.getIdCom() == idCom).findFirst()
                     .ifPresent(cbSku::setValue);
 
-            // Contador empieza en 0 — el usuario confirma cuántas piezas nuevas instala
-            cantidad = 0;
-            actualizarContador();
+            cantidad = cantOrig;
             Componente sel = cbSku.getValue();
             int stock = sel != null ? sel.getStock() : 0;
             btnMas.setDisable(!prefijo.equals("otro") && stock <= 0);
             chkReutilizado.setSelected(esReutilizado);
+            if (esReutilizado) {
+                btnMas.setDisable(true);
+                btnMenos.setDisable(true);
+            } else if (cantOrig > 0) {
+                chkReutilizado.setDisable(true);
+            }
+            actualizarContador();
 
             // Pre-rellenar observación
             this.observacion = observacion;
@@ -1157,14 +1203,6 @@ public class FormularioReparacionController {
                 lblObservacion.setManaged(true);
                 btnBorrarObs.setVisible(true);
                 btnBorrarObs.setManaged(true);
-            }
-
-            // Checkbox pieza vieja rota (solo primera vez, siempre visible en edición)
-            if (chkPiezaViejaRota == null) {
-                chkPiezaViejaRota = new CheckBox("Pieza rota / reutilizada");
-                chkPiezaViejaRota.setStyle("-fx-font-size: 11px; -fx-padding: 0 8 0 8; -fx-text-fill: #CC4444;");
-                chkPiezaViejaRota.setOnAction(e -> notificar());
-                mainRow.getChildren().add(chkPiezaViejaRota);
             }
 
             // Ocultar solicitud en modo edición
@@ -1183,6 +1221,8 @@ public class FormularioReparacionController {
         private int idTecFila = -1;
 
         void configurarTecnicoEdicion(List<Tecnico> tecnicos, int idTecDefault) {
+            btnSolicitud.setVisible(false);
+            btnSolicitud.setManaged(false);
             idTecFila = idTecDefault;
             cbTecnicoFila = new ComboBox<>();
             cbTecnicoFila.getItems().setAll(tecnicos);
@@ -1216,14 +1256,10 @@ public class FormularioReparacionController {
             if (!modoEdicion) return false;
             Componente sel = cbSku.getValue();
             int idComActual = sel != null ? sel.getIdCom() : -1;
-            return cantidad > 0
+            return cantidad != cantidadOriginal
                     || idComActual != idComOriginal
                     || chkReutilizado.isSelected() != esReutilizadoOriginal
                     || !Objects.equals(observacion, observacionOriginal);
-        }
-
-        boolean isPiezaViejaRota() {
-            return chkPiezaViejaRota != null && chkPiezaViejaRota.isSelected();
         }
 
         VBox getRoot() {

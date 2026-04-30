@@ -37,10 +37,12 @@ public class ReparacionDAO {
         public final int    idCom;
         public final boolean esReutilizado;
         public final String  observacion;
+        public final int     cantidad;
         public DetalleEdicion(String imei, int idTec, int idCom,
-                              boolean esReutilizado, String observacion) {
+                              boolean esReutilizado, String observacion, int cantidad) {
             this.imei = imei; this.idTec = idTec; this.idCom = idCom;
             this.esReutilizado = esReutilizado; this.observacion = observacion;
+            this.cantidad = cantidad;
         }
     }
 
@@ -330,17 +332,15 @@ public class ReparacionDAO {
      * @param idComNuevo         nuevo ID del componente
      * @param esReutilizadoNuevo {@code true} si la nueva pieza no resta stock
      * @param observacionNueva   nuevas notas del técnico
-     * @param piezaViejaRota     {@code true} si la pieza anterior no se devuelve al stock
      * @param nNuevas            unidades de la nueva pieza a descontar
      * @throws SQLException si falla la llamada al servidor
      */
     public void editarReparacion(String idRep, int idComNuevo, boolean esReutilizadoNuevo,
-            String observacionNueva, boolean piezaViejaRota, int nNuevas) throws SQLException {
+            String observacionNueva, int nNuevas) throws SQLException {
         Map<String, Object> body = new HashMap<>();
         body.put("idComNuevo",         idComNuevo);
         body.put("esReutilizadoNuevo", esReutilizadoNuevo);
         body.put("observacionNueva",   observacionNueva);
-        body.put("piezaViejaRota",     piezaViejaRota);
         body.put("nNuevas",            nNuevas);
         ApiClient.put("/api/reparaciones/" + idRep, body);
     }
