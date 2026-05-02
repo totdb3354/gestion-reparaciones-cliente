@@ -483,17 +483,48 @@ if (response.statusCode() == 401) {
 
 Con la migración a API REST varios clientes pueden llamar al servidor simultáneamente. El optimistic locking de la sección 2.1 cubre las ediciones usuario-a-usuario, pero hay operaciones donde dos transacciones pueden interferir aunque ninguna esté "editando" el mismo registro. Estos son los **vértices**: pares de operaciones que, ejecutadas en paralelo, pueden corromper datos.
 
-### Tabla de vértices por combinación de roles
+### Vértices por combinación de roles
 
-| # | Operación A | Operación B | Riesgo sin protección | Mecanismo de protección | Fix |
-|---|---|---|---|---|---|
-| 1 | Admin/Técnico inserta nueva rep. | Admin/Técnico inserta nueva rep. | `nextId()` lee el mismo MAX → dos rep. con el mismo ID → PK violation | `SELECT … FOR UPDATE` en `nextId()` serializa las lecturas | #1 |
-| 2 | Admin edita una reparación R* | Admin edita la misma R* | Último en guardar pisa al primero sin aviso | `UPDATED_AT` de `Reparacion_componente` en `editarReparacion` + 409 | #2 |
-| 3 | Admin elimina A* | Técnico completa la misma A* | Técnico inserta `Reparacion_componente` sobre A* ya borrada → FK violation o trabajo perdido | `SELECT FOR UPDATE` al inicio de `insertarCompleta` verifica existencia | #3 |
-| 4 | Admin cancela incidencia (borra A*) | Técnico completa la A* asociada | Admin puede borrar una A* que Técnico acaba de cerrar, o Técnico ve la A* abierta que Admin ya cerró | `FOR UPDATE` + recheck `FECHA_FIN IS NULL` en `borrarIncidenciaPorImei` | #4 |
-| 5 | Admin elimina A* | Técnico pulsa "Completar" sobre la misma A* | `UPDATE FECHA_FIN` afecta 0 filas silenciosamente (éxito falso) | `UPDATE … AND FECHA_FIN IS NULL` + 409 si 0 filas | #5 |
-| 6 | Admin A reasigna técnico de A* | Admin B reasigna el mismo técnico | Último en guardar pisa al primero (TOCTOU en patrón SELECT→UPDATE) | UPDATE atómico `WHERE UPDATED_AT = ?` en `actualizarTecnico` | #6 |
-| 7 | Admin A edita un componente | Admin B edita el mismo componente | TOCTOU idéntico al caso 6 | UPDATE atómico `WHERE UPDATED_AT = ?` en `ComponenteDAO.actualizar` | #7 |
+#### Admin — Admin
+
+| Operación A | Operación B | Riesgo | Fix |
+|---|---|---|---|
+| Inserta nueva reparación (R* o A*) | Inserta nueva reparación al mismo tiempo | `nextId()` lee el mismo MAX → mismo ID → PK violation | #1 |
+| Edita una R* (componente, cantidad, observación) | Edita la misma R* | Último en guardar pisa al primero sin aviso | #2 |
+| Reasigna técnico en una A* | Reasigna técnico en la misma A* | TOCTOU: el check y el UPDATE van separados → el segundo pisa al primero | #6 |
+| Edita un componente (stock, tipo, mínimo) | Edita el mismo componente | TOCTOU idéntico al caso anterior | #7 |
+| Recibe un pedido | Recibe el mismo pedido | Stock se incrementa dos veces | Cubierto (rama anterior) |
+| Borra una A* | Borra la misma A* | El segundo DELETE simplemente no afecta filas — sin corrupción | Sin fix necesario |
+
+#### Admin — Técnico
+
+| Operación Admin | Operación Técnico | Riesgo | Fix |
+|---|---|---|---|
+| Elimina una A* | Completa la misma A* (crea R* y descuenta stock) | Técnico inserta sobre una A* ya borrada → FK violation o inserción huérfana | #3 |
+| Cancela incidencia (borra A* asociada) | Completa la A* de esa incidencia | Admin puede borrar una A* que Técnico acaba de cerrar, o viceversa | #4 |
+| Elimina una A* | Pulsa "Completar" (solo cierra `FECHA_FIN`) | El UPDATE afecta 0 filas silenciosamente → Técnico cree que completó sin error | #5 |
+
+#### Técnico — Técnico
+
+| Operación A | Operación B | Riesgo | Fix |
+|---|---|---|---|
+| Inserta nueva reparación | Inserta nueva reparación al mismo tiempo | Mismo riesgo de `nextId()` que en Admin–Admin | #1 |
+| Descuenta stock del mismo componente | Descuenta stock del mismo componente | `UPDATE … SET STOCK = STOCK - ?` es atómico en InnoDB — sin riesgo | Sin fix necesario |
+| Completa su A* | Completa la A* del otro técnico | Imposible: cada A* está asignada a un único técnico | No aplica |
+
+---
+
+### Tabla detallada por fix
+
+| # | Operación A | Operación B | Riesgo sin protección | Mecanismo de protección |
+|---|---|---|---|---|
+| 1 | Cualquier inserción concurrente | Cualquier inserción concurrente | `nextId()` lee el mismo MAX → mismo ID → PK violation | `SELECT … FOR UPDATE` en `nextId()` |
+| 2 | Admin edita una R* | Admin edita la misma R* | Último pisa al primero sin aviso | `UPDATED_AT` de `Reparacion_componente` + 409 |
+| 3 | Admin elimina A* | Técnico completa la misma A* | FK violation o trabajo perdido | `SELECT FOR UPDATE` al inicio de `insertarCompleta` |
+| 4 | Admin cancela incidencia | Técnico completa la A* asociada | Borrado de A* ya cerrada o viceversa | `FOR UPDATE` + recheck `FECHA_FIN IS NULL` en `borrarIncidenciaPorImei` |
+| 5 | Admin elimina A* | Técnico pulsa "Completar" | Éxito falso silencioso | `UPDATE … AND FECHA_FIN IS NULL` + 409 si 0 filas |
+| 6 | Admin A reasigna técnico | Admin B reasigna el mismo técnico | TOCTOU SELECT→UPDATE | UPDATE atómico `WHERE UPDATED_AT = ?` en `actualizarTecnico` |
+| 7 | Admin A edita componente | Admin B edita el mismo componente | TOCTOU idéntico al caso 6 | UPDATE atómico `WHERE UPDATED_AT = ?` en `ComponenteDAO.actualizar` |
 
 ### Vértices descartados (no son race conditions reales)
 
