@@ -78,6 +78,7 @@ public class MainController {
     private List<Componente> alertasCriticas = List.of();
     private com.reparaciones.utils.Recargable controladorActivo;
     private Runnable accionVistaActual;
+    private final java.util.Map<String, Object[]> vistaCache = new java.util.HashMap<>();
 
     // Filtro pendiente para la próxima carga de la vista de reparaciones
     private java.time.LocalDate filtroNavDesde;
@@ -530,7 +531,11 @@ public class MainController {
     @FXML
     private void cerrarSesion() {
         try {
-            if (controladorActivo != null) controladorActivo.detenerPolling();
+            vistaCache.values().forEach(cached -> {
+                if (cached[1] instanceof com.reparaciones.utils.Recargable r)
+                    r.detenerPolling();
+            });
+            vistaCache.clear();
             Sesion.cerrar();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/LoginView.fxml"));
             Parent root = loader.load();
@@ -567,24 +572,35 @@ public class MainController {
         btnEstadisticas.setDisable(true);
 
         try {
-            if (controladorActivo != null) controladorActivo.detenerPolling();
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(ruta));
-            Node vista = loader.load();
-            Object ctrl = loader.getController();
-            if (ctrl instanceof com.reparaciones.utils.Recargable)
-                controladorActivo = (com.reparaciones.utils.Recargable) ctrl;
+            Object[] cached = vistaCache.get(ruta);
+            Node vista;
+            Object ctrl;
 
-            // Pasar callback de navegación a EstadisticasController
-            if (ctrl instanceof EstadisticasController ec) {
-                ec.setNavegacion((desde, hasta, tecnico) -> {
-                    filtroNavDesde   = desde;
-                    filtroNavHasta   = hasta;
-                    filtroNavTecnico = tecnico;
-                    mostrarReparaciones();
-                });
+            if (cached != null) {
+                vista = (Node) cached[0];
+                ctrl  = cached[1];
+            } else {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(ruta));
+                vista = loader.load();
+                ctrl  = loader.getController();
+
+                // Pasar callback de navegación a EstadisticasController (solo primera carga)
+                if (ctrl instanceof EstadisticasController ec) {
+                    ec.setNavegacion((desde, hasta, tecnico) -> {
+                        filtroNavDesde   = desde;
+                        filtroNavHasta   = hasta;
+                        filtroNavTecnico = tecnico;
+                        mostrarReparaciones();
+                    });
+                }
+
+                vistaCache.put(ruta, new Object[]{vista, ctrl});
             }
 
-            // Aplicar filtro pendiente si viene de estadísticas
+            if (ctrl instanceof com.reparaciones.utils.Recargable r)
+                controladorActivo = r;
+
+            // Filtro desde estadísticas: se aplica siempre que haya uno pendiente
             if (filtroNavDesde != null) {
                 if (ctrl instanceof ReparacionControllerAdmin rca)
                     rca.setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
@@ -592,6 +608,9 @@ public class MainController {
                     rct.setFiltroInicial(filtroNavDesde, filtroNavHasta);
                 filtroNavDesde = filtroNavHasta = null;
                 filtroNavTecnico = null;
+            } else if (cached != null && controladorActivo != null) {
+                // Vista ya existente: refrescar datos sin tocar filtros
+                controladorActivo.recargar();
             }
 
             contenedor.getChildren().setAll(vista);
