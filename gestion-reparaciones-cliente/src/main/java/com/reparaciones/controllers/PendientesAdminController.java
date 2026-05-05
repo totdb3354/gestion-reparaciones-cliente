@@ -477,6 +477,10 @@ public class PendientesAdminController {
                 }
                 ventana.close();
                 cargar();
+            } catch (com.reparaciones.utils.StaleDataException ex) {
+                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
+                        "Este teléfono ya tiene historial. Usa la opción de incidencia desde la tabla.")
+                        .showAndWait();
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
