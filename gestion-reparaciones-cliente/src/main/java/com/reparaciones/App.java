@@ -24,7 +24,7 @@ public class App extends Application {
     public void start(Stage stage) throws Exception {
         Parent root = FXMLLoader.load(getClass().getResource("/views/LoginView.fxml"));
         Scene scene = new Scene(root);
-        stage.getIcons().add(new Image(getClass().getResourceAsStream("/images/logo.png")));
+        stage.getIcons().add(new Image(getClass().getResourceAsStream("/images/icono_programa.png")));
         stage.setTitle("Gestión de Reparaciones — Login");
         stage.setScene(scene);
         stage.setResizable(false);
