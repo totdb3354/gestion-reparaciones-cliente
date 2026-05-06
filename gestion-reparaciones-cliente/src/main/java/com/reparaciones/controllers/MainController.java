@@ -489,7 +489,9 @@ public class MainController {
         if (Sesion.esAdmin()) {
             MenuItem itemGestionar = new MenuItem("Gestionar técnicos");
             itemGestionar.setOnAction(e -> abrirGestionTecnicos());
-            menuUsuario.getItems().addAll(itemGestionar, new SeparatorMenuItem());
+            MenuItem itemLogs = new MenuItem("Ver logs");
+            itemLogs.setOnAction(e -> abrirLogs());
+            menuUsuario.getItems().addAll(itemGestionar, itemLogs, new SeparatorMenuItem());
         }
         menuUsuario.getItems().addAll(itemDescargar, sep, itemCerrar);
     }
@@ -514,6 +516,21 @@ public class MainController {
             ventana.setResizable(false);
             ventana.showAndWait();
             if (accionVistaActual != null) accionVistaActual.run();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Abre el modal de logs de actividad ({@code LogView.fxml}). */
+    private void abrirLogs() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/LogView.fxml"));
+            Parent root = loader.load();
+            Stage ventana = new Stage();
+            ventana.setTitle("Log de actividad");
+            ventana.setScene(new Scene(root));
+            ventana.setResizable(true);
+            ventana.show();
         } catch (IOException e) {
             e.printStackTrace();
         }

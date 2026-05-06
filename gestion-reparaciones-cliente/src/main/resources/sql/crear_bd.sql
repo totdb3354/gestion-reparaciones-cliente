@@ -11,6 +11,7 @@ USE reparaciones;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS Log_Actividad;
 DROP TABLE IF EXISTS Reparacion_componente;
 DROP TABLE IF EXISTS Compra_componente;
 DROP TABLE IF EXISTS Reparacion;
@@ -129,4 +130,16 @@ CREATE TABLE Reparacion_componente (
     PRIMARY KEY (ID_RC),
     CONSTRAINT fk_rc_reparacion  FOREIGN KEY (ID_REP) REFERENCES Reparacion (ID_REP),
     CONSTRAINT fk_rc_componente  FOREIGN KEY (ID_COM) REFERENCES Componente  (ID_COM)
+);
+
+-- ── Log de actividad ──────────────────────────────────────────────────────────
+
+CREATE TABLE Log_Actividad (
+    ID_LOG  INT          NOT NULL AUTO_INCREMENT,
+    FECHA   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ID_USU  INT          NOT NULL,
+    ACCION  VARCHAR(50)  NOT NULL,
+    DETALLE TEXT,
+    PRIMARY KEY (ID_LOG),
+    CONSTRAINT fk_log_usuario FOREIGN KEY (ID_USU) REFERENCES Usuario (ID_USU)
 );
