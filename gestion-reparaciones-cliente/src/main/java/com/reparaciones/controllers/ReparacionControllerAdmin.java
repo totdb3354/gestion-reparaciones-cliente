@@ -118,7 +118,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         pendientesAdminController.setOnActualizar(this::cargarDatos);
         misPendientesController.setOnCerrar(this::cargarDatos);
 
-        mostrarPanel(pnlPendientes, btnTabPendientes);
+        if (com.reparaciones.Sesion.esAdmin()) {
+            btnTabPendientes   .setVisible(false); btnTabPendientes   .setManaged(false);
+            btnTabMisPendientes.setVisible(false); btnTabMisPendientes.setManaged(false);
+            mostrarPanel(pnlHistorial, btnTabHistorial);
+        } else {
+            mostrarPanel(pnlPendientes, btnTabPendientes);
+        }
 
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
@@ -405,22 +411,26 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
                 });
-                MenuItem editar      = new MenuItem("Editar");
-                MenuItem borrar      = new MenuItem("Borrar");
-                MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
-                MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
-                editar     .setOnAction(e -> { if (getItem() != null) FormularioReparacionController.abrirEditar(getItem().getIdRep(), ReparacionControllerAdmin.this::cargarDatos); });
-                borrar     .setOnAction(e -> { if (getItem() != null) borrarReparacion(getItem()); });
-                aniadirInc .setOnAction(e -> { if (getItem() != null) abrirDialogoIncidencia(getItem()); });
-                cancelarInc.setOnAction(e -> { if (getItem() != null) borrarIncidencia(getItem()); });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
-                menu.setOnShowing(e -> {
-                    ReparacionResumen rep = getItem();
-                    boolean tieneInc = rep != null && rep.isEsIncidencia() && !rep.isEsResuelto();
-                    editar      .setVisible(rep != null && rep.getIdRep().startsWith("R"));
-                    aniadirInc  .setVisible(rep != null && !rep.isEsIncidencia());
-                    cancelarInc .setVisible(tieneInc);
-                });
+                if (com.reparaciones.Sesion.esSuperTecnico()) {
+                    MenuItem editar      = new MenuItem("Editar");
+                    MenuItem borrar      = new MenuItem("Borrar");
+                    MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
+                    MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
+                    editar     .setOnAction(e -> { if (getItem() != null) FormularioReparacionController.abrirEditar(getItem().getIdRep(), ReparacionControllerAdmin.this::cargarDatos); });
+                    borrar     .setOnAction(e -> { if (getItem() != null) borrarReparacion(getItem()); });
+                    aniadirInc .setOnAction(e -> { if (getItem() != null) abrirDialogoIncidencia(getItem()); });
+                    cancelarInc.setOnAction(e -> { if (getItem() != null) borrarIncidencia(getItem()); });
+                    menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
+                    menu.setOnShowing(e -> {
+                        ReparacionResumen rep = getItem();
+                        boolean tieneInc = rep != null && rep.isEsIncidencia() && !rep.isEsResuelto();
+                        editar      .setVisible(rep != null && rep.getIdRep().startsWith("R"));
+                        aniadirInc  .setVisible(rep != null && !rep.isEsIncidencia());
+                        cancelarInc .setVisible(tieneInc);
+                    });
+                } else {
+                    menu.getItems().add(copiar);
+                }
                 setContextMenu(menu);
                 selectedProperty().addListener((obs, wasSelected, isSelected) -> aplicarEstilo(getItem(), isEmpty()));
             }

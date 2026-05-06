@@ -134,7 +134,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         configurarTablaStock();
         configurarTablaPedidos();
         configurarTablaProveedores();
-        if (!com.reparaciones.Sesion.esAdmin()) {
+        if (!com.reparaciones.Sesion.esSuperTecnico()) {
             btnNuevoPedido   .setVisible(false); btnNuevoPedido   .setManaged(false);
             btnNuevoProveedor.setVisible(false); btnNuevoProveedor.setManaged(false);
         }
@@ -288,8 +288,8 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             }
         });
 
-        // Menú contextual (solo admin)
-        if (com.reparaciones.Sesion.esAdmin()) {
+        // Menú contextual (solo supertecnico)
+        if (com.reparaciones.Sesion.esSuperTecnico()) {
             ContextMenu ctxStock = new ContextMenu();
             MenuItem itemPedir  = new MenuItem("Pedir");
             MenuItem itemMin    = new MenuItem("Ajustar mínimo");
@@ -818,8 +818,8 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         dpPedidosHasta.getEditor().setOpacity(1.0);
         tablaPedidos.setItems(filtrada);
 
-        // Menú contextual según estado de la fila (solo admin)
-        if (com.reparaciones.Sesion.esAdmin()) {
+        // Menú contextual según estado de la fila (solo supertecnico)
+        if (com.reparaciones.Sesion.esSuperTecnico()) {
             ContextMenu ctx = new ContextMenu();
             tablaPedidos.setContextMenu(ctx);
             tablaPedidos.getSelectionModel().selectedItemProperty().addListener(
@@ -1052,7 +1052,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         });
         tablaProveedores.setItems(datosProveedores);
 
-        if (com.reparaciones.Sesion.esAdmin()) {
+        if (com.reparaciones.Sesion.esSuperTecnico()) {
             ContextMenu ctxProv = new ContextMenu();
             tablaProveedores.setContextMenu(ctxProv);
             tablaProveedores.getSelectionModel().selectedItemProperty().addListener((obs, old, sel) -> {

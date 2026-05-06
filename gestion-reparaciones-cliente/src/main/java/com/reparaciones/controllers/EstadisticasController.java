@@ -639,7 +639,7 @@ public class EstadisticasController {
                 Tooltip.install(nodo, tip);
 
                 boolean navegable = navegacion != null &&
-                        (com.reparaciones.Sesion.esAdmin() ||
+                        (com.reparaciones.Sesion.esAdminOSuperTecnico() ||
                          serie.getName().equals(nombreTecnicoSesion));
                 nodo.setOnMouseEntered(e -> {
                     String cursor = navegable ? "; -fx-cursor: hand;" : ";";

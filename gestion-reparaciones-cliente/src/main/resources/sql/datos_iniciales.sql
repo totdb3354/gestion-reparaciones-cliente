@@ -15,11 +15,11 @@ TRUNCATE TABLE Componente;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ── Usuario administrador ─────────────────────────────────────────────────────
+-- ── Usuarios iniciales ────────────────────────────────────────────────────────
 -- Contraseña por defecto: cambiar tras el primer acceso
-INSERT INTO Tecnico (ID_TEC, NOMBRE) VALUES (1, 'Admin');
 INSERT INTO Usuario (NOMBRE_USUARIO, PASSWORD, ROL, ID_TEC)
-VALUES ('admin', '$2a$10$89OoWr1AD1dbESqCVGhGVOBWILu0ld117qcCSS68z1dH4k/A7MjBu', 'ADMIN', 1);
+VALUES ('admin', '$2a$10$89OoWr1AD1dbESqCVGhGVOBWILu0ld117qcCSS68z1dH4k/A7MjBu', 'ADMIN', NULL);
+
 
 -- ── Componentes (SKUs) ────────────────────────────────────────────────────────
 
