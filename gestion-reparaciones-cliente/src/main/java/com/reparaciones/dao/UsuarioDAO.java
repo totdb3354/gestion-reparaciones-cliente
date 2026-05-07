@@ -110,10 +110,11 @@ public class UsuarioDAO {
      * @param password       contraseña en texto plano
      * @throws SQLException si el nombre de usuario ya existe o falla la transacción
      */
-    public void registrarTecnico(String nombreTecnico, String nombreUsuario, String password) throws SQLException {
+    public void registrarTecnico(String nombreTecnico, String nombreUsuario, String password, String rol) throws SQLException {
         ApiClient.post("/api/usuarios/tecnicos", Map.of(
                 "nombreTecnico", nombreTecnico,
                 "nombreUsuario", nombreUsuario,
-                "password",      password));
+                "password",      password,
+                "rol",           rol));
     }
 }

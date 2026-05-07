@@ -94,7 +94,7 @@ public class MainController {
         lblUsuario.setText("Hola, " + Sesion.getUsuario().getNombreUsuario());
         inicializarMenuUsuario();
         mostrarReparaciones();
-        if (Sesion.esAdmin()) {
+        if (Sesion.esSuperTecnico()) {
             verificarStockAlertas();
             ivCampana.setImage(imgCampanaOff);
             campanaPane.setVisible(true);
@@ -109,7 +109,7 @@ public class MainController {
                 win.focusedProperty().addListener((obs3, wasFocused, isFocused) -> {
                     if (isFocused && controladorActivo != null) {
                         controladorActivo.recargar();
-                        if (Sesion.esAdmin()) actualizarBadge();
+                        if (Sesion.esSuperTecnico()) actualizarBadge();
                     }
                 });
             });
@@ -451,7 +451,7 @@ public class MainController {
     @FXML
     private void mostrarReparaciones() {
         accionVistaActual = this::mostrarReparaciones;
-        String vista = Sesion.esAdmin()
+        String vista = Sesion.esAdminOSuperTecnico()
                 ? "/views/ReparacionViewAdmin.fxml"
                 : "/views/ReparacionViewTecnico.fxml";
         mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas);

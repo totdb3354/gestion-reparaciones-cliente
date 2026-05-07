@@ -7,6 +7,7 @@
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.reparaciones.controllers.RegisterController"
             style="-fx-background-color: #EFEFEF;"
+            stylesheets="@../styles/app.css"
             prefWidth="700"
             prefHeight="620">
 
@@ -71,11 +72,11 @@
                 </VBox>
             </HBox>
 
-            <!-- Error + botón -->
             <HBox alignment="CENTER_LEFT" spacing="12">
                 <Label fx:id="lblError" text=""
                        style="-fx-text-fill: #B03040; -fx-font-size: 11px;"
                        visible="false" HBox.hgrow="ALWAYS"/>
+                <ComboBox fx:id="comboRol" prefWidth="130"/>
                 <Button fx:id="btnRegistrar"
                         text="Registrar técnico"
                         onAction="#registrar"
@@ -97,9 +98,10 @@
             <TableView fx:id="tablaUsuarios" VBox.vgrow="ALWAYS" styleClass="tabla-reparaciones"
                        stylesheets="@../styles/app.css">
                 <columns>
-                    <TableColumn fx:id="colNombreTecnico"  text="Técnico"  prefWidth="180"/>
-                    <TableColumn fx:id="colNombreUsuario"  text="Usuario"  prefWidth="160"/>
-                    <TableColumn fx:id="colEstado"         text="Estado"   prefWidth="100"/>
+                    <TableColumn fx:id="colNombreTecnico"  text="Técnico"  prefWidth="160"/>
+                    <TableColumn fx:id="colNombreUsuario"  text="Usuario"  prefWidth="130"/>
+                    <TableColumn fx:id="colRol"            text="Rol"      prefWidth="110"/>
+                    <TableColumn fx:id="colEstado"         text="Estado"   prefWidth="90"/>
                     <TableColumn fx:id="colAcciones"       text=""         prefWidth="80"/>
                 </columns>
                 <columnResizePolicy>

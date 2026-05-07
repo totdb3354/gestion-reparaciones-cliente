@@ -32,6 +32,12 @@ public class Sesion {
     /** @return {@code true} si el usuario en sesión tiene rol {@code "ADMIN"} */
     public static boolean esAdmin() { return usuarioActual != null && usuarioActual.esAdmin(); }
 
+    /** @return {@code true} si el usuario en sesión tiene rol {@code "SUPERTECNICO"} */
+    public static boolean esSuperTecnico() { return usuarioActual != null && usuarioActual.esSuperTecnico(); }
+
+    /** @return {@code true} si el usuario en sesión tiene rol {@code "ADMIN"} o {@code "SUPERTECNICO"} */
+    public static boolean esAdminOSuperTecnico() { return usuarioActual != null && usuarioActual.esAdminOSuperTecnico(); }
+
     /** @return ID del técnico del usuario en sesión, o {@code null} si no tiene técnico asociado */
     public static Integer getIdTec() { return usuarioActual != null ? usuarioActual.getIdTec() : null; }
 

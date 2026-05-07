@@ -88,4 +88,10 @@ public class Usuario {
 
     /** @return {@code true} si el rol es {@code "ADMIN"} */
     public boolean esAdmin() { return "ADMIN".equals(rol); }
+
+    /** @return {@code true} si el rol es {@code "SUPERTECNICO"} */
+    public boolean esSuperTecnico() { return "SUPERTECNICO".equals(rol); }
+
+    /** @return {@code true} si el rol es {@code "ADMIN"} o {@code "SUPERTECNICO"} */
+    public boolean esAdminOSuperTecnico() { return esAdmin() || esSuperTecnico(); }
 }

@@ -12,7 +12,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -30,12 +29,14 @@ public class RegisterController {
     @FXML private TextField     campoNombreUsuario;
     @FXML private PasswordField campoPassword;
     @FXML private PasswordField campoConfirmar;
+    @FXML private ComboBox<String> comboRol;
     @FXML private Label         lblError;
     @FXML private Button        btnRegistrar;
 
     @FXML private TableView<Usuario>           tablaUsuarios;
     @FXML private TableColumn<Usuario, String> colNombreTecnico;
     @FXML private TableColumn<Usuario, String> colNombreUsuario;
+    @FXML private TableColumn<Usuario, String> colRol;
     @FXML private TableColumn<Usuario, Void>   colEstado;
     @FXML private TableColumn<Usuario, Void>   colAcciones;
 
@@ -47,6 +48,8 @@ public class RegisterController {
      */
     @FXML
     public void initialize() {
+        comboRol.setItems(FXCollections.observableArrayList("TECNICO", "SUPERTECNICO"));
+        comboRol.setValue("TECNICO");
         configurarTabla();
         cargarUsuarios();
     }
@@ -63,6 +66,8 @@ public class RegisterController {
             data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getNombreTecnico()));
         colNombreUsuario.setCellValueFactory(
             data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getNombreUsuario()));
+        colRol.setCellValueFactory(
+            data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getRol()));
 
         // Badge de estado
         colEstado.setCellFactory(col -> new TableCell<>() {
@@ -239,7 +244,7 @@ public class RegisterController {
         }
 
         try {
-            usuarioDAO.registrarTecnico(nombreTecnico, nombreUsuario, password);
+            usuarioDAO.registrarTecnico(nombreTecnico, nombreUsuario, password, comboRol.getValue());
             limpiarFormulario();
             cargarUsuarios();
         } catch (SQLException e) {
@@ -260,6 +265,7 @@ public class RegisterController {
         campoNombreUsuario.clear();
         campoPassword.clear();
         campoConfirmar.clear();
+        comboRol.setValue("TECNICO");
         lblError.setVisible(false);
     }
 
