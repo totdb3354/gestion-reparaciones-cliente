@@ -417,6 +417,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 cargarChartSku(sel);
             }
         });
+        tablaStock.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void cargarStock() {
@@ -908,6 +909,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             tablaPedidos.getSelectionModel().selectedItemProperty().addListener(
                     (obs, old, sel) -> construirMenuContextual(ctx, sel));
         }
+        tablaPedidos.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void construirMenuContextual(ContextMenu ctx, CompraComponente sel) {
@@ -1179,6 +1181,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 } catch (SQLException e) { mostrarError(e); }
             });
         }
+        tablaProveedores.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void cargarProveedores() {

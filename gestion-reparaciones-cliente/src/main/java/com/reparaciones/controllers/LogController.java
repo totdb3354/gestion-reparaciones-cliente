@@ -34,6 +34,7 @@ public class LogController {
         colDetalle.setCellValueFactory(c ->
                 new javafx.beans.property.SimpleStringProperty(c.getValue().getDetalle()));
 
+        tablaLogs.getColumns().forEach(c -> c.setReorderable(false));
         cargarLogs();
     }
 

@@ -102,6 +102,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaReparaciones.setItems(datosFiltrados);
         configurarColumnas();
+        tablaReparaciones.getColumns().forEach(c -> c.setReorderable(false));
         configurarFilas();
         configurarFiltros();
 
@@ -668,6 +669,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
             tabla.setPrefHeight(440);
             tabla.getColumns().addAll(cId, cTecnico, cFecha, cComp, cObs, cIncid);
+            tabla.getColumns().forEach(c -> c.setReorderable(false));
             tabla.setItems(FXCollections.observableArrayList(historial));
 
             Label lblTitulo = new Label("Historial del IMEI");
