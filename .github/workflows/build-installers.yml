@@ -18,13 +18,13 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            jfx-zip: openjfx-21_osx-x64_bin-sdk.zip
+            jfx-jmods-zip: openjfx-21_osx-x64_bin-jmods.zip
             pkg-type: dmg
             pkg-version: 1.0.0
             icon-arg: "--icon packaging/icono_mac.icns"
             artifact: FSGR-mac
           - os: windows-latest
-            jfx-zip: openjfx-21_windows-x64_bin-sdk.zip
+            jfx-jmods-zip: openjfx-21_windows-x64_bin-jmods.zip
             pkg-type: msi
             pkg-version: 0.9.0
             icon-arg: "--icon packaging/icono_Windows.ico"
@@ -48,10 +48,10 @@ jobs:
       - name: Build con Maven
         run: mvn package -DskipTests
 
-      - name: Descargar JavaFX SDK
+      - name: Descargar JavaFX jmods
         run: |
-          curl -L "https://download2.gluonhq.com/openjfx/21/${{ matrix.jfx-zip }}" -o javafx-sdk.zip
-          unzip -q javafx-sdk.zip
+          curl -L "https://download2.gluonhq.com/openjfx/21/${{ matrix.jfx-jmods-zip }}" -o javafx-jmods.zip
+          unzip -q javafx-jmods.zip
 
       - name: Preparar libs
         run: |
@@ -63,7 +63,7 @@ jobs:
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then SEP=";"; else SEP=":"; fi
           jlink \
-            --module-path "$JAVA_HOME/jmods${SEP}javafx-sdk-21/lib" \
+            --module-path "$JAVA_HOME/jmods${SEP}javafx-jmods-21" \
             --add-modules java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.prefs,java.sql,java.xml,javafx.controls,javafx.fxml,javafx.base,javafx.graphics,jdk.crypto.ec,jdk.unsupported \
             --output custom-runtime \
             --no-header-files \
@@ -79,6 +79,7 @@ jobs:
             --main-jar gestion-reparaciones-cliente-1.0-SNAPSHOT.jar \
             --main-class com.reparaciones.App \
             --runtime-image custom-runtime \
+            --java-options "--add-modules=javafx.controls,javafx.fxml" \
             --java-options "-Dfile.encoding=UTF-8" \
             ${{ matrix.icon-arg }}
 
