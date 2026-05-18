@@ -101,6 +101,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     @FXML private TableColumn<Proveedor, String>   cpvNombre;
     @FXML private TableColumn<Proveedor, String>   cpvDivisa;
     @FXML private TableColumn<Proveedor, String>   cpvActivo;
+    @FXML private TableColumn<Proveedor, String>   cpvComentario;
     @FXML private MenuButton                       menuFiltroProveedores;
     @FXML private MenuButton                       menuFiltroProveedorPedidos;
     private final java.util.List<CheckBox> cbsProveedor         = new java.util.ArrayList<>();
@@ -1115,6 +1116,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         cpvNombre.setCellValueFactory(c -> sp(c.getValue().getNombre()));
         cpvDivisa.setCellValueFactory(c -> sp(c.getValue().getDivisa()));
         cpvActivo.setCellValueFactory(c -> sp(c.getValue().isActivo() ? "Activo" : "Inactivo"));
+        cpvComentario.setCellValueFactory(c -> sp(c.getValue().getComentario() != null ? c.getValue().getComentario() : ""));
         cpvActivo.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
             @Override protected void updateItem(String val, boolean empty) {
@@ -1169,9 +1171,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 if (sel == null) return;
                 MenuItem itemToggle = new MenuItem(sel.isActivo() ? "Desactivar" : "Activar");
                 itemToggle.setOnAction(e -> activarProveedor());
-                MenuItem itemDivisa = new MenuItem("Cambiar divisa");
-                itemDivisa.setOnAction(e -> cambiarDivisa());
-                ctxProv.getItems().addAll(itemToggle, itemDivisa);
+                MenuItem itemEditar = new MenuItem("Editar");
+                itemEditar.setOnAction(e -> editarProveedor());
+                ctxProv.getItems().addAll(itemToggle, itemEditar);
                 try {
                     if (!proveedorDAO.tienePedidos(sel.getIdProv())) {
                         MenuItem itemBorrar = new MenuItem("Borrar");
@@ -1254,23 +1256,40 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         });
     }
 
-    @FXML private void cambiarDivisa() {
+    @FXML private void editarProveedor() {
         Proveedor sel = tablaProveedores.getSelectionModel().getSelectedItem();
         if (sel == null) return;
 
-        Label lblTitulo = new Label("Divisa del proveedor");
+        Label lblTitulo = new Label("Editar proveedor");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
-        Label lblNombre = new Label(sel.getNombre());
-        lblNombre.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+        Label lblNombreLabel = new Label("Nombre");
+        lblNombreLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextField tfNombre = new TextField(sel.getNombre());
+        tfNombre.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
 
-        Label lblLabel = new Label("Divisa por defecto");
-        lblLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-
+        Label lblDivisaLabel = new Label("Divisa");
+        lblDivisaLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<String> cmbDiv = new ComboBox<>();
         cmbDiv.getItems().setAll("EUR", "USD");
         cmbDiv.setValue(sel.getDivisa());
         cmbDiv.setMaxWidth(Double.MAX_VALUE);
+
+        Label lblComentarioLabel = new Label("Comentario");
+        lblComentarioLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        javafx.scene.control.TextArea taComentario = new javafx.scene.control.TextArea(
+                sel.getComentario() != null ? sel.getComentario() : "");
+        taComentario.setPrefRowCount(3);
+        taComentario.setWrapText(true);
+        taComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6;" +
+                "-fx-font-size: 13px; -fx-text-fill: #2C3B54;");
+
+        Label lblError = new Label();
+        lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
+        lblError.setVisible(false);
 
         Button btnConfirmar = new Button("Confirmar");
         btnConfirmar.setMaxWidth(Double.MAX_VALUE);
@@ -1283,21 +1302,31 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         javafx.scene.layout.HBox botones = new javafx.scene.layout.HBox(10, btnCancelar, btnConfirmar);
         botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-        javafx.scene.layout.VBox contenido = new javafx.scene.layout.VBox(12,
-                lblTitulo, lblNombre, lblLabel, cmbDiv, botones);
+        javafx.scene.layout.VBox contenido = new javafx.scene.layout.VBox(10,
+                lblTitulo, lblNombreLabel, tfNombre,
+                lblDivisaLabel, cmbDiv,
+                lblComentarioLabel, taComentario,
+                lblError, botones);
         contenido.setPadding(new javafx.geometry.Insets(28));
-        contenido.setPrefWidth(320);
+        contenido.setPrefWidth(360);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         ventana.setResizable(false);
-        ventana.setTitle("Divisa — " + sel.getNombre());
+        ventana.setTitle("Editar proveedor — " + sel.getNombre());
 
         btnCancelar.setOnAction(ev -> ventana.close());
         btnConfirmar.setOnAction(ev -> {
+            String nombre = tfNombre.getText().trim();
+            if (nombre.isBlank()) {
+                lblError.setText("El nombre no puede estar vacío.");
+                lblError.setVisible(true);
+                return;
+            }
             try {
-                proveedorDAO.setDivisa(sel.getIdProv(), cmbDiv.getValue());
+                proveedorDAO.editar(sel.getIdProv(), nombre, cmbDiv.getValue(),
+                        taComentario.getText().trim());
                 ventana.close();
                 cargarProveedores();
             } catch (SQLException e) { mostrarError(e); }
@@ -1306,6 +1335,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
+        javafx.application.Platform.runLater(tfNombre::requestFocus);
         ventana.showAndWait();
     }
 
