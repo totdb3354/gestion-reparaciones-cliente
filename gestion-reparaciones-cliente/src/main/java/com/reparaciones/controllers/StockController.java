@@ -1396,25 +1396,16 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void exportarPedidos(Stage owner) {
-        List<String> cabeceras = List.of(
-                "ID", "Componente", "Cantidad", "Urgente", "Proveedor",
-                "Estado", "Fecha pedido", "Fecha llegada", "Precio ud.", "Divisa", "Precio EUR", "Cant. recibida");
+        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (CompraComponente p : tablaPedidos.getItems()) {
             filas.add(List.of(
-                    String.valueOf(p.getIdCompra()),
+                    p.getFechaPedido() != null ? p.getFechaPedido().format(fmt) : "",
                     p.getTipoComponente() != null ? p.getTipoComponente() : "",
                     String.valueOf(p.getCantidad()),
                     p.isEsUrgente() ? "Sí" : "No",
-                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
-                    p.getEstado() != null ? p.getEstado().name() : "",
-                    p.getFechaPedido() != null ? p.getFechaPedido().format(fmt) : "",
-                    p.getFechaLlegada() != null ? p.getFechaLlegada().format(fmt) : "",
-                    p.getPrecioUnidadPedido() > 0 ? String.valueOf(p.getPrecioUnidadPedido()) : "",
-                    p.getDivisa() != null ? p.getDivisa() : "",
-                    p.getPrecioEur() > 0 ? String.valueOf(p.getPrecioEur()) : "",
-                    p.getCantidadRecibida() != null ? String.valueOf(p.getCantidadRecibida()) : ""
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : ""
             ));
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos", cabeceras, filas);
