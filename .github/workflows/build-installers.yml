@@ -9,6 +9,7 @@ on:
 defaults:
   run:
     shell: bash
+    working-directory: gestion-reparaciones-cliente
 
 jobs:
   build:
@@ -72,6 +73,6 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: |
-            *.dmg
-            *.msi
+            gestion-reparaciones-cliente/*.dmg
+            gestion-reparaciones-cliente/*.msi
           if-no-files-found: error
