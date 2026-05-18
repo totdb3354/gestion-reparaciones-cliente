@@ -50,7 +50,16 @@ jobs:
 
       - name: Descargar JavaFX jmods
         run: |
-          curl -L "https://download2.gluonhq.com/openjfx/21/${{ matrix.jfx-jmods-zip }}" -o javafx-jmods.zip
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            if [ "$(uname -m)" == "arm64" ]; then
+              JFX_ZIP="openjfx-21_osx-aarch64_bin-jmods.zip"
+            else
+              JFX_ZIP="openjfx-21_osx-x64_bin-jmods.zip"
+            fi
+          else
+            JFX_ZIP="${{ matrix.jfx-jmods-zip }}"
+          fi
+          curl -L "https://download2.gluonhq.com/openjfx/21/${JFX_ZIP}" -o javafx-jmods.zip
           unzip -q javafx-jmods.zip
 
       - name: Preparar libs
