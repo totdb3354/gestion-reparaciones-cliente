@@ -1,0 +1,77 @@
+name: Build Installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            jfx-zip: openjfx-21_osx-x64_bin-sdk.zip
+            pkg-type: dmg
+            artifact: FSGR-mac
+          - os: windows-latest
+            jfx-zip: openjfx-21_windows-x64_bin-sdk.zip
+            pkg-type: msi
+            artifact: FSGR-windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Crear config.properties
+        run: echo "api.url=${{ secrets.API_URL }}" > src/main/resources/config.properties
+
+      - name: Build con Maven
+        run: mvn package -DskipTests
+
+      - name: Descargar JavaFX SDK
+        run: |
+          curl -L "https://download2.gluonhq.com/openjfx/21/${{ matrix.jfx-zip }}" -o javafx-sdk.zip
+          unzip -q javafx-sdk.zip
+
+      - name: Preparar libs
+        run: |
+          cp target/gestion-reparaciones-cliente-*.jar target/libs/
+          rm -f target/libs/javafx-*.jar
+
+      - name: Empaquetar con jpackage
+        run: |
+          jpackage \
+            --type ${{ matrix.pkg-type }} \
+            --name "FSGR" \
+            --app-version 0.9.0 \
+            --input target/libs \
+            --main-jar gestion-reparaciones-cliente-1.0-SNAPSHOT.jar \
+            --main-class com.reparaciones.App \
+            --module-path javafx-sdk-21/lib \
+            --add-modules javafx.controls,javafx.fxml \
+            --java-options "--module-path \$APPDIR --add-modules javafx.controls,javafx.fxml" \
+            --java-options "-Dfile.encoding=UTF-8"
+
+      - name: Subir instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            *.dmg
+            *.msi
+          if-no-files-found: error
