@@ -53,7 +53,10 @@ public class LoginController {
         });
 
         campoUsuario.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) login();
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                if (passwordVisible) campoPasswordVisible.requestFocus();
+                else                 campoPassword.requestFocus();
+            }
         });
         campoPassword.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) login();
