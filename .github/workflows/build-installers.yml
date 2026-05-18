@@ -20,10 +20,12 @@ jobs:
           - os: macos-latest
             jfx-zip: openjfx-21_osx-x64_bin-sdk.zip
             pkg-type: dmg
+            pkg-version: 1.0.0
             artifact: FSGR-mac
           - os: windows-latest
             jfx-zip: openjfx-21_windows-x64_bin-sdk.zip
             pkg-type: msi
+            pkg-version: 0.9.0
             artifact: FSGR-windows
 
     runs-on: ${{ matrix.os }}
@@ -59,7 +61,7 @@ jobs:
           jpackage \
             --type ${{ matrix.pkg-type }} \
             --name "FSGR" \
-            --app-version 0.9.0 \
+            --app-version ${{ matrix.pkg-version }} \
             --input target/libs \
             --main-jar gestion-reparaciones-cliente-1.0-SNAPSHOT.jar \
             --main-class com.reparaciones.App \
