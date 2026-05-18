@@ -69,7 +69,7 @@ jobs:
             --main-class com.reparaciones.App \
             --module-path javafx-sdk-21/lib \
             --add-modules javafx.controls,javafx.fxml \
-            --java-options "--add-modules javafx.controls,javafx.fxml" \
+            --java-options "--add-modules=javafx.controls,javafx.fxml" \
             --java-options "-Dfile.encoding=UTF-8" \
             ${{ matrix.icon-arg }}
 
