@@ -109,6 +109,7 @@
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <Label text="Pedidos" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
                     <MenuButton fx:id="menuFiltroEstado" text="Estado" prefWidth="140"/>
+                    <MenuButton fx:id="menuFiltroProveedorPedidos" text="Proveedor" prefWidth="140"/>
                     <TextField fx:id="txtBuscadorPedidos" promptText="Buscar componente…"
                                styleClass="buscador" prefWidth="180"/>
                     <Label text="Desde:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
@@ -142,6 +143,7 @@
             <VBox fx:id="pnlProveedores" spacing="12" visible="false" managed="false">
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <Label text="Proveedores" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <MenuButton fx:id="menuFiltroProveedores" text="Proveedor" prefWidth="160"/>
                     <Button fx:id="btnNuevoProveedor" text="Nuevo proveedor" styleClass="btn-primary" onAction="#nuevoProveedor"/>
                 </HBox>
                 <TableView fx:id="tablaProveedores" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
