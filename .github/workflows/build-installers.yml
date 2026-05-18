@@ -21,11 +21,13 @@ jobs:
             jfx-zip: openjfx-21_osx-x64_bin-sdk.zip
             pkg-type: dmg
             pkg-version: 1.0.0
+            icon-arg: ""
             artifact: FSGR-mac
           - os: windows-latest
             jfx-zip: openjfx-21_windows-x64_bin-sdk.zip
             pkg-type: msi
             pkg-version: 0.9.0
+            icon-arg: "--icon packaging/icono_Windows.ico"
             artifact: FSGR-windows
 
     runs-on: ${{ matrix.os }}
@@ -68,7 +70,8 @@ jobs:
             --module-path javafx-sdk-21/lib \
             --add-modules javafx.controls,javafx.fxml \
             --java-options "--add-modules javafx.controls,javafx.fxml" \
-            --java-options "-Dfile.encoding=UTF-8"
+            --java-options "-Dfile.encoding=UTF-8" \
+            ${{ matrix.icon-arg }}
 
       - name: Subir instalador
         uses: actions/upload-artifact@v4
