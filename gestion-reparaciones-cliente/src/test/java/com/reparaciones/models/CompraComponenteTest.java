@@ -10,7 +10,7 @@ class CompraComponenteTest {
                 1, 1, "Batería", 1, "Proveedor", cantidad, null,
                 false, null, null,
                 precioUd, "USD", precioEur,
-                CompraComponente.Estado.pendiente, null);
+                CompraComponente.Estado.en_camino, null);
     }
 
     @Test
@@ -38,9 +38,9 @@ class CompraComponenteTest {
     }
 
     @Test
-    void estadoInicial_esPendiente() {
+    void estadoInicial_esEnCamino() {
         CompraComponente p = pedido(10.0, 9.5, 2);
-        assertEquals(CompraComponente.Estado.pendiente, p.getEstado());
+        assertEquals(CompraComponente.Estado.en_camino, p.getEstado());
     }
 
     @Test
