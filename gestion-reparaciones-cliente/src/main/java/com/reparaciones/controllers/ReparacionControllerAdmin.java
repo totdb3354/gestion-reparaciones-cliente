@@ -205,25 +205,45 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
         colImei.setCellFactory(col -> new TableCell<>() {
             private final Label lblImei = new Label();
+            private final Label lblMod  = new Label();
+            private final javafx.scene.layout.VBox vbImei = new javafx.scene.layout.VBox(0, lblImei, lblMod);
             private final ImageView ivHist = new ImageView(imgHistorial);
-            private final HBox contenedor = new HBox(6, lblImei, ivHist);
+            private final HBox contenedor = new HBox(6, vbImei, ivHist);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> aplicarColores(sel);
             {
+                aplicarColores(false);
                 ivHist.setFitWidth(25);
                 ivHist.setFitHeight(25);
                 ivHist.setPreserveRatio(true);
                 ivHist.setStyle("-fx-cursor: hand;");
                 contenedor.setAlignment(Pos.CENTER_LEFT);
                 ivHist.setOnMouseClicked(e -> abrirHistorialImei(getTableView().getItems().get(getIndex()).getImei()));
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) newRow.selectedProperty().addListener(selListener);
+                });
             }
-
+            private void aplicarColores(boolean sel) {
+                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
+            }
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                    return;
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
                 }
-                lblImei.setText(getTableView().getItems().get(getIndex()).getImei());
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lblImei.setText(rep.getImei());
+                aplicarColores(getTableRow() != null && getTableRow().isSelected());
+                String modelo = rep.getModelo();
+                if (modelo != null && !modelo.isEmpty()) {
+                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
+                    lblMod.setVisible(true); lblMod.setManaged(true);
+                } else {
+                    lblMod.setVisible(false); lblMod.setManaged(false);
+                }
                 setGraphic(contenedor);
             }
         });

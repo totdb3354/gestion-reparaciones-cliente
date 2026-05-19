@@ -150,9 +150,18 @@ public class PendientesAdminController {
             private final Label lblImei  = new Label();
             private final Label lblMod   = new Label();
             private final VBox  celda    = new VBox(0, lblImei, lblMod);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> aplicarColores(sel);
             {
-                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
-                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A96A3;");
+                aplicarColores(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) newRow.selectedProperty().addListener(selListener);
+                });
+            }
+            private void aplicarColores(boolean sel) {
+                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
             }
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -162,6 +171,7 @@ public class PendientesAdminController {
                 }
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 lblImei.setText(rep.getImei());
+                aplicarColores(getTableRow() != null && getTableRow().isSelected());
                 String modelo = rep.getModelo();
                 if (modelo != null && !modelo.isEmpty()) {
                     lblMod.setText(FormularioReparacionController.traducirModelo(modelo));

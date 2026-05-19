@@ -8,6 +8,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -51,8 +52,42 @@ public class PendientesTecnicoController {
 
         cId.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
-        cImei.setCellValueFactory(d ->
-            new javafx.beans.property.SimpleStringProperty(d.getValue().getImei()));
+        cImei.setCellFactory(col -> new TableCell<>() {
+            private final Label lblImei = new Label();
+            private final Label lblMod  = new Label();
+            private final VBox  celda   = new VBox(0, lblImei, lblMod);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> aplicarColores(sel);
+            {
+                aplicarColores(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) newRow.selectedProperty().addListener(selListener);
+                });
+            }
+            private void aplicarColores(boolean sel) {
+                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lblImei.setText(rep.getImei());
+                aplicarColores(getTableRow() != null && getTableRow().isSelected());
+                String modelo = rep.getModelo();
+                if (modelo != null && !modelo.isEmpty()) {
+                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
+                    lblMod.setVisible(true); lblMod.setManaged(true);
+                } else {
+                    lblMod.setVisible(false); lblMod.setManaged(false);
+                }
+                setGraphic(celda);
+            }
+        });
         cFecha.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
