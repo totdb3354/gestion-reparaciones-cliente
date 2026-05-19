@@ -175,7 +175,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         mostrarTabPedidos();
         // Activar solo pendiente + parcial (los que forman "en camino")
         cbsEstado.forEach(cb -> cb.setSelected(
-                cb.getText().equals("pendiente") || cb.getText().equals("parcial")));
+                cb.getText().equals("en camino") || cb.getText().equals("parcial")));
         // Rellenar buscador con el nombre del componente
         txtBuscadorPedidos.setText(comp.getTipo());
         // Seleccionar y hacer scroll al primer pedido activo del componente
@@ -814,7 +814,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 String sep = com.reparaciones.utils.Colores.FILA_SEP;
                 String barraIzq = "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " ";
                 setStyle(switch (item.getEstado()) {
-                    case pendiente -> item.isEsUrgente()
+                    case en_camino -> item.isEsUrgente()
                             ? barraIzq + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";"
                             : "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " transparent;";
                     case recibido  -> barraIzq + com.reparaciones.utils.Colores.FILA_RECIBIDO_BRD + ";";
@@ -845,10 +845,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 }
                 CompraComponente p = getTableRow().getItem();
                 boolean urgente = p.isEsUrgente();
-                boolean cancelado = p.getEstado() != Estado.pendiente && p.getEstado() != Estado.parcial;
+                boolean cancelado = p.getEstado() != Estado.en_camino && p.getEstado() != Estado.parcial;
                 String bg, txt;
                 switch (p.getEstado()) {
-                    case pendiente -> { bg = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BG  : "#E8EAF0";
+                    case en_camino -> { bg = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BG  : "#E8EAF0";
                                         txt = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD : "#586376"; }
                     case recibido  -> { bg = com.reparaciones.utils.Colores.FILA_RECIBIDO_BG;  txt = com.reparaciones.utils.Colores.FILA_RECIBIDO_BRD; }
                     case parcial   -> { bg = com.reparaciones.utils.Colores.FILA_PARCIAL_BG;   txt = com.reparaciones.utils.Colores.FILA_PARCIAL_BRD; }
@@ -876,7 +876,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             java.time.LocalDate desde = dpPedidosDesde.getValue();
             java.time.LocalDate hasta = dpPedidosHasta.getValue();
             filtrada.setPredicate(p -> {
-                boolean coincideEstado    = sel.isEmpty()     || sel.contains(p.getEstado().name());
+                boolean coincideEstado    = sel.isEmpty()     || sel.contains(p.getEstado().name().replace('_', ' '));
                 boolean coincideProveedor = selProv.isEmpty() || selProv.contains(p.getNombreProveedor());
                 boolean coincideTexto     = texto == null || texto.isBlank() ||
                         p.getTipoComponente().toLowerCase().contains(texto.toLowerCase().trim());
@@ -886,7 +886,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 return coincideEstado && coincideProveedor && coincideTexto && coincideDesde && coincideHasta;
             });
         };
-        for (String estado : new String[]{"pendiente", "parcial", "recibido", "cancelado"}) {
+        for (String estado : new String[]{"en camino", "parcial", "recibido", "cancelado"}) {
             CheckBox cb = new CheckBox(estado);
             cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
             cb.selectedProperty().addListener((obs, o, n) -> aplicarFiltroPedidos.run());
@@ -917,7 +917,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         ctx.getItems().clear();
         if (sel == null) return;
         switch (sel.getEstado()) {
-            case pendiente -> {
+            case en_camino -> {
                 MenuItem confirmar = new MenuItem("Confirmar recibido");
                 MenuItem parcial   = new MenuItem("Recepción parcial");
                 MenuItem editar    = new MenuItem("Editar");
@@ -936,7 +936,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 ctx.getItems().addAll(resto, alterado);
             }
             case recibido -> {
-                MenuItem desrecibir = new MenuItem("Revertir a pendiente");
+                MenuItem desrecibir = new MenuItem("Revertir a En camino");
                 MenuItem editar     = new MenuItem("Editar");
                 desrecibir.setOnAction(e -> desrecibirPedido());
                 editar    .setOnAction(e -> editarPedido());
@@ -1094,10 +1094,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         if (sel == null) return;
         int cantidadRevertir = sel.getCantidadRecibida() != null ? sel.getCantidadRecibida() : sel.getCantidad();
         ConfirmDialog.mostrar(
-                "Revertir a pendiente",
+                "Revertir a En camino",
                 "¿Revertir el pedido #" + sel.getIdCompra() + " de " + sel.getTipoComponente() +
-                " a pendiente?\nSe descontarán " + cantidadRevertir + " unidad(es) del stock.\nRecuerda revisar el stock tras la operación.",
-                "Revertir a pendiente",
+                " a En camino?\nSe descontarán " + cantidadRevertir + " unidad(es) del stock.\nRecuerda revisar el stock tras la operación.",
+                "Revertir a En camino",
                 () -> {
                     try {
                         compraDAO.desrecibir(sel);

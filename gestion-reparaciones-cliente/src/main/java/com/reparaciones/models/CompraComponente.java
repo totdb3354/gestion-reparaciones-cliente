@@ -17,13 +17,13 @@ public class CompraComponente {
     /**
      * Estado del ciclo de vida del pedido:
      * <ul>
-     *   <li>{@code pendiente} — pedido realizado, aún sin recibir nada</li>
+     *   <li>{@code en_camino} — pedido realizado, aún sin recibir nada</li>
      *   <li>{@code parcial} — recibida una parte de la cantidad pedida</li>
      *   <li>{@code recibido} — recibida la totalidad</li>
      *   <li>{@code cancelado} — pedido anulado</li>
      * </ul>
      */
-    public enum Estado { pendiente, recibido, parcial, cancelado }
+    public enum Estado { en_camino, recibido, parcial, cancelado }
 
     /** Clave primaria (ID_COMPRA en BD). */
     private int idCompra;
