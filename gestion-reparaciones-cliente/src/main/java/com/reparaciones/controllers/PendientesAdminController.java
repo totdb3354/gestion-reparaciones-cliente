@@ -45,6 +45,7 @@ public class PendientesAdminController {
     @FXML private TableColumn<ReparacionResumen, String> cId;
     @FXML private TableColumn<ReparacionResumen, String> cTecnico;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
+    @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private TextField  filtroImei;
@@ -147,21 +148,15 @@ public class PendientesAdminController {
             }
         });
         cImei.setCellFactory(col -> new TableCell<>() {
-            private final Label lblImei  = new Label();
-            private final Label lblMod   = new Label();
-            private final VBox  celda    = new VBox(0, lblImei, lblMod);
+            private final Label lbl = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
-                (obs, o, sel) -> aplicarColores(sel);
+                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
-                aplicarColores(false);
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
                 });
-            }
-            private void aplicarColores(boolean sel) {
-                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
-                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
             }
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -169,18 +164,15 @@ public class PendientesAdminController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                lblImei.setText(rep.getImei());
-                aplicarColores(getTableRow() != null && getTableRow().isSelected());
-                String modelo = rep.getModelo();
-                if (modelo != null && !modelo.isEmpty()) {
-                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
-                    lblMod.setVisible(true); lblMod.setManaged(true);
-                } else {
-                    lblMod.setVisible(false); lblMod.setManaged(false);
-                }
-                setGraphic(celda);
+                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                setGraphic(lbl);
             }
+        });
+        cModelo.setCellValueFactory(d -> {
+            String m = d.getValue().getModelo();
+            return new javafx.beans.property.SimpleStringProperty(
+                (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
@@ -689,9 +681,10 @@ public class PendientesAdminController {
      * @return texto de la celda, o {@code null} si la columna no es copiable
      */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
-        if (col == cId)    return rep.getIdRep();
-        if (col == cImei)  return rep.getImei();
-        if (col == cFecha) return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cId)     return rep.getIdRep();
+        if (col == cImei)   return rep.getImei();
+        if (col == cModelo) { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
         return null;
     }
 
