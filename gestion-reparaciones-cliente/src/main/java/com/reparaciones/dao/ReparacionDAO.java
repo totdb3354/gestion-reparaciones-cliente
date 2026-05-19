@@ -232,6 +232,10 @@ public class ReparacionDAO {
                 "/api/reparaciones/imei/" + imei + "/tiene-asignacion?tecnico=" + idTec);
     }
 
+    public List<Integer> getTecnicosConAsignacionActiva(String imei) throws SQLException {
+        return ApiClient.getList("/api/reparaciones/imei/" + imei + "/tecnicos-asignados", Integer.class);
+    }
+
     /**
      * Devuelve el conteo de reparaciones finalizadas agrupadas por técnico y periodo.
      *
