@@ -12,6 +12,7 @@
 
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Mis asignaciones pendientes" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <MenuButton fx:id="filtroSolicitud" text="Tipo" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
     </HBox>
@@ -20,6 +21,7 @@
         <columns>
             <TableColumn fx:id="cId"     text="Id Asignación"    prefWidth="90"/>
             <TableColumn fx:id="cImei"   text="IMEI"             prefWidth="130"/>
+            <TableColumn fx:id="cModelo" text="Modelo"           prefWidth="120"/>
             <TableColumn fx:id="cFecha"  text="Fecha asignación" prefWidth="130"/>
             <TableColumn fx:id="cEstado" text="Estado"           prefWidth="100"/>
             <TableColumn fx:id="cAccion" text=""                  prefWidth="150"/>

@@ -57,6 +57,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML
     private TableColumn<ReparacionResumen, String> colImei;
     @FXML
+    private TableColumn<ReparacionResumen, String> colModelo;
+    @FXML
     private TableColumn<ReparacionResumen, String> colReparador;
     @FXML
     private TableColumn<ReparacionResumen, String> colFecha;
@@ -204,15 +206,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
         colImei.setCellFactory(col -> new TableCell<>() {
-            private final Label lblImei = new Label();
-            private final Label lblMod  = new Label();
-            private final javafx.scene.layout.VBox vbImei = new javafx.scene.layout.VBox(0, lblImei, lblMod);
+            private final Label lbl = new Label();
             private final ImageView ivHist = new ImageView(imgHistorial);
-            private final HBox contenedor = new HBox(6, vbImei, ivHist);
+            private final HBox contenedor = new HBox(6, lbl, ivHist);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
-                (obs, o, sel) -> aplicarColores(sel);
+                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
-                aplicarColores(false);
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
                 ivHist.setFitWidth(25);
                 ivHist.setFitHeight(25);
                 ivHist.setPreserveRatio(true);
@@ -224,28 +224,21 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
                 });
             }
-            private void aplicarColores(boolean sel) {
-                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
-                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
-            }
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                lblImei.setText(rep.getImei());
-                aplicarColores(getTableRow() != null && getTableRow().isSelected());
-                String modelo = rep.getModelo();
-                if (modelo != null && !modelo.isEmpty()) {
-                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
-                    lblMod.setVisible(true); lblMod.setManaged(true);
-                } else {
-                    lblMod.setVisible(false); lblMod.setManaged(false);
-                }
+                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
                 setGraphic(contenedor);
             }
+        });
+        colModelo.setCellValueFactory(d -> {
+            String m = d.getValue().getModelo();
+            return new javafx.beans.property.SimpleStringProperty(
+                (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
 
         colReparador.setCellFactory(col -> new TableCell<>() {
@@ -514,6 +507,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
         if (col == colIdRep)         return rep.getIdRep();
         if (col == colImei)          return rep.getImei();
+        if (col == colModelo)        { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
         if (col == colReparador)     return rep.getNombreTecnico();
         if (col == colFecha)         return rep.getFechaFin() != null ? rep.getFechaFin().format(FORMATO_FECHA) : "";
         if (col == colComponente)    return rep.getTipoComponente();

@@ -8,7 +8,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -29,9 +28,11 @@ public class PendientesTecnicoController {
     @FXML private TableColumn<ReparacionResumen, Void>   cEstado;
     @FXML private TableColumn<ReparacionResumen, String> cId;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
+    @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private MenuButton filtroSolicitud;
+    @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
@@ -53,21 +54,15 @@ public class PendientesTecnicoController {
         cId.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
         cImei.setCellFactory(col -> new TableCell<>() {
-            private final Label lblImei = new Label();
-            private final Label lblMod  = new Label();
-            private final VBox  celda   = new VBox(0, lblImei, lblMod);
+            private final Label lbl = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
-                (obs, o, sel) -> aplicarColores(sel);
+                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
-                aplicarColores(false);
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
                 });
-            }
-            private void aplicarColores(boolean sel) {
-                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
-                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (sel ? "#D0D8E8" : "#8A96A3") + ";");
             }
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -75,18 +70,15 @@ public class PendientesTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                lblImei.setText(rep.getImei());
-                aplicarColores(getTableRow() != null && getTableRow().isSelected());
-                String modelo = rep.getModelo();
-                if (modelo != null && !modelo.isEmpty()) {
-                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
-                    lblMod.setVisible(true); lblMod.setManaged(true);
-                } else {
-                    lblMod.setVisible(false); lblMod.setManaged(false);
-                }
-                setGraphic(celda);
+                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                setGraphic(lbl);
             }
+        });
+        cModelo.setCellValueFactory(d -> {
+            String m = d.getValue().getModelo();
+            return new javafx.beans.property.SimpleStringProperty(
+                (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
         cFecha.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(
@@ -259,6 +251,18 @@ public class PendientesTecnicoController {
             CustomMenuItem item = new CustomMenuItem(cb, false);
             filtroSolicitud.getItems().add(item);
         }
+        if (filtroImei != null) {
+            filtroImei.textProperty().addListener((obs, o, n) -> {
+                if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
+                if (filtroImei.getText().length() > 15)
+                    filtroImei.setText(filtroImei.getText().substring(0, 15));
+                String val = filtroImei.getText();
+                if (val.isEmpty())          filtroImei.setStyle("");
+                else if (val.length() < 15) filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                else                        filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
+                aplicarFiltros();
+            });
+        }
     }
 
     private void actualizarTextoFiltroSolicitud() {
@@ -277,7 +281,9 @@ public class PendientesTecnicoController {
         boolean filtrarSol  = cbSoloSolicitudes.isSelected();
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
+        String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
         datosFiltrados.setPredicate(rep -> {
+            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
             if (!filtrarSol && !filtrarInc && !filtrarAsig) return true;
             boolean esSol  = rep.getEsSolicitud() > 0;
             boolean esInc  = rep.isEsIncidencia();
@@ -292,6 +298,7 @@ public class PendientesTecnicoController {
 
     @FXML
     private void limpiarFiltros() {
+        if (filtroImei != null) { filtroImei.clear(); filtroImei.setStyle(""); }
         cbSoloSolicitudes.setSelected(false);
         cbSoloIncidencias.setSelected(false);
         cbSoloAsignaciones.setSelected(false);
@@ -329,9 +336,10 @@ public class PendientesTecnicoController {
      * @return texto de la celda, o {@code null} si la columna no es copiable
      */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
-        if (col == cId)   return rep.getIdRep();
-        if (col == cImei) return rep.getImei();
-        if (col == cFecha) return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cId)     return rep.getIdRep();
+        if (col == cImei)   return rep.getImei();
+        if (col == cModelo) { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
         return null;
     }
 
