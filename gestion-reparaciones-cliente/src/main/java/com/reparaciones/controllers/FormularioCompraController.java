@@ -120,70 +120,129 @@ public class FormularioCompraController {
     private void configurarTabla() {
         tablaLineas.setEditable(true);
 
-        // Componente — ComboBox editable con filtro por texto
+        // Componente — TextField con popup filtrado (evita conflictos del ComboBox editable)
         colComponente.setCellValueFactory(c -> c.getValue().componenteProperty());
         colComponente.setCellFactory(col -> new TableCell<>() {
             private final javafx.collections.transformation.FilteredList<Componente> filtrada =
                     new javafx.collections.transformation.FilteredList<>(componentesDisponibles, c -> true);
-            private final ComboBox<Componente> combo = new ComboBox<>(filtrada);
+            private final TextField campo = new TextField();
+            private final ListView<Componente> lista = new ListView<>(filtrada);
+            private final javafx.stage.Popup popup = new javafx.stage.Popup();
+            private Componente seleccionado = null;
             private boolean actualizando = false;
+
+            private static final String CAMPO_NORMAL =
+                    "-fx-background-color: #001232; -fx-background-radius: 24;" +
+                    "-fx-border-color: transparent; -fx-border-radius: 24; -fx-border-width: 0;" +
+                    "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
+                    "-fx-padding: 4 12 4 12;";
+            private static final String CAMPO_SELEC =
+                    "-fx-background-color: #001232; -fx-background-radius: 24;" +
+                    "-fx-border-color: rgba(255,255,255,0.35); -fx-border-radius: 24; -fx-border-width: 1;" +
+                    "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
+                    "-fx-padding: 4 12 4 12;";
             {
-                combo.setEditable(true);
-                combo.setCellFactory(lv -> new ListCell<>() {
+                campo.setStyle(CAMPO_NORMAL);
+                campo.setMaxWidth(Double.MAX_VALUE);
+
+                lista.setStyle(
+                        "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                        "-fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
+                lista.setFixedCellSize(30);
+                lista.setPrefWidth(260);
+                lista.setCellFactory(lv -> new ListCell<>() {
                     {
                         setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)
-                            setStyle("-fx-text-fill: #2C3B54; -fx-background-color: #DDE1E7;"); });
+                            setStyle("-fx-background-color: #001232; -fx-background-radius: 8;" +
+                                    "-fx-background-insets: 2 6 2 6;" +
+                                    "-fx-text-fill: white; -fx-font-size: 12px;" +
+                                    "-fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
                         setOnMouseExited(e -> { if (!isEmpty() && getItem() != null)
-                            setStyle("-fx-text-fill: #2C3B54; -fx-background-color: white;"); });
+                            setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
+                                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
                     }
                     @Override protected void updateItem(Componente c, boolean empty) {
                         super.updateItem(c, empty);
-                        setText(empty || c == null ? null : c.toString());
-                        setStyle("-fx-text-fill: #2C3B54; -fx-background-color: white;");
+                        if (empty || c == null) { setText(null); setStyle(""); }
+                        else { setText(c.getTipo()); setStyle("-fx-background-color: white;" +
+                                "-fx-text-fill: #001232; -fx-font-size: 12px;" +
+                                "-fx-font-weight: bold; -fx-padding: 6 12 6 12;"); }
                     }
                 });
-                combo.setButtonCell(new ListCell<>() {
-                    @Override protected void updateItem(Componente c, boolean empty) {
-                        super.updateItem(c, empty);
-                        setText(empty || c == null ? "" : c.toString());
+                lista.setOnMouseClicked(e -> {
+                    Componente sel = lista.getSelectionModel().getSelectedItem();
+                    if (sel != null) confirmarSeleccion(sel);
+                });
+                lista.setOnKeyPressed(e -> {
+                    if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                        Componente sel = lista.getSelectionModel().getSelectedItem();
+                        if (sel != null) confirmarSeleccion(sel);
                     }
                 });
-                combo.getEditor().textProperty().addListener((obs, old, val) -> {
+
+                popup.setAutoHide(true);
+                popup.getContent().add(lista);
+
+                campo.textProperty().addListener((obs, old, val) -> {
                     if (actualizando) return;
                     String lower = val == null ? "" : val.toLowerCase().trim();
                     filtrada.setPredicate(c -> lower.isEmpty() || c.getTipo().toLowerCase().contains(lower));
-                    if (!combo.isShowing()) combo.show();
+                    mostrarPopup();
+                });
+                // Enter en el campo confirma el primer resultado
+                campo.setOnAction(e -> {
+                    if (!filtrada.isEmpty()) confirmarSeleccion(filtrada.get(0));
+                });
+                campo.focusedProperty().addListener((obs, o, focused) -> {
+                    if (!focused) {
+                        javafx.application.Platform.runLater(() -> {
+                            popup.hide();
+                            if (seleccionado != null && !campo.getText().equals(seleccionado.getTipo())) {
+                                actualizando = true;
+                                campo.setText(seleccionado.getTipo());
+                                filtrada.setPredicate(c -> true);
+                                actualizando = false;
+                            }
+                        });
+                    }
                 });
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
-                    if (newRow != null) {
-                        combo.setStyle(newRow.isSelected() ? "-fx-border-color: rgba(255,255,255,0.35); -fx-border-width: 1;" : "");
-                        newRow.selectedProperty().addListener((o, old, selected) ->
-                            combo.setStyle(selected ? "-fx-border-color: rgba(255,255,255,0.35); -fx-border-width: 1;" : ""));
-                    }
+                    if (newRow == null) return;
+                    campo.setStyle(newRow.isSelected() ? CAMPO_SELEC : CAMPO_NORMAL);
+                    newRow.selectedProperty().addListener((o, old, selected) ->
+                        campo.setStyle(selected ? CAMPO_SELEC : CAMPO_NORMAL));
                 });
-                combo.setMaxWidth(Double.MAX_VALUE);
-                combo.setOnAction(e -> {
-                    Componente val = combo.getValue();
-                    int idx = getIndex();
-                    if (val != null && idx >= 0 && idx < getTableView().getItems().size()) {
-                        getTableView().getItems().get(idx).setComponente(val);
-                        actualizando = true;
-                        combo.getEditor().setText(val.getTipo());
-                        filtrada.setPredicate(c -> true);
-                        actualizando = false;
-                    }
-                });
+            }
+            private void mostrarPopup() {
+                if (filtrada.isEmpty() || campo.getScene() == null) { popup.hide(); return; }
+                lista.setPrefHeight(Math.min(filtrada.size(), 6) * 28 + 4);
+                if (!popup.isShowing()) {
+                    javafx.geometry.Bounds b = campo.localToScreen(campo.getBoundsInLocal());
+                    if (b != null) popup.show(campo, b.getMinX(), b.getMaxY() + 1);
+                }
+            }
+            private void confirmarSeleccion(Componente c) {
+                seleccionado = c;
+                actualizando = true;
+                campo.setText(c.getTipo());
+                filtrada.setPredicate(x -> true);
+                actualizando = false;
+                popup.hide();
+                int idx = getIndex();
+                if (idx >= 0 && idx < getTableView().getItems().size())
+                    getTableView().getItems().get(idx).setComponente(c);
             }
             @Override protected void updateItem(Componente item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) { setGraphic(null); }
+                if (empty) { seleccionado = null; popup.hide(); setGraphic(null); }
                 else {
+                    seleccionado = item;
                     actualizando = true;
-                    combo.setValue(item);
-                    combo.getEditor().setText(item != null ? item.getTipo() : "");
+                    campo.setText(item != null ? item.getTipo() : "");
                     filtrada.setPredicate(c -> true);
                     actualizando = false;
-                    setGraphic(combo);
+                    setGraphic(campo);
                 }
             }
         });
