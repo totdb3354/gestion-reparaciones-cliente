@@ -470,29 +470,52 @@ public class PendientesAdminController {
         Label lblModelo = new Label("Modelo de iPhone");
         lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
 
-        List<String> todosModelos = new ArrayList<>(FormularioReparacionController.MODELOS_ORDENADOS);
-        ComboBox<String> cbModelo = new ComboBox<>();
-        cbModelo.getItems().addAll(todosModelos);
-        cbModelo.setEditable(true);
-        cbModelo.setMaxWidth(Double.MAX_VALUE);
-        cbModelo.setConverter(new javafx.util.StringConverter<>() {
-            @Override public String toString(String code) {
-                return (code == null) ? "" : FormularioReparacionController.traducirModelo(code);
+        javafx.collections.ObservableList<String> todosModelos =
+                FXCollections.observableArrayList(FormularioReparacionController.MODELOS_ORDENADOS);
+        FilteredList<String> modelosFiltrados = new FilteredList<>(todosModelos, s -> true);
+
+        TextField tfModelo = new TextField();
+        tfModelo.setPromptText("Escribe para buscar...");
+        tfModelo.setMaxWidth(Double.MAX_VALUE);
+        tfModelo.setStyle(
+                "-fx-background-color: #001232; -fx-background-radius: 24;" +
+                "-fx-border-color: transparent; -fx-border-radius: 24; -fx-border-width: 0;" +
+                "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 12 4 12;");
+
+        ListView<String> listaModelos = new ListView<>(modelosFiltrados);
+        listaModelos.setStyle(
+                "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
+        listaModelos.setFixedCellSize(30);
+        listaModelos.setPrefWidth(344);
+        listaModelos.setCellFactory(lv -> new ListCell<>() {
+            {
+                setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)
+                    setStyle("-fx-background-color: #001232; -fx-background-radius: 8;" +
+                            "-fx-background-insets: 2 6 2 6;" +
+                            "-fx-text-fill: white; -fx-font-size: 12px;" +
+                            "-fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
+                setOnMouseExited(e -> { if (!isEmpty() && getItem() != null)
+                    setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
+                            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
             }
-            @Override public String fromString(String text) {
-                if (text == null || text.isBlank()) return null;
-                return todosModelos.stream()
-                    .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(text.trim()))
-                    .findFirst().orElse(null);
+            @Override protected void updateItem(String code, boolean empty) {
+                super.updateItem(code, empty);
+                if (empty || code == null) { setText(null); setStyle(""); }
+                else { setText(FormularioReparacionController.traducirModelo(code));
+                    setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
+                            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); }
             }
         });
-        cbModelo.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(String m, boolean empty) {
-                super.updateItem(m, empty);
-                setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
-            }
-        });
-        cbModelo.getEditor().setPromptText("Escribe para buscar...");
+
+        javafx.stage.Popup popupModelo = new javafx.stage.Popup();
+        popupModelo.setAutoHide(true);
+        popupModelo.getContent().add(listaModelos);
+
+        String[] modeloSel = {null};
+        boolean[] actualizandoModelo = {false};
 
         // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
         Label lblTecnicos = new Label("Técnicos a asignar");
@@ -569,8 +592,27 @@ public class PendientesAdminController {
             }
 
             boolean algunoSeleccionado = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
-            boolean modeloOk = cbModelo.getValue() != null;
+            boolean modeloOk = modeloSel[0] != null;
             btnConfirmar.setDisable(!(imeiOk && algunoSeleccionado && modeloOk));
+        };
+
+        // ── Helpers popup modelo ──────────────────────────────────────────────
+        Runnable mostrarPopupModelo = () -> {
+            if (modelosFiltrados.isEmpty() || tfModelo.getScene() == null) { popupModelo.hide(); return; }
+            listaModelos.setPrefHeight(Math.min(modelosFiltrados.size(), 6) * 28 + 4);
+            if (!popupModelo.isShowing()) {
+                javafx.geometry.Bounds b = tfModelo.localToScreen(tfModelo.getBoundsInLocal());
+                if (b != null) popupModelo.show(tfModelo, b.getMinX(), b.getMaxY() + 1);
+            }
+        };
+        java.util.function.Consumer<String> confirmarModelo = code -> {
+            modeloSel[0] = code;
+            actualizandoModelo[0] = true;
+            tfModelo.setText(FormularioReparacionController.traducirModelo(code));
+            modelosFiltrados.setPredicate(s -> true);
+            actualizandoModelo[0] = false;
+            popupModelo.hide();
+            validar.run();
         };
 
         // ── Listeners ─────────────────────────────────────────────────────────
@@ -580,27 +622,54 @@ public class PendientesAdminController {
             validar.run();
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
-        cbModelo.valueProperty().addListener((obs, o, n) -> validar.run());
 
-        boolean[] actualizandoItems = {false};
-        cbModelo.getEditor().textProperty().addListener((obs, oldText, newText) -> {
-            if (actualizandoItems[0]) return;
-            String sel = cbModelo.getValue();
-            if (sel != null && FormularioReparacionController.traducirModelo(sel).equals(newText)) return;
-            String query = newText == null ? "" : newText.trim().toLowerCase();
-            List<String> filtrados = query.isEmpty() ? todosModelos :
-                todosModelos.stream()
-                    .filter(c -> FormularioReparacionController.traducirModelo(c).toLowerCase().contains(query))
-                    .collect(java.util.stream.Collectors.toList());
-            actualizandoItems[0] = true;
-            cbModelo.getItems().setAll(filtrados);
-            actualizandoItems[0] = false;
-            if (!filtrados.isEmpty() && !query.isEmpty()) cbModelo.show();
+        tfModelo.textProperty().addListener((obs, oldText, newText) -> {
+            if (actualizandoModelo[0]) return;
+            if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(newText)) return;
+            modeloSel[0] = null;
+            String lower = newText == null ? "" : newText.trim().toLowerCase();
+            modelosFiltrados.setPredicate(c -> lower.isEmpty()
+                    || FormularioReparacionController.traducirModelo(c).toLowerCase().contains(lower));
+            mostrarPopupModelo.run();
             validar.run();
+        });
+        tfModelo.setOnAction(e -> {
+            if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0));
+        });
+        tfModelo.focusedProperty().addListener((obs, o, focused) -> {
+            if (!focused) javafx.application.Platform.runLater(() -> {
+                popupModelo.hide();
+                String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
+                if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) {
+                    modelosFiltrados.setPredicate(s -> true);
+                    return;
+                }
+                String exacto = todosModelos.stream()
+                        .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(texto))
+                        .findFirst().orElse(null);
+                if (exacto != null) {
+                    confirmarModelo.accept(exacto);
+                } else {
+                    actualizandoModelo[0] = true;
+                    tfModelo.setText(modeloSel[0] != null ? FormularioReparacionController.traducirModelo(modeloSel[0]) : "");
+                    modelosFiltrados.setPredicate(s -> true);
+                    actualizandoModelo[0] = false;
+                }
+            });
+        });
+        listaModelos.setOnMouseClicked(e -> {
+            String sel = listaModelos.getSelectionModel().getSelectedItem();
+            if (sel != null) confirmarModelo.accept(sel);
+        });
+        listaModelos.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                String sel = listaModelos.getSelectionModel().getSelectedItem();
+                if (sel != null) confirmarModelo.accept(sel);
+            }
         });
 
         // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, cbModelo, lblTecnicos, scrollTecnicos, botones);
+        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, botones);
         contenido.setPadding(new Insets(28));
         contenido.setPrefWidth(400);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
@@ -614,7 +683,7 @@ public class PendientesAdminController {
 
         btnConfirmar.setOnAction(ev -> {
             String imei  = tfImei.getText().trim();
-            String model = cbModelo.getValue();
+            String model = modeloSel[0];
             try {
                 telefonoDAO.insertar(imei, model);
                 for (int i = 0; i < checkboxes.size(); i++) {
