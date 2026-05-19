@@ -470,22 +470,29 @@ public class PendientesAdminController {
         Label lblModelo = new Label("Modelo de iPhone");
         lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
 
+        List<String> todosModelos = new ArrayList<>(FormularioReparacionController.MODELOS_ORDENADOS);
         ComboBox<String> cbModelo = new ComboBox<>();
-        cbModelo.getItems().addAll(FormularioReparacionController.MODELOS_ORDENADOS);
-        cbModelo.setPromptText("— Selecciona modelo —");
+        cbModelo.getItems().addAll(todosModelos);
+        cbModelo.setEditable(true);
         cbModelo.setMaxWidth(Double.MAX_VALUE);
+        cbModelo.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(String code) {
+                return (code == null) ? "" : FormularioReparacionController.traducirModelo(code);
+            }
+            @Override public String fromString(String text) {
+                if (text == null || text.isBlank()) return null;
+                return todosModelos.stream()
+                    .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(text.trim()))
+                    .findFirst().orElse(null);
+            }
+        });
         cbModelo.setCellFactory(lv -> new ListCell<>() {
             @Override protected void updateItem(String m, boolean empty) {
                 super.updateItem(m, empty);
                 setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
             }
         });
-        cbModelo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(String m, boolean empty) {
-                super.updateItem(m, empty);
-                setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
-            }
-        });
+        cbModelo.getEditor().setPromptText("Escribe para buscar...");
 
         // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
         Label lblTecnicos = new Label("Técnicos a asignar");
@@ -574,6 +581,23 @@ public class PendientesAdminController {
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
         cbModelo.valueProperty().addListener((obs, o, n) -> validar.run());
+
+        boolean[] actualizandoItems = {false};
+        cbModelo.getEditor().textProperty().addListener((obs, oldText, newText) -> {
+            if (actualizandoItems[0]) return;
+            String sel = cbModelo.getValue();
+            if (sel != null && FormularioReparacionController.traducirModelo(sel).equals(newText)) return;
+            String query = newText == null ? "" : newText.trim().toLowerCase();
+            List<String> filtrados = query.isEmpty() ? todosModelos :
+                todosModelos.stream()
+                    .filter(c -> FormularioReparacionController.traducirModelo(c).toLowerCase().contains(query))
+                    .collect(java.util.stream.Collectors.toList());
+            actualizandoItems[0] = true;
+            cbModelo.getItems().setAll(filtrados);
+            actualizandoItems[0] = false;
+            if (!filtrados.isEmpty() && !query.isEmpty()) cbModelo.show();
+            validar.run();
+        });
 
         // ── Confirmar ─────────────────────────────────────────────────────────
         VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, cbModelo, lblTecnicos, scrollTecnicos, botones);
