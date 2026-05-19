@@ -148,6 +148,7 @@ public class RegisterController {
             }
         });
 
+        tablaUsuarios.getColumns().forEach(c -> c.setReorderable(false));
         tablaUsuarios.setItems(datos);
     }
 

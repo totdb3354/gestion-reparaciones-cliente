@@ -202,6 +202,7 @@ public class PendientesTecnicoController {
             }
         });
 
+        tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
     }

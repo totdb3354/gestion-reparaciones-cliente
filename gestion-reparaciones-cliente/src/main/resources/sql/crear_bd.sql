@@ -79,10 +79,11 @@ CREATE TABLE Reparacion (
 -- ── Tablas de stock ───────────────────────────────────────────────────────────
 
 CREATE TABLE Proveedor (
-    ID_PROV  INT          NOT NULL AUTO_INCREMENT,
-    NOMBRE   VARCHAR(100) NOT NULL,
-    ACTIVO   BOOLEAN      NOT NULL DEFAULT TRUE,
-    DIVISA   VARCHAR(3)   NOT NULL DEFAULT 'EUR',
+    ID_PROV    INT          NOT NULL AUTO_INCREMENT,
+    NOMBRE     VARCHAR(100) NOT NULL,
+    ACTIVO     BOOLEAN      NOT NULL DEFAULT TRUE,
+    DIVISA     VARCHAR(3)   NOT NULL DEFAULT 'EUR',
+    COMENTARIO TEXT,
     PRIMARY KEY (ID_PROV)
 );
 

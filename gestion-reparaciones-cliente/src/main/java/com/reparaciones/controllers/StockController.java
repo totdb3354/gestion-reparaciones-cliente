@@ -101,6 +101,12 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     @FXML private TableColumn<Proveedor, String>   cpvNombre;
     @FXML private TableColumn<Proveedor, String>   cpvDivisa;
     @FXML private TableColumn<Proveedor, String>   cpvActivo;
+    @FXML private TableColumn<Proveedor, String>   cpvComentario;
+    @FXML private MenuButton                       menuFiltroProveedores;
+    @FXML private MenuButton                       menuFiltroProveedorPedidos;
+    private final java.util.List<CheckBox> cbsProveedor         = new java.util.ArrayList<>();
+    private final java.util.List<CheckBox> cbsProveedorPedidos  = new java.util.ArrayList<>();
+    private Runnable onFiltroPedidosProveedor = () -> {};
 
     // ── Última actualización ──────────────────────────────────────────────────
     @FXML private Label lblUltimaActStock;
@@ -140,6 +146,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             btnNuevoPedido   .setVisible(false); btnNuevoPedido   .setManaged(false);
             btnNuevoProveedor.setVisible(false); btnNuevoProveedor.setManaged(false);
         }
+        cargarProveedores();
         cargarStock();
 
         poller.scheduleAtFixedRate(
@@ -217,6 +224,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @FXML private void limpiarFiltrosPedidos() {
         cbsEstado.forEach(cb -> cb.setSelected(false));
+        cbsProveedorPedidos.forEach(cb -> cb.setSelected(false));
         txtBuscadorPedidos.clear();
         dpPedidosDesde.setValue(null);
         dpPedidosHasta.setValue(null);
@@ -410,6 +418,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 cargarChartSku(sel);
             }
         });
+        tablaStock.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void cargarStock() {
@@ -859,20 +868,22 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         FilteredList<CompraComponente> filtrada = new FilteredList<>(datosPedidos, p -> true);
         Runnable aplicarFiltroPedidos = () -> {
             actualizarTextoFiltroEstado();
-            java.util.List<String> sel = cbsEstado.stream()
+            java.util.List<String> sel     = cbsEstado.stream()
                     .filter(CheckBox::isSelected).map(CheckBox::getText)
                     .collect(java.util.stream.Collectors.toList());
+            java.util.List<String> selProv = nombresSeleccionados(cbsProveedorPedidos);
             String texto = txtBuscadorPedidos.getText();
             java.time.LocalDate desde = dpPedidosDesde.getValue();
             java.time.LocalDate hasta = dpPedidosHasta.getValue();
             filtrada.setPredicate(p -> {
-                boolean coincideEstado = sel.isEmpty() || sel.contains(p.getEstado().name());
-                boolean coincideTexto  = texto == null || texto.isBlank() ||
+                boolean coincideEstado    = sel.isEmpty()     || sel.contains(p.getEstado().name());
+                boolean coincideProveedor = selProv.isEmpty() || selProv.contains(p.getNombreProveedor());
+                boolean coincideTexto     = texto == null || texto.isBlank() ||
                         p.getTipoComponente().toLowerCase().contains(texto.toLowerCase().trim());
                 java.time.LocalDate fecha = p.getFechaPedido() != null ? p.getFechaPedido().toLocalDate() : null;
                 boolean coincideDesde = desde == null || fecha == null || !fecha.isBefore(desde);
                 boolean coincideHasta = hasta == null || fecha == null || !fecha.isAfter(hasta);
-                return coincideEstado && coincideTexto && coincideDesde && coincideHasta;
+                return coincideEstado && coincideProveedor && coincideTexto && coincideDesde && coincideHasta;
             });
         };
         for (String estado : new String[]{"pendiente", "parcial", "recibido", "cancelado"}) {
@@ -882,6 +893,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             cbsEstado.add(cb);
             menuFiltroEstado.getItems().add(new CustomMenuItem(cb, false));
         }
+        onFiltroPedidosProveedor = aplicarFiltroPedidos;
         txtBuscadorPedidos.textProperty().addListener((obs, o, n) -> aplicarFiltroPedidos.run());
         dpPedidosDesde.valueProperty().addListener((obs, o, n) -> aplicarFiltroPedidos.run());
         dpPedidosHasta.valueProperty().addListener((obs, o, n) -> aplicarFiltroPedidos.run());
@@ -898,6 +910,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             tablaPedidos.getSelectionModel().selectedItemProperty().addListener(
                     (obs, old, sel) -> construirMenuContextual(ctx, sel));
         }
+        tablaPedidos.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void construirMenuContextual(ContextMenu ctx, CompraComponente sel) {
@@ -1103,6 +1116,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         cpvNombre.setCellValueFactory(c -> sp(c.getValue().getNombre()));
         cpvDivisa.setCellValueFactory(c -> sp(c.getValue().getDivisa()));
         cpvActivo.setCellValueFactory(c -> sp(c.getValue().isActivo() ? "Activo" : "Inactivo"));
+        cpvComentario.setCellValueFactory(c -> sp(c.getValue().getComentario() != null ? c.getValue().getComentario() : ""));
         cpvActivo.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
             @Override protected void updateItem(String val, boolean empty) {
@@ -1146,7 +1160,8 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 actualizarEstilo();
             }
         });
-        tablaProveedores.setItems(datosProveedores);
+        FilteredList<Proveedor> filtradaProveedores = new FilteredList<>(datosProveedores, p -> true);
+        tablaProveedores.setItems(filtradaProveedores);
 
         if (com.reparaciones.Sesion.esSuperTecnico()) {
             ContextMenu ctxProv = new ContextMenu();
@@ -1156,9 +1171,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 if (sel == null) return;
                 MenuItem itemToggle = new MenuItem(sel.isActivo() ? "Desactivar" : "Activar");
                 itemToggle.setOnAction(e -> activarProveedor());
-                MenuItem itemDivisa = new MenuItem("Cambiar divisa");
-                itemDivisa.setOnAction(e -> cambiarDivisa());
-                ctxProv.getItems().addAll(itemToggle, itemDivisa);
+                MenuItem itemEditar = new MenuItem("Editar");
+                itemEditar.setOnAction(e -> editarProveedor());
+                ctxProv.getItems().addAll(itemToggle, itemEditar);
                 try {
                     if (!proveedorDAO.tienePedidos(sel.getIdProv())) {
                         MenuItem itemBorrar = new MenuItem("Borrar");
@@ -1168,16 +1183,61 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 } catch (SQLException e) { mostrarError(e); }
             });
         }
+        tablaProveedores.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     private void cargarProveedores() {
         try {
             datosProveedores.setAll(proveedorDAO.getAll());
+            poblarFiltrosProveedor();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActProveedores != null) lblUltimaActProveedores.setText("Actualizado " + hora);
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    private void poblarFiltrosProveedor() {
+        java.util.List<String> selProv    = nombresSeleccionados(cbsProveedor);
+        java.util.List<String> selPedidos = nombresSeleccionados(cbsProveedorPedidos);
+
+        cbsProveedor.clear();        menuFiltroProveedores.getItems().clear();
+        cbsProveedorPedidos.clear(); menuFiltroProveedorPedidos.getItems().clear();
+
+        for (Proveedor p : datosProveedores) {
+            if (!p.isActivo()) continue;
+            CheckBox cb1 = new CheckBox(p.getNombre());
+            CheckBox cb2 = new CheckBox(p.getNombre());
+            cb1.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
+            cb2.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
+            if (selProv.contains(p.getNombre()))    cb1.setSelected(true);
+            if (selPedidos.contains(p.getNombre())) cb2.setSelected(true);
+            cb1.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedores, cbsProveedor, "Proveedor"); aplicarFiltroProveedores(); });
+            cb2.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedorPedidos, cbsProveedorPedidos, "Proveedor"); aplicarFiltroPedidosProveedor(); });
+            cbsProveedor.add(cb1);        menuFiltroProveedores.getItems().add(new CustomMenuItem(cb1, false));
+            cbsProveedorPedidos.add(cb2); menuFiltroProveedorPedidos.getItems().add(new CustomMenuItem(cb2, false));
+        }
+    }
+
+    private java.util.List<String> nombresSeleccionados(java.util.List<CheckBox> cbs) {
+        return cbs.stream().filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toList());
+    }
+
+    private void actualizarTextoFiltroProveedor(MenuButton menu, java.util.List<CheckBox> cbs, String placeholder) {
+        java.util.List<String> sel = nombresSeleccionados(cbs);
+        if      (sel.isEmpty())    menu.setText(placeholder);
+        else if (sel.size() == 1)  menu.setText(sel.get(0));
+        else                       menu.setText(sel.size() + " proveedores");
+    }
+
+    private void aplicarFiltroProveedores() {
+        java.util.List<String> sel = nombresSeleccionados(cbsProveedor);
+        ((FilteredList<Proveedor>) tablaProveedores.getItems())
+                .setPredicate(p -> sel.isEmpty() || sel.contains(p.getNombre()));
+    }
+
+    private void aplicarFiltroPedidosProveedor() {
+        onFiltroPedidosProveedor.run();
     }
 
     // ── Acciones proveedores ──────────────────────────────────────────────────
@@ -1196,23 +1256,40 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         });
     }
 
-    @FXML private void cambiarDivisa() {
+    @FXML private void editarProveedor() {
         Proveedor sel = tablaProveedores.getSelectionModel().getSelectedItem();
         if (sel == null) return;
 
-        Label lblTitulo = new Label("Divisa del proveedor");
+        Label lblTitulo = new Label("Editar proveedor");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
-        Label lblNombre = new Label(sel.getNombre());
-        lblNombre.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+        Label lblNombreLabel = new Label("Nombre");
+        lblNombreLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextField tfNombre = new TextField(sel.getNombre());
+        tfNombre.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
 
-        Label lblLabel = new Label("Divisa por defecto");
-        lblLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-
+        Label lblDivisaLabel = new Label("Divisa");
+        lblDivisaLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<String> cmbDiv = new ComboBox<>();
         cmbDiv.getItems().setAll("EUR", "USD");
         cmbDiv.setValue(sel.getDivisa());
         cmbDiv.setMaxWidth(Double.MAX_VALUE);
+
+        Label lblComentarioLabel = new Label("Comentario");
+        lblComentarioLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        javafx.scene.control.TextArea taComentario = new javafx.scene.control.TextArea(
+                sel.getComentario() != null ? sel.getComentario() : "");
+        taComentario.setPrefRowCount(3);
+        taComentario.setWrapText(true);
+        taComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6;" +
+                "-fx-font-size: 13px; -fx-text-fill: #2C3B54;");
+
+        Label lblError = new Label();
+        lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
+        lblError.setVisible(false);
 
         Button btnConfirmar = new Button("Confirmar");
         btnConfirmar.setMaxWidth(Double.MAX_VALUE);
@@ -1225,21 +1302,31 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         javafx.scene.layout.HBox botones = new javafx.scene.layout.HBox(10, btnCancelar, btnConfirmar);
         botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-        javafx.scene.layout.VBox contenido = new javafx.scene.layout.VBox(12,
-                lblTitulo, lblNombre, lblLabel, cmbDiv, botones);
+        javafx.scene.layout.VBox contenido = new javafx.scene.layout.VBox(10,
+                lblTitulo, lblNombreLabel, tfNombre,
+                lblDivisaLabel, cmbDiv,
+                lblComentarioLabel, taComentario,
+                lblError, botones);
         contenido.setPadding(new javafx.geometry.Insets(28));
-        contenido.setPrefWidth(320);
+        contenido.setPrefWidth(360);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         ventana.setResizable(false);
-        ventana.setTitle("Divisa — " + sel.getNombre());
+        ventana.setTitle("Editar proveedor — " + sel.getNombre());
 
         btnCancelar.setOnAction(ev -> ventana.close());
         btnConfirmar.setOnAction(ev -> {
+            String nombre = tfNombre.getText().trim();
+            if (nombre.isBlank()) {
+                lblError.setText("El nombre no puede estar vacío.");
+                lblError.setVisible(true);
+                return;
+            }
             try {
-                proveedorDAO.setDivisa(sel.getIdProv(), cmbDiv.getValue());
+                proveedorDAO.editar(sel.getIdProv(), nombre, cmbDiv.getValue(),
+                        taComentario.getText().trim());
                 ventana.close();
                 cargarProveedores();
             } catch (SQLException e) { mostrarError(e); }
@@ -1248,6 +1335,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
+        javafx.application.Platform.runLater(tfNombre::requestFocus);
         ventana.showAndWait();
     }
 
@@ -1341,25 +1429,16 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void exportarPedidos(Stage owner) {
-        List<String> cabeceras = List.of(
-                "ID", "Componente", "Cantidad", "Urgente", "Proveedor",
-                "Estado", "Fecha pedido", "Fecha llegada", "Precio ud.", "Divisa", "Precio EUR", "Cant. recibida");
+        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (CompraComponente p : tablaPedidos.getItems()) {
             filas.add(List.of(
-                    String.valueOf(p.getIdCompra()),
+                    p.getFechaPedido() != null ? p.getFechaPedido().format(fmt) : "",
                     p.getTipoComponente() != null ? p.getTipoComponente() : "",
                     String.valueOf(p.getCantidad()),
                     p.isEsUrgente() ? "Sí" : "No",
-                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
-                    p.getEstado() != null ? p.getEstado().name() : "",
-                    p.getFechaPedido() != null ? p.getFechaPedido().format(fmt) : "",
-                    p.getFechaLlegada() != null ? p.getFechaLlegada().format(fmt) : "",
-                    p.getPrecioUnidadPedido() > 0 ? String.valueOf(p.getPrecioUnidadPedido()) : "",
-                    p.getDivisa() != null ? p.getDivisa() : "",
-                    p.getPrecioEur() > 0 ? String.valueOf(p.getPrecioEur()) : "",
-                    p.getCantidadRecibida() != null ? String.valueOf(p.getCantidadRecibida()) : ""
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : ""
             ));
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos", cabeceras, filas);

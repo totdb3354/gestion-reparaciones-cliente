@@ -283,6 +283,7 @@ public class PendientesAdminController {
             }
         });
 
+        tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
     }

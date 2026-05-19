@@ -386,6 +386,7 @@ public class FormularioCompraController {
                 setGraphic(empty ? null : box);
             }
         });
+        tablaLineas.getColumns().forEach(c -> c.setReorderable(false));
     }
 
     // ─── Añadir fila ──────────────────────────────────────────────────────────
