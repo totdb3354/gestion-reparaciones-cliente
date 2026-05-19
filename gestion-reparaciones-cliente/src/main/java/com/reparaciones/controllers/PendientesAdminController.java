@@ -146,7 +146,32 @@ public class PendientesAdminController {
                 setGraphic(cb);
             }
         });
-        cImei.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getImei()));
+        cImei.setCellFactory(col -> new TableCell<>() {
+            private final Label lblImei  = new Label();
+            private final Label lblMod   = new Label();
+            private final VBox  celda    = new VBox(0, lblImei, lblMod);
+            {
+                lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                lblMod.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A96A3;");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lblImei.setText(rep.getImei());
+                String modelo = rep.getModelo();
+                if (modelo != null && !modelo.isEmpty()) {
+                    lblMod.setText(FormularioReparacionController.traducirModelo(modelo));
+                    lblMod.setVisible(true); lblMod.setManaged(true);
+                } else {
+                    lblMod.setVisible(false); lblMod.setManaged(false);
+                }
+                setGraphic(celda);
+            }
+        });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
 
@@ -439,6 +464,27 @@ public class PendientesAdminController {
         Label lblImeiErr = new Label();
         lblImeiErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
 
+        // ── Modelo de iPhone ──────────────────────────────────────────────────
+        Label lblModelo = new Label("Modelo de iPhone (opcional)");
+        lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+
+        ComboBox<String> cbModelo = new ComboBox<>();
+        cbModelo.getItems().addAll(FormularioReparacionController.MODELOS_ORDENADOS);
+        cbModelo.setPromptText("— Selecciona modelo —");
+        cbModelo.setMaxWidth(Double.MAX_VALUE);
+        cbModelo.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(String m, boolean empty) {
+                super.updateItem(m, empty);
+                setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
+            }
+        });
+        cbModelo.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(String m, boolean empty) {
+                super.updateItem(m, empty);
+                setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
+            }
+        });
+
         // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
         Label lblTecnicos = new Label("Técnicos a asignar");
         lblTecnicos.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
@@ -526,7 +572,7 @@ public class PendientesAdminController {
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
 
         // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblTecnicos, scrollTecnicos, botones);
+        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, cbModelo, lblTecnicos, scrollTecnicos, botones);
         contenido.setPadding(new Insets(28));
         contenido.setPrefWidth(400);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
@@ -539,9 +585,10 @@ public class PendientesAdminController {
         btnCancelar.setOnAction(ev -> ventana.close());
 
         btnConfirmar.setOnAction(ev -> {
-            String imei = tfImei.getText().trim();
+            String imei  = tfImei.getText().trim();
+            String model = cbModelo.getValue();
             try {
-                telefonoDAO.insertar(imei);
+                telefonoDAO.insertar(imei, model);
                 for (int i = 0; i < checkboxes.size(); i++) {
                     if (checkboxes.get(i).isSelected())
                         reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec());
