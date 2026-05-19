@@ -475,7 +475,7 @@ public class PendientesAdminController {
         FilteredList<String> modelosFiltrados = new FilteredList<>(todosModelos, s -> true);
 
         TextField tfModelo = new TextField();
-        tfModelo.setPromptText("Escribe para buscar...");
+        tfModelo.setPromptText("Escribe modelo");
         tfModelo.setMaxWidth(Double.MAX_VALUE);
         tfModelo.setStyle(
                 "-fx-background-color: #001232; -fx-background-radius: 24;" +
