@@ -195,12 +195,28 @@ public class FormularioCompraController {
                     if (!filtrada.isEmpty()) confirmarSeleccion(filtrada.get(0));
                 });
                 campo.focusedProperty().addListener((obs, o, focused) -> {
-                    if (!focused) {
+                    if (focused) {
+                        int idx = getIndex();
+                        if (idx >= 0 && idx < getTableView().getItems().size())
+                            getTableView().getSelectionModel().select(idx);
+                    } else {
                         javafx.application.Platform.runLater(() -> {
                             popup.hide();
-                            if (seleccionado != null && !campo.getText().equals(seleccionado.getTipo())) {
+                            String texto = campo.getText() == null ? "" : campo.getText().trim();
+                            if (seleccionado != null && texto.equals(seleccionado.getTipo())) {
+                                filtrada.setPredicate(c -> true);
+                                return;
+                            }
+                            // Intentar match exacto (case-insensitive) antes de descartar
+                            Componente exacto = componentesDisponibles.stream()
+                                    .filter(c -> c.getTipo().equalsIgnoreCase(texto))
+                                    .findFirst().orElse(null);
+                            if (exacto != null) {
+                                confirmarSeleccion(exacto);
+                            } else {
+                                // Texto inválido: restaurar al último componente válido o limpiar
                                 actualizando = true;
-                                campo.setText(seleccionado.getTipo());
+                                campo.setText(seleccionado != null ? seleccionado.getTipo() : "");
                                 filtrada.setPredicate(c -> true);
                                 actualizando = false;
                             }
