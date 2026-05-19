@@ -475,7 +475,7 @@ public class PendientesAdminController {
         lblImeiErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
 
         // ── Modelo de iPhone ──────────────────────────────────────────────────
-        Label lblModelo = new Label("Modelo de iPhone (opcional)");
+        Label lblModelo = new Label("Modelo de iPhone");
         lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
 
         ComboBox<String> cbModelo = new ComboBox<>();
@@ -570,7 +570,8 @@ public class PendientesAdminController {
             }
 
             boolean algunoSeleccionado = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
-            btnConfirmar.setDisable(!(imeiOk && algunoSeleccionado));
+            boolean modeloOk = cbModelo.getValue() != null;
+            btnConfirmar.setDisable(!(imeiOk && algunoSeleccionado && modeloOk));
         };
 
         // ── Listeners ─────────────────────────────────────────────────────────
@@ -580,6 +581,7 @@ public class PendientesAdminController {
             validar.run();
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
+        cbModelo.valueProperty().addListener((obs, o, n) -> validar.run());
 
         // ── Confirmar ─────────────────────────────────────────────────────────
         VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, cbModelo, lblTecnicos, scrollTecnicos, botones);
