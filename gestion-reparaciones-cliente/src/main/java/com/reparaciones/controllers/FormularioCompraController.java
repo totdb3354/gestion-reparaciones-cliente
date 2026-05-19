@@ -145,7 +145,7 @@ public class FormularioCompraController {
                     "-fx-padding: 4 12 4 12;";
             {
                 campo.setStyle(CAMPO_NORMAL);
-                campo.setPromptText("Escribe componente");
+                campo.setPromptText("Escribe componente...");
                 campo.setMaxWidth(Double.MAX_VALUE);
 
                 lista.setStyle(
