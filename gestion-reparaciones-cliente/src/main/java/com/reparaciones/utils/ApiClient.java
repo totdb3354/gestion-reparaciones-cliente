@@ -283,7 +283,11 @@ public class ApiClient {
             case 403 -> throw new SQLException("No tienes permisos para realizar esta acción.");
             case 404 -> throw new SQLException("Recurso no encontrado.");
             case 409 -> throw new StaleDataException(msg);
-            default  -> throw new SQLException("Error del servidor (" + status + "): " + msg);
+            default  -> {
+                if (status >= 500)
+                    throw new SQLException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.");
+                throw new SQLException("Error del servidor (" + status + "): " + msg);
+            }
         }
     }
 

@@ -484,41 +484,37 @@ public class PendientesAdminController {
         Runnable validar = () -> {
             String imeiStr = tfImei.getText().trim();
             boolean imeiOk = imeiStr.length() == 15;
-            boolean bloqueadoPorHistorial = false;
 
             if (imeiOk) {
                 try {
-                    if (telefonoDAO.exists(imeiStr)) {
-                        bloqueadoPorHistorial = true;
-                        lblImeiErr.setText("Este teléfono ya tiene historial. Marca una incidencia desde la tabla si necesita reparación.");
-                        tfImei.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
-                                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-                        checkboxes.forEach(cb -> { cb.setDisable(true); cb.setSelected(false); });
+                    List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(imeiStr);
+                    for (int i = 0; i < tecnicosModal.size(); i++) {
+                        boolean ocupado = ocupados.contains(tecnicosModal.get(i).getIdTec());
+                        checkboxes.get(i).setDisable(ocupado);
+                        if (ocupado) checkboxes.get(i).setSelected(false);
                     }
+                    lblImeiErr.setText(ocupados.size() == tecnicosModal.size()
+                            ? "Todos los técnicos ya tienen asignación activa para este IMEI." : "");
                 } catch (SQLException ex) {
                     // silencioso: se llama en cada tecla del campo IMEI
                 }
-            }
-
-            if (!bloqueadoPorHistorial) {
+                tfImei.setStyle("-fx-background-color: white; -fx-border-color: #8AC7AF;" +
+                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
+                        "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+            } else {
                 checkboxes.forEach(cb -> cb.setDisable(false));
                 tfImei.setStyle(imeiStr.isEmpty()
                         ? "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                                 "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
                                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;"
-                        : imeiOk
-                                ? "-fx-background-color: white; -fx-border-color: #8AC7AF;" +
-                                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                                        "-fx-text-fill: #2C3B54; -fx-font-size: 13px;"
-                                : "-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
-                                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                                        "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-                lblImeiErr.setText(!imeiStr.isEmpty() && !imeiOk ? "El IMEI debe tener exactamente 15 dígitos" : "");
+                        : "-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
+                                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
+                                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+                lblImeiErr.setText(!imeiStr.isEmpty() ? "El IMEI debe tener exactamente 15 dígitos" : "");
             }
 
             boolean algunoSeleccionado = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
-            btnConfirmar.setDisable(!(imeiOk && !bloqueadoPorHistorial && algunoSeleccionado));
+            btnConfirmar.setDisable(!(imeiOk && algunoSeleccionado));
         };
 
         // ── Listeners ─────────────────────────────────────────────────────────
@@ -552,10 +548,6 @@ public class PendientesAdminController {
                 }
                 ventana.close();
                 cargar();
-            } catch (com.reparaciones.utils.StaleDataException ex) {
-                new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
-                        "Este teléfono ya tiene historial. Usa la opción de incidencia desde la tabla.")
-                        .showAndWait();
             } catch (SQLException ex) {
                 mostrarError(ex);
             }
