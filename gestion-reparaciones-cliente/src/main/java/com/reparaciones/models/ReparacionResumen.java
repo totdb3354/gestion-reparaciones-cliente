@@ -34,6 +34,7 @@ public class ReparacionResumen {
     private boolean       enCaminoSolicitud;
     private String        tiposSolicitud;
     private LocalDateTime updatedAt;
+    private String        modelo;
 
     /**
      * Constructor completo — llamado desde {@code ReparacionDAO.getResumenes()}.
@@ -148,4 +149,5 @@ public class ReparacionResumen {
     public int     getStockSolicitud()     { return stockSolicitud; }
     public boolean isEnCaminoSolicitud()   { return enCaminoSolicitud; }
     public String  getTiposSolicitud()     { return tiposSolicitud; }
+    public String  getModelo()            { return modelo; }
 }

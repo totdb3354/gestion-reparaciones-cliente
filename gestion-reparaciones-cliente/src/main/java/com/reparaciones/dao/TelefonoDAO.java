@@ -38,13 +38,35 @@ public class TelefonoDAO {
     }
 
     /**
-     * Inserta un nuevo teléfono.
+     * Inserta o actualiza el teléfono con el modelo dado.
+     *
+     * @param imei   IMEI del dispositivo
+     * @param modelo modelo del teléfono (puede ser null)
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public void insertar(String imei, String modelo) throws SQLException {
+        ApiClient.post("/api/telefonos", Map.of("imei", imei, "modelo", modelo != null ? modelo : ""));
+    }
+
+    /**
+     * Inserta un nuevo teléfono sin especificar modelo.
      *
      * @param imei IMEI del dispositivo
      * @throws SQLException si falla la llamada al servidor
      */
     public void insertar(String imei) throws SQLException {
-        ApiClient.post("/api/telefonos", Map.of("imei", imei));
+        insertar(imei, null);
+    }
+
+    /**
+     * Devuelve el modelo almacenado para el IMEI dado, o null si no hay.
+     *
+     * @param imei IMEI del dispositivo
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public String getModelo(String imei) throws SQLException {
+        String val = ApiClient.getString("/api/telefonos/" + imei + "/modelo");
+        return (val == null || val.equals("null")) ? null : val;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.ComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
+import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.Tecnico;
@@ -157,6 +158,17 @@ public class FormularioReparacionController {
                 for (FilaUI fila : filasUI)
                     fila.preseleccionarSku(sol.getIdCom());
             }
+        }
+        // Auto-completar modelo desde BD si no se detectó automáticamente por componentes
+        if (cbFiltroModelo.getValue() == null && !modoEdicion) {
+            try {
+                String modeloBD = new TelefonoDAO().getModelo(imei);
+                if (modeloBD != null && !modeloBD.isEmpty()
+                        && cbFiltroModelo.getItems().contains(modeloBD)) {
+                    cbFiltroModelo.setValue(modeloBD);
+                    cbFiltroModelo.setDisable(true);
+                }
+            } catch (SQLException e) { /* silencioso */ }
         }
     }
 
