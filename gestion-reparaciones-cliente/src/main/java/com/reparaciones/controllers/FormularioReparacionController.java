@@ -356,7 +356,7 @@ public class FormularioReparacionController {
     private void activarConfirmacion() {
         esperandoConfirmacion = true;
         btnGuardar.setDisable(true);
-        segundosRestantes = 5;
+        segundosRestantes = 3;
         btnGuardar.setText("Guardar (" + segundosRestantes + ")");
 
         timelineReset = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
