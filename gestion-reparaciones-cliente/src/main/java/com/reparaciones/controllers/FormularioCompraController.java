@@ -134,15 +134,18 @@ public class FormularioCompraController {
             private static final String CAMPO_NORMAL =
                     "-fx-background-color: #001232; -fx-background-radius: 24;" +
                     "-fx-border-color: transparent; -fx-border-radius: 24; -fx-border-width: 0;" +
-                    "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
+                    "-fx-text-fill: #FAFAFA; -fx-prompt-text-fill: rgba(255,255,255,0.45);" +
+                    "-fx-font-size: 12px; -fx-font-weight: bold;" +
                     "-fx-padding: 4 12 4 12;";
             private static final String CAMPO_SELEC =
                     "-fx-background-color: #001232; -fx-background-radius: 24;" +
                     "-fx-border-color: rgba(255,255,255,0.35); -fx-border-radius: 24; -fx-border-width: 1;" +
-                    "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
+                    "-fx-text-fill: #FAFAFA; -fx-prompt-text-fill: rgba(255,255,255,0.45);" +
+                    "-fx-font-size: 12px; -fx-font-weight: bold;" +
                     "-fx-padding: 4 12 4 12;";
             {
                 campo.setStyle(CAMPO_NORMAL);
+                campo.setPromptText("Escribe componente...");
                 campo.setMaxWidth(Double.MAX_VALUE);
 
                 lista.setStyle(
