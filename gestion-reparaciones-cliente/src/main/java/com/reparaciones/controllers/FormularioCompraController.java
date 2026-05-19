@@ -120,11 +120,15 @@ public class FormularioCompraController {
     private void configurarTabla() {
         tablaLineas.setEditable(true);
 
-        // Componente — ComboBox siempre visible
+        // Componente — ComboBox editable con filtro por texto
         colComponente.setCellValueFactory(c -> c.getValue().componenteProperty());
         colComponente.setCellFactory(col -> new TableCell<>() {
-            private final ComboBox<Componente> combo = new ComboBox<>(componentesDisponibles);
+            private final javafx.collections.transformation.FilteredList<Componente> filtrada =
+                    new javafx.collections.transformation.FilteredList<>(componentesDisponibles, c -> true);
+            private final ComboBox<Componente> combo = new ComboBox<>(filtrada);
+            private boolean actualizando = false;
             {
+                combo.setEditable(true);
                 combo.setCellFactory(lv -> new ListCell<>() {
                     {
                         setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)
@@ -144,6 +148,12 @@ public class FormularioCompraController {
                         setText(empty || c == null ? "" : c.toString());
                     }
                 });
+                combo.getEditor().textProperty().addListener((obs, old, val) -> {
+                    if (actualizando) return;
+                    String lower = val == null ? "" : val.toLowerCase().trim();
+                    filtrada.setPredicate(c -> lower.isEmpty() || c.getTipo().toLowerCase().contains(lower));
+                    if (!combo.isShowing()) combo.show();
+                });
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (newRow != null) {
                         combo.setStyle(newRow.isSelected() ? "-fx-border-color: rgba(255,255,255,0.35); -fx-border-width: 1;" : "");
@@ -155,14 +165,26 @@ public class FormularioCompraController {
                 combo.setOnAction(e -> {
                     Componente val = combo.getValue();
                     int idx = getIndex();
-                    if (val != null && idx >= 0 && idx < getTableView().getItems().size())
+                    if (val != null && idx >= 0 && idx < getTableView().getItems().size()) {
                         getTableView().getItems().get(idx).setComponente(val);
+                        actualizando = true;
+                        combo.getEditor().setText(val.getTipo());
+                        filtrada.setPredicate(c -> true);
+                        actualizando = false;
+                    }
                 });
             }
             @Override protected void updateItem(Componente item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty) { setGraphic(null); }
-                else { combo.setValue(item); setGraphic(combo); }
+                else {
+                    actualizando = true;
+                    combo.setValue(item);
+                    combo.getEditor().setText(item != null ? item.getTipo() : "");
+                    filtrada.setPredicate(c -> true);
+                    actualizando = false;
+                    setGraphic(combo);
+                }
             }
         });
 
