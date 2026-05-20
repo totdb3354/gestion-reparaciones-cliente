@@ -331,6 +331,14 @@ public class ReparacionDAO {
                 Map.of("idTec", idTec, "updatedAt", updatedAt));
     }
 
+    public void actualizarAsignacion(String idRep, int idTec, String comentarioAsignacion, LocalDateTime updatedAt)
+            throws SQLException, StaleDataException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep,
+                Map.of("idTec", idTec,
+                       "comentarioAsignacion", comentarioAsignacion != null ? comentarioAsignacion : "",
+                       "updatedAt", updatedAt));
+    }
+
     /**
      * Edita el componente y observaciones de una reparación finalizada.
      *

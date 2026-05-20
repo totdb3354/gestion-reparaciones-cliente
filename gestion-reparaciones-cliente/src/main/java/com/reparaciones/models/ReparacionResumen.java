@@ -150,4 +150,8 @@ public class ReparacionResumen {
     public boolean isEnCaminoSolicitud()   { return enCaminoSolicitud; }
     public String  getTiposSolicitud()     { return tiposSolicitud; }
     public String  getModelo()            { return modelo; }
+
+    private String comentarioAsignacion;
+    public String getComentarioAsignacion() { return comentarioAsignacion; }
+    public void setComentarioAsignacion(String c) { this.comentarioAsignacion = c; }
 }
