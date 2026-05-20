@@ -48,6 +48,7 @@ public class PendientesAdminController {
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
+    @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private TextField  filtroImei;
     @FXML private MenuButton filtroTecnico;
@@ -63,6 +64,7 @@ public class PendientesAdminController {
     private Runnable onActualizar;
 
     @FXML private Button btnConfirmarCambios;
+    @FXML private Button btnDescartarCambios;
     @FXML private Label  lblUltimaActualizacion;
 
     private CheckBox cbSoloSolicitudes;
@@ -70,7 +72,7 @@ public class PendientesAdminController {
     private CheckBox cbSoloAsignaciones;
     private final List<CheckBox>        cbsTecnico       = new ArrayList<>();
     private final List<Tecnico>         tecnicos         = new ArrayList<>();
-    private record CambioPendiente(Tecnico tecnico, java.time.LocalDateTime updatedAt) {}
+    private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion, java.time.LocalDateTime updatedAt) {}
     private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
 
     @FXML
@@ -114,12 +116,27 @@ public class PendientesAdminController {
                     Tecnico sel = cb.getValue();
                     if (sel == null) return;
                     if (sel.getIdTec() != rep.getIdTec()) {
-                        cambiosPendientes.put(rep.getIdRep(), new CambioPendiente(sel, rep.getUpdatedAt()));
+                        String comentarioActual = cambiosPendientes.containsKey(rep.getIdRep())
+                            ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
+                            : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+                        cambiosPendientes.put(rep.getIdRep(),
+                            new CambioPendiente(sel.getIdTec(), sel.getNombre(), comentarioActual, rep.getUpdatedAt()));
                     } else {
-                        cambiosPendientes.remove(rep.getIdRep());
+                        CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
+                        if (existing != null) {
+                            String repComentario  = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                            String extComentario  = existing.comentarioAsignacion() != null ? existing.comentarioAsignacion() : "";
+                            if (!extComentario.equals(repComentario)) {
+                                cambiosPendientes.put(rep.getIdRep(),
+                                    new CambioPendiente(rep.getIdTec(), rep.getNombreTecnico(), existing.comentarioAsignacion(), rep.getUpdatedAt()));
+                            } else {
+                                cambiosPendientes.remove(rep.getIdRep());
+                            }
+                        }
                     }
                     actualizarVisibilidadConfirmar();
-                    boolean mod = cambiosPendientes.containsKey(rep.getIdRep());
+                    CambioPendiente cambioActual = cambiosPendientes.get(rep.getIdRep());
+                    boolean mod = cambioActual != null && cambioActual.idTec() != rep.getIdTec();
                     setStyle(mod ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
                 });
             }
@@ -136,12 +153,12 @@ public class PendientesAdminController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 cb.getItems().setAll(tecnicos);
                 CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-                Tecnico mostrar = cambio != null ? cambio.tecnico() :
-                        tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec())
-                                .findFirst().orElse(null);
+                Tecnico mostrar = cambio != null
+                    ? tecnicos.stream().filter(t -> t.getIdTec() == cambio.idTec()).findFirst().orElse(null)
+                    : tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
                 actualizando = false;
-                boolean modificada = cambiosPendientes.containsKey(rep.getIdRep());
+                boolean modificada = cambio != null && cambio.idTec() != rep.getIdTec();
                 setStyle(modificada
                         ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";"
                         : "");
@@ -177,11 +194,35 @@ public class PendientesAdminController {
         });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+        cComentario.setCellValueFactory(d -> {
+            ReparacionResumen rep = d.getValue();
+            CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
+            String texto = cambio != null ? cambio.comentarioAsignacion()
+                                          : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+            return new javafx.beans.property.SimpleStringProperty(texto);
+        });
+        cComentario.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setText(null); setStyle(""); return;
+                }
+                setText(item);
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
+                String repComentario    = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                String cambioComentario = cambio != null ? (cambio.comentarioAsignacion() != null ? cambio.comentarioAsignacion() : "") : repComentario;
+                boolean modificado = cambio != null && !cambioComentario.equals(repComentario);
+                setStyle(modificado ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
+            }
+        });
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPendientes.setItems(datosFiltrados);
         tablaPendientes.setColumnResizePolicy(param -> true);
 
+        Image imgEditar = new Image(getClass().getResourceAsStream("/images/editar.png"));
         tablaPendientes.setRowFactory(tv -> new TableRow<>() {
             {
                 ContextMenu menu = new ContextMenu();
@@ -214,6 +255,19 @@ public class PendientesAdminController {
                         });
                 });
                 menu.getItems().add(copiar);
+                MenuItem editarComentario = new MenuItem("Editar comentario");
+                ImageView ivEditar = new ImageView(imgEditar);
+                ivEditar.setFitWidth(14); ivEditar.setFitHeight(14); ivEditar.setPreserveRatio(true);
+                editarComentario.setGraphic(ivEditar);
+                editarComentario.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    String actual = cambiosPendientes.containsKey(rep.getIdRep())
+                        ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
+                        : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+                    PendientesAdminController.this.abrirEditorComentario(rep, actual);
+                });
+                menu.getItems().add(editarComentario);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -669,10 +723,22 @@ public class PendientesAdminController {
             }
         });
 
+        // ── Comentario ────────────────────────────────────────────────────────
+        Label lblComentario = new Label("Comentario (opcional)");
+        lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+
+        TextArea tfComentario = new TextArea();
+        tfComentario.setWrapText(true);
+        tfComentario.setPrefRowCount(3);
+        tfComentario.setPromptText("Instrucciones para el técnico...");
+        tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+
         // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, botones);
+        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, lblComentario, tfComentario, botones);
         contenido.setPadding(new Insets(28));
-        contenido.setPrefWidth(400);
+        contenido.setPrefWidth(440);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
@@ -686,10 +752,12 @@ public class PendientesAdminController {
             String imei  = tfImei.getText().trim();
             String model = modeloSel[0];
             try {
+                String comentario = tfComentario.getText().trim();
                 telefonoDAO.insertar(imei, model);
                 for (int i = 0; i < checkboxes.size(); i++) {
                     if (checkboxes.get(i).isSelected())
-                        reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec());
+                        reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec(),
+                                comentario.isEmpty() ? null : comentario);
                 }
                 ventana.close();
                 cargar();
@@ -708,13 +776,15 @@ public class PendientesAdminController {
     public void resetearCambios() {
         cambiosPendientes.clear();
         actualizarVisibilidadConfirmar();
-        tablaPendientes.refresh();
+        cargar();
     }
 
     private void actualizarVisibilidadConfirmar() {
         boolean hay = !cambiosPendientes.isEmpty();
         btnConfirmarCambios.setVisible(hay);
         btnConfirmarCambios.setManaged(hay);
+        btnDescartarCambios.setVisible(hay);
+        btnDescartarCambios.setManaged(hay);
     }
 
     @FXML
@@ -727,12 +797,13 @@ public class PendientesAdminController {
                     .filter(r -> r.getIdRep().equals(idRep)).findFirst().orElse(null);
             if (rep == null) continue;
             try {
-                reparacionDAO.actualizarTecnico(idRep, cambio.tecnico().getIdTec(), cambio.updatedAt());
-                rep.setIdTec(cambio.tecnico().getIdTec());
-                rep.setNombreTecnico(cambio.tecnico().getNombre());
+                reparacionDAO.actualizarAsignacion(idRep, cambio.idTec(), cambio.comentarioAsignacion(), cambio.updatedAt());
+                rep.setIdTec(cambio.idTec());
+                rep.setNombreTecnico(cambio.nombreTecnico());
+                rep.setComentarioAsignacion(cambio.comentarioAsignacion());
                 cambiosPendientes.remove(idRep);
             } catch (com.reparaciones.utils.StaleDataException e) {
-                conflictos.add(mensajeConflicto(idRep, cambio.tecnico()));
+                conflictos.add(mensajeConflicto(idRep, cambio.idTec()));
             } catch (SQLException e) { mostrarError(e); }
         }
         if (!conflictos.isEmpty()) {
@@ -748,13 +819,13 @@ public class PendientesAdminController {
         if (onActualizar != null) onActualizar.run();
     }
 
-    private String mensajeConflicto(String idRep, Tecnico tecnicoIntentado) {
+    private String mensajeConflicto(String idRep, int idTecIntentado) {
         try {
             java.util.Optional<ReparacionResumen> actual = reparacionDAO.getAsignacionById(idRep);
             if (actual.isEmpty())
                 return "• " + idRep + ": ya no está pendiente (fue completada por otro usuario).";
             ReparacionResumen rep = actual.get();
-            if (rep.getIdTec() != tecnicoIntentado.getIdTec())
+            if (rep.getIdTec() != idTecIntentado)
                 return "• " + idRep + ": fue reasignada a " + rep.getNombreTecnico() + " por otro usuario.";
             return "• " + idRep + ": fue modificada por otro usuario.";
         } catch (SQLException e) {
@@ -767,6 +838,60 @@ public class PendientesAdminController {
         return tablaPendientes.getItems();
     }
 
+    private void abrirEditorComentario(ReparacionResumen rep, String textoActual) {
+        Label lblTitulo = new Label("Comentario de asignación");
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+
+        TextArea ta = new TextArea(textoActual);
+        ta.setWrapText(true);
+        ta.setPrefRowCount(4);
+        ta.setPrefWidth(340);
+        ta.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+
+        Button btnGuardar = new Button("Guardar");
+        btnGuardar.getStyleClass().add("btn-primary");
+        Button btnCerrar = new Button("Cancelar");
+        btnCerrar.getStyleClass().add("btn-secondary");
+
+        HBox botones = new HBox(10, btnCerrar, btnGuardar);
+        botones.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox contenido = new VBox(12, lblTitulo, ta, botones);
+        contenido.setPadding(new Insets(24));
+        contenido.setStyle("-fx-background-color: #DDE1E7;");
+
+        javafx.stage.Stage ventana = new javafx.stage.Stage();
+        ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        ventana.setResizable(false);
+        ventana.setTitle("Comentario");
+
+        btnCerrar.setOnAction(e -> ventana.close());
+        btnGuardar.setOnAction(e -> {
+            String nuevoTexto = ta.getText();
+            CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
+            int idTecActual = existing != null ? existing.idTec() : rep.getIdTec();
+            String nombreTecActual = existing != null ? existing.nombreTecnico() : rep.getNombreTecnico();
+            String repComentario = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+            if (idTecActual == rep.getIdTec() && nuevoTexto.equals(repComentario)) {
+                cambiosPendientes.remove(rep.getIdRep());
+            } else {
+                cambiosPendientes.put(rep.getIdRep(),
+                    new CambioPendiente(idTecActual, nombreTecActual, nuevoTexto, rep.getUpdatedAt()));
+            }
+            actualizarVisibilidadConfirmar();
+            tablaPendientes.refresh();
+            ventana.close();
+        });
+
+        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        ventana.setScene(scene);
+        javafx.application.Platform.runLater(ta::requestFocus);
+        ventana.showAndWait();
+    }
+
     /**
      * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
      *
@@ -775,10 +900,11 @@ public class PendientesAdminController {
      * @return texto de la celda, o {@code null} si la columna no es copiable
      */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
-        if (col == cId)     return rep.getIdRep();
-        if (col == cImei)   return rep.getImei();
-        if (col == cModelo) { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-        if (col == cFecha)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cId)        return rep.getIdRep();
+        if (col == cImei)      return rep.getImei();
+        if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }
 

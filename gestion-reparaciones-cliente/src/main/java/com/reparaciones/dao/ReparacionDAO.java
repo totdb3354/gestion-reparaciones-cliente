@@ -279,9 +279,12 @@ public class ReparacionDAO {
      * @return ID de la asignación con formato {@code A[yyyyMMdd]_N}
      * @throws SQLException si falla la llamada al servidor
      */
-    public String insertarAsignacion(String imei, int idTec) throws SQLException {
-        JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones",
-                Map.of("imei", imei, "idTec", idTec), JsonObject.class);
+    public String insertarAsignacion(String imei, int idTec, String comentario) throws SQLException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("imei", imei);
+        body.put("idTec", idTec);
+        if (comentario != null && !comentario.isBlank()) body.put("comentario", comentario);
+        JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones", body, JsonObject.class);
         return resp != null ? resp.get("value").getAsString() : null;
     }
 
@@ -329,6 +332,14 @@ public class ReparacionDAO {
             throws SQLException, StaleDataException {
         ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/tecnico",
                 Map.of("idTec", idTec, "updatedAt", updatedAt));
+    }
+
+    public void actualizarAsignacion(String idRep, int idTec, String comentarioAsignacion, LocalDateTime updatedAt)
+            throws SQLException, StaleDataException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep,
+                Map.of("idTec", idTec,
+                       "comentarioAsignacion", comentarioAsignacion != null ? comentarioAsignacion : "",
+                       "updatedAt", updatedAt));
     }
 
     /**

@@ -28,8 +28,9 @@
             <TableColumn fx:id="cTecnico" text="Técnico"          prefWidth="110"/>
             <TableColumn fx:id="cImei"    text="IMEI"             prefWidth="130"/>
             <TableColumn fx:id="cModelo"  text="Modelo"           prefWidth="120"/>
-            <TableColumn fx:id="cFecha"   text="Fecha asignación" prefWidth="130"/>
-            <TableColumn fx:id="cEstado"  text="Estado"           prefWidth="100"/>
+            <TableColumn fx:id="cFecha"      text="Fecha asignación" prefWidth="130"/>
+            <TableColumn fx:id="cComentario" text="Comentario"       prefWidth="160"/>
+            <TableColumn fx:id="cEstado"     text="Estado"           prefWidth="100"/>
             <TableColumn fx:id="cAccion"  text=""                 prefWidth="45"/>
         </columns>
         <placeholder><Label text="No hay asignaciones pendientes"/></placeholder>
@@ -39,6 +40,11 @@
         <Label fx:id="lblUltimaActualizacion"
                style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"
                HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnDescartarCambios"
+                text="Descartar cambios"
+                onAction="#resetearCambios"
+                visible="false" managed="false"
+                styleClass="btn-secondary"/>
         <Button fx:id="btnConfirmarCambios"
                 text="Confirmar cambios"
                 onAction="#confirmarCambiosTecnico"

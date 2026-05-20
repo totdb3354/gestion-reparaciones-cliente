@@ -31,6 +31,7 @@ public class PendientesTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
+    @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private MenuButton filtroSolicitud;
     @FXML private TextField  filtroImei;
@@ -84,6 +85,8 @@ public class PendientesTecnicoController {
         cFecha.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+        cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+                d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPendientes.setItems(datosFiltrados);
@@ -337,10 +340,11 @@ public class PendientesTecnicoController {
      * @return texto de la celda, o {@code null} si la columna no es copiable
      */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
-        if (col == cId)     return rep.getIdRep();
-        if (col == cImei)   return rep.getImei();
-        if (col == cModelo) { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-        if (col == cFecha)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cId)        return rep.getIdRep();
+        if (col == cImei)      return rep.getImei();
+        if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }
 
