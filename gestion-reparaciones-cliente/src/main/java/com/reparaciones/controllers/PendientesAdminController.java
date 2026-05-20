@@ -122,10 +122,21 @@ public class PendientesAdminController {
                         cambiosPendientes.put(rep.getIdRep(),
                             new CambioPendiente(sel.getIdTec(), sel.getNombre(), comentarioActual, rep.getUpdatedAt()));
                     } else {
-                        cambiosPendientes.remove(rep.getIdRep());
+                        CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
+                        if (existing != null) {
+                            String repComentario  = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                            String extComentario  = existing.comentarioAsignacion() != null ? existing.comentarioAsignacion() : "";
+                            if (!extComentario.equals(repComentario)) {
+                                cambiosPendientes.put(rep.getIdRep(),
+                                    new CambioPendiente(rep.getIdTec(), rep.getNombreTecnico(), existing.comentarioAsignacion(), rep.getUpdatedAt()));
+                            } else {
+                                cambiosPendientes.remove(rep.getIdRep());
+                            }
+                        }
                     }
                     actualizarVisibilidadConfirmar();
-                    boolean mod = cambiosPendientes.containsKey(rep.getIdRep());
+                    CambioPendiente cambioActual = cambiosPendientes.get(rep.getIdRep());
+                    boolean mod = cambioActual != null && cambioActual.idTec() != rep.getIdTec();
                     setStyle(mod ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
                 });
             }
@@ -147,7 +158,7 @@ public class PendientesAdminController {
                     : tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
                 actualizando = false;
-                boolean modificada = cambiosPendientes.containsKey(rep.getIdRep());
+                boolean modificada = cambio != null && cambio.idTec() != rep.getIdTec();
                 setStyle(modificada
                         ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";"
                         : "");
@@ -189,6 +200,22 @@ public class PendientesAdminController {
             String texto = cambio != null ? cambio.comentarioAsignacion()
                                           : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
             return new javafx.beans.property.SimpleStringProperty(texto);
+        });
+        cComentario.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setText(null); setStyle(""); return;
+                }
+                setText(item);
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
+                String repComentario    = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                String cambioComentario = cambio != null ? (cambio.comentarioAsignacion() != null ? cambio.comentarioAsignacion() : "") : repComentario;
+                boolean modificado = cambio != null && !cambioComentario.equals(repComentario);
+                setStyle(modificado ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
+            }
         });
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
