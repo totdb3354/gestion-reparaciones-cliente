@@ -106,3 +106,8 @@ jobs:
             gestion-reparaciones-cliente/*.dmg
             gestion-reparaciones-cliente/*.msi
           if-no-files-found: error
+
+# Nota: se generan tres artefactos en paralelo:
+#   FSGR-mac        → .dmg para Apple Silicon (M1/M2/M3) — runner macos-latest (ARM64)
+#   FSGR-mac-intel  → .dmg para Macs Intel (pre-2020)    — runner macos-13 (x64)
+#   FSGR-windows    → .msi para Windows
