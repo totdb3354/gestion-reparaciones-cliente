@@ -182,8 +182,13 @@ public class PendientesAdminController {
         });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
-        cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-                d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+        cComentario.setCellValueFactory(d -> {
+            ReparacionResumen rep = d.getValue();
+            CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
+            String texto = cambio != null ? cambio.comentarioAsignacion()
+                                          : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+            return new javafx.beans.property.SimpleStringProperty(texto);
+        });
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPendientes.setItems(datosFiltrados);
