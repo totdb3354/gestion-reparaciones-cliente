@@ -1,6 +1,7 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.dao.ReparacionDAO;
+import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
@@ -782,6 +783,6 @@ public class PendientesAdminController {
     }
 
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 }

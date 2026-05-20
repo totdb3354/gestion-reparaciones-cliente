@@ -3,6 +3,7 @@ package com.reparaciones.controllers;
 import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
+import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
@@ -800,8 +801,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 dialog.close();
                 cargarDatos();
             } catch (SQLException ex) {
-                new Alert(Alert.AlertType.ERROR,
-                        "No se pudo guardar: " + ex.getMessage()).showAndWait();
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
             }
         });
 
@@ -1009,6 +1009,6 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     }
 
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 }

@@ -6,6 +6,7 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.PuntoEstadistica;
 import com.reparaciones.models.Tecnico;
+import com.reparaciones.utils.Alertas;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -1081,6 +1082,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 }

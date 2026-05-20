@@ -7,6 +7,7 @@ import com.reparaciones.dao.SolicitudStockDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.SolicitudResumen;
 import com.reparaciones.models.SolicitudStock;
+import com.reparaciones.utils.Alertas;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -939,7 +940,7 @@ public class MainController {
      * @param inactivos resto de botones de navegación
      */
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 
     private void setActivo(Button activo, Button... inactivos) {
