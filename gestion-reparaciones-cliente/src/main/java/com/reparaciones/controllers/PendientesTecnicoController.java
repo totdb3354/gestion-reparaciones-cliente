@@ -340,10 +340,11 @@ public class PendientesTecnicoController {
      * @return texto de la celda, o {@code null} si la columna no es copiable
      */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
-        if (col == cId)     return rep.getIdRep();
-        if (col == cImei)   return rep.getImei();
-        if (col == cModelo) { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-        if (col == cFecha)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cId)        return rep.getIdRep();
+        if (col == cImei)      return rep.getImei();
+        if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }
 

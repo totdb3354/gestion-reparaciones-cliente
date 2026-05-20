@@ -785,13 +785,6 @@ public class PendientesAdminController {
         return tablaPendientes.getItems();
     }
 
-    /**
-     * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
-     *
-     * @param rep datos de la fila
-     * @param col columna seleccionada
-     * @return texto de la celda, o {@code null} si la columna no es copiable
-     */
     private void abrirEditorComentario(ReparacionResumen rep, String textoActual) {
         Label lblTitulo = new Label("Comentario de asignación");
         lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
@@ -846,6 +839,13 @@ public class PendientesAdminController {
         ventana.showAndWait();
     }
 
+    /**
+     * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
+     *
+     * @param rep datos de la fila
+     * @param col columna seleccionada
+     * @return texto de la celda, o {@code null} si la columna no es copiable
+     */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
         if (col == cId)        return rep.getIdRep();
         if (col == cImei)      return rep.getImei();
