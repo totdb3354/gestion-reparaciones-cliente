@@ -822,7 +822,7 @@ public class PendientesAdminController {
 
         Button btnGuardar = new Button("Guardar");
         btnGuardar.getStyleClass().add("btn-primary");
-        Button btnCerrar = new Button("✕");
+        Button btnCerrar = new Button("Cancelar");
         btnCerrar.getStyleClass().add("btn-secondary");
 
         HBox botones = new HBox(10, btnCerrar, btnGuardar);
