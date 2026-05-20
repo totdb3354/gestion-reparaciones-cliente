@@ -279,9 +279,12 @@ public class ReparacionDAO {
      * @return ID de la asignación con formato {@code A[yyyyMMdd]_N}
      * @throws SQLException si falla la llamada al servidor
      */
-    public String insertarAsignacion(String imei, int idTec) throws SQLException {
-        JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones",
-                Map.of("imei", imei, "idTec", idTec), JsonObject.class);
+    public String insertarAsignacion(String imei, int idTec, String comentario) throws SQLException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("imei", imei);
+        body.put("idTec", idTec);
+        if (comentario != null && !comentario.isBlank()) body.put("comentario", comentario);
+        JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones", body, JsonObject.class);
         return resp != null ? resp.get("value").getAsString() : null;
     }
 

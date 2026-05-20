@@ -189,6 +189,7 @@ public class PendientesAdminController {
         tablaPendientes.setItems(datosFiltrados);
         tablaPendientes.setColumnResizePolicy(param -> true);
 
+        Image imgEditar = new Image(getClass().getResourceAsStream("/images/editar.png"));
         tablaPendientes.setRowFactory(tv -> new TableRow<>() {
             {
                 ContextMenu menu = new ContextMenu();
@@ -221,7 +222,10 @@ public class PendientesAdminController {
                         });
                 });
                 menu.getItems().add(copiar);
-                MenuItem editarComentario = new MenuItem("✏  Editar comentario");
+                MenuItem editarComentario = new MenuItem("Editar comentario");
+                ImageView ivEditar = new ImageView(imgEditar);
+                ivEditar.setFitWidth(14); ivEditar.setFitHeight(14); ivEditar.setPreserveRatio(true);
+                editarComentario.setGraphic(ivEditar);
                 editarComentario.setOnAction(e -> {
                     if (getItem() == null) return;
                     ReparacionResumen rep = getItem();
@@ -686,10 +690,22 @@ public class PendientesAdminController {
             }
         });
 
+        // ── Comentario ────────────────────────────────────────────────────────
+        Label lblComentario = new Label("Comentario (opcional)");
+        lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+
+        TextArea tfComentario = new TextArea();
+        tfComentario.setWrapText(true);
+        tfComentario.setPrefRowCount(3);
+        tfComentario.setPromptText("Instrucciones para el técnico...");
+        tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+
         // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, botones);
+        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, lblComentario, tfComentario, botones);
         contenido.setPadding(new Insets(28));
-        contenido.setPrefWidth(400);
+        contenido.setPrefWidth(440);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
@@ -703,10 +719,12 @@ public class PendientesAdminController {
             String imei  = tfImei.getText().trim();
             String model = modeloSel[0];
             try {
+                String comentario = tfComentario.getText().trim();
                 telefonoDAO.insertar(imei, model);
                 for (int i = 0; i < checkboxes.size(); i++) {
                     if (checkboxes.get(i).isSelected())
-                        reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec());
+                        reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec(),
+                                comentario.isEmpty() ? null : comentario);
                 }
                 ventana.close();
                 cargar();
