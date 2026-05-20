@@ -23,18 +23,21 @@ jobs:
             pkg-version: 1.0.0
             icon-arg: "--icon packaging/icono_mac.icns"
             artifact: FSGR-mac
+            appimage-artifact: FSGR-mac-appimage
           - os: macos-13
             jfx-jmods-zip: openjfx-21_osx-x64_bin-jmods.zip
             pkg-type: dmg
             pkg-version: 1.0.0
             icon-arg: "--icon packaging/icono_mac.icns"
             artifact: FSGR-mac-intel
+            appimage-artifact: FSGR-mac-intel-appimage
           - os: windows-latest
             jfx-jmods-zip: openjfx-21_windows-x64_bin-jmods.zip
             pkg-type: msi
             pkg-version: 0.9.0
             icon-arg: "--icon packaging/icono_Windows.ico"
             artifact: FSGR-windows
+            appimage-artifact: FSGR-windows-appimage
 
     runs-on: ${{ matrix.os }}
 
@@ -107,7 +110,33 @@ jobs:
             gestion-reparaciones-cliente/*.msi
           if-no-files-found: error
 
-# Nota: se generan tres artefactos en paralelo:
-#   FSGR-mac        → .dmg para Apple Silicon (M1/M2/M3) — runner macos-latest (ARM64)
-#   FSGR-mac-intel  → .dmg para Macs Intel (pre-2020)    — runner macos-13 (x64)
-#   FSGR-windows    → .msi para Windows
+      - name: Generar app-image portable
+        run: |
+          jpackage \
+            --type app-image \
+            --name "FSGR" \
+            --app-version ${{ matrix.pkg-version }} \
+            --input target/libs \
+            --main-jar gestion-reparaciones-cliente-1.0-SNAPSHOT.jar \
+            --main-class com.reparaciones.App \
+            --runtime-image custom-runtime \
+            --java-options "--add-modules=javafx.controls,javafx.fxml" \
+            --java-options "-Dfile.encoding=UTF-8" \
+            ${{ matrix.icon-arg }}
+
+      - name: Subir app-image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.appimage-artifact }}
+          path: |
+            gestion-reparaciones-cliente/FSGR.app
+            gestion-reparaciones-cliente/FSGR
+          if-no-files-found: warn
+
+# Nota: se generan seis artefactos en paralelo (dos por job):
+#   FSGR-mac              → .dmg para Apple Silicon (M1/M2/M3) — runner macos-latest (ARM64)
+#   FSGR-mac-appimage     → app-image portable para Apple Silicon
+#   FSGR-mac-intel        → .dmg para Macs Intel (pre-2020)    — runner macos-13 (x64)
+#   FSGR-mac-intel-appimage → app-image portable para Macs Intel
+#   FSGR-windows          → .msi para Windows
+#   FSGR-windows-appimage → app-image portable para Windows
