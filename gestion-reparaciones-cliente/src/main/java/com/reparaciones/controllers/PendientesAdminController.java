@@ -64,6 +64,7 @@ public class PendientesAdminController {
     private Runnable onActualizar;
 
     @FXML private Button btnConfirmarCambios;
+    @FXML private Button btnDescartarCambios;
     @FXML private Label  lblUltimaActualizacion;
 
     private CheckBox cbSoloSolicitudes;
@@ -748,13 +749,15 @@ public class PendientesAdminController {
     public void resetearCambios() {
         cambiosPendientes.clear();
         actualizarVisibilidadConfirmar();
-        tablaPendientes.refresh();
+        cargar();
     }
 
     private void actualizarVisibilidadConfirmar() {
         boolean hay = !cambiosPendientes.isEmpty();
         btnConfirmarCambios.setVisible(hay);
         btnConfirmarCambios.setManaged(hay);
+        btnDescartarCambios.setVisible(hay);
+        btnDescartarCambios.setManaged(hay);
     }
 
     @FXML
