@@ -5,6 +5,7 @@ import com.reparaciones.dao.ProveedorDAO;
 import com.reparaciones.dao.TipoCambioDAO;
 import com.reparaciones.models.CompraComponente;
 import com.reparaciones.models.Proveedor;
+import com.reparaciones.utils.Alertas;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -145,7 +146,7 @@ public class FormularioCompraEditarController {
                     "El pedido fue modificado por otro usuario. Cierra y recarga los datos.")
                     .showAndWait();
         } catch (SQLException e) {
-            new Alert(Alert.AlertType.ERROR, "Error al guardar: " + e.getMessage()).showAndWait();
+            Alertas.mostrarError("Error al guardar: " + e.getMessage());
         }
     }
 
@@ -156,6 +157,6 @@ public class FormularioCompraEditarController {
     }
 
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 }

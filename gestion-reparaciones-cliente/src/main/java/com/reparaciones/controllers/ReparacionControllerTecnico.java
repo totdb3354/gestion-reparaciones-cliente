@@ -2,6 +2,7 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.Sesion;
 import com.reparaciones.dao.ReparacionDAO;
+import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.models.ReparacionResumen;
 import javafx.collections.FXCollections;
@@ -758,6 +759,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 }

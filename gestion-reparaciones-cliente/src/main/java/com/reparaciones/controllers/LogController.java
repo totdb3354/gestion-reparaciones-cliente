@@ -2,6 +2,7 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.dao.LogDAO;
 import com.reparaciones.models.LogActividad;
+import com.reparaciones.utils.Alertas;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -44,7 +45,7 @@ public class LogController {
             List<LogActividad> logs = logDAO.getAll();
             tablaLogs.setItems(FXCollections.observableArrayList(logs));
         } catch (SQLException e) {
-            new Alert(Alert.AlertType.ERROR, "Error al cargar los logs: " + e.getMessage()).showAndWait();
+            Alertas.mostrarError("Error al cargar los logs: " + e.getMessage());
         }
     }
 

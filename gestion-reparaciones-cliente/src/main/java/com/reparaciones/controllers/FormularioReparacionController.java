@@ -23,6 +23,7 @@ import javafx.scene.text.FontWeight;
 import javafx.geometry.Pos;
 import javafx.util.Duration;
 
+import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.StaleDataException;
 
 import java.sql.SQLException;
@@ -232,7 +233,7 @@ public class FormularioReparacionController {
                 stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                 stage.show();
             } catch (Exception e) {
-                new Alert(Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+                Alertas.mostrarError(e.getMessage());
             }
         });
     }
@@ -411,8 +412,7 @@ public class FormularioReparacionController {
                         "No se pudo registrar componente agotado: " + ex.getMessage()).showAndWait();
                 return;
             } catch (SQLException ex) {
-                new Alert(Alert.AlertType.ERROR,
-                        "Error al registrar componente agotado: " + ex.getMessage()).showAndWait();
+                Alertas.mostrarError("Error al registrar componente agotado: " + ex.getMessage());
                 return;
             }
         }
@@ -482,8 +482,7 @@ public class FormularioReparacionController {
                     "Cierra el formulario y comprueba el estado de la asignación.")
                     .showAndWait();
         } catch (SQLException ex) {
-            new Alert(Alert.AlertType.ERROR,
-                    "No se pudo guardar: " + ex.getMessage()).showAndWait();
+            Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
         }
     }
 
@@ -529,8 +528,7 @@ public class FormularioReparacionController {
                     "Cierra y vuelve a abrir el formulario para ver los cambios actuales.")
                     .showAndWait();
         } catch (SQLException ex) {
-            new Alert(Alert.AlertType.ERROR,
-                    "No se pudo guardar: " + ex.getMessage()).showAndWait();
+            Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
         }
     }
 
@@ -557,13 +555,13 @@ public class FormularioReparacionController {
                 stage.show();
 
             } catch (Exception e) {
-                new Alert(Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+                Alertas.mostrarError(e.getMessage());
             }
         });
     }
 
     private void mostrarError(Exception e) {
-        new Alert(Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 
     // ─── Utilidades estáticas ─────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import com.reparaciones.models.CompraComponente;
 import com.reparaciones.models.LineaPedido;
 import com.reparaciones.models.Proveedor;
 import com.reparaciones.models.SolicitudStock;
+import com.reparaciones.utils.Alertas;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -544,7 +545,7 @@ public class FormularioCompraController {
             onGuardado.run();
             cerrarVentana();
         } catch (SQLException e) {
-            new Alert(Alert.AlertType.ERROR, "Error al guardar: " + e.getMessage()).showAndWait();
+            Alertas.mostrarError("Error al guardar: " + e.getMessage());
         }
     }
 
@@ -704,7 +705,7 @@ public class FormularioCompraController {
     }
 
     private static void mostrarError(Exception e) {
-        new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 
     public static void abrirEditar(CompraComponente pedido, Runnable onGuardado) {

@@ -7,6 +7,7 @@ import com.reparaciones.models.CompraComponente;
 import com.reparaciones.models.CompraComponente.Estado;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.Proveedor;
+import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -1393,7 +1394,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void mostrarError(SQLException e) {
-        new Alert(Alert.AlertType.ERROR, e.getMessage()).showAndWait();
+        Alertas.mostrarError(e.getMessage());
     }
 
     private void mostrarConflicto() {
