@@ -414,9 +414,8 @@ public class PulidoAdminController {
 
         Runnable validar = () -> {
             boolean imeiOk    = tfImei.getText().trim().length() == 15;
-            boolean modeloOk  = modeloSel[0] != null;
             boolean tecnicoOk = cbTecnico.getValue() != null;
-            btnConfirmar.setDisable(!(imeiOk && modeloOk && tecnicoOk));
+            btnConfirmar.setDisable(!(imeiOk && tecnicoOk));
             String imeiT = tfImei.getText().trim();
             tfImei.setStyle(imeiT.isEmpty()
                 ? "-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-text-fill: #2C3B54; -fx-font-size: 13px;"
