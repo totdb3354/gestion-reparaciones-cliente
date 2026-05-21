@@ -336,20 +336,26 @@ public class PulidoAdminController {
 
     @FXML
     private void abrirFormularioAsignacion() {
-        Label lblTitulo = new Label("Asignar pulido");
+        // ── Cabecera ──────────────────────────────────────────────────────────
+        Label lblTitulo = new Label("Asignar pulidos");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label lblSub = new Label("El técnico y modelo se mantienen entre escaneos.");
+        lblSub.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
 
-        Label lblImei = new Label("IMEI del teléfono");
-        lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-        TextField tfImei = new TextField();
-        tfImei.setPromptText("15 dígitos");
-        tfImei.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
-                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-        Label lblImeiErr = new Label();
-        lblImeiErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
+        // ── Técnico ───────────────────────────────────────────────────────────
+        Label lblTecnico = new Label("Técnico a asignar");
+        lblTecnico.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        ComboBox<Tecnico> cbTecnico = new ComboBox<>();
+        cbTecnico.setMaxWidth(Double.MAX_VALUE);
+        cbTecnico.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+            @Override public Tecnico fromString(String s) { return null; }
+        });
+        try { cbTecnico.getItems().addAll(tecnicoDAO.getAllActivos()); }
+        catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
 
-        Label lblModelo = new Label("Modelo de iPhone");
+        // ── Modelo (opcional, sticky) ─────────────────────────────────────────
+        Label lblModelo = new Label("Modelo de iPhone (opcional)");
         lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ObservableList<String> todosModelos =
                 FXCollections.observableArrayList(FormularioReparacionController.MODELOS_ORDENADOS);
@@ -365,7 +371,7 @@ public class PulidoAdminController {
                 "-fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;" +
                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
         listaModelos.setFixedCellSize(30);
-        listaModelos.setPrefWidth(344);
+        listaModelos.setPrefWidth(384);
         listaModelos.setCellFactory(lv -> new ListCell<>() {
             { setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null) setStyle("-fx-background-color: #001232; -fx-background-radius: 8; -fx-background-insets: 2 6 2 6; -fx-text-fill: white; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
               setOnMouseExited(e -> { if (!isEmpty() && getItem() != null) setStyle("-fx-background-color: white; -fx-text-fill: #001232; -fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); }); }
@@ -382,48 +388,81 @@ public class PulidoAdminController {
         String[] modeloSel = {null};
         boolean[] actualizandoModelo = {false};
 
-        Label lblTecnico = new Label("Técnico a asignar");
-        lblTecnico.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-        ComboBox<Tecnico> cbTecnico = new ComboBox<>();
-        cbTecnico.setMaxWidth(Double.MAX_VALUE);
-        cbTecnico.setConverter(new javafx.util.StringConverter<>() {
-            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
-            @Override public Tecnico fromString(String s) { return null; }
-        });
-        try { cbTecnico.getItems().addAll(tecnicoDAO.getAllActivos()); }
-        catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
-
+        // ── Comentario (opcional, sticky) ────────────────────────────────────
         Label lblComentario = new Label("Comentario (opcional)");
         lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         TextArea tfComentario = new TextArea();
         tfComentario.setWrapText(true);
-        tfComentario.setPrefRowCount(3);
+        tfComentario.setPrefRowCount(2);
         tfComentario.setPromptText("Instrucciones para el técnico...");
         tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                 "-fx-border-radius: 4; -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
 
-        Button btnConfirmar = new Button("Asignar pulido");
-        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
-        btnConfirmar.setDisable(true);
-        btnConfirmar.getStyleClass().add("btn-primary");
-        Button btnCancelar = new Button("Cancelar");
-        btnCancelar.setMaxWidth(Double.MAX_VALUE);
-        btnCancelar.getStyleClass().add("btn-secondary");
-        HBox botones = new HBox(10, btnCancelar, btnConfirmar);
-        botones.setAlignment(Pos.CENTER_RIGHT);
+        // ── IMEI (auto-envío) ─────────────────────────────────────────────────
+        Label lblImei = new Label("IMEI");
+        lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextField tfImei = new TextField();
+        tfImei.setPromptText("Escanea o escribe el IMEI (15 dígitos)...");
+        tfImei.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 14px;");
 
-        Runnable validar = () -> {
-            boolean imeiOk    = tfImei.getText().trim().length() == 15;
-            boolean tecnicoOk = cbTecnico.getValue() != null;
-            btnConfirmar.setDisable(!(imeiOk && tecnicoOk));
-            String imeiT = tfImei.getText().trim();
-            tfImei.setStyle(imeiT.isEmpty()
-                ? "-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-text-fill: #2C3B54; -fx-font-size: 13px;"
-                : (imeiOk
-                    ? "-fx-background-color: white; -fx-border-color: #8AC7AF; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-text-fill: #2C3B54; -fx-font-size: 13px;"
-                    : "-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-text-fill: #2C3B54; -fx-font-size: 13px;"));
-            lblImeiErr.setText(!imeiT.isEmpty() && !imeiOk ? "El IMEI debe tener exactamente 15 dígitos" : "");
+        // ── Feedback ──────────────────────────────────────────────────────────
+        int[] contador = {0};
+        Label lblContador = new Label("0 añadidos");
+        lblContador.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #586376;");
+        Label lblError = new Label();
+        lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-wrap-text: true;");
+        lblError.setMaxWidth(384);
+        HBox statusBar = new HBox(12, lblContador, lblError);
+        statusBar.setAlignment(Pos.CENTER_LEFT);
+
+        Button btnCerrar = new Button("Cerrar");
+        btnCerrar.setMaxWidth(Double.MAX_VALUE);
+        btnCerrar.getStyleClass().add("btn-secondary");
+
+        // ── Lógica de envío ───────────────────────────────────────────────────
+        String IMEI_STYLE_BASE = "-fx-background-color: white; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-text-fill: #2C3B54; -fx-font-size: 14px;";
+        boolean[] enviando = {false};
+        Runnable intentarEnviar = () -> {
+            if (enviando[0]) return;
+            String imei = tfImei.getText().trim();
+            if (imei.length() != 15) return;
+            Tecnico tec = cbTecnico.getValue();
+            if (tec == null) { lblError.setText("Selecciona un técnico primero."); return; }
+            enviando[0] = true;
+            try {
+                String comentario = tfComentario.getText().trim();
+                telefonoDAO.insertar(imei, modeloSel[0]);
+                pulidoDAO.insertarAsignacionPulido(imei, tec.getIdTec(),
+                        comentario.isEmpty() ? null : comentario);
+                contador[0]++;
+                lblContador.setText(contador[0] + " añadido" + (contador[0] == 1 ? "" : "s"));
+                lblContador.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2E7D32;");
+                lblError.setText("");
+                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #8AC7AF;");
+                tfImei.clear();
+                javafx.application.Platform.runLater(() -> {
+                    tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #C2C8D0;");
+                    tfImei.requestFocus();
+                });
+            } catch (SQLException ex) {
+                lblError.setText(ex.getMessage());
+                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+            }
+            enviando[0] = false;
         };
+
+        tfImei.textProperty().addListener((obs, o, n) -> {
+            if (!n.matches("\\d*")) { tfImei.setText(n.replaceAll("[^\\d]", "")); return; }
+            if (tfImei.getText().length() > 15) { tfImei.setText(tfImei.getText().substring(0, 15)); return; }
+            lblError.setText("");
+            if (tfImei.getText().length() == 15) intentarEnviar.run();
+        });
+        tfImei.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) intentarEnviar.run();
+        });
+
         Runnable mostrarPopup = () -> {
             if (modelosFiltrados.isEmpty() || tfModelo.getScene() == null) { popupModelo.hide(); return; }
             listaModelos.setPrefHeight(Math.min(modelosFiltrados.size(), 6) * 28 + 4);
@@ -439,14 +478,8 @@ public class PulidoAdminController {
             modelosFiltrados.setPredicate(s -> true);
             actualizandoModelo[0] = false;
             popupModelo.hide();
-            validar.run();
+            javafx.application.Platform.runLater(tfImei::requestFocus);
         };
-        tfImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) tfImei.setText(n.replaceAll("[^\\d]", ""));
-            if (tfImei.getText().length() > 15) tfImei.setText(tfImei.getText().substring(0, 15));
-            validar.run();
-        });
-        cbTecnico.valueProperty().addListener((obs, o, n) -> validar.run());
         tfModelo.textProperty().addListener((obs, o, newText) -> {
             if (actualizandoModelo[0]) return;
             if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(newText)) return;
@@ -455,7 +488,6 @@ public class PulidoAdminController {
             modelosFiltrados.setPredicate(c -> lower.isEmpty()
                     || FormularioReparacionController.traducirModelo(c).toLowerCase().contains(lower));
             mostrarPopup.run();
-            validar.run();
         });
         tfModelo.setOnAction(e -> { if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0)); });
         tfModelo.focusedProperty().addListener((obs, o, focused) -> {
@@ -471,8 +503,14 @@ public class PulidoAdminController {
         listaModelos.setOnMouseClicked(e -> { String sel = listaModelos.getSelectionModel().getSelectedItem(); if (sel != null) confirmarModelo.accept(sel); });
         listaModelos.setOnKeyPressed(e -> { if (e.getCode() == javafx.scene.input.KeyCode.ENTER) { String sel = listaModelos.getSelectionModel().getSelectedItem(); if (sel != null) confirmarModelo.accept(sel); } });
 
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr,
-                lblModelo, tfModelo, lblTecnico, cbTecnico, lblComentario, tfComentario, botones);
+        // ── Layout ────────────────────────────────────────────────────────────
+        VBox contenido = new VBox(12, lblTitulo, lblSub,
+                lblTecnico, cbTecnico,
+                lblModelo, tfModelo,
+                lblComentario, tfComentario,
+                new javafx.scene.control.Separator(),
+                lblImei, tfImei,
+                statusBar, btnCerrar);
         contenido.setPadding(new Insets(28));
         contenido.setPrefWidth(440);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
@@ -480,24 +518,13 @@ public class PulidoAdminController {
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         ventana.setResizable(false);
-        ventana.setTitle("Asignar pulido");
-        btnCancelar.setOnAction(ev -> ventana.close());
-        btnConfirmar.setOnAction(ev -> {
-            String imei = tfImei.getText().trim();
-            Tecnico tec = cbTecnico.getValue();
-            try {
-                telefonoDAO.insertar(imei, modeloSel[0]);
-                String comentario = tfComentario.getText().trim();
-                pulidoDAO.insertarAsignacionPulido(imei, tec.getIdTec(),
-                        comentario.isEmpty() ? null : comentario);
-                ventana.close();
-                cargar();
-            } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
-        });
+        ventana.setTitle("Asignar pulidos");
+        btnCerrar.setOnAction(ev -> { ventana.close(); cargar(); });
+
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
-        javafx.application.Platform.runLater(tfImei::requestFocus);
+        javafx.application.Platform.runLater(cbTecnico::requestFocus);
         ventana.showAndWait();
     }
 
