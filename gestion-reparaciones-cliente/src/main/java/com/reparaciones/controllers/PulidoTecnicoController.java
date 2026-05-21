@@ -1,11 +1,20 @@
 package com.reparaciones.controllers;
 
+import com.reparaciones.Sesion;
 import com.reparaciones.dao.PulidoDAO;
 import com.reparaciones.models.ReparacionResumen;
+import com.reparaciones.utils.Alertas;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+
+import java.sql.SQLException;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class PulidoTecnicoController {
 
@@ -21,20 +30,135 @@ public class PulidoTecnicoController {
     @FXML private Label     lblUltimaActualizacion;
 
     private final PulidoDAO pulidoDAO = new PulidoDAO();
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
+    private FilteredList<ReparacionResumen> datosFiltrados;
+    private final Set<String> seleccionados = new HashSet<>();
 
     @FXML
     public void initialize() {
-        tablaPulidos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        tablaPulidos.setItems(datos);
+        cCheck.setCellValueFactory(d ->
+            new javafx.beans.property.SimpleBooleanProperty(seleccionados.contains(d.getValue().getIdRep())));
+        cCheck.setCellFactory(col -> new TableCell<>() {
+            private final CheckBox cb = new CheckBox();
+            {
+                cb.setOnAction(e -> {
+                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
+                    String id = getTableView().getItems().get(getIndex()).getIdRep();
+                    if (cb.isSelected()) seleccionados.add(id);
+                    else seleccionados.remove(id);
+                    actualizarBotonCompletar();
+                });
+            }
+            @Override protected void updateItem(Boolean item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                cb.setSelected(seleccionados.contains(getTableView().getItems().get(getIndex()).getIdRep()));
+                setGraphic(cb);
+            }
+        });
+
+        cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
+        cImei.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getImei()));
+        cModelo.setCellValueFactory(d -> {
+            String m = d.getValue().getModelo();
+            return new javafx.beans.property.SimpleStringProperty(
+                (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+        });
+        cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+        cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+
+        datosFiltrados = new FilteredList<>(datos, p -> true);
+        tablaPulidos.setItems(datosFiltrados);
+        tablaPulidos.setColumnResizePolicy(param -> true);
+
+        tablaPulidos.setRowFactory(tv -> new TableRow<>() {
+            {
+                selectedProperty().addListener((obs, o, sel) -> actualizarEstilo());
+            }
+            private void actualizarEstilo() {
+                if (isEmpty() || getItem() == null) { setStyle(""); return; }
+                if (isSelected()) {
+                    setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
+                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
+                            "-fx-border-width: 0 0 1 0;");
+                } else {
+                    setStyle("-fx-border-width: 0 0 1 0; -fx-border-color: transparent transparent " +
+                            com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                }
+            }
+            @Override protected void updateItem(ReparacionResumen item, boolean empty) {
+                super.updateItem(item, empty);
+                actualizarEstilo();
+            }
+        });
+
+        tablaPulidos.getColumns().forEach(c -> c.setReorderable(false));
+        filtroImei.textProperty().addListener((obs, o, n) -> {
+            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
+            if (filtroImei.getText().length() > 15)
+                filtroImei.setText(filtroImei.getText().substring(0, 15));
+            aplicarFiltro();
+        });
+        cargar();
+    }
+
+    private void aplicarFiltro() {
+        if (datosFiltrados == null) return;
+        String imeiStr = filtroImei.getText().trim();
+        datosFiltrados.setPredicate(rep -> imeiStr.length() != 15 || rep.getImei().equals(imeiStr));
+    }
+
+    @FXML private void limpiarFiltros() {
+        filtroImei.clear();
+        aplicarFiltro();
+    }
+
+    @FXML
+    private void seleccionarTodo() {
+        if (seleccionados.size() == datos.size() && !datos.isEmpty()) {
+            seleccionados.clear();
+        } else {
+            datos.forEach(r -> seleccionados.add(r.getIdRep()));
+        }
+        tablaPulidos.refresh();
+        actualizarBotonCompletar();
+    }
+
+    @FXML
+    private void completarSeleccionados() {
+        if (seleccionados.isEmpty()) return;
+        List<String> ids = List.copyOf(seleccionados);
+        try {
+            pulidoDAO.completarPulidoLote(ids);
+            seleccionados.clear();
+            cargar();
+        } catch (SQLException e) {
+            Alertas.mostrarError(e.getMessage());
+        }
+    }
+
+    private void actualizarBotonCompletar() {
+        if (btnCompletarSeleccionados != null)
+            btnCompletarSeleccionados.setDisable(seleccionados.isEmpty());
     }
 
     public void cargar() {
-        // TODO
+        try {
+            Integer idTec = Sesion.getIdTec();
+            if (idTec == null) return;
+            seleccionados.clear();
+            datos.setAll(pulidoDAO.getAsignacionesPulidoPorTecnico(idTec));
+            actualizarBotonCompletar();
+            String hora = java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+            if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
+        } catch (SQLException e) {
+            Alertas.mostrarError(e.getMessage());
+        }
     }
-
-    @FXML private void limpiarFiltros() {}
-    @FXML private void seleccionarTodo() {}
-    @FXML private void completarSeleccionados() {}
 }
