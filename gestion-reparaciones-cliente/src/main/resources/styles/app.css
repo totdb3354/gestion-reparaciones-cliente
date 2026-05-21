@@ -451,4 +451,45 @@
 /* ── 12. Preview de stock (FormularioReparacion, modo edición) ──────────────── */
 /* stock-preview-down : #C94040  — stock baja tras guardar  */
 /* stock-preview-up   : #4CAF50  — stock sube tras guardar  */
+
+
+/* ── 13. Toggle pill selector (Reparaciones / Pulidos) ─────────────────────── */
+
+.toggle-pill-left {
+    -fx-background-color: #F0F2F5;
+    -fx-text-fill: #586376;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 14 5 14;
+    -fx-background-radius: 24 0 0 24;
+    -fx-border-radius: 24 0 0 24;
+    -fx-border-color: #C8CDD5;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+}
+
+.toggle-pill-left:selected {
+    -fx-background-color: #001232;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #001232;
+}
+
+.toggle-pill-right {
+    -fx-background-color: #F0F2F5;
+    -fx-text-fill: #586376;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 14 5 14;
+    -fx-background-radius: 0 24 24 0;
+    -fx-border-radius: 0 24 24 0;
+    -fx-border-color: #C8CDD5;
+    -fx-border-width: 1 1 1 0;
+    -fx-cursor: hand;
+}
+
+.toggle-pill-right:selected {
+    -fx-background-color: #001232;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #001232;
+}
 /* stock-preview-same : #586376  — sin cambio               */

@@ -89,6 +89,19 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private VBox   pnlMisPendientes;
     @FXML private PendientesAdminController   pendientesAdminController;
     @FXML private PendientesTecnicoController misPendientesController;
+
+    // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
+    @FXML private javafx.scene.control.ToggleButton toggleHistRep;
+    @FXML private javafx.scene.control.ToggleButton toggleHistPul;
+    @FXML private VBox pnlHistRep;
+    @FXML private VBox pnlHistPul;
+    @FXML private HistorialPulidoController historialPulidoController;
+
+    @FXML private javafx.scene.control.ToggleButton togglePendRep;
+    @FXML private javafx.scene.control.ToggleButton togglePendPul;
+    @FXML private VBox pnlPendRep;
+    @FXML private VBox pnlPendPul;
+    @FXML private PulidoAdminController pulidoAdminController;
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
@@ -123,6 +136,32 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         pendientesAdminController.setOnActualizar(this::cargarDatos);
         misPendientesController.setOnCerrar(this::cargarDatos);
 
+        // Toggle historial: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
+        toggleHistRep.setToggleGroup(tgHist);
+        toggleHistPul.setToggleGroup(tgHist);
+        tgHist.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleHistRep.setSelected(true); return; }
+            boolean rep = (n == toggleHistRep);
+            pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
+            pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
+            if (!rep) historialPulidoController.cargar();
+            else      cargarDatos();
+        });
+
+        // Toggle pendientes: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
+        togglePendRep.setToggleGroup(tgPend);
+        togglePendPul.setToggleGroup(tgPend);
+        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { togglePendRep.setSelected(true); return; }
+            boolean rep = (n == togglePendRep);
+            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
+            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
+            if (!rep) pulidoAdminController.cargar();
+            else      pendientesAdminController.cargar();
+        });
+
         if (com.reparaciones.Sesion.esAdmin()) {
             btnTabPendientes   .setVisible(false); btnTabPendientes   .setManaged(false);
             btnTabMisPendientes.setVisible(false); btnTabMisPendientes.setManaged(false);
@@ -148,9 +187,15 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
      */
     @Override
     public void recargar() {
-        if (pnlPendientes.isVisible())        pendientesAdminController.cargar();
-        else if (pnlMisPendientes.isVisible()) misPendientesController.cargar();
-        else                                   cargarDatos();
+        if (pnlPendientes.isVisible()) {
+            if (togglePendPul.isSelected()) pulidoAdminController.cargar();
+            else                            pendientesAdminController.cargar();
+        } else if (pnlMisPendientes.isVisible()) {
+            misPendientesController.cargar();
+        } else {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        }
     }
 
     @FXML private void mostrarHistorial() {
