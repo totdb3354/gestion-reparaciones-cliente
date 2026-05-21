@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      xmlns="http://javafx.com/javafx/25"
+      fx:controller="com.reparaciones.controllers.HistorialPulidoController"
+      spacing="12" VBox.vgrow="ALWAYS"
+      stylesheets="@../styles/app.css">
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="Historial de pulidos" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
+        <MenuButton fx:id="filtroTecnico" text="Técnico" prefWidth="130"/>
+        <Label text="Desde:" style="-fx-font-size: 12px;"/>
+        <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
+        <Label text="Hasta:" style="-fx-font-size: 12px;"/>
+        <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
+        <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
+    </HBox>
+
+    <TableView fx:id="tablaPulidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="cId"         text="Id Pulido"        prefWidth="110"/>
+            <TableColumn fx:id="cImei"       text="IMEI"             prefWidth="130"/>
+            <TableColumn fx:id="cModelo"     text="Modelo"           prefWidth="120"/>
+            <TableColumn fx:id="cTecnico"    text="Técnico"          prefWidth="110"/>
+            <TableColumn fx:id="cFechaIni"   text="Fecha asignación" prefWidth="130"/>
+            <TableColumn fx:id="cFechaFin"   text="Fecha fin"        prefWidth="130"/>
+            <TableColumn fx:id="cComentario" text="Comentario"       prefWidth="160"/>
+        </columns>
+        <placeholder><Label text="No hay pulidos completados"/></placeholder>
+    </TableView>
+
+    <Label fx:id="lblUltimaActualizacion"
+           style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"
+           alignment="CENTER_RIGHT" maxWidth="Infinity"/>
+
+</VBox>
