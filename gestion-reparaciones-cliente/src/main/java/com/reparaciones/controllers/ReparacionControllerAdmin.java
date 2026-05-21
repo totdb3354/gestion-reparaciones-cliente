@@ -102,6 +102,12 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private VBox pnlPendRep;
     @FXML private VBox pnlPendPul;
     @FXML private PulidoAdminController pulidoAdminController;
+
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendRep;
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendPul;
+    @FXML private VBox pnlMisPendRep;
+    @FXML private VBox pnlMisPendPul;
+    @FXML private PulidoTecnicoController misPulidosTecnicoController;
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
@@ -162,6 +168,19 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             else      pendientesAdminController.cargar();
         });
 
+        // Toggle mis pendientes (supertécnico como técnico): Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgMisPend = new javafx.scene.control.ToggleGroup();
+        toggleMisPendRep.setToggleGroup(tgMisPend);
+        toggleMisPendPul.setToggleGroup(tgMisPend);
+        tgMisPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleMisPendRep.setSelected(true); return; }
+            boolean rep = (n == toggleMisPendRep);
+            pnlMisPendRep.setVisible(rep);  pnlMisPendRep.setManaged(rep);
+            pnlMisPendPul.setVisible(!rep); pnlMisPendPul.setManaged(!rep);
+            if (!rep) misPulidosTecnicoController.cargar();
+            else      misPendientesController.cargar();
+        });
+
         if (com.reparaciones.Sesion.esAdmin()) {
             btnTabPendientes   .setVisible(false); btnTabPendientes   .setManaged(false);
             btnTabMisPendientes.setVisible(false); btnTabMisPendientes.setManaged(false);
@@ -191,7 +210,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             if (togglePendPul.isSelected()) pulidoAdminController.cargar();
             else                            pendientesAdminController.cargar();
         } else if (pnlMisPendientes.isVisible()) {
-            misPendientesController.cargar();
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();

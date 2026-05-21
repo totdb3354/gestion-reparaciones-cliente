@@ -102,7 +102,19 @@
 
                 <!-- Panel: Mis pendientes (técnico) -->
                 <VBox fx:id="pnlMisPendientes" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                    <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientes"/>
+                    <HBox spacing="0" alignment="CENTER_LEFT">
+                        <VBox.margin><Insets bottom="8"/></VBox.margin>
+                        <ToggleButton fx:id="toggleMisPendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
+                        <ToggleButton fx:id="toggleMisPendPul" text="Pulidos" styleClass="toggle-pill-right"/>
+                    </HBox>
+                    <StackPane VBox.vgrow="ALWAYS">
+                        <VBox fx:id="pnlMisPendRep" VBox.vgrow="ALWAYS">
+                            <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientes"/>
+                        </VBox>
+                        <VBox fx:id="pnlMisPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                            <fx:include source="PulidoTecnicoView.fxml" fx:id="misPulidosTecnico"/>
+                        </VBox>
+                    </StackPane>
                 </VBox>
 
             </StackPane>
