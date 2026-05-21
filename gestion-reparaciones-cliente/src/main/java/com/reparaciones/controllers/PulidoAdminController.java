@@ -406,9 +406,9 @@ public class PulidoAdminController {
                 lblContador.setText(contador[0] + " añadido" + (contador[0] == 1 ? "" : "s"));
                 lblContador.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2E7D32;");
                 lblError.setText("");
-                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #8AC7AF;");
-                tfImei.clear();
                 javafx.application.Platform.runLater(() -> {
+                    tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #8AC7AF;");
+                    tfImei.clear();
                     tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #C2C8D0;");
                     tfImei.requestFocus();
                 });
@@ -420,10 +420,18 @@ public class PulidoAdminController {
         };
 
         tfImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) { tfImei.setText(n.replaceAll("[^\\d]", "")); return; }
-            if (tfImei.getText().length() > 15) { tfImei.setText(tfImei.getText().substring(0, 15)); return; }
+            if (!n.matches("\\d*")) {
+                String solo = n.replaceAll("[^\\d]", "");
+                javafx.application.Platform.runLater(() -> tfImei.setText(solo));
+                return;
+            }
+            if (n.length() > 15) {
+                String recortado = n.substring(0, 15);
+                javafx.application.Platform.runLater(() -> tfImei.setText(recortado));
+                return;
+            }
             lblError.setText("");
-            if (tfImei.getText().length() == 15) intentarEnviar.run();
+            if (n.length() == 15) intentarEnviar.run();
         });
         tfImei.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) intentarEnviar.run();
