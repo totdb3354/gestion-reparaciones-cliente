@@ -106,11 +106,10 @@ public class MainController {
         inicializarMenuUsuario();
         mostrarReparaciones();
         if (Sesion.esSuperTecnico()) {
-            verificarStockAlertas();
-            ivCampana.setImage(imgCampanaOff);
             campanaPane.setVisible(true);
             campanaPane.setManaged(true);
             actualizarBadge();
+            verificarStockAlertas();
         }
         // Recargar al recuperar el foco; abrir alertas la primera vez que la ventana se muestra
         contenedor.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -159,6 +158,7 @@ public class MainController {
 
     private void iniciarPulso() {
         if (pulsoAlertas != null && pulsoAlertas.getStatus() == Timeline.Status.RUNNING) return;
+        ivCampana.setImage(imgCampanaOn);
         DropShadow glow = new DropShadow();
         glow.setColor(Color.web("#F1E356"));
         glow.setRadius(0);
@@ -201,6 +201,7 @@ public class MainController {
 
     private void abrirSolicitudes(boolean abrirEnAlertas) {
         detenerPulso();
+        ivCampana.setImage(imgCampanaOn);
         if (ventanaNotificaciones != null && ventanaNotificaciones.isShowing()) {
             ventanaNotificaciones.close();
             return;
