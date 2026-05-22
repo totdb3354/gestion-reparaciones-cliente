@@ -89,6 +89,25 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private VBox   pnlMisPendientes;
     @FXML private PendientesAdminController   pendientesAdminController;
     @FXML private PendientesTecnicoController misPendientesController;
+
+    // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
+    @FXML private javafx.scene.control.ToggleButton toggleHistRep;
+    @FXML private javafx.scene.control.ToggleButton toggleHistPul;
+    @FXML private VBox pnlHistRep;
+    @FXML private VBox pnlHistPul;
+    @FXML private HistorialPulidoController historialPulidoController;
+
+    @FXML private javafx.scene.control.ToggleButton togglePendRep;
+    @FXML private javafx.scene.control.ToggleButton togglePendPul;
+    @FXML private VBox pnlPendRep;
+    @FXML private VBox pnlPendPul;
+    @FXML private PulidoAdminController pulidoAdminController;
+
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendRep;
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendPul;
+    @FXML private VBox pnlMisPendRep;
+    @FXML private VBox pnlMisPendPul;
+    @FXML private PulidoTecnicoController misPulidosTecnicoController;
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
@@ -123,6 +142,45 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         pendientesAdminController.setOnActualizar(this::cargarDatos);
         misPendientesController.setOnCerrar(this::cargarDatos);
 
+        // Toggle historial: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
+        toggleHistRep.setToggleGroup(tgHist);
+        toggleHistPul.setToggleGroup(tgHist);
+        tgHist.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleHistRep.setSelected(true); return; }
+            boolean rep = (n == toggleHistRep);
+            pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
+            pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
+            if (!rep) { historialPulidoController.setFiltroImei(filtroImei.getText()); historialPulidoController.cargar(); }
+            else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
+        });
+
+        // Toggle pendientes: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
+        togglePendRep.setToggleGroup(tgPend);
+        togglePendPul.setToggleGroup(tgPend);
+        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { togglePendRep.setSelected(true); return; }
+            boolean rep = (n == togglePendRep);
+            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
+            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
+            if (!rep) { pulidoAdminController.setFiltroImei(pendientesAdminController.getFiltroImei()); pulidoAdminController.cargar(); }
+            else      { pendientesAdminController.setFiltroImei(pulidoAdminController.getFiltroImei()); pendientesAdminController.cargar(); }
+        });
+
+        // Toggle mis pendientes (supertécnico como técnico): Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgMisPend = new javafx.scene.control.ToggleGroup();
+        toggleMisPendRep.setToggleGroup(tgMisPend);
+        toggleMisPendPul.setToggleGroup(tgMisPend);
+        tgMisPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleMisPendRep.setSelected(true); return; }
+            boolean rep = (n == toggleMisPendRep);
+            pnlMisPendRep.setVisible(rep);  pnlMisPendRep.setManaged(rep);
+            pnlMisPendPul.setVisible(!rep); pnlMisPendPul.setManaged(!rep);
+            if (!rep) { misPulidosTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); misPulidosTecnicoController.cargar(); }
+            else      { misPendientesController.setFiltroImei(misPulidosTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
+        });
+
         if (com.reparaciones.Sesion.esAdmin()) {
             btnTabPendientes   .setVisible(false); btnTabPendientes   .setManaged(false);
             btnTabMisPendientes.setVisible(false); btnTabMisPendientes.setManaged(false);
@@ -148,9 +206,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
      */
     @Override
     public void recargar() {
-        if (pnlPendientes.isVisible())        pendientesAdminController.cargar();
-        else if (pnlMisPendientes.isVisible()) misPendientesController.cargar();
-        else                                   cargarDatos();
+        if (pnlPendientes.isVisible()) {
+            if (togglePendPul.isSelected()) pulidoAdminController.cargar();
+            else                            pendientesAdminController.cargar();
+        } else if (pnlMisPendientes.isVisible()) {
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
+        } else {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        }
     }
 
     @FXML private void mostrarHistorial() {
@@ -174,9 +239,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
-        if      (panel == pnlHistorial)    cargarDatos();
-        else if (panel == pnlPendientes)   pendientesAdminController.cargar();
-        else                               misPendientesController.cargar();
+        if (panel == pnlHistorial) {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        } else if (panel == pnlPendientes) {
+            if (togglePendPul.isSelected()) pulidoAdminController.cargar();
+            else                            pendientesAdminController.cargar();
+        } else {
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
+        }
     }
 
     // ─── Label expandible (click abre popup de lectura) ───────────────────────

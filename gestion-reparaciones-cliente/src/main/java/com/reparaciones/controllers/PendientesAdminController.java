@@ -490,6 +490,9 @@ public class PendientesAdminController {
 
     public void setOnActualizar(Runnable onActualizar) { this.onActualizar = onActualizar; }
 
+    public String getFiltroImei() { return filtroImei.getText(); }
+    public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }
+
     // ─── Carga ────────────────────────────────────────────────────────────────
 
     public void cargar() {

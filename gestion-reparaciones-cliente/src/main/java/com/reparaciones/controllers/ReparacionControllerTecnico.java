@@ -81,6 +81,19 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @FXML private VBox   pnlMisPendientes;
     @FXML private Label  lblUltimaActualizacion;
     @FXML private PendientesTecnicoController misPendientesController;
+
+    // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
+    @FXML private javafx.scene.control.ToggleButton toggleHistRep;
+    @FXML private javafx.scene.control.ToggleButton toggleHistPul;
+    @FXML private VBox pnlHistRep;
+    @FXML private VBox pnlHistPul;
+    @FXML private HistorialPulidoController historialPulidoController;
+
+    @FXML private javafx.scene.control.ToggleButton togglePendRep;
+    @FXML private javafx.scene.control.ToggleButton togglePendPul;
+    @FXML private VBox pnlPendRep;
+    @FXML private VBox pnlPendPul;
+    @FXML private PulidoTecnicoController pulidoTecnicoController;
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
@@ -111,6 +124,32 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
         misPendientesController.setOnCerrar(this::cargarDatos);
 
+        // Toggle historial: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
+        toggleHistRep.setToggleGroup(tgHist);
+        toggleHistPul.setToggleGroup(tgHist);
+        tgHist.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleHistRep.setSelected(true); return; }
+            boolean rep = (n == toggleHistRep);
+            pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
+            pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
+            if (!rep) { historialPulidoController.setFiltroImei(filtroImei.getText()); historialPulidoController.cargar(); }
+            else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
+        });
+
+        // Toggle pendientes: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
+        togglePendRep.setToggleGroup(tgPend);
+        togglePendPul.setToggleGroup(tgPend);
+        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { togglePendRep.setSelected(true); return; }
+            boolean rep = (n == togglePendRep);
+            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
+            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
+            if (!rep) { pulidoTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); pulidoTecnicoController.cargar(); }
+            else      { misPendientesController.setFiltroImei(pulidoTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
+        });
+
         misPendientesController.cargar();
 
         poller.scheduleAtFixedRate(
@@ -130,8 +169,13 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
      */
     @Override
     public void recargar() {
-        if (pnlMisPendientes.isVisible()) misPendientesController.cargar();
-        else                              cargarDatos();
+        if (pnlMisPendientes.isVisible()) {
+            if (togglePendPul.isSelected()) pulidoTecnicoController.cargar();
+            else                            misPendientesController.cargar();
+        } else {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        }
     }
 
     @FXML private void mostrarHistorial() {
