@@ -57,4 +57,8 @@ public class PulidoDAO {
     public void eliminarAsignacionPulido(String idAP) throws SQLException {
         ApiClient.delete("/api/pulidos/asignaciones/" + idAP);
     }
+
+    public void eliminarPulido(String idP) throws SQLException {
+        ApiClient.delete("/api/pulidos/historial/" + idP);
+    }
 }

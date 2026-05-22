@@ -151,8 +151,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             boolean rep = (n == toggleHistRep);
             pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
             pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
-            if (!rep) historialPulidoController.cargar();
-            else      cargarDatos();
+            if (!rep) { historialPulidoController.setFiltroImei(filtroImei.getText()); historialPulidoController.cargar(); }
+            else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
         });
 
         // Toggle pendientes: Reparaciones ↔ Pulidos
@@ -164,8 +164,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             boolean rep = (n == togglePendRep);
             pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
             pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
-            if (!rep) pulidoAdminController.cargar();
-            else      pendientesAdminController.cargar();
+            if (!rep) { pulidoAdminController.setFiltroImei(pendientesAdminController.getFiltroImei()); pulidoAdminController.cargar(); }
+            else      { pendientesAdminController.setFiltroImei(pulidoAdminController.getFiltroImei()); pendientesAdminController.cargar(); }
         });
 
         // Toggle mis pendientes (supertécnico como técnico): Reparaciones ↔ Pulidos
@@ -177,8 +177,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             boolean rep = (n == toggleMisPendRep);
             pnlMisPendRep.setVisible(rep);  pnlMisPendRep.setManaged(rep);
             pnlMisPendPul.setVisible(!rep); pnlMisPendPul.setManaged(!rep);
-            if (!rep) misPulidosTecnicoController.cargar();
-            else      misPendientesController.cargar();
+            if (!rep) { misPulidosTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); misPulidosTecnicoController.cargar(); }
+            else      { misPendientesController.setFiltroImei(misPulidosTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
         });
 
         if (com.reparaciones.Sesion.esAdmin()) {
@@ -239,9 +239,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
-        if      (panel == pnlHistorial)    cargarDatos();
-        else if (panel == pnlPendientes)   pendientesAdminController.cargar();
-        else                               misPendientesController.cargar();
+        if (panel == pnlHistorial) {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        } else if (panel == pnlPendientes) {
+            if (togglePendPul.isSelected()) pulidoAdminController.cargar();
+            else                            pendientesAdminController.cargar();
+        } else {
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
+        }
     }
 
     // ─── Label expandible (click abre popup de lectura) ───────────────────────

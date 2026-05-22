@@ -148,12 +148,16 @@ public class PulidoTecnicoController {
             btnCompletarSeleccionados.setDisable(seleccionados.isEmpty());
     }
 
+    public String getFiltroImei() { return filtroImei.getText(); }
+    public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }
+
     public void cargar() {
         try {
             Integer idTec = Sesion.getIdTec();
             if (idTec == null) return;
             seleccionados.clear();
             datos.setAll(pulidoDAO.getAsignacionesPulidoPorTecnico(idTec));
+            tablaPulidos.refresh();
             actualizarBotonCompletar();
             String hora = java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);

@@ -133,8 +133,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             boolean rep = (n == toggleHistRep);
             pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
             pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
-            if (!rep) historialPulidoController.cargar();
-            else      cargarDatos();
+            if (!rep) { historialPulidoController.setFiltroImei(filtroImei.getText()); historialPulidoController.cargar(); }
+            else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
         });
 
         // Toggle pendientes: Reparaciones ↔ Pulidos
@@ -146,8 +146,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             boolean rep = (n == togglePendRep);
             pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
             pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
-            if (!rep) pulidoTecnicoController.cargar();
-            else      misPendientesController.cargar();
+            if (!rep) { pulidoTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); pulidoTecnicoController.cargar(); }
+            else      { misPendientesController.setFiltroImei(pulidoTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
         });
 
         misPendientesController.cargar();

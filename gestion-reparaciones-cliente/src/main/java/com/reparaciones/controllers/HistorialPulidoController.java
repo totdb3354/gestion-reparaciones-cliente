@@ -80,7 +80,27 @@ public class HistorialPulidoController {
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
                 });
-                menu.getItems().add(copiar);
+                if (com.reparaciones.Sesion.esSuperTecnico()) {
+                    MenuItem borrar = new MenuItem("Borrar");
+                    borrar.setOnAction(e -> {
+                        if (getItem() == null) return;
+                        com.reparaciones.utils.ConfirmDialog.mostrar(
+                                "Borrar pulido",
+                                "Se eliminará el registro " + getItem().getIdRep() + ". Esta acción no se puede deshacer.",
+                                "Borrar pulido",
+                                () -> {
+                                    try {
+                                        pulidoDAO.eliminarPulido(getItem().getIdRep());
+                                        cargar();
+                                    } catch (java.sql.SQLException ex) {
+                                        Alertas.mostrarError(ex.getMessage());
+                                    }
+                                });
+                    });
+                    menu.getItems().addAll(borrar, new SeparatorMenuItem(), copiar);
+                } else {
+                    menu.getItems().add(copiar);
+                }
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -172,6 +192,9 @@ public class HistorialPulidoController {
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
     }
+
+    public String getFiltroImei() { return filtroImei.getText(); }
+    public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }
 
     public void cargar() {
         try {
