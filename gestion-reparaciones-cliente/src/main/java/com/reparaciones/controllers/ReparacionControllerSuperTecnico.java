@@ -1,10 +1,12 @@
 package com.reparaciones.controllers;
 
+import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.models.ReparacionResumen;
+import com.reparaciones.models.Tecnico;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -31,28 +33,46 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 
 /**
- * Controlador de la vista de reparaciones para el rol ADMIN.
- * <p>Muestra el historial completo de reparaciones en modo solo lectura.
- * El menú contextual solo permite copiar celdas; no hay acciones de edición.</p>
+ * Controlador de la vista de reparaciones para el rol SUPERTECNICO.
+ * <p>Presenta tres secciones accesibles desde el sidebar:</p>
+ * <ul>
+ *   <li><b>Asignaciones</b> — gestionadas por {@link PendientesSuperTecnicoController}
+ *       (incrustado como controlador anidado).</li>
+ *   <li><b>Pendientes</b> — reparaciones pendientes asignadas al propio supertécnico,
+ *       gestionadas por {@link PendientesTecnicoController}.</li>
+ *   <li><b>Historial</b> — tabla con todas las reparaciones finalizadas, filtrable por IMEI,
+ *       técnico, rango de fechas e incidencias. Permite editar y eliminar reparaciones.</li>
+ * </ul>
  * <p>Implementa {@link com.reparaciones.utils.Recargable} para el ciclo de vida controlado
  * por {@link MainController}, y {@link com.reparaciones.utils.Exportable} para la exportación
  * contextual a CSV.</p>
  *
- * @role ADMIN
+ * @role SUPERTECNICO
  */
-public class ReparacionControllerAdmin implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
+public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
-    @FXML private TableView<ReparacionResumen> tablaReparaciones;
-    @FXML private TableColumn<ReparacionResumen, String> colIdRep;
-    @FXML private TableColumn<ReparacionResumen, String> colImei;
-    @FXML private TableColumn<ReparacionResumen, String> colModelo;
-    @FXML private TableColumn<ReparacionResumen, String> colReparador;
-    @FXML private TableColumn<ReparacionResumen, String> colFecha;
-    @FXML private TableColumn<ReparacionResumen, String> colComponente;
-    @FXML private TableColumn<ReparacionResumen, String> colObservaciones;
-    @FXML private TableColumn<ReparacionResumen, Void>   colEstado;
-    @FXML private TableColumn<ReparacionResumen, Void>   colIncidencia;
-    @FXML private TableColumn<ReparacionResumen, String> colIdAnterior;
+    @FXML
+    private TableView<ReparacionResumen> tablaReparaciones;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colIdRep;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colImei;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colModelo;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colReparador;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colFecha;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colComponente;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colObservaciones;
+    @FXML
+    private TableColumn<ReparacionResumen, Void> colEstado;
+    @FXML
+    private TableColumn<ReparacionResumen, Void> colIncidencia;
+    @FXML
+    private TableColumn<ReparacionResumen, String> colIdAnterior;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -60,23 +80,53 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private DatePicker filtroFechaHasta;
     @FXML private MenuButton filtroIncidencias;
 
+    // ── Sidebar + paneles ─────────────────────────────────────────────────────
+    @FXML private Button btnTabHistorial;
+    @FXML private Button btnTabPendientes;
+    @FXML private Button btnTabMisPendientes;
+    @FXML private VBox   pnlHistorial;
+    @FXML private VBox   pnlPendientes;
+    @FXML private VBox   pnlMisPendientes;
+    @FXML private PendientesSuperTecnicoController pendientesSuperTecnicoController;
+    @FXML private PendientesTecnicoController      misPendientesController;
+
+    // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
     @FXML private javafx.scene.control.ToggleButton toggleHistRep;
     @FXML private javafx.scene.control.ToggleButton toggleHistPul;
     @FXML private VBox pnlHistRep;
     @FXML private VBox pnlHistPul;
     @FXML private HistorialPulidoController historialPulidoController;
 
+    @FXML private javafx.scene.control.ToggleButton togglePendRep;
+    @FXML private javafx.scene.control.ToggleButton togglePendPul;
+    @FXML private VBox pnlPendRep;
+    @FXML private VBox pnlPendPul;
+    @FXML private PulidoSuperTecnicoController pulidoSuperTecnicoController;
+
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendRep;
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendPul;
+    @FXML private VBox pnlMisPendRep;
+    @FXML private VBox pnlMisPendPul;
+    @FXML private PulidoTecnicoController misPulidosTecnicoController;
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
+    private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
 
     private ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private FilteredList<ReparacionResumen> datosFiltrados;
     private final List<CheckBox> checksTecnico = new java.util.ArrayList<>();
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+
+    private final java.util.concurrent.ScheduledExecutorService poller =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "poller-reparaciones-supertecnico");
+                t.setDaemon(true);
+                return t;
+            });
 
     @FXML
     public void initialize() {
@@ -87,6 +137,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         tablaReparaciones.getColumns().forEach(c -> c.setReorderable(false));
         configurarFilas();
         configurarFiltros();
+
+        // Callbacks para los paneles embebidos (antes de mostrar el panel inicial)
+        pendientesSuperTecnicoController.setOnActualizar(this::cargarDatos);
+        misPendientesController.setOnCerrar(this::cargarDatos);
 
         // Toggle historial: Reparaciones ↔ Pulidos
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
@@ -101,24 +155,94 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
         });
 
-        cargarDatos();
+        // Toggle pendientes: Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
+        togglePendRep.setToggleGroup(tgPend);
+        togglePendPul.setToggleGroup(tgPend);
+        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { togglePendRep.setSelected(true); return; }
+            boolean rep = (n == togglePendRep);
+            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
+            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
+            if (!rep) { pulidoSuperTecnicoController.setFiltroImei(pendientesSuperTecnicoController.getFiltroImei()); pulidoSuperTecnicoController.cargar(); }
+            else      { pendientesSuperTecnicoController.setFiltroImei(pulidoSuperTecnicoController.getFiltroImei()); pendientesSuperTecnicoController.cargar(); }
+        });
+
+        // Toggle mis pendientes (supertécnico como técnico): Reparaciones ↔ Pulidos
+        javafx.scene.control.ToggleGroup tgMisPend = new javafx.scene.control.ToggleGroup();
+        toggleMisPendRep.setToggleGroup(tgMisPend);
+        toggleMisPendPul.setToggleGroup(tgMisPend);
+        tgMisPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleMisPendRep.setSelected(true); return; }
+            boolean rep = (n == toggleMisPendRep);
+            pnlMisPendRep.setVisible(rep);  pnlMisPendRep.setManaged(rep);
+            pnlMisPendPul.setVisible(!rep); pnlMisPendPul.setManaged(!rep);
+            if (!rep) { misPulidosTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); misPulidosTecnicoController.cargar(); }
+            else      { misPendientesController.setFiltroImei(misPulidosTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
+        });
+
+        mostrarPanel(pnlPendientes, btnTabPendientes);
+
+        poller.scheduleAtFixedRate(
+                () -> javafx.application.Platform.runLater(this::recargar),
+                60, 60, java.util.concurrent.TimeUnit.SECONDS);
     }
 
+    /** Detiene el poller periódico al salir de la vista. */
     @Override
-    public void detenerPolling() { /* sin polling */ }
+    public void detenerPolling() { poller.shutdownNow(); }
+
+    // ─── Sidebar ─────────────────────────────────────────────────────────────
 
     /**
-     * Recarga el panel visible: historial de reparaciones o de pulidos.
+     * Recarga los datos de la sección visible: asignaciones, mis pendientes o historial.
      * Invocado por {@link MainController} cuando la ventana recupera el foco.
      */
     @Override
     public void recargar() {
-        if (toggleHistPul.isSelected()) historialPulidoController.cargar();
-        else                            cargarDatos();
+        if (pnlPendientes.isVisible()) {
+            if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
+            else                            pendientesSuperTecnicoController.cargar();
+        } else if (pnlMisPendientes.isVisible()) {
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
+        } else {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        }
     }
 
-    /** No hay panel alternativo al que navegar; el historial es siempre visible. */
-    public void irAInicio() { /* historial siempre visible */ }
+    @FXML private void mostrarHistorial() {
+        mostrarPanel(pnlHistorial, btnTabHistorial);
+    }
+
+    public void irAInicio() {
+        mostrarPanel(pnlPendientes, btnTabPendientes);
+    }
+
+
+    private void mostrarPanel(VBox panel, Button btnActivo) {
+        if (pnlPendientes.isVisible() && panel != pnlPendientes)
+            pendientesSuperTecnicoController.resetearCambios();
+        pnlHistorial    .setVisible(false); pnlHistorial    .setManaged(false);
+        pnlPendientes   .setVisible(false); pnlPendientes   .setManaged(false);
+        pnlMisPendientes.setVisible(false); pnlMisPendientes.setManaged(false);
+        panel.setVisible(true); panel.setManaged(true);
+        for (Button b : new Button[]{btnTabHistorial, btnTabPendientes, btnTabMisPendientes}) {
+            b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
+            b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
+        }
+        if (panel == pnlHistorial) {
+            if (toggleHistPul.isSelected()) historialPulidoController.cargar();
+            else                            cargarDatos();
+        } else if (panel == pnlPendientes) {
+            if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
+            else                            pendientesSuperTecnicoController.cargar();
+        } else {
+            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
+            else                               misPendientesController.cargar();
+        }
+    }
 
     // ─── Label expandible (click abre popup de lectura) ───────────────────────
 
@@ -229,6 +353,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             }
         });
 
+        // CON tooltip
         colObservaciones.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -253,7 +378,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                         e -> lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand; -fx-underline: false;"));
                 lblLink.setOnMouseClicked(e -> {
                     String idAnterior = getTableView().getItems().get(getIndex()).getIdRepAnterior();
-                    if (idAnterior == null) return;
+                    if (idAnterior == null)
+                        return;
                     for (int i = 0; i < getTableView().getItems().size(); i++) {
                         if (idAnterior.equals(getTableView().getItems().get(i).getIdRep())) {
                             getTableView().getSelectionModel().select(i);
@@ -268,7 +394,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) { setGraphic(null); return; }
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
                 String idAnterior = getTableView().getItems().get(getIndex()).getIdRepAnterior();
                 if (idAnterior != null) {
                     lblLink.setText(idAnterior);
@@ -385,7 +514,22 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                             ).play();
                         });
                 });
-                menu.getItems().add(copiar);
+                MenuItem editar      = new MenuItem("Editar");
+                MenuItem borrar      = new MenuItem("Borrar");
+                MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
+                MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
+                editar     .setOnAction(e -> { if (getItem() != null) FormularioReparacionController.abrirEditar(getItem().getIdRep(), ReparacionControllerSuperTecnico.this::cargarDatos); });
+                borrar     .setOnAction(e -> { if (getItem() != null) borrarReparacion(getItem()); });
+                aniadirInc .setOnAction(e -> { if (getItem() != null) abrirDialogoIncidencia(getItem()); });
+                cancelarInc.setOnAction(e -> { if (getItem() != null) borrarIncidencia(getItem()); });
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
+                menu.setOnShowing(e -> {
+                    ReparacionResumen rep = getItem();
+                    boolean tieneInc = rep != null && rep.isEsIncidencia() && !rep.isEsResuelto();
+                    editar      .setVisible(rep != null && rep.getIdRep().startsWith("R"));
+                    aniadirInc  .setVisible(rep != null && !rep.isEsIncidencia());
+                    cancelarInc .setVisible(tieneInc);
+                });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -453,6 +597,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     // ─── Filtros ──────────────────────────────────────────────────────────────
 
     private void configurarFiltros() {
+        // Cargar checkboxes de técnicos en un ScrollPane dentro del MenuButton
         try {
             List<com.reparaciones.models.Tecnico> tecnicos = tecnicoDAO.getAll();
             for (com.reparaciones.models.Tecnico t : tecnicos) {
@@ -469,7 +614,9 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             mostrarError(e);
         }
 
+        // Listeners de los demás filtros
         filtroImei.textProperty().addListener((obs, o, n) -> {
+            // Solo números, máx 15
             if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
             if (filtroImei.getText().length() > 15)
                 filtroImei.setText(filtroImei.getText().substring(0, 15));
@@ -484,6 +631,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
             aplicarFiltros();
         });
+        // Deshabilitar escritura manual — solo selección por calendario
         filtroFechaDesde.getEditor().setDisable(true);
         filtroFechaDesde.getEditor().setOpacity(1.0);
         filtroFechaHasta.getEditor().setDisable(true);
@@ -508,10 +656,11 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             actualizarTextoFiltroIncidencias();
             aplicarFiltros();
         });
-        filtroIncidencias.getItems().addAll(
-                new CustomMenuItem(cbIncidenciasAbiertas, false),
-                new CustomMenuItem(cbIncidenciasCerradas, false),
-                new CustomMenuItem(cbNormales, false));
+        CustomMenuItem itemAbiertas = new CustomMenuItem(cbIncidenciasAbiertas, false);
+
+        CustomMenuItem itemCerradas = new CustomMenuItem(cbIncidenciasCerradas, false);
+        CustomMenuItem itemNormales = new CustomMenuItem(cbNormales, false);
+        filtroIncidencias.getItems().addAll(itemAbiertas, itemCerradas, itemNormales);
     }
 
     private void aplicarFiltros() {
@@ -584,10 +733,14 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
      * @param tecnico nombre del técnico a pre-seleccionar, o {@code null} para todos
      */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        // Navegar al historial antes de aplicar filtros
+        mostrarHistorial();
+        // Seleccionar técnico antes de tocar fechas para que aplicarFiltros lea el estado correcto
         if (tecnico != null) {
             checksTecnico.forEach(cb -> cb.setSelected(cb.getText().equals(tecnico)));
             actualizarTextoFiltroTecnico();
         }
+        // Setear fechas dispara aplicarFiltros vía listener
         filtroFechaDesde.setValue(desde);
         filtroFechaHasta.setValue(hasta);
     }
@@ -606,18 +759,173 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         filtroIncidencias.setText("Incidencias");
     }
 
+    // ─── Modal pendientes ─────────────────────────────────────────────────────
+
+    @FXML
+    private void abrirModalPendientes() {
+        mostrarPanel(pnlPendientes, btnTabPendientes);
+    }
+
+    @FXML
+    private void abrirMisPendientes() {
+        mostrarPanel(pnlMisPendientes, btnTabMisPendientes);
+    }
+
+    // ─── Incidencias ──────────────────────────────────────────────────────────
+
+    private void abrirDialogoIncidencia(ReparacionResumen rep) {
+
+        // ── Campo comentario ──────────────────────────────────────────────────
+        Label lblComentario = new Label("Comentario de incidencia");
+        String textoInicial = rep.getIncidencia() != null ? rep.getIncidencia() : "";
+        TextArea tfComentario = new TextArea(textoInicial);
+        tfComentario.setPromptText("Describe la incidencia...");
+        tfComentario.setWrapText(true);
+        tfComentario.setPrefRowCount(4);
+        tfComentario.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 13px;");
+
+        // ── Selector técnico ──────────────────────────────────────────────────
+        Label lblTecnico = new Label("Técnico asignado");
+        ComboBox<Tecnico> cbTecnico = new ComboBox<>();
+        cbTecnico.setMaxWidth(Double.MAX_VALUE);
+        cbTecnico.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
+                "-fx-border-radius: 4; -fx-background-radius: 4;");
+
+        try {
+            List<Tecnico> tecnicos = tecnicoDAO.getAllActivos();
+            cbTecnico.getItems().addAll(tecnicos);
+            // Preseleccionar el técnico actual de la reparación
+            tecnicos.stream()
+                    .filter(t -> t.getIdTec() == rep.getIdTec())
+                    .findFirst()
+                    .ifPresent(cbTecnico::setValue);
+        } catch (SQLException ex) {
+            mostrarError(ex);
+        }
+
+        cbTecnico.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                setText(empty || t == null ? null : t.getNombre());
+            }
+        });
+        cbTecnico.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                setText(empty || t == null ? "Selecciona técnico" : t.getNombre());
+            }
+        });
+
+        // ── Botón confirmar ───────────────────────────────────────────────────
+        Button btnConfirmar = new Button("Añadir incidencia y asignar");
+        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
+        btnConfirmar.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.GRIS_DISABLED + "; -fx-text-fill: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
+                "-fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8;");
+
+        Runnable validar = () -> {
+            boolean ok = !tfComentario.getText().trim().isEmpty() && cbTecnico.getValue() != null;
+            btnConfirmar.setDisable(!ok);
+            btnConfirmar.setStyle(ok
+                    ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-text-fill: white; -fx-font-size: 12px;" +
+                            "-fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;"
+                    : "-fx-background-color: " + com.reparaciones.utils.Colores.GRIS_DISABLED + "; -fx-text-fill: " + com.reparaciones.utils.Colores.GRIS_BORDE + "; -fx-font-size: 12px;" +
+                            "-fx-background-radius: 4; -fx-padding: 8;");
+        };
+
+        // Validar estado inicial
+        validar.run();
+        tfComentario.textProperty().addListener((obs, o, n) -> validar.run());
+        cbTecnico.valueProperty().addListener((obs, o, n) -> validar.run());
+
+        VBox form = new VBox(8,
+                lblComentario, tfComentario,
+                lblTecnico, cbTecnico,
+                btnConfirmar);
+        form.setPadding(new Insets(16));
+        form.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
+        form.setPrefWidth(480);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Añadir incidencia");
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setPrefWidth(520);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        btnConfirmar.setOnAction(e -> {
+            String comentario = tfComentario.getText().trim();
+            int idTec = cbTecnico.getValue().getIdTec();
+            try {
+                reparacionDAO.marcarIncidenciaYAsignar(rep.getIdRep(), comentario, rep.getImei(), idTec);
+                dialog.close();
+                cargarDatos();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void borrarIncidencia(ReparacionResumen rep) {
+        ConfirmDialog.mostrar(
+                "Borrar incidencia",
+                "Esta acción solo es válida si fue un error al añadirla.",
+                "Borrar incidencia",
+                () -> {
+                    try {
+                        reparacionComponenteDAO.borrarIncidencia(rep.getIdRep());
+                        cargarDatos();
+                    } catch (SQLException e) {
+                        mostrarError(e);
+                    }
+                }
+        );
+    }
+
+    private void borrarReparacion(ReparacionResumen rep) {
+        try {
+            String ref = reparacionDAO.getReferenciadora(rep.getIdRep());
+            if (ref != null) {
+                Alert alerta = new Alert(Alert.AlertType.WARNING);
+                alerta.setTitle("No se puede borrar");
+                alerta.setHeaderText("Esta reparación está siendo referenciada");
+                alerta.setContentText("La reparación " + ref + " apunta a esta. Bórrala primero.");
+                alerta.showAndWait();
+                return;
+            }
+            ConfirmDialog.mostrar(
+                    "Borrar reparación",
+                    "Se borrará " + rep.getIdRep() + ". Los componentes usados volverán a stock y, si resolvía una incidencia, esta quedará activa de nuevo.",
+                    "Borrar reparación",
+                    () -> {
+                        try {
+                            reparacionDAO.eliminar(rep.getIdRep());
+                            cargarDatos();
+                        } catch (SQLException e) {
+                            mostrarError(e);
+                        }
+                    }
+            );
+        } catch (SQLException e) {
+            mostrarError(e);
+        }
+    }
+
     // ─── Historial IMEI ───────────────────────────────────────────────────────
 
     private void abrirHistorialImei(String imei) {
         try {
             List<ReparacionResumen> historial = reparacionDAO.getResumenPorImei(imei);
 
-            TableColumn<ReparacionResumen, String> cId      = new TableColumn<>("ID");
+            TableColumn<ReparacionResumen, String> cId     = new TableColumn<>("ID");
             TableColumn<ReparacionResumen, String> cTecnico = new TableColumn<>("Técnico");
-            TableColumn<ReparacionResumen, String> cFecha   = new TableColumn<>("Fechas");
-            TableColumn<ReparacionResumen, String> cComp    = new TableColumn<>("Componente");
-            TableColumn<ReparacionResumen, String> cObs     = new TableColumn<>("Observaciones");
-            TableColumn<ReparacionResumen, String> cIncid   = new TableColumn<>("Incidencia");
+            TableColumn<ReparacionResumen, String> cFecha  = new TableColumn<>("Fechas");
+            TableColumn<ReparacionResumen, String> cComp   = new TableColumn<>("Componente");
+            TableColumn<ReparacionResumen, String> cObs    = new TableColumn<>("Observaciones");
+            TableColumn<ReparacionResumen, String> cIncid  = new TableColumn<>("Incidencia");
 
             cId.setPrefWidth(130);  cId.setMinWidth(100);
             cTecnico.setPrefWidth(110); cTecnico.setMinWidth(80);
@@ -627,7 +935,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             cIncid.setPrefWidth(200); cIncid.setMinWidth(100);
 
             cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
-            cTecnico.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getNombreTecnico()));
+            cTecnico.setCellValueFactory(
+                    d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getNombreTecnico()));
 
             cFecha.setCellFactory(col -> new TableCell<>() {
                 private final Label lblInicio = new Label();
@@ -694,7 +1003,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             btnCerrar.getStyleClass().add("btn-secondary");
 
             HBox botones = new HBox(btnCerrar);
-            botones.setAlignment(Pos.CENTER_RIGHT);
+            botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
             VBox contenido = new VBox(12, lblTitulo, lblImeiLabel, tabla, botones);
             contenido.setPadding(new Insets(28));
@@ -718,14 +1027,32 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         }
     }
 
+    @FXML
+    private void descargarHistorial() {
+        exportarCSV((Stage) tablaReparaciones.getScene().getWindow());
+    }
+
     @Override
     public void exportarCSV(Stage owner) {
+        java.util.List<ReparacionResumen> items;
+        String nombre;
+        if (pnlPendientes.isVisible()) {
+            items  = pendientesSuperTecnicoController.getItemsVisibles();
+            nombre = "reparaciones_pendientes";
+        } else if (pnlMisPendientes.isVisible()) {
+            items  = misPendientesController.getItemsVisibles();
+            nombre = "mis_pendientes";
+        } else {
+            items  = tablaReparaciones.getItems();
+            nombre = "historial_reparaciones";
+        }
+
         List<String> cabeceras = List.of(
                 "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
                 "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (ReparacionResumen r : tablaReparaciones.getItems()) {
+        for (ReparacionResumen r : items) {
             filas.add(List.of(
                     r.getIdRep(),
                     com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
@@ -739,7 +1066,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
             ));
         }
-        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner, nombre, cabeceras, filas);
     }
 
     private void mostrarError(Exception e) {

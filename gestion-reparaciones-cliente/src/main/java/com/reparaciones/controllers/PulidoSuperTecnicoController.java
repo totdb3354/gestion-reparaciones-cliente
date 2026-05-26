@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PulidoAdminController {
+public class PulidoSuperTecnicoController {
 
     @FXML private TableView<ReparacionResumen>           tablaPulidos;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
