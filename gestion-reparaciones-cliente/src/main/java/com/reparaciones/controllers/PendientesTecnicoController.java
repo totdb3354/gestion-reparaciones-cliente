@@ -16,12 +16,12 @@ import java.time.format.DateTimeFormatter;
 /**
  * Controlador de la tabla de asignaciones pendientes del técnico.
  * <p>Incrustado como controlador anidado tanto en {@link ReparacionControllerTecnico}
- * (sección "Mis pendientes") como en {@link ReparacionControllerAdmin}
- * (sección "Mis pendientes" del admin que también repara).</p>
+ * (sección "Mis pendientes") como en {@link ReparacionControllerSuperTecnico}
+ * (sección "Mis pendientes" del supertécnico que también repara).</p>
  * <p>Muestra las asignaciones ({@code A*}) del usuario en sesión y permite
  * finalizarlas abriendo el formulario de reparación.</p>
  *
- * @role TECNICO; ADMIN (si tiene técnico asignado)
+ * @role TECNICO; SUPERTECNICO (si tiene técnico asignado)
  */
 public class PendientesTecnicoController {
 

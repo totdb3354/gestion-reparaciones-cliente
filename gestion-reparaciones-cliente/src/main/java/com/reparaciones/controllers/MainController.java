@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  *   <li>Mostrar el diálogo de alertas de stock al inicio si hay componentes bajo mínimo.</li>
  * </ul>
  *
- * @role ADMIN; TECNICO (con vistas distintas)
+ * @role ADMIN; SUPERTECNICO; TECNICO (con vistas distintas)
  */
 public class MainController {
 
@@ -700,7 +700,7 @@ public class MainController {
     /**
      * Comprueba si hay componentes con stock bajo o sin stock y, de haberlos,
      * activa el indicador visual y muestra el diálogo de alertas al arrancar.
-     * <p>Solo se llama para el rol ADMIN.</p>
+     * <p>Solo se llama para el rol SUPERTECNICO.</p>
      */
     private void verificarStockAlertas() {
         try {
