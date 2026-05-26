@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
  *   <li>Mostrar el diálogo de alertas de stock al inicio si hay componentes bajo mínimo.</li>
  * </ul>
  *
- * @role ADMIN; TECNICO (con vistas distintas)
+ * @role ADMIN; SUPERTECNICO; TECNICO (con vistas distintas)
  */
 public class MainController {
 
@@ -700,7 +700,7 @@ public class MainController {
     /**
      * Comprueba si hay componentes con stock bajo o sin stock y, de haberlos,
      * activa el indicador visual y muestra el diálogo de alertas al arrancar.
-     * <p>Solo se llama para el rol ADMIN.</p>
+     * <p>Solo se llama para el rol SUPERTECNICO.</p>
      */
     private void verificarStockAlertas() {
         try {
@@ -719,15 +719,20 @@ public class MainController {
     @FXML
     private void irAInicio() {
         mostrarReparaciones();
-        String ruta = Sesion.esAdminOSuperTecnico()
-                ? "/views/ReparacionViewAdmin.fxml"
-                : "/views/ReparacionViewTecnico.fxml";
+        String ruta;
+        if (Sesion.esSuperTecnico())  ruta = "/views/ReparacionViewSuperTecnico.fxml";
+        else if (Sesion.esAdmin())    ruta = "/views/ReparacionViewAdmin.fxml";
+        else                          ruta = "/views/ReparacionViewTecnico.fxml";
         Object[] cached = vistaCache.get(ruta);
         if (cached != null) {
-            if (cached[1] instanceof ReparacionControllerAdmin rca)
-                Platform.runLater(rca::irAInicio);
-            else if (cached[1] instanceof ReparacionControllerTecnico rct)
-                Platform.runLater(rct::irAInicio);
+            Object ctrl = cached[1];
+            if (ctrl instanceof ReparacionControllerSuperTecnico) {
+                Platform.runLater(((ReparacionControllerSuperTecnico) ctrl)::irAInicio);
+            } else if (ctrl instanceof ReparacionControllerAdmin) {
+                Platform.runLater(((ReparacionControllerAdmin) ctrl)::irAInicio);
+            } else if (ctrl instanceof ReparacionControllerTecnico) {
+                Platform.runLater(((ReparacionControllerTecnico) ctrl)::irAInicio);
+            }
         }
     }
 
@@ -735,9 +740,10 @@ public class MainController {
     @FXML
     private void mostrarReparaciones() {
         accionVistaActual = this::mostrarReparaciones;
-        String vista = Sesion.esAdminOSuperTecnico()
-                ? "/views/ReparacionViewAdmin.fxml"
-                : "/views/ReparacionViewTecnico.fxml";
+        String vista;
+        if (Sesion.esSuperTecnico())  vista = "/views/ReparacionViewSuperTecnico.fxml";
+        else if (Sesion.esAdmin())    vista = "/views/ReparacionViewAdmin.fxml";
+        else                          vista = "/views/ReparacionViewTecnico.fxml";
         mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas);
     }
 
@@ -911,10 +917,13 @@ public class MainController {
 
             // Filtro desde estadísticas: se aplica siempre que haya uno pendiente
             if (filtroNavDesde != null) {
-                if (ctrl instanceof ReparacionControllerAdmin rca)
-                    rca.setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
-                else if (ctrl instanceof ReparacionControllerTecnico rct)
-                    rct.setFiltroInicial(filtroNavDesde, filtroNavHasta);
+                if (ctrl instanceof ReparacionControllerSuperTecnico) {
+                    ((ReparacionControllerSuperTecnico) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                } else if (ctrl instanceof ReparacionControllerAdmin) {
+                    ((ReparacionControllerAdmin) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                } else if (ctrl instanceof ReparacionControllerTecnico) {
+                    ((ReparacionControllerTecnico) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta);
+                }
                 filtroNavDesde = filtroNavHasta = null;
                 filtroNavTecnico = null;
             } else if (cached != null && controladorActivo != null) {

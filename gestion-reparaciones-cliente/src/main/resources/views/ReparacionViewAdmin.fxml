@@ -9,116 +9,62 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
-<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane styleClass="vista-container" stylesheets="@../styles/app.css"
-            xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/25"
-            fx:controller="com.reparaciones.controllers.ReparacionControllerAdmin">
+<VBox styleClass="vista-container" stylesheets="@../styles/app.css"
+      xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/25"
+      fx:controller="com.reparaciones.controllers.ReparacionControllerAdmin"
+      spacing="0">
+    <padding><Insets bottom="40" left="40" right="40" top="40"/></padding>
 
-    <!-- ── Sidebar ── -->
-    <left>
-        <VBox styleClass="stock-sidebar" spacing="0">
-            <Button fx:id="btnTabPendientes"   text="Asignaciones"    maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn"        onAction="#abrirModalPendientes"/>
-            <Button fx:id="btnTabMisPendientes" text="Pendientes"    maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn"        onAction="#abrirMisPendientes"/>
-            <Button fx:id="btnTabHistorial"    text="Historial"       maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn-active" onAction="#mostrarHistorial"/>
+    <!-- Toggle pill Reparaciones ↔ Pulidos -->
+    <HBox spacing="0" alignment="CENTER_LEFT">
+        <VBox.margin><Insets bottom="8"/></VBox.margin>
+        <ToggleButton fx:id="toggleHistRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
+        <ToggleButton fx:id="toggleHistPul" text="Pulidos" styleClass="toggle-pill-right"/>
+    </HBox>
+
+    <StackPane VBox.vgrow="ALWAYS">
+
+        <!-- Panel: historial de reparaciones -->
+        <VBox fx:id="pnlHistRep" spacing="0" visible="true" managed="true" VBox.vgrow="ALWAYS">
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+                <Label styleClass="vista-titulo" text="Historial de reparaciones" HBox.hgrow="ALWAYS"/>
+                <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
+                <MenuButton fx:id="filtroTecnico" text="Técnico" prefWidth="130"/>
+                <Label text="Desde:" style="-fx-font-size: 12px;"/>
+                <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
+                <Label text="Hasta:" style="-fx-font-size: 12px;"/>
+                <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
+                <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
+                <Button onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
+            </HBox>
+            <TableView fx:id="tablaReparaciones" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colIdRep"          minWidth="110" text="Id Reparación"/>
+                    <TableColumn fx:id="colImei"           minWidth="130" text="IMEI teléfono"/>
+                    <TableColumn fx:id="colModelo"         minWidth="100" text="Modelo"/>
+                    <TableColumn fx:id="colReparador"      minWidth="100" text="Reparador"/>
+                    <TableColumn fx:id="colFecha"          minWidth="110" text="Fechas"/>
+                    <TableColumn fx:id="colComponente"     minWidth="150" text="Componente"/>
+                    <TableColumn fx:id="colObservaciones"  minWidth="200" maxWidth="320" text="Observaciones"/>
+                    <TableColumn fx:id="colEstado"         minWidth="110" prefWidth="120" maxWidth="150" text="Estado"/>
+                    <TableColumn fx:id="colIncidencia"     minWidth="200" maxWidth="360" text="Incidencia"/>
+                    <TableColumn fx:id="colIdAnterior"     minWidth="150" text="Id Rep. Anterior"/>
+                </columns>
+            </TableView>
+            <Label fx:id="lblUltimaActualizacion"
+                   style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"
+                   alignment="CENTER_RIGHT" maxWidth="Infinity"/>
         </VBox>
-    </left>
 
-    <!-- ── Contenido ── -->
-    <center>
-        <VBox spacing="0">
-            <padding><Insets bottom="40" left="40" right="40" top="40"/></padding>
-
-            <!-- Paneles intercambiables -->
-            <StackPane VBox.vgrow="ALWAYS">
-
-                <!-- Panel: Historial -->
-                <VBox fx:id="pnlHistorial" spacing="0" visible="true" managed="true" VBox.vgrow="ALWAYS">
-                    <HBox spacing="0" alignment="CENTER_LEFT">
-                        <VBox.margin><Insets bottom="8"/></VBox.margin>
-                        <ToggleButton fx:id="toggleHistRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
-                        <ToggleButton fx:id="toggleHistPul" text="Pulidos" styleClass="toggle-pill-right"/>
-                    </HBox>
-                    <StackPane VBox.vgrow="ALWAYS">
-                        <VBox fx:id="pnlHistRep" spacing="0" VBox.vgrow="ALWAYS">
-                            <HBox alignment="CENTER_LEFT" spacing="12">
-                                <VBox.margin><Insets bottom="8"/></VBox.margin>
-                                <Label styleClass="vista-titulo" text="Historial de reparaciones" HBox.hgrow="ALWAYS"/>
-                                <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
-                                <MenuButton fx:id="filtroTecnico" text="Técnico" prefWidth="130"/>
-                                <Label text="Desde:" style="-fx-font-size: 12px;"/>
-                                <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
-                                <Label text="Hasta:" style="-fx-font-size: 12px;"/>
-                                <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
-                                <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
-                                <Button fx:id="btnLimpiarFiltros" onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
-                            </HBox>
-                            <TableView fx:id="tablaReparaciones" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
-                                <columns>
-                                    <TableColumn fx:id="colIdRep" minWidth="110" text="Id Reparación"/>
-                                    <TableColumn fx:id="colImei" minWidth="130" text="IMEI teléfono"/>
-                                    <TableColumn fx:id="colModelo" minWidth="100" text="Modelo"/>
-                                    <TableColumn fx:id="colReparador" minWidth="100" text="Reparador"/>
-                                    <TableColumn fx:id="colFecha" minWidth="110" text="Fechas"/>
-                                    <TableColumn fx:id="colComponente" minWidth="150" text="Componente"/>
-                                    <TableColumn fx:id="colObservaciones" minWidth="200" maxWidth="320" text="Observaciones"/>
-                                    <TableColumn fx:id="colEstado" minWidth="110" prefWidth="120" maxWidth="150" text="Estado"/>
-                                    <TableColumn fx:id="colIncidencia" minWidth="200" maxWidth="360" text="Incidencia"/>
-                                    <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
-                                </columns>
-                            </TableView>
-                            <Label fx:id="lblUltimaActualizacion"
-                                   style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"
-                                   alignment="CENTER_RIGHT" maxWidth="Infinity"/>
-                        </VBox>
-                        <VBox fx:id="pnlHistPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                            <fx:include source="HistorialPulidoView.fxml" fx:id="historialPulido"/>
-                        </VBox>
-                    </StackPane>
-                </VBox>
-
-                <!-- Panel: Pendientes admin -->
-                <VBox fx:id="pnlPendientes" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                    <HBox spacing="0" alignment="CENTER_LEFT">
-                        <VBox.margin><Insets bottom="8"/></VBox.margin>
-                        <ToggleButton fx:id="togglePendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
-                        <ToggleButton fx:id="togglePendPul" text="Pulidos" styleClass="toggle-pill-right"/>
-                    </HBox>
-                    <StackPane VBox.vgrow="ALWAYS">
-                        <VBox fx:id="pnlPendRep" VBox.vgrow="ALWAYS">
-                            <fx:include source="PendientesAdminView.fxml" fx:id="pendientesAdmin"/>
-                        </VBox>
-                        <VBox fx:id="pnlPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                            <fx:include source="PulidoAdminView.fxml" fx:id="pulidoAdmin"/>
-                        </VBox>
-                    </StackPane>
-                </VBox>
-
-                <!-- Panel: Mis pendientes (técnico) -->
-                <VBox fx:id="pnlMisPendientes" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                    <HBox spacing="0" alignment="CENTER_LEFT">
-                        <VBox.margin><Insets bottom="8"/></VBox.margin>
-                        <ToggleButton fx:id="toggleMisPendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
-                        <ToggleButton fx:id="toggleMisPendPul" text="Pulidos" styleClass="toggle-pill-right"/>
-                    </HBox>
-                    <StackPane VBox.vgrow="ALWAYS">
-                        <VBox fx:id="pnlMisPendRep" VBox.vgrow="ALWAYS">
-                            <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientes"/>
-                        </VBox>
-                        <VBox fx:id="pnlMisPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                            <fx:include source="PulidoTecnicoView.fxml" fx:id="misPulidosTecnico"/>
-                        </VBox>
-                    </StackPane>
-                </VBox>
-
-            </StackPane>
+        <!-- Panel: historial de pulidos -->
+        <VBox fx:id="pnlHistPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
+            <fx:include source="HistorialPulidoView.fxml" fx:id="historialPulido"/>
         </VBox>
-    </center>
 
-</BorderPane>
+    </StackPane>
+</VBox>

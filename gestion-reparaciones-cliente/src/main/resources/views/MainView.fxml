@@ -40,7 +40,7 @@
             <!-- Espaciador -->
             <HBox HBox.hgrow="ALWAYS"/>
 
-            <!-- Campana solicitudes (solo admin) -->
+            <!-- Campana solicitudes (solo supertécnico) -->
             <StackPane fx:id="campanaPane" visible="false" managed="false" alignment="CENTER">
                 <Button fx:id="btnCampana" styleClass="navbar-bell-btn" onAction="#abrirSolicitudes">
                     <graphic>

@@ -27,8 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Controlador de la tabla de asignaciones pendientes (vista del administrador).
- * <p>Incrustado como controlador anidado en {@link ReparacionControllerAdmin}.
+ * Controlador de la tabla de asignaciones pendientes (vista del supertécnico).
+ * <p>Incrustado como controlador anidado en {@link ReparacionControllerSuperTecnico}.
  * Muestra todas las asignaciones ({@code A*}) con estado pendiente y permite:</p>
  * <ul>
  *   <li>Crear nuevas asignaciones para cualquier técnico y IMEI.</li>
@@ -37,9 +37,9 @@ import java.util.Map;
  *   <li>Filtrar por IMEI, técnico y solicitudes pendientes de componente.</li>
  * </ul>
  *
- * @role ADMIN
+ * @role SUPERTECNICO
  */
-public class PendientesAdminController {
+public class PendientesSuperTecnicoController {
 
     @FXML private TableView<ReparacionResumen>           tablaPendientes;
     @FXML private TableColumn<ReparacionResumen, Void>   cEstado;
@@ -265,7 +265,7 @@ public class PendientesAdminController {
                     String actual = cambiosPendientes.containsKey(rep.getIdRep())
                         ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
                         : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
-                    PendientesAdminController.this.abrirEditorComentario(rep, actual);
+                    PendientesSuperTecnicoController.this.abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
                 setContextMenu(menu);
@@ -895,13 +895,6 @@ public class PendientesAdminController {
         ventana.showAndWait();
     }
 
-    /**
-     * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
-     *
-     * @param rep datos de la fila
-     * @param col columna seleccionada
-     * @return texto de la celda, o {@code null} si la columna no es copiable
-     */
     private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
         if (col == cId)        return rep.getIdRep();
         if (col == cImei)      return rep.getImei();
