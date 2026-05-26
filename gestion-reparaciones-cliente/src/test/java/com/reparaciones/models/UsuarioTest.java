@@ -42,4 +42,40 @@ class UsuarioTest {
         Usuario u = new Usuario(1, "daniel", "TECNICO", 1, "Daniel García", true);
         assertEquals("Daniel García", u.getNombreTecnico());
     }
+
+    @Test
+    void esSuperTecnico_conRolSuperTecnico_devuelveTrue() {
+        Usuario u = new Usuario(3, "jefe", "SUPERTECNICO", 3);
+        assertTrue(u.esSuperTecnico());
+    }
+
+    @Test
+    void esSuperTecnico_conRolAdmin_devuelveFalse() {
+        Usuario u = new Usuario(1, "admin", "ADMIN", 1);
+        assertFalse(u.esSuperTecnico());
+    }
+
+    @Test
+    void esSuperTecnico_conRolTecnico_devuelveFalse() {
+        Usuario u = new Usuario(2, "daniel", "TECNICO", 2);
+        assertFalse(u.esSuperTecnico());
+    }
+
+    @Test
+    void esAdminOSuperTecnico_conRolAdmin_devuelveTrue() {
+        Usuario u = new Usuario(1, "admin", "ADMIN", 1);
+        assertTrue(u.esAdminOSuperTecnico());
+    }
+
+    @Test
+    void esAdminOSuperTecnico_conRolSuperTecnico_devuelveTrue() {
+        Usuario u = new Usuario(3, "jefe", "SUPERTECNICO", 3);
+        assertTrue(u.esAdminOSuperTecnico());
+    }
+
+    @Test
+    void esAdminOSuperTecnico_conRolTecnico_devuelveFalse() {
+        Usuario u = new Usuario(2, "daniel", "TECNICO", 2);
+        assertFalse(u.esAdminOSuperTecnico());
+    }
 }
