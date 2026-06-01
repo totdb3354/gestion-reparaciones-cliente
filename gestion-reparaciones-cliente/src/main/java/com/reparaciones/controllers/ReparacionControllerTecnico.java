@@ -24,9 +24,12 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -98,12 +101,14 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     // ── Drill-down ────────────────────────────────────────────────────────────
     private enum Modo { MAESTRO, DETALLE }
-    private Modo   modoActual    = Modo.MAESTRO;
-    private String imeiDetalle   = null;
-    private HBox   barraNavegacion;
-    private Label  lblNavImei;
-    private Label  lblNavModelo;
-    private Label  lblNavCount;
+    private Modo          modoActual       = Modo.MAESTRO;
+    private String        imeiDetalle      = null;
+    private HBox          barraNavegacion;
+    private Label         lblNavImei;
+    private Label         lblNavModelo;
+    private Label         lblNavCount;
+    private ToggleButton  btnOtrosTecnicos;
+    private final Set<String> idsAjenas    = new HashSet<>();
 
     private final java.util.concurrent.ScheduledExecutorService poller =
             java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
@@ -194,9 +199,20 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         lblNavModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
         lblNavCount .setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
 
+        Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
+        ImageView ivToggle = new ImageView(imgHistorial);
+        ivToggle.setFitWidth(22); ivToggle.setFitHeight(22); ivToggle.setPreserveRatio(true);
+        btnOtrosTecnicos = new ToggleButton("", ivToggle);
+        btnOtrosTecnicos.getStyleClass().add("btn-secondary");
+        btnOtrosTecnicos.setTooltip(new Tooltip("Mostrar reparaciones de otros técnicos"));
+        btnOtrosTecnicos.selectedProperty().addListener((obs, o, sel) -> aplicarFiltros());
+
+        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+
         barraNavegacion = new HBox(12, btnVolver,
                 new Separator(javafx.geometry.Orientation.VERTICAL),
-                lblNavImei, lblNavModelo, lblNavCount);
+                lblNavImei, lblNavModelo, lblNavCount, spacer, btnOtrosTecnicos);
         barraNavegacion.setAlignment(Pos.CENTER_LEFT);
         barraNavegacion.setPadding(new Insets(6, 0, 6, 0));
         barraNavegacion.setVisible(false);
@@ -206,16 +222,21 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void buildTablaItems() {
-        LinkedHashMap<String, List<ReparacionResumen>> porImei = new LinkedHashMap<>();
-        for (ReparacionResumen rep : datosFiltrados)
-            porImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
+        // IMEIs propios filtrados (preservando orden de aparición)
+        Set<String> imeisPropios = new LinkedHashSet<>();
+        for (ReparacionResumen rep : datosFiltrados) imeisPropios.add(rep.getImei());
+
+        // Todas las reparaciones (propias + ajenas) agrupadas por IMEI para el contador
+        Map<String, List<ReparacionResumen>> todasPorImei = new LinkedHashMap<>();
+        for (ReparacionResumen rep : datos)
+            todasPorImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
 
         boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
         boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
 
         tablaItems.clear();
-        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
-            GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
+        for (String imei : imeisPropios) {
+            GrupoImei grupo = new GrupoImei(imei, todasPorImei.getOrDefault(imei, List.of()));
             if (filtrarInc || filtrarNormal) {
                 boolean tieneInc = grupo.getCountIncAbiertas() > 0;
                 boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
@@ -275,6 +296,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private void resetarModo() {
         modoActual  = Modo.MAESTRO;
         imeiDetalle = null;
+        if (btnOtrosTecnicos != null) btnOtrosTecnicos.setSelected(false);
+        idsAjenas.clear();
         if (barraNavegacion != null) {
             barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
             filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
@@ -356,21 +379,15 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             }
         });
 
-        Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
         colImei.setCellFactory(col -> new TableCell<>() {
-            // Para GrupoImei: IMEI en negrita + icono drill-down
+            // Para GrupoImei: solo IMEI en negrita (el click en fila ya hace el drill-down)
             private final Label lblGrupo = new Label();
-            private final ImageView ivDrill = new ImageView(imgHistorial);
-            private final HBox hboxGrupo = new HBox(6, lblGrupo, ivDrill);
             // Para ReparacionResumen: solo IMEI
             private final Label lblDetalle = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListenerDetalle =
                 (obs, o, sel) -> lblDetalle.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
                 lblGrupo.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-                ivDrill.setFitWidth(25); ivDrill.setFitHeight(25); ivDrill.setPreserveRatio(true);
-                ivDrill.setStyle("-fx-cursor: hand;");
-                hboxGrupo.setAlignment(Pos.CENTER_LEFT);
                 lblDetalle.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListenerDetalle);
@@ -386,13 +403,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 Object row = getTableView().getItems().get(getIndex());
                 if (row instanceof GrupoImei g) {
                     lblGrupo.setText(g.getImei());
-                    ivDrill.setOnMouseClicked(e -> {
-                        if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
-                            e.consume();
-                            mostrarDetalle(g);
-                        }
-                    });
-                    setGraphic(hboxGrupo);
+                    setGraphic(lblGrupo);
                 } else if (row instanceof ReparacionResumen rep) {
                     lblDetalle.setText(rep.getImei());
                     lblDetalle.setStyle("-fx-font-size: 12px; -fx-text-fill: " +
@@ -709,6 +720,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
                 aplicarEstilo(item, empty);
+                if (!empty && item instanceof ReparacionResumen rep) {
+                    setOpacity(idsAjenas.contains(rep.getIdRep()) ? 0.45 : 1.0);
+                } else {
+                    setOpacity(1.0);
+                }
             }
         });
     }
@@ -764,9 +780,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     private void cargarDatos() {
         try {
-            Integer idTec = Sesion.getIdTec();
-            if (idTec == null) return;
-            datos.setAll(reparacionDAO.getReparacionesPorTecnico(idTec));
+            datos.setAll(reparacionDAO.getReparacionesResumen());
             aplicarFiltros();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null)
@@ -834,41 +848,68 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         boolean filtrarNormales = cbNormales.isSelected();
 
         if (modoActual == Modo.DETALLE) {
-            List<ReparacionResumen> filtradas = datos.stream()
+            Integer idTec = Sesion.getIdTec();
+
+            java.util.function.Predicate<ReparacionResumen> predicado = rep -> {
+                if (desde != null || hasta != null) {
+                    if (rep.getFechaFin() == null) return false;
+                    LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                    if (desde != null && fechaFin.isBefore(desde)) return false;
+                    if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                }
+                if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                    boolean mostrar = false;
+                    if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                    if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
+                    if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
+                    if (!mostrar) return false;
+                }
+                return true;
+            };
+
+            List<ReparacionResumen> propias = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
-                .filter(rep -> {
-                    if (desde != null || hasta != null) {
-                        if (rep.getFechaFin() == null) return false;
-                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
-                        if (desde != null && fechaFin.isBefore(desde)) return false;
-                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
-                    }
-                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
-                        boolean mostrar = false;
-                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
-                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
-                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
-                        if (!mostrar) return false;
-                    }
-                    return true;
-                }).collect(Collectors.toList());
-            tablaItems.setAll(filtradas);
-            lblNavCount.setText("  •  " + filtradas.size() + " reparaciones");
+                .filter(r -> idTec != null && r.getIdTec() == idTec)
+                .filter(predicado)
+                .collect(Collectors.toList());
+
+            idsAjenas.clear();
+            List<ReparacionResumen> resultado = new ArrayList<>(propias);
+
+            if (btnOtrosTecnicos != null && btnOtrosTecnicos.isSelected()) {
+                List<ReparacionResumen> ajenas = datos.stream()
+                    .filter(r -> r.getImei().equals(imeiDetalle))
+                    .filter(r -> idTec == null || r.getIdTec() != idTec)
+                    .filter(predicado)
+                    .collect(Collectors.toList());
+                ajenas.forEach(r -> idsAjenas.add(r.getIdRep()));
+                resultado.addAll(ajenas);
+                int nA = idsAjenas.size();
+                lblNavCount.setText("  •  " + propias.size() + " propia" + (propias.size() != 1 ? "s" : "")
+                    + (nA > 0 ? " + " + nA + " de otros" : ""));
+            } else {
+                lblNavCount.setText("  •  " + propias.size() + " reparaciones");
+            }
+
+            tablaItems.setAll(resultado);
             return;
         }
 
+        Integer idTec = Sesion.getIdTec();
         String imeiStr = filtroImei.getText().trim();
-        datosFiltrados = datos.stream().filter(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr))
-                return false;
-            if (desde != null || hasta != null) {
-                if (rep.getFechaFin() == null) return false;
-                LocalDate fechaFin = rep.getFechaFin().toLocalDate();
-                if (desde != null && fechaFin.isBefore(desde)) return false;
-                if (hasta != null && fechaFin.isAfter(hasta))  return false;
-            }
-            return true;
-        }).collect(Collectors.toList());
+        datosFiltrados = datos.stream()
+            .filter(rep -> idTec != null && rep.getIdTec() == idTec)
+            .filter(rep -> {
+                if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr))
+                    return false;
+                if (desde != null || hasta != null) {
+                    if (rep.getFechaFin() == null) return false;
+                    LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                    if (desde != null && fechaFin.isBefore(desde)) return false;
+                    if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                }
+                return true;
+            }).collect(Collectors.toList());
         buildTablaItems();
     }
 
