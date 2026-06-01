@@ -126,6 +126,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         filtrosBar = (HBox) pnlHistRep.getChildren().get(0);
         crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
+        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
+        colIdAnterior.setVisible(false);
+        colComponente.setText("Reparaciones");
+        tablaReparaciones.setColumnResizePolicy(param -> true);
+        colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+        colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
 
         cargarDatos();
     }
@@ -416,7 +423,6 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 menu.getItems().add(copiar);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
-                    if (getItem() instanceof GrupoImei) { e.consume(); return; }
                     double x = e.getX(); double offset = 0;
                     for (TableColumn<?, ?> c : tv.getVisibleLeafColumns()) {
                         offset += c.getWidth();
@@ -464,6 +470,15 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     }
 
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
+        if (row instanceof GrupoImei g) {
+            if (col == colImei)       return g.getImei();
+            if (col == colModelo)     { String m = g.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? g.getFechaMasAntigua().format(FORMATO_FECHA) : "—")
+                                            + " → " + (g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(FORMATO_FECHA) : "—");
+            if (col == colComponente) return g.getReparaciones().size() + " reparaciones";
+            if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? g.getCountIncAbiertas() + " incidencia" + (g.getCountIncAbiertas() > 1 ? "s" : "") : "";
+            return null;
+        }
         if (!(row instanceof ReparacionResumen rep)) return null;
         if (col == colIdRep)         return rep.getIdRep();
         if (col == colImei)          return rep.getImei();
@@ -617,6 +632,11 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         filtrosBar     .setVisible(false); filtrosBar     .setManaged(false);
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
+        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colObservaciones.setVisible(true); colIncidencia.setVisible(true);
+        colIdAnterior.setVisible(true);
+        colComponente.setText("Componente");
+        tablaReparaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }
 
     private void volverAGrupos() {
@@ -631,6 +651,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
             filtrosBar     .setVisible(true);  filtrosBar     .setManaged(true);
         }
+        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
+        colIdAnterior.setVisible(false);
+        colComponente.setText("Reparaciones");
+        tablaReparaciones.setColumnResizePolicy(param -> true);
+        colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+        colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
     }
 
     // ─── Helpers de filtro ────────────────────────────────────────────────────
