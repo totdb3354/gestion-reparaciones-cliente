@@ -4,6 +4,7 @@ import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.models.GrupoImei;
 import com.reparaciones.models.ReparacionResumen;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -24,35 +25,37 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import javafx.collections.transformation.FilteredList;
+import java.util.Map;
+import java.util.stream.Collectors;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 
 /**
  * Controlador de la vista de reparaciones para el rol ADMIN.
- * <p>Muestra el historial completo de reparaciones en modo solo lectura.
- * El menú contextual solo permite copiar celdas; no hay acciones de edición.</p>
- * <p>Implementa {@link com.reparaciones.utils.Recargable} para el ciclo de vida controlado
- * por {@link MainController}, y {@link com.reparaciones.utils.Exportable} para la exportación
- * contextual a CSV.</p>
+ * <p>El historial opera en dos modos:</p>
+ * <ul>
+ *   <li><b>Maestro</b>: una fila por IMEI con datos de resumen. Solo lectura.</li>
+ *   <li><b>Detalle</b>: muestra todas las reparaciones del IMEI seleccionado. Barra de navegación para volver.</li>
+ * </ul>
  *
  * @role ADMIN
  */
 public class ReparacionControllerAdmin implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
-    @FXML private TableView<ReparacionResumen> tablaReparaciones;
-    @FXML private TableColumn<ReparacionResumen, String> colIdRep;
-    @FXML private TableColumn<ReparacionResumen, String> colImei;
-    @FXML private TableColumn<ReparacionResumen, String> colModelo;
-    @FXML private TableColumn<ReparacionResumen, String> colReparador;
-    @FXML private TableColumn<ReparacionResumen, String> colFecha;
-    @FXML private TableColumn<ReparacionResumen, String> colComponente;
-    @FXML private TableColumn<ReparacionResumen, String> colObservaciones;
-    @FXML private TableColumn<ReparacionResumen, Void>   colEstado;
-    @FXML private TableColumn<ReparacionResumen, Void>   colIncidencia;
-    @FXML private TableColumn<ReparacionResumen, String> colIdAnterior;
+    @FXML private TableView<Object>           tablaReparaciones;
+    @FXML private TableColumn<Object, String> colIdRep;
+    @FXML private TableColumn<Object, String> colImei;
+    @FXML private TableColumn<Object, String> colModelo;
+    @FXML private TableColumn<Object, String> colReparador;
+    @FXML private TableColumn<Object, String> colFecha;
+    @FXML private TableColumn<Object, String> colComponente;
+    @FXML private TableColumn<Object, String> colObservaciones;
+    @FXML private TableColumn<Object, Void>   colEstado;
+    @FXML private TableColumn<Object, Void>   colIncidencia;
+    @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -69,18 +72,31 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
+    private CustomMenuItem itemCerradas;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
 
-    private ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
-    private FilteredList<ReparacionResumen> datosFiltrados;
+    // ── Datos ─────────────────────────────────────────────────────────────────
+    private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
+    private List<ReparacionResumen> datosFiltrados = new ArrayList<>();
+    private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
+
+    // ── Drill-down ────────────────────────────────────────────────────────────
+    private enum Modo { MAESTRO, DETALLE }
+    private Modo   modoActual  = Modo.MAESTRO;
+    private String imeiDetalle = null;
+    private HBox   barraNavegacion;
+    private Label  lblNavImei;
+    private Label  lblNavModelo;
+    private Label  lblNavCount;
+
     private final List<CheckBox> checksTecnico = new java.util.ArrayList<>();
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     @FXML
     public void initialize() {
-        tablaReparaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaReparaciones.setColumnResizePolicy(param -> true);
         tablaReparaciones.setFixedCellSize(44);
 
         configurarColumnas();
@@ -97,8 +113,27 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             boolean rep = (n == toggleHistRep);
             pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
             pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
-            if (!rep) { historialPulidoController.setFiltroImei(filtroImei.getText()); historialPulidoController.cargar(); }
-            else      { filtroImei.setText(historialPulidoController.getFiltroImei()); cargarDatos(); }
+            if (!rep) {
+                if (modoActual == Modo.DETALLE) resetarModo();
+                historialPulidoController.setFiltroImei(filtroImei.getText());
+                historialPulidoController.cargar();
+            } else {
+                filtroImei.setText(historialPulidoController.getFiltroImei());
+                cargarDatos();
+            }
+        });
+
+        crearBarraNavegacion();
+        tablaReparaciones.setItems(tablaItems);
+        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
+        colIdAnterior.setVisible(false);
+        colComponente.setText("Reparaciones");
+        adaptarFiltrosMaestro();
+        javafx.application.Platform.runLater(() -> {
+            tablaReparaciones.setColumnResizePolicy(param -> true);
+            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
         });
 
         cargarDatos();
@@ -107,20 +142,15 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @Override
     public void detenerPolling() { /* sin polling */ }
 
-    /**
-     * Recarga el panel visible: historial de reparaciones o de pulidos.
-     * Invocado por {@link MainController} cuando la ventana recupera el foco.
-     */
     @Override
     public void recargar() {
         if (toggleHistPul.isSelected()) historialPulidoController.cargar();
         else                            cargarDatos();
     }
 
-    /** No hay panel alternativo al que navegar; el historial es siempre visible. */
     public void irAInicio() { /* historial siempre visible */ }
 
-    // ─── Label expandible (click abre popup de lectura) ───────────────────────
+    // ─── Label expandible ────────────────────────────────────────────────────
 
     private Label labelExpandible(String titulo, String texto) {
         Label lbl = new Label(texto != null ? texto : "");
@@ -140,9 +170,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdRep.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty ? null : getTableView().getItems().get(getIndex()).getIdRep());
+                super.updateItem(item, empty); setGraphic(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setText(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                setText(row instanceof ReparacionResumen rep ? rep.getIdRep() : null);
             }
         });
 
@@ -152,15 +183,11 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             private final ImageView ivHist = new ImageView(imgHistorial);
             private final HBox contenedor = new HBox(6, lbl, ivHist);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
-                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                (obs, o, sel) -> lbl.setStyle(lbl.getUserData() + "-fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
-                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
-                ivHist.setFitWidth(25);
-                ivHist.setFitHeight(25);
-                ivHist.setPreserveRatio(true);
-                ivHist.setStyle("-fx-cursor: hand;");
+                ivHist.setFitWidth(25); ivHist.setFitHeight(25);
+                ivHist.setPreserveRatio(true); ivHist.setStyle("-fx-cursor: hand;");
                 contenedor.setAlignment(Pos.CENTER_LEFT);
-                ivHist.setOnMouseClicked(e -> abrirHistorialImei(getTableView().getItems().get(getIndex()).getImei()));
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
@@ -169,26 +196,48 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null); return;
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) {
+                    String base = "-fx-font-size: 12px; -fx-font-weight: bold; ";
+                    lbl.setUserData(base);
+                    lbl.setText(grupo.getImei());
+                    lbl.setStyle(base + "-fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                    ivHist.setVisible(true); ivHist.setManaged(true);
+                    ivHist.setOnMouseClicked(e -> { e.consume(); mostrarDetalle(grupo); });
+                    setGraphic(contenedor);
+                } else if (row instanceof ReparacionResumen rep) {
+                    String base = "-fx-font-size: 12px; ";
+                    lbl.setUserData(base);
+                    lbl.setText(rep.getImei());
+                    lbl.setStyle(base + "-fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                    ivHist.setVisible(false); ivHist.setManaged(false);
+                    setGraphic(contenedor);
                 }
-                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
-                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                setGraphic(contenedor);
             }
         });
+
         colModelo.setCellValueFactory(d -> {
-            String m = d.getValue().getModelo();
+            Object row = d.getValue();
+            String m = null;
+            if (row instanceof GrupoImei grupo) m = grupo.getModelo();
+            else if (row instanceof ReparacionResumen rep) m = rep.getModelo();
             return new javafx.beans.property.SimpleStringProperty(
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
 
+        colReparador.setCellValueFactory(d -> {
+            Object o = d.getValue();
+            if (o instanceof ReparacionResumen rep)
+                return new javafx.beans.property.SimpleStringProperty(
+                    rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+            return new javafx.beans.property.SimpleStringProperty("");
+        });
         colReparador.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty ? null : getTableView().getItems().get(getIndex()).getNombreTecnico());
+                super.updateItem(item, empty); setGraphic(null);
+                setText(empty || item == null || item.isEmpty() ? null : item);
             }
         });
 
@@ -209,12 +258,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             }
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(null);
-                if (empty) { setGraphic(null); return; }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                lblInicio.setText(rep.getFechaAsig() != null ? rep.getFechaAsig().format(FORMATO_FECHA) : "—");
-                lblFin.setText("→ " + (rep.getFechaFin() != null ? rep.getFechaFin().format(FORMATO_FECHA) : "—"));
+                super.updateItem(item, empty); setText(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) {
+                    lblInicio.setText(grupo.getFechaMasAntigua()  != null ? grupo.getFechaMasAntigua().format(FORMATO_FECHA)  : "—");
+                    lblFin.setText("→ " + (grupo.getFechaMasReciente() != null ? grupo.getFechaMasReciente().format(FORMATO_FECHA) : "—"));
+                } else if (row instanceof ReparacionResumen rep) {
+                    lblInicio.setText(rep.getFechaAsig() != null ? rep.getFechaAsig().format(FORMATO_FECHA) : "—");
+                    lblFin.setText("→ " + (rep.getFechaFin() != null ? rep.getFechaFin().format(FORMATO_FECHA) : "—"));
+                } else { setGraphic(null); return; }
                 actualizarColores(getTableRow() != null && getTableRow().isSelected());
                 setGraphic(box);
             }
@@ -223,9 +276,12 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colComponente.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty ? null : getTableView().getItems().get(getIndex()).getTipoComponente());
+                super.updateItem(item, empty); setGraphic(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setText(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) setText(grupo.getReparaciones().size() + " reparaciones");
+                else if (row instanceof ReparacionResumen rep) setText(rep.getTipoComponente());
+                else setText(null);
             }
         });
 
@@ -233,11 +289,9 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                    return;
-                }
-                setGraphic(labelExpandible("Observaciones", getTableView().getItems().get(getIndex()).getObservaciones()));
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                setGraphic(row instanceof ReparacionResumen rep ? labelExpandible("Observaciones", rep.getObservaciones()) : null);
             }
         });
 
@@ -247,15 +301,16 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand;");
                 lblLink.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
                 lblLink.setMaxWidth(Double.MAX_VALUE);
-                lblLink.setOnMouseEntered(
-                        e -> lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand; -fx-underline: true;"));
-                lblLink.setOnMouseExited(
-                        e -> lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand; -fx-underline: false;"));
+                lblLink.setOnMouseEntered(e -> lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand; -fx-underline: true;"));
+                lblLink.setOnMouseExited(e -> lblLink.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ACCION + "; -fx-cursor: hand; -fx-underline: false;"));
                 lblLink.setOnMouseClicked(e -> {
-                    String idAnterior = getTableView().getItems().get(getIndex()).getIdRepAnterior();
+                    Object row = getTableView().getItems().get(getIndex());
+                    if (!(row instanceof ReparacionResumen rep)) return;
+                    String idAnterior = rep.getIdRepAnterior();
                     if (idAnterior == null) return;
                     for (int i = 0; i < getTableView().getItems().size(); i++) {
-                        if (idAnterior.equals(getTableView().getItems().get(i).getIdRep())) {
+                        Object candidate = getTableView().getItems().get(i);
+                        if (candidate instanceof ReparacionResumen r && idAnterior.equals(r.getIdRep())) {
                             getTableView().getSelectionModel().select(i);
                             getTableView().scrollTo(i);
                             getTableView().requestFocus();
@@ -264,17 +319,14 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     }
                 });
             }
-
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) { setGraphic(null); return; }
-                String idAnterior = getTableView().getItems().get(getIndex()).getIdRepAnterior();
-                if (idAnterior != null) {
-                    lblLink.setText(idAnterior);
-                    setGraphic(lblLink);
-                } else
-                    setGraphic(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof ReparacionResumen rep && rep.getIdRepAnterior() != null) {
+                    lblLink.setText(rep.getIdRepAnterior()); setGraphic(lblLink);
+                } else { setGraphic(null); }
             }
         });
 
@@ -285,35 +337,35 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private void configurarColEstado() {
         colEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
-            {
-                badge.setStyle(
-                    "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
-                    "-fx-font-size: 11px; -fx-font-weight: bold;");
-            }
+            { badge.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold;"); }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) { setGraphic(null); return; }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
-                              "-fx-font-size: 11px; -fx-font-weight: bold;";
-                if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
-                    badge.setText("Incidencia");
-                    badge.setStyle(base +
-                        "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + ";" +
-                        "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                } else if (rep.isEsIncidencia()) {
-                    badge.setText("Resuelta");
-                    badge.setStyle(base +
-                        "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_BG + ";" +
-                        "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
-                } else {
-                    badge.setText("Normal");
-                    badge.setStyle(base +
-                        "-fx-background-color: #E8EAF0;" +
-                        "-fx-text-fill: #586376;");
-                }
-                setGraphic(badge);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold;";
+                if (row instanceof GrupoImei grupo) {
+                    if (grupo.getCountIncAbiertas() > 0) {
+                        badge.setText("Incidencia");
+                        badge.setStyle(base + "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + "; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                    } else {
+                        badge.setText("Normal");
+                        badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
+                    }
+                    setGraphic(badge);
+                } else if (row instanceof ReparacionResumen rep) {
+                    if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
+                        badge.setText("Incidencia");
+                        badge.setStyle(base + "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + "; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                    } else if (rep.isEsIncidencia()) {
+                        badge.setText("Resuelta");
+                        badge.setStyle(base + "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_BG + "; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
+                    } else {
+                        badge.setText("Normal");
+                        badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
+                    }
+                    setGraphic(badge);
+                } else { setGraphic(null); }
             }
         });
     }
@@ -327,28 +379,22 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 lblComentario.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
                 lblSin.setStyle("-fx-font-size: 12px; -fx-text-fill: #A0A0A0; -fx-font-style: italic;");
             }
-
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) { setGraphic(null); setStyle(""); return; }
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                if (rep.isEsIncidencia()) {
-                    String texto = rep.getIncidencia() != null ? rep.getIncidencia() : "";
-                    lblComentario.setText(texto);
-                    String color = rep.isEsResuelto() ? "#A9A9A9" : "#000000";
-                    lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: " + color + ";" +
-                            (!texto.isEmpty() ? " -fx-cursor: hand;" : ""));
-                    lblComentario.setOnMouseClicked(texto.isEmpty() ? null :
-                            e -> { if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) ConfirmDialog.mostrarTexto("Incidencia", texto); });
-                    setStyle(rep.isEsResuelto()
-                            ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_BG + ";"
-                            : "");
-                    setGraphic(lblComentario);
-                } else {
-                    setStyle("");
-                    setGraphic(lblSin);
-                }
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); setStyle(""); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof ReparacionResumen rep) {
+                    if (rep.isEsIncidencia()) {
+                        String texto = rep.getIncidencia() != null ? rep.getIncidencia() : "";
+                        lblComentario.setText(texto);
+                        lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (rep.isEsResuelto() ? "#A9A9A9" : "#000000") + ";" + (!texto.isEmpty() ? " -fx-cursor: hand;" : ""));
+                        lblComentario.setOnMouseClicked(texto.isEmpty() ? null :
+                                e -> { if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) ConfirmDialog.mostrarTexto("Incidencia", texto); });
+                        setStyle(rep.isEsResuelto() ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_BG + ";" : "");
+                        setGraphic(lblComentario);
+                    } else { setStyle(""); setGraphic(lblSin); }
+                } else { setStyle(""); setGraphic(null); }
             }
         });
     }
@@ -360,23 +406,22 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 TableColumn<?, ?>[] colRightClick = {null};
                 MenuItem copiar = new MenuItem("📋  Copiar celda");
                 copiar.setOnAction(e -> {
-                    if (getItem() == null || colRightClick[0] == null) return;
-                    TableColumn<?, ?> col = colRightClick[0];
-                    String texto = textoDeCelda(getItem(), col);
+                    Object rowItem = getItem();
+                    if (rowItem == null || colRightClick[0] == null) return;
+                    String texto = textoDeCelda(rowItem, colRightClick[0]);
                     if (texto == null || texto.isEmpty()) return;
                     javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
                     getChildrenUnmodifiable().stream()
-                        .filter(n -> n instanceof TableCell && ((TableCell<?, ?>) n).getTableColumn() == col)
+                        .filter(n -> n instanceof TableCell && ((TableCell<?, ?>) n).getTableColumn() == colRightClick[0])
                         .findFirst()
                         .ifPresent(cell -> {
                             javafx.beans.property.DoubleProperty flashAlpha = new javafx.beans.property.SimpleDoubleProperty(1.0);
                             flashAlpha.addListener((obs2, o2, n2) -> {
                                 double a = n2.doubleValue();
                                 if (a <= 0.02) cell.setStyle("");
-                                else cell.setStyle(String.format(java.util.Locale.US,
-                                    "-fx-background-color: rgba(224,247,250,%.2f);", a));
+                                else cell.setStyle(String.format(java.util.Locale.US, "-fx-background-color: rgba(224,247,250,%.2f);", a));
                             });
                             cell.setStyle("-fx-background-color: rgba(224,247,250,1.0);");
                             new javafx.animation.Timeline(
@@ -394,35 +439,58 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                         if (x < offset) { colRightClick[0] = c; break; }
                     }
                 });
+
+                // Drill-down al clicar en fila de grupo
+                setOnMouseClicked(e -> {
+                    if (!isEmpty() && getItem() instanceof GrupoImei grupo
+                            && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
+                            && e.getClickCount() == 1) {
+                        mostrarDetalle(grupo);
+                    }
+                });
+
                 selectedProperty().addListener((obs, wasSelected, isSelected) -> aplicarEstilo(getItem(), isEmpty()));
             }
 
-            private void aplicarEstilo(ReparacionResumen item, boolean empty) {
+            private void aplicarEstilo(Object item, boolean empty) {
                 if (empty || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
-                if (isSelected()) {
-                    setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
-                            "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
-                } else if (item.isEsIncidencia() && !item.isEsResuelto()) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                } else if (item.isEsIncidencia()) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_REPARADO_BRD + ";");
-                } else {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                if (item instanceof GrupoImei g) {
+                    String brd = g.getCountIncAbiertas() > 0 ? com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
+                    setStyle(isSelected()
+                        ? "-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + "; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent; -fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0;"
+                        : "-fx-background-color: #EEF0F5; -fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + brd + "; -fx-cursor: hand;");
+                } else if (item instanceof ReparacionResumen rep) {
+                    if (isSelected()) {
+                        setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + "; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent; -fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
+                    } else if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
+                        setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                    } else if (rep.isEsIncidencia()) {
+                        setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_REPARADO_BRD + ";");
+                    } else {
+                        setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                    }
                 }
             }
 
             @Override
-            protected void updateItem(ReparacionResumen item, boolean empty) {
+            protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
                 aplicarEstilo(item, empty);
             }
         });
     }
 
-    private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
+    private String textoDeCelda(Object row, TableColumn<?, ?> col) {
+        if (row instanceof GrupoImei g) {
+            if (col == colImei)       return g.getImei();
+            if (col == colModelo)     { String m = g.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? g.getFechaMasAntigua().format(FORMATO_FECHA) : "—")
+                                            + " → " + (g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(FORMATO_FECHA) : "—");
+            if (col == colComponente) return g.getReparaciones().size() + " reparaciones";
+            if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? "Incidencia" : "Normal";
+            return null;
+        }
+        if (!(row instanceof ReparacionResumen rep)) return null;
         if (col == colIdRep)         return rep.getIdRep();
         if (col == colImei)          return rep.getImei();
         if (col == colModelo)        { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
@@ -438,10 +506,6 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private void cargarDatos() {
         try {
             datos.setAll(reparacionDAO.getReparacionesResumen());
-            if (datosFiltrados == null) {
-                datosFiltrados = new FilteredList<>(datos, p -> true);
-                tablaReparaciones.setItems(datosFiltrados);
-            }
             aplicarFiltros();
             lblUltimaActualizacion.setText("Actualizado " +
                     java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
@@ -458,132 +522,235 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             for (com.reparaciones.models.Tecnico t : tecnicos) {
                 CheckBox cb = new CheckBox(t.getNombre());
                 cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-                cb.selectedProperty().addListener((obs, o, n) -> {
-                    actualizarTextoFiltroTecnico();
-                    aplicarFiltros();
-                });
+                cb.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroTecnico(); aplicarFiltros(); });
                 checksTecnico.add(cb);
                 filtroTecnico.getItems().add(new CustomMenuItem(cb, false));
             }
-        } catch (SQLException e) {
-            mostrarError(e);
-        }
+        } catch (SQLException e) { mostrarError(e); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
             if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15)
-                filtroImei.setText(filtroImei.getText().substring(0, 15));
+            if (filtroImei.getText().length() > 15) filtroImei.setText(filtroImei.getText().substring(0, 15));
             String val = filtroImei.getText();
-            if (val.isEmpty())
-                filtroImei.setStyle("");
+            if (val.isEmpty()) filtroImei.setStyle("");
             else if (val.length() < 15)
-                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
-                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
             else
-                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
-                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
             aplicarFiltros();
         });
-        filtroFechaDesde.getEditor().setDisable(true);
-        filtroFechaDesde.getEditor().setOpacity(1.0);
-        filtroFechaHasta.getEditor().setDisable(true);
-        filtroFechaHasta.getEditor().setOpacity(1.0);
+        filtroFechaDesde.getEditor().setDisable(true); filtroFechaDesde.getEditor().setOpacity(1.0);
+        filtroFechaHasta.getEditor().setDisable(true); filtroFechaHasta.getEditor().setOpacity(1.0);
         filtroFechaDesde.valueProperty().addListener((obs, o, n) -> aplicarFiltros());
         filtroFechaHasta.valueProperty().addListener((obs, o, n) -> aplicarFiltros());
         cbIncidenciasAbiertas = new CheckBox("Abiertas");
         cbIncidenciasAbiertas.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-        cbIncidenciasAbiertas.selectedProperty().addListener((obs, o, n) -> {
-            actualizarTextoFiltroIncidencias();
-            aplicarFiltros();
-        });
+        cbIncidenciasAbiertas.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroIncidencias(); aplicarFiltros(); });
         cbIncidenciasCerradas = new CheckBox("Cerradas");
         cbIncidenciasCerradas.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-        cbIncidenciasCerradas.selectedProperty().addListener((obs, o, n) -> {
-            actualizarTextoFiltroIncidencias();
-            aplicarFiltros();
-        });
+        cbIncidenciasCerradas.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroIncidencias(); aplicarFiltros(); });
         cbNormales = new CheckBox("Sin incidencia");
         cbNormales.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-        cbNormales.selectedProperty().addListener((obs, o, n) -> {
-            actualizarTextoFiltroIncidencias();
-            aplicarFiltros();
-        });
+        cbNormales.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroIncidencias(); aplicarFiltros(); });
+        itemCerradas = new CustomMenuItem(cbIncidenciasCerradas, false);
         filtroIncidencias.getItems().addAll(
-                new CustomMenuItem(cbIncidenciasAbiertas, false),
-                new CustomMenuItem(cbIncidenciasCerradas, false),
-                new CustomMenuItem(cbNormales, false));
+            new CustomMenuItem(cbIncidenciasAbiertas, false),
+            itemCerradas,
+            new CustomMenuItem(cbNormales, false));
     }
 
     private void aplicarFiltros() {
-        if (datosFiltrados == null) return;
-        String imeiStr = filtroImei.getText().trim();
         LocalDate desde = filtroFechaDesde.getValue();
         LocalDate hasta = filtroFechaHasta.getValue();
         boolean filtrarAbiertas = cbIncidenciasAbiertas.isSelected();
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
         List<String> tecnicosSeleccionados = checksTecnico.stream()
-                .filter(CheckBox::isSelected)
-                .map(CheckBox::getText)
-                .collect(java.util.stream.Collectors.toList());
+                .filter(CheckBox::isSelected).map(CheckBox::getText).collect(Collectors.toList());
 
-        datosFiltrados.setPredicate(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr))
-                return false;
-            if (!tecnicosSeleccionados.isEmpty() && !tecnicosSeleccionados.contains(rep.getNombreTecnico()))
-                return false;
+        if (modoActual == Modo.DETALLE) {
+            List<ReparacionResumen> filtradas = datos.stream()
+                .filter(r -> r.getImei().equals(imeiDetalle))
+                .filter(rep -> {
+                    if (!tecnicosSeleccionados.isEmpty() && !tecnicosSeleccionados.contains(rep.getNombreTecnico())) return false;
+                    if (desde != null || hasta != null) {
+                        if (rep.getFechaFin() == null) return false;
+                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                        if (desde != null && fechaFin.isBefore(desde)) return false;
+                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                    }
+                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                        boolean mostrar = false;
+                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
+                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
+                        if (!mostrar) return false;
+                    }
+                    return true;
+                }).collect(Collectors.toList());
+            tablaItems.setAll(filtradas);
+            lblNavCount.setText("  •  " + filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            return;
+        }
+
+        String imeiStr = filtroImei.getText().trim();
+        datosFiltrados = datos.stream().filter(rep -> {
+            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
             if (desde != null || hasta != null) {
                 if (rep.getFechaFin() == null) return false;
                 LocalDate fechaFin = rep.getFechaFin().toLocalDate();
                 if (desde != null && fechaFin.isBefore(desde)) return false;
                 if (hasta != null && fechaFin.isAfter(hasta))  return false;
             }
-            if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
-                boolean mostrar = false;
-                if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
-                if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
-                if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
-                if (!mostrar) return false;
-            }
             return true;
+        }).collect(Collectors.toList());
+        buildTablaItems();
+    }
+
+    private void buildTablaItems() {
+        LinkedHashMap<String, List<ReparacionResumen>> porImei = new LinkedHashMap<>();
+        for (ReparacionResumen rep : datosFiltrados)
+            porImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
+
+        boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
+        boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
+
+        tablaItems.clear();
+        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
+            GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
+            if (filtrarInc || filtrarNormal) {
+                boolean tieneInc = grupo.getCountIncAbiertas() > 0;
+                boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
+                if (!ok) continue;
+            }
+            tablaItems.add(grupo);
+        }
+    }
+
+    // ─── Drill-down ───────────────────────────────────────────────────────────
+
+    private void crearBarraNavegacion() {
+        Button btnVolver = new Button("← Volver");
+        btnVolver.getStyleClass().add("btn-secondary");
+        btnVolver.setOnAction(e -> volverAGrupos());
+
+        lblNavImei   = new Label();
+        lblNavModelo = new Label();
+        lblNavCount  = new Label();
+        lblNavImei  .setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        lblNavModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+        lblNavCount .setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+
+        barraNavegacion = new HBox(12, btnVolver,
+                new Separator(javafx.geometry.Orientation.VERTICAL),
+                lblNavImei, lblNavModelo, lblNavCount);
+        barraNavegacion.setAlignment(Pos.CENTER_LEFT);
+        barraNavegacion.setPadding(new Insets(6, 0, 6, 0));
+        barraNavegacion.setVisible(false);
+        barraNavegacion.setManaged(false);
+        pnlHistRep.getChildren().add(1, barraNavegacion);
+    }
+
+    private void mostrarDetalle(GrupoImei grupo) { mostrarDetalleParaImei(grupo.getImei()); }
+
+    private void mostrarDetalleParaImei(String imei) {
+        modoActual  = Modo.DETALLE;
+        imeiDetalle = imei;
+
+        String modelo = datos.stream().filter(r -> r.getImei().equals(imei))
+                .map(ReparacionResumen::getModelo)
+                .filter(m -> m != null && !m.isEmpty()).findFirst().orElse("");
+        lblNavImei  .setText("IMEI: " + imei);
+        lblNavModelo.setText(!modelo.isEmpty() ? "  •  " + FormularioReparacionController.traducirModelo(modelo) : "");
+
+        filtroImei     .setVisible(false); filtroImei     .setManaged(false);
+        barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
+        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colObservaciones.setVisible(true); colIncidencia.setVisible(true);
+        colIdAnterior.setVisible(true);
+        colComponente.setText("Componente");
+        adaptarFiltrosDetalle();
+        javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
+        aplicarFiltros();
+    }
+
+    private void aplicarAnchosDetalle() {
+        double w = tablaReparaciones.getWidth();
+        if (w <= 0) return;
+        double u = w / 1370.0;
+        colIdRep        .setPrefWidth(Math.max(110, 110 * u));
+        colImei         .setPrefWidth(Math.max(130, 130 * u));
+        colModelo       .setPrefWidth(Math.max(100, 100 * u));
+        colReparador    .setPrefWidth(Math.max(100, 100 * u));
+        colFecha        .setPrefWidth(Math.max(110, 110 * u));
+        colComponente   .setPrefWidth(Math.max(150, 150 * u));
+        colObservaciones.setPrefWidth(Math.max(200, 200 * u));
+        colEstado       .setPrefWidth(Math.max(120, 120 * u));
+        colIncidencia   .setPrefWidth(Math.max(200, 200 * u));
+        colIdAnterior   .setPrefWidth(Math.max(150, 150 * u));
+    }
+
+    private void volverAGrupos() {
+        resetarModo();
+        cargarDatos();
+    }
+
+    private void resetarModo() {
+        modoActual  = Modo.MAESTRO;
+        imeiDetalle = null;
+        if (barraNavegacion != null) {
+            barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
+            filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
+        }
+        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
+        colIdAnterior.setVisible(false);
+        colComponente.setText("Reparaciones");
+        adaptarFiltrosMaestro();
+        javafx.application.Platform.runLater(() -> {
+            tablaReparaciones.setColumnResizePolicy(param -> true);
+            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
         });
     }
 
+    // ─── Helpers de filtro ────────────────────────────────────────────────────
+
+    private void adaptarFiltrosMaestro() {
+        filtroTecnico.setVisible(false); filtroTecnico.setManaged(false);
+        cbIncidenciasAbiertas.setText("Incidencia");
+        cbIncidenciasCerradas.setSelected(false);
+        if (itemCerradas != null) itemCerradas.setVisible(false);
+        cbNormales.setText("Normal");
+        actualizarTextoFiltroIncidencias();
+    }
+
+    private void adaptarFiltrosDetalle() {
+        filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
+        cbIncidenciasAbiertas.setText("Abiertas");
+        if (itemCerradas != null) itemCerradas.setVisible(true);
+        cbNormales.setText("Sin incidencia");
+        actualizarTextoFiltroIncidencias();
+    }
+
     private void actualizarTextoFiltroIncidencias() {
-        boolean a = cbIncidenciasAbiertas.isSelected();
-        boolean c = cbIncidenciasCerradas.isSelected();
-        boolean n = cbNormales.isSelected();
+        boolean a = cbIncidenciasAbiertas.isSelected(), c = cbIncidenciasCerradas.isSelected(), n = cbNormales.isSelected();
         long total = java.util.stream.Stream.of(a, c, n).filter(Boolean::booleanValue).count();
         if      (total == 0) filtroIncidencias.setText("Incidencias");
         else if (total == 3) filtroIncidencias.setText("Todas");
-        else if (total == 1) filtroIncidencias.setText(a ? "Abiertas" : c ? "Cerradas" : "Sin incidencia");
+        else if (total == 1) filtroIncidencias.setText(a ? cbIncidenciasAbiertas.getText() : c ? cbIncidenciasCerradas.getText() : cbNormales.getText());
         else                 filtroIncidencias.setText(total + " filtros");
     }
 
     private void actualizarTextoFiltroTecnico() {
-        List<String> seleccionados = checksTecnico.stream()
-                .filter(CheckBox::isSelected)
-                .map(CheckBox::getText)
-                .collect(java.util.stream.Collectors.toList());
-        if (seleccionados.isEmpty())
-            filtroTecnico.setText("Técnico");
-        else if (seleccionados.size() == 1)
-            filtroTecnico.setText(seleccionados.get(0));
-        else
-            filtroTecnico.setText(seleccionados.size() + " técnicos");
+        List<String> sel = checksTecnico.stream().filter(CheckBox::isSelected).map(CheckBox::getText).collect(Collectors.toList());
+        if (sel.isEmpty())        filtroTecnico.setText("Técnico");
+        else if (sel.size() == 1) filtroTecnico.setText(sel.get(0));
+        else                      filtroTecnico.setText(sel.size() + " técnicos");
     }
 
-    /**
-     * Aplica un filtro inicial de fecha y técnico.
-     * <p>Llamado por {@link MainController} cuando se navega desde la vista de
-     * estadísticas (clic en un vértice del gráfico). Debe invocarse después de
-     * que el controlador esté completamente inicializado.</p>
-     *
-     * @param desde   fecha de inicio del filtro
-     * @param hasta   fecha de fin del filtro
-     * @param tecnico nombre del técnico a pre-seleccionar, o {@code null} para todos
-     */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        if (modoActual == Modo.DETALLE) volverAGrupos();
         if (tecnico != null) {
             checksTecnico.forEach(cb -> cb.setSelected(cb.getText().equals(tecnico)));
             actualizarTextoFiltroTecnico();
@@ -594,138 +761,27 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @FXML
     private void limpiarFiltros() {
-        filtroImei.clear();
-        filtroImei.setStyle("");
+        filtroImei.clear(); filtroImei.setStyle("");
         checksTecnico.forEach(cb -> cb.setSelected(false));
         filtroTecnico.setText("Técnico");
-        filtroFechaDesde.setValue(null);
-        filtroFechaHasta.setValue(null);
+        filtroFechaDesde.setValue(null); filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
         cbIncidenciasCerradas.setSelected(false);
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
     }
 
-    // ─── Historial IMEI ───────────────────────────────────────────────────────
-
-    private void abrirHistorialImei(String imei) {
-        try {
-            List<ReparacionResumen> historial = reparacionDAO.getResumenPorImei(imei);
-
-            TableColumn<ReparacionResumen, String> cId      = new TableColumn<>("ID");
-            TableColumn<ReparacionResumen, String> cTecnico = new TableColumn<>("Técnico");
-            TableColumn<ReparacionResumen, String> cFecha   = new TableColumn<>("Fechas");
-            TableColumn<ReparacionResumen, String> cComp    = new TableColumn<>("Componente");
-            TableColumn<ReparacionResumen, String> cObs     = new TableColumn<>("Observaciones");
-            TableColumn<ReparacionResumen, String> cIncid   = new TableColumn<>("Incidencia");
-
-            cId.setPrefWidth(130);  cId.setMinWidth(100);
-            cTecnico.setPrefWidth(110); cTecnico.setMinWidth(80);
-            cFecha.setPrefWidth(130); cFecha.setMinWidth(110);
-            cComp.setPrefWidth(120); cComp.setMinWidth(90);
-            cObs.setPrefWidth(200); cObs.setMinWidth(100); cObs.setMaxWidth(250);
-            cIncid.setPrefWidth(200); cIncid.setMinWidth(100);
-
-            cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
-            cTecnico.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getNombreTecnico()));
-
-            cFecha.setCellFactory(col -> new TableCell<>() {
-                private final Label lblInicio = new Label();
-                private final Label lblFin    = new Label();
-                private final VBox  box       = new VBox(1, lblInicio, lblFin);
-                {
-                    actualizarColores(false);
-                    tableRowProperty().addListener((obs, oldRow, newRow) -> {
-                        if (newRow != null)
-                            newRow.selectedProperty().addListener((o, was, sel) -> actualizarColores(sel));
-                    });
-                }
-                private void actualizarColores(boolean selected) {
-                    lblInicio.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (selected ? "white" : "#9AA0AA") + ";");
-                    lblFin.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (selected ? "white" : "#2C3B54") + ";");
-                }
-                @Override protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty); setText(null);
-                    if (empty) { setGraphic(null); return; }
-                    ReparacionResumen r = getTableView().getItems().get(getIndex());
-                    lblInicio.setText(r.getFechaAsig() != null ? r.getFechaAsig().format(FORMATO_FECHA) : "—");
-                    lblFin.setText("→ " + (r.getFechaFin() != null ? r.getFechaFin().format(FORMATO_FECHA) : "—"));
-                    actualizarColores(getTableRow() != null && getTableRow().isSelected());
-                    setGraphic(box);
-                }
-            });
-
-            cComp.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-                    d.getValue().getTipoComponente() != null ? d.getValue().getTipoComponente() : "—"));
-            cObs.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-                    d.getValue().getObservaciones() != null ? d.getValue().getObservaciones() : ""));
-            cObs.setCellFactory(col -> new TableCell<>() {
-                @Override protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null || item.isBlank()) { setText(null); setTooltip(null); }
-                    else { setText(item); setTooltip(new Tooltip(item)); }
-                }
-            });
-            cIncid.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-                    d.getValue().isEsIncidencia() && d.getValue().getIncidencia() != null
-                            ? d.getValue().getIncidencia() : ""));
-            cIncid.setCellFactory(col -> new TableCell<>() {
-                @Override protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null || item.isBlank()) { setText(null); setTooltip(null); }
-                    else { setText(item); setTooltip(new Tooltip(item)); }
-                }
-            });
-
-            TableView<ReparacionResumen> tabla = new TableView<>();
-            tabla.getStyleClass().add("tabla-reparaciones");
-            tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-            tabla.setPrefHeight(440);
-            tabla.getColumns().addAll(cId, cTecnico, cFecha, cComp, cObs, cIncid);
-            tabla.getColumns().forEach(c -> c.setReorderable(false));
-            tabla.setItems(FXCollections.observableArrayList(historial));
-
-            Label lblTitulo = new Label("Historial del IMEI");
-            lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-            Label lblImeiLabel = new Label(imei);
-            lblImeiLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
-
-            Button btnCerrar = new Button("Cerrar");
-            btnCerrar.getStyleClass().add("btn-secondary");
-
-            HBox botones = new HBox(btnCerrar);
-            botones.setAlignment(Pos.CENTER_RIGHT);
-
-            VBox contenido = new VBox(12, lblTitulo, lblImeiLabel, tabla, botones);
-            contenido.setPadding(new Insets(28));
-            contenido.setPrefWidth(1000);
-            contenido.setStyle("-fx-background-color: #DDE1E7;");
-
-            javafx.stage.Stage ventana = new javafx.stage.Stage();
-            ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-            ventana.setResizable(true);
-            ventana.setTitle("Historial — " + imei);
-
-            btnCerrar.setOnAction(ev -> ventana.close());
-
-            javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
-            scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
-            ventana.setScene(scene);
-            ventana.showAndWait();
-
-        } catch (SQLException e) {
-            mostrarError(e);
-        }
-    }
-
     @Override
     public void exportarCSV(Stage owner) {
-        List<String> cabeceras = List.of(
-                "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+        List<ReparacionResumen> items = modoActual == Modo.DETALLE
+                ? tablaItems.stream().filter(o -> o instanceof ReparacionResumen).map(o -> (ReparacionResumen) o).collect(Collectors.toList())
+                : new ArrayList<>(datosFiltrados);
+
+        List<String> cabeceras = List.of("ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
                 "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-        for (ReparacionResumen r : tablaReparaciones.getItems()) {
+        for (ReparacionResumen r : items) {
             filas.add(List.of(
                     r.getIdRep(),
                     com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
@@ -742,7 +798,5 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
     }
 
-    private void mostrarError(Exception e) {
-        Alertas.mostrarError(e.getMessage());
-    }
+    private void mostrarError(Exception e) { Alertas.mostrarError(e.getMessage()); }
 }
