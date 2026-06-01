@@ -100,7 +100,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private Modo   modoActual    = Modo.MAESTRO;
     private String imeiDetalle   = null;
     private HBox   barraNavegacion;
-    private HBox   filtrosBar;
     private Label  lblNavImei;
     private Label  lblNavModelo;
     private Label  lblNavCount;
@@ -114,7 +113,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     @FXML
     public void initialize() {
-        tablaReparaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaReparaciones.setColumnResizePolicy(param -> true);
         tablaReparaciones.setFixedCellSize(44);
 
         configurarColumnas();
@@ -122,16 +121,17 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         configurarFilas();
         configurarFiltros();
 
-        filtrosBar = (HBox) pnlHistRep.getChildren().get(0);
         crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false);
         colComponente.setText("Reparaciones");
-        tablaReparaciones.setColumnResizePolicy(param -> true);
-        colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
-        colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
+        javafx.application.Platform.runLater(() -> {
+            tablaReparaciones.setColumnResizePolicy(param -> true);
+            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
+        });
 
         misPendientesController.setOnCerrar(this::cargarDatos);
 
@@ -220,24 +220,37 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         modoActual  = Modo.DETALLE;
         imeiDetalle = imei;
 
-        List<ReparacionResumen> todas = datos.stream()
-                .filter(r -> r.getImei().equals(imei))
-                .collect(Collectors.toList());
-        tablaItems.setAll(todas);
-
-        GrupoImei grupo = new GrupoImei(imei, todas);
+        String modelo = datos.stream().filter(r -> r.getImei().equals(imei))
+                .map(ReparacionResumen::getModelo)
+                .filter(m -> m != null && !m.isEmpty()).findFirst().orElse("");
         lblNavImei.setText("IMEI: " + imei);
-        lblNavModelo.setText(grupo.getModelo() != null && !grupo.getModelo().isEmpty()
-                ? "  •  " + FormularioReparacionController.traducirModelo(grupo.getModelo()) : "");
-        lblNavCount.setText("  •  " + todas.size() + " reparaciones");
+        lblNavModelo.setText(!modelo.isEmpty()
+                ? "  •  " + FormularioReparacionController.traducirModelo(modelo) : "");
 
-        filtrosBar     .setVisible(false); filtrosBar     .setManaged(false);
+        filtroImei     .setVisible(false); filtroImei     .setManaged(false);
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true);
         colComponente.setText("Componente");
-        tablaReparaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
+        aplicarFiltros();
+    }
+
+    private void aplicarAnchosDetalle() {
+        double w = tablaReparaciones.getWidth();
+        if (w <= 0) return;
+        double u = w / 1370.0;
+        colIdRep        .setPrefWidth(Math.max(110, 110 * u));
+        colImei         .setPrefWidth(Math.max(130, 130 * u));
+        colModelo       .setPrefWidth(Math.max(100, 100 * u));
+        colReparador    .setPrefWidth(Math.max(100, 100 * u));
+        colFecha        .setPrefWidth(Math.max(110, 110 * u));
+        colComponente   .setPrefWidth(Math.max(150, 150 * u));
+        colObservaciones.setPrefWidth(Math.max(200, 200 * u));
+        colEstado       .setPrefWidth(Math.max(120, 120 * u));
+        colIncidencia   .setPrefWidth(Math.max(200, 200 * u));
+        colIdAnterior   .setPrefWidth(Math.max(150, 150 * u));
     }
 
     private void volverAGrupos() {
@@ -250,15 +263,17 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         imeiDetalle = null;
         if (barraNavegacion != null) {
             barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
-            filtrosBar     .setVisible(true);  filtrosBar     .setManaged(true);
+            filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
         }
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false);
         colComponente.setText("Reparaciones");
-        tablaReparaciones.setColumnResizePolicy(param -> true);
-        colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
-        colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
+        javafx.application.Platform.runLater(() -> {
+            tablaReparaciones.setColumnResizePolicy(param -> true);
+            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
+        });
     }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
@@ -716,8 +731,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             Integer idTec = Sesion.getIdTec();
             if (idTec == null) return;
             datos.setAll(reparacionDAO.getReparacionesPorTecnico(idTec));
-            if (modoActual == Modo.DETALLE) mostrarDetalleParaImei(imeiDetalle);
-            else aplicarFiltros();
+            aplicarFiltros();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null)
                 lblUltimaActualizacion.setText("Actualizado " + hora);
@@ -775,15 +789,38 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void aplicarFiltros() {
-        if (modoActual == Modo.DETALLE) return;
         if (cbIncidenciasAbiertas == null) return;
-        String imeiStr = filtroImei.getText().trim();
         LocalDate desde = filtroFechaDesde.getValue();
         LocalDate hasta = filtroFechaHasta.getValue();
         boolean filtrarAbiertas = cbIncidenciasAbiertas.isSelected();
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
 
+        if (modoActual == Modo.DETALLE) {
+            List<ReparacionResumen> filtradas = datos.stream()
+                .filter(r -> r.getImei().equals(imeiDetalle))
+                .filter(rep -> {
+                    if (desde != null || hasta != null) {
+                        if (rep.getFechaFin() == null) return false;
+                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                        if (desde != null && fechaFin.isBefore(desde)) return false;
+                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                    }
+                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                        boolean mostrar = false;
+                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
+                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
+                        if (!mostrar) return false;
+                    }
+                    return true;
+                }).collect(Collectors.toList());
+            tablaItems.setAll(filtradas);
+            lblNavCount.setText("  •  " + filtradas.size() + " reparaciones");
+            return;
+        }
+
+        String imeiStr = filtroImei.getText().trim();
         datosFiltrados = datos.stream().filter(rep -> {
             if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr))
                 return false;
@@ -802,7 +839,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             }
             return true;
         }).collect(Collectors.toList());
-
         buildTablaItems();
     }
 
