@@ -87,6 +87,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
+    private CustomMenuItem itemCerradas;
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
@@ -127,6 +128,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false);
         colComponente.setText("Reparaciones");
+        adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
             tablaReparaciones.setColumnResizePolicy(param -> true);
             colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
@@ -207,9 +209,20 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         LinkedHashMap<String, List<ReparacionResumen>> porImei = new LinkedHashMap<>();
         for (ReparacionResumen rep : datosFiltrados)
             porImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
+
+        boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
+        boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
+
         tablaItems.clear();
-        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet())
-            tablaItems.add(new GrupoImei(e.getKey(), e.getValue()));
+        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
+            GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
+            if (filtrarInc || filtrarNormal) {
+                boolean tieneInc = grupo.getCountIncAbiertas() > 0;
+                boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
+                if (!ok) continue;
+            }
+            tablaItems.add(grupo);
+        }
     }
 
     private void mostrarDetalle(GrupoImei grupo) {
@@ -233,6 +246,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true);
         colComponente.setText("Componente");
+        adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
         aplicarFiltros();
     }
@@ -255,7 +269,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     private void volverAGrupos() {
         resetarModo();
-        buildTablaItems();
+        cargarDatos();
     }
 
     private void resetarModo() {
@@ -269,6 +283,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false);
         colComponente.setText("Reparaciones");
+        adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
             tablaReparaciones.setColumnResizePolicy(param -> true);
             colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
@@ -398,15 +413,19 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
 
+        colReparador.setCellValueFactory(d -> {
+            Object o = d.getValue();
+            if (o instanceof ReparacionResumen rep)
+                return new javafx.beans.property.SimpleStringProperty(
+                    rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+            return new javafx.beans.property.SimpleStringProperty("");
+        });
         colReparador.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 setGraphic(null);
-                if (empty) { setText(null); return; }
-                Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof ReparacionResumen rep) setText(rep.getNombreTecnico());
-                else setText(null);
+                setText(empty || item == null || item.isEmpty() ? null : item);
             }
         });
 
@@ -531,14 +550,15 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
                 if (row instanceof GrupoImei g) {
                     if (g.getCountIncAbiertas() > 0) {
-                        badge.setText(g.getCountIncAbiertas() + " incidencia" + (g.getCountIncAbiertas() > 1 ? "s" : ""));
+                        badge.setText("Incidencia");
                         badge.setStyle(base +
                             "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + ";" +
                             "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                        setGraphic(badge);
                     } else {
-                        setGraphic(null);
+                        badge.setText("Normal");
+                        badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
+                    setGraphic(badge);
                 } else if (row instanceof ReparacionResumen rep) {
                     if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
                         badge.setText("Incidencia");
@@ -661,10 +681,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
             private void aplicarEstilo(Object item, boolean empty) {
                 if (empty || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
-                if (item instanceof GrupoImei) {
+                if (item instanceof GrupoImei g) {
+                    String brd = g.getCountIncAbiertas() > 0 ? com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
                     setStyle("-fx-background-color: #EEF0F5;" +
                              "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " #2C3B54;" +
+                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + brd + ";" +
                              "-fx-cursor: hand;");
                     return;
                 }
@@ -692,6 +713,21 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         });
     }
 
+    private void adaptarFiltrosMaestro() {
+        cbIncidenciasAbiertas.setText("Incidencia");
+        cbIncidenciasCerradas.setSelected(false);
+        if (itemCerradas != null) itemCerradas.setVisible(false);
+        cbNormales.setText("Normal");
+        actualizarTextoFiltroIncidencias();
+    }
+
+    private void adaptarFiltrosDetalle() {
+        cbIncidenciasAbiertas.setText("Abiertas");
+        if (itemCerradas != null) itemCerradas.setVisible(true);
+        cbNormales.setText("Sin incidencia");
+        actualizarTextoFiltroIncidencias();
+    }
+
     private void actualizarTextoFiltroIncidencias() {
         boolean a = cbIncidenciasAbiertas.isSelected();
         boolean c = cbIncidenciasCerradas.isSelected();
@@ -699,7 +735,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         long total = java.util.stream.Stream.of(a, c, n).filter(Boolean::booleanValue).count();
         if      (total == 0) filtroIncidencias.setText("Incidencias");
         else if (total == 3) filtroIncidencias.setText("Todas");
-        else if (total == 1) filtroIncidencias.setText(a ? "Abiertas" : c ? "Cerradas" : "Sin incidencia");
+        else if (total == 1) filtroIncidencias.setText(a ? cbIncidenciasAbiertas.getText() : c ? cbIncidenciasCerradas.getText() : cbNormales.getText());
         else                 filtroIncidencias.setText(total + " filtros");
     }
 
@@ -710,7 +746,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             if (col == colFecha)      return (g.getFechaMasAntigua() != null ? g.getFechaMasAntigua().format(FORMATO_FECHA) : "—")
                                             + " → " + (g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(FORMATO_FECHA) : "—");
             if (col == colComponente) return g.getReparaciones().size() + " reparaciones";
-            if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? g.getCountIncAbiertas() + " incidencia" + (g.getCountIncAbiertas() > 1 ? "s" : "") : "";
+            if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? "Incidencia" : "Normal";
             return null;
         }
         if (!(item instanceof ReparacionResumen rep)) return null;
@@ -782,10 +818,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             actualizarTextoFiltroIncidencias();
             aplicarFiltros();
         });
-        CustomMenuItem itemAbiertas = new CustomMenuItem(cbIncidenciasAbiertas, false);
-        CustomMenuItem itemCerradas = new CustomMenuItem(cbIncidenciasCerradas, false);
-        CustomMenuItem itemNormales = new CustomMenuItem(cbNormales, false);
-        filtroIncidencias.getItems().addAll(itemAbiertas, itemCerradas, itemNormales);
+        itemCerradas = new CustomMenuItem(cbIncidenciasCerradas, false);
+        filtroIncidencias.getItems().addAll(
+            new CustomMenuItem(cbIncidenciasAbiertas, false),
+            itemCerradas,
+            new CustomMenuItem(cbNormales, false));
     }
 
     private void aplicarFiltros() {
@@ -829,13 +866,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 LocalDate fechaFin = rep.getFechaFin().toLocalDate();
                 if (desde != null && fechaFin.isBefore(desde)) return false;
                 if (hasta != null && fechaFin.isAfter(hasta))  return false;
-            }
-            if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
-                boolean mostrar = false;
-                if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
-                if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
-                if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
-                if (!mostrar) return false;
             }
             return true;
         }).collect(Collectors.toList());
