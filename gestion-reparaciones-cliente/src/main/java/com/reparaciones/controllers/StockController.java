@@ -156,14 +156,20 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         if (lblUltimaActStock != null) {
             lblUltimaActStock.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActStock.setOnMouseClicked(e -> cargarStock());
+            lblUltimaActStock.setOnMouseEntered(e -> lblUltimaActStock.setUnderline(true));
+            lblUltimaActStock.setOnMouseExited(e -> lblUltimaActStock.setUnderline(false));
         }
         if (lblUltimaActPedidos != null) {
             lblUltimaActPedidos.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActPedidos.setOnMouseClicked(e -> cargarPedidos());
+            lblUltimaActPedidos.setOnMouseEntered(e -> lblUltimaActPedidos.setUnderline(true));
+            lblUltimaActPedidos.setOnMouseExited(e -> lblUltimaActPedidos.setUnderline(false));
         }
         if (lblUltimaActProveedores != null) {
             lblUltimaActProveedores.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActProveedores.setOnMouseClicked(e -> cargarProveedores());
+            lblUltimaActProveedores.setOnMouseEntered(e -> lblUltimaActProveedores.setUnderline(true));
+            lblUltimaActProveedores.setOnMouseExited(e -> lblUltimaActProveedores.setUnderline(false));
         }
     }
 

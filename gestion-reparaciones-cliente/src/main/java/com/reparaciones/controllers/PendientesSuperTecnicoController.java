@@ -431,6 +431,8 @@ public class PendientesSuperTecnicoController {
         if (lblUltimaActualizacion != null) {
             lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
     }
 
