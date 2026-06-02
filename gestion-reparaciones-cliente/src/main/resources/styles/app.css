@@ -494,3 +494,8 @@
 }
 /* stock-preview-same : #586376  — sin cambio               */
 
+/* ── Badge sidebar: texto oscuro cuando el botón está inactivo (fondo claro) */
+.sidebar-item-inactive .navbar-badge {
+    -fx-text-fill: #2C3B54;
+}
+

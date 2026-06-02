@@ -214,6 +214,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
         actualizarBadges();
+        updateBadgeStyle(lblBadgeAsignaciones, false);
+        updateBadgeStyle(lblBadgePendientes,   false);
     }
 
     @Override
@@ -250,6 +252,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         pane.setVisible(true); pane.setManaged(true);
     }
 
+    private void updateBadgeStyle(Label lbl, boolean active) {
+        javafx.scene.layout.StackPane outer = (javafx.scene.layout.StackPane) lbl.getParent().getParent();
+        outer.getStyleClass().removeAll("sidebar-item-active", "sidebar-item-inactive");
+        outer.getStyleClass().add(active ? "sidebar-item-active" : "sidebar-item-inactive");
+    }
+
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
     @FXML private void mostrarHistorial() {
@@ -276,6 +284,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
+        updateBadgeStyle(lblBadgeAsignaciones, btnActivo == btnTabPendientes);
+        updateBadgeStyle(lblBadgePendientes,   btnActivo == btnTabMisPendientes);
         if (panel == pnlHistorial) {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();

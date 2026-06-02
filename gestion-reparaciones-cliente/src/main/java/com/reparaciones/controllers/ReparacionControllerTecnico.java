@@ -187,6 +187,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
         actualizarBadges();
+        updateBadgeStyle(lblBadgePendientes, true);
     }
 
     /** Detiene el poller periódico al salir de la vista. */
@@ -353,6 +354,12 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         pane.setVisible(true); pane.setManaged(true);
     }
 
+    private void updateBadgeStyle(Label lbl, boolean active) {
+        javafx.scene.layout.StackPane outer = (javafx.scene.layout.StackPane) lbl.getParent().getParent();
+        outer.getStyleClass().removeAll("sidebar-item-active", "sidebar-item-inactive");
+        outer.getStyleClass().add(active ? "sidebar-item-active" : "sidebar-item-inactive");
+    }
+
     @FXML private void mostrarHistorial() {
         if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
@@ -371,6 +378,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
+        updateBadgeStyle(lblBadgePendientes, btnActivo == btnTabMisPendientes);
     }
 
     // ─── Label expandible (click abre popup de lectura) ───────────────────────
