@@ -141,8 +141,16 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         configurarFilas();
         configurarFiltros();
 
-        pendientesSuperTecnicoController.setOnActualizar(this::cargarDatos);
-        misPendientesController.setOnCerrar(this::cargarDatos);
+        pendientesSuperTecnicoController.setOnActualizar(() -> {
+            cargarDatos();
+            pendientesSuperTecnicoController.cargar();
+            actualizarBadges();
+        });
+        misPendientesController.setOnCerrar(() -> {
+            cargarDatos();
+            misPendientesController.cargar();
+            actualizarBadges();
+        });
 
         // Toggle historial: Reparaciones ↔ Pulidos
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();

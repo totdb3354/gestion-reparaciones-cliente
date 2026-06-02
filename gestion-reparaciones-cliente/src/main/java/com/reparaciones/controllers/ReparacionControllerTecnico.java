@@ -141,7 +141,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
         });
 
-        misPendientesController.setOnCerrar(this::cargarDatos);
+        misPendientesController.setOnCerrar(() -> {
+            cargarDatos();
+            misPendientesController.cargar();
+            actualizarBadges();
+        });
 
         // Toggle historial: Reparaciones ↔ Pulidos
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
