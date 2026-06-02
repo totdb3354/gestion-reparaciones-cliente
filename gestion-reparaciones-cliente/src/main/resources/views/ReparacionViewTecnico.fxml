@@ -9,8 +9,6 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -29,10 +27,7 @@
                 <StackPane visible="false" managed="false"
                            StackPane.alignment="CENTER_RIGHT" translateX="45"
                            mouseTransparent="true">
-                    <ImageView fitWidth="18" fitHeight="18">
-                        <image><Image url="@/images/Badge.png"/></image>
-                    </ImageView>
-                    <Label fx:id="lblBadgePendientes" styleClass="navbar-badge" mouseTransparent="true"/>
+                    <Label fx:id="lblBadgePendientes" styleClass="sidebar-badge" mouseTransparent="true"/>
                 </StackPane>
             </StackPane>
             <Button fx:id="btnTabHistorial"     text="Historial"      maxWidth="Infinity"
