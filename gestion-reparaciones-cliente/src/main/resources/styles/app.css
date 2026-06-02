@@ -494,14 +494,3 @@
 }
 /* stock-preview-same : #586376  — sin cambio               */
 
-/* ── Badge contador sidebar ─────────────────────────────── */
-.sidebar-badge {
-    -fx-background-color: #E53935;
-    -fx-text-fill: white;
-    -fx-font-size: 9px;
-    -fx-font-weight: bold;
-    -fx-padding: 1 4 1 4;
-    -fx-background-radius: 8;
-    -fx-min-width: 14;
-    -fx-alignment: center;
-}

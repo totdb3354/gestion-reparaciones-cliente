@@ -347,9 +347,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void setBadge(Label lbl, int count) {
-        if (count <= 0) { lbl.setVisible(false); lbl.setManaged(false); return; }
+        javafx.scene.layout.StackPane pane = (javafx.scene.layout.StackPane) lbl.getParent();
+        if (count <= 0) { pane.setVisible(false); pane.setManaged(false); return; }
         lbl.setText(count > 9 ? "9+" : String.valueOf(count));
-        lbl.setVisible(true); lbl.setManaged(true);
+        pane.setVisible(true); pane.setManaged(true);
     }
 
     @FXML private void mostrarHistorial() {

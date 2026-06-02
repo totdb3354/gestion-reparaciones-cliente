@@ -9,6 +9,8 @@
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -24,18 +26,26 @@
             <StackPane maxWidth="Infinity">
                 <Button fx:id="btnTabPendientes" text="Asignaciones" maxWidth="Infinity"
                         styleClass="stock-sidebar-btn" onAction="#abrirModalPendientes"/>
-                <Label fx:id="lblBadgeAsignaciones" styleClass="sidebar-badge"
-                       visible="false" managed="false"
-                       StackPane.alignment="TOP_RIGHT" mouseTransparent="true"
-                       translateX="-4" translateY="4"/>
+                <StackPane visible="false" managed="false"
+                           StackPane.alignment="CENTER_RIGHT" translateX="-10"
+                           mouseTransparent="true">
+                    <ImageView fitWidth="18" fitHeight="18">
+                        <image><Image url="@/images/Badge.png"/></image>
+                    </ImageView>
+                    <Label fx:id="lblBadgeAsignaciones" styleClass="navbar-badge" mouseTransparent="true"/>
+                </StackPane>
             </StackPane>
             <StackPane maxWidth="Infinity">
                 <Button fx:id="btnTabMisPendientes" text="Pendientes" maxWidth="Infinity"
                         styleClass="stock-sidebar-btn" onAction="#abrirMisPendientes"/>
-                <Label fx:id="lblBadgePendientes" styleClass="sidebar-badge"
-                       visible="false" managed="false"
-                       StackPane.alignment="TOP_RIGHT" mouseTransparent="true"
-                       translateX="-4" translateY="4"/>
+                <StackPane visible="false" managed="false"
+                           StackPane.alignment="CENTER_RIGHT" translateX="-10"
+                           mouseTransparent="true">
+                    <ImageView fitWidth="18" fitHeight="18">
+                        <image><Image url="@/images/Badge.png"/></image>
+                    </ImageView>
+                    <Label fx:id="lblBadgePendientes" styleClass="navbar-badge" mouseTransparent="true"/>
+                </StackPane>
             </StackPane>
             <Button fx:id="btnTabHistorial"    text="Historial"       maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarHistorial"/>
