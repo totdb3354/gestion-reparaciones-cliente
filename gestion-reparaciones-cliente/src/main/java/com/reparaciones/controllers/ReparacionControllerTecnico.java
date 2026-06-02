@@ -346,9 +346,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void actualizarBadges() {
-        int misPend = misPendientesController.getTotalItems()
-                    + pulidoTecnicoController.getTotalItems();
-        setBadge(lblBadgePendientes, misPend);
+        setBadge(lblBadgePendientes, misPendientesController.getTotalItems());
     }
 
     private void setBadge(Label lbl, int count) {

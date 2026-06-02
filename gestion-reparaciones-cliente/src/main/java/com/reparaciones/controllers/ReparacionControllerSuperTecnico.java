@@ -245,12 +245,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     }
 
     private void actualizarBadges() {
-        int asignaciones = pendientesSuperTecnicoController.getTotalItems()
-                         + pulidoSuperTecnicoController.getTotalItems();
-        int misPend = misPendientesController.getTotalItems()
-                    + misPulidosTecnicoController.getTotalItems();
-        setBadge(lblBadgeAsignaciones, asignaciones);
-        setBadge(lblBadgePendientes,   misPend);
+        setBadge(lblBadgeAsignaciones, pendientesSuperTecnicoController.getTotalItems());
+        setBadge(lblBadgePendientes,   misPendientesController.getTotalItems());
     }
 
     private void setBadge(Label lbl, int count) {
