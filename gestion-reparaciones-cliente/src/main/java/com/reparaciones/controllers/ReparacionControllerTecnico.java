@@ -480,15 +480,36 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         });
 
         colComponente.setCellFactory(col -> new TableCell<>() {
+            private final Label lblTipo = new Label();
+            private final Label lblReut = new Label("Reutilizado");
+            private final VBox  box     = new VBox(1, lblTipo, lblReut);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> actualizarColores(sel);
+            {
+                box.setAlignment(Pos.CENTER_LEFT);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) { newRow.selectedProperty().addListener(selListener); actualizarColores(newRow.isSelected()); }
+                });
+            }
+            private void actualizarColores(boolean sel) {
+                lblTipo.setStyle("-fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblReut.setStyle("-fx-font-size: 10px; -fx-font-style: italic; -fx-text-fill: " + (sel ? "white" : "#9AA0AA") + ";");
+            }
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(null);
-                if (empty) { setText(null); return; }
+                setGraphic(null); setText(null);
+                if (empty) return;
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei g) setText(g.getReparaciones().size() + " reparaciones");
-                else if (row instanceof ReparacionResumen rep) setText(rep.getTipoComponente());
-                else setText(null);
+                if (row instanceof GrupoImei g) {
+                    setText(g.getReparaciones().size() + " reparaciones");
+                } else if (row instanceof ReparacionResumen rep) {
+                    lblTipo.setText(rep.getTipoComponente() != null ? rep.getTipoComponente() : "");
+                    lblReut.setVisible(rep.isEsReutilizado()); lblReut.setManaged(rep.isEsReutilizado());
+                    actualizarColores(getTableRow() != null && getTableRow().isSelected());
+                    setGraphic(box);
+                }
             }
         });
 

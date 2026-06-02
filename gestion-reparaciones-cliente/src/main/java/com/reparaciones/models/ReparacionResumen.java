@@ -23,6 +23,7 @@ public class ReparacionResumen {
     private String        observaciones;
     private boolean       esIncidencia;
     private boolean       esResuelto;
+    private boolean       esReutilizado;
     private String        incidencia;
     private String        idRepAnterior;
     private int           idTec;
@@ -113,6 +114,9 @@ public class ReparacionResumen {
 
     /** @return {@code true} si la incidencia está resuelta */
     public boolean isEsResuelto() { return esResuelto; }
+
+    /** @return {@code true} si el componente fue reutilizado (no restó stock) */
+    public boolean isEsReutilizado() { return esReutilizado; }
 
     /** @return descripción de la incidencia, o {@code null} */
     public String getIncidencia() { return incidencia; }
