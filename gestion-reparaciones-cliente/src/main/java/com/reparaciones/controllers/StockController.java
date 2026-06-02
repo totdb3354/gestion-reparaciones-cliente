@@ -495,11 +495,13 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void cargarChartSku(Componente c) {
         int pendiente = 0;
-        try {
-            pendiente = compraDAO.getCantidadPendientePorComponente(c.getIdCom());
-        } catch (SQLException e) {
-            mostrarError(e);
-            return;
+        if (com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+            try {
+                pendiente = compraDAO.getCantidadPendientePorComponente(c.getIdCom());
+            } catch (SQLException e) {
+                mostrarError(e);
+                return;
+            }
         }
         lblChartSku.setText(c.getTipo());
         lblPlaceholder.setVisible(false);
