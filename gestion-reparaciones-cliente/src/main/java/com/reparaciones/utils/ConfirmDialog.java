@@ -1,7 +1,5 @@
 package com.reparaciones.utils;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -17,8 +15,6 @@ import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.util.Duration;
-
 /**
  * Diálogo de confirmación reutilizable con cuenta atrás de seguridad.
  * <p>El botón de acción destructiva se habilita solo cuando el contador llega a 0
@@ -31,8 +27,6 @@ import javafx.util.Duration;
  * }</pre>
  */
 public class ConfirmDialog {
-
-    private static final int SEGUNDOS = 1;
 
     // Estilos del contenedor
     private static final String ESTILO_CONTENEDOR =
@@ -82,33 +76,15 @@ public class ConfirmDialog {
         lblDesc.setWrapText(true);
         lblDesc.setMaxWidth(352);
 
-        // ── Botón acción con cuenta atrás ─────────────────────────────────────
-        final int[] segs = {SEGUNDOS};
-        Button btnAccion = new Button(textoAccion + " ( " + segs[0] + " segs)");
+        // ── Botón acción ──────────────────────────────────────────────────────
+        Button btnAccion = new Button(textoAccion);
         btnAccion.setMaxWidth(Double.MAX_VALUE);
-        btnAccion.setDisable(true);
         btnAccion.setStyle(
-                "-fx-background-color: #C2C8D0; -fx-text-fill: " + Colores.AZUL_GRIS + ";" +
-                "-fx-background-radius: 4; -fx-font-size: 12px; -fx-padding: 10;");
-
-        Timeline countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            segs[0]--;
-            if (segs[0] > 0) {
-                btnAccion.setText(textoAccion + " ( " + segs[0] + " segs)");
-            } else {
-                btnAccion.setText(textoAccion);
-                btnAccion.setDisable(false);
-                btnAccion.setStyle(
-                        "-fx-background-color: " + Colores.ROJO_ACCION + "; -fx-text-fill: " + Colores.CREMA + ";" +
-                        "-fx-background-radius: 4; -fx-font-size: 12px;" +
-                        "-fx-padding: 10; -fx-cursor: hand;");
-            }
-        }));
-        countdown.setCycleCount(SEGUNDOS);
-        countdown.play();
+                "-fx-background-color: " + Colores.ROJO_ACCION + "; -fx-text-fill: " + Colores.CREMA + ";" +
+                "-fx-background-radius: 4; -fx-font-size: 12px;" +
+                "-fx-padding: 10; -fx-cursor: hand;");
 
         btnAccion.setOnAction(e -> {
-            countdown.stop();
             ventana.close();
             onConfirm.run();
         });
@@ -121,10 +97,7 @@ public class ConfirmDialog {
                 "-fx-border-color: " + Colores.AZUL_GRIS + "; -fx-border-radius: 4;" +
                 "-fx-background-radius: 4; -fx-font-size: 12px;" +
                 "-fx-padding: 10; -fx-cursor: hand;");
-        btnCancelar.setOnAction(e -> {
-            countdown.stop();
-            ventana.close();
-        });
+        btnCancelar.setOnAction(e -> ventana.close());
 
         // ── Layout ────────────────────────────────────────────────────────────
         VBox contenido = new VBox(10, barraTop, lblDesc, btnAccion, btnCancelar);
@@ -143,7 +116,7 @@ public class ConfirmDialog {
         Scene scene = new Scene(contenido);
         scene.setFill(Color.web(Colores.CREMA));
         ventana.setScene(scene);
-        ventana.setOnCloseRequest(e -> countdown.stop());
+        ventana.setOnCloseRequest(e -> {});
         ventana.showAndWait();
     }
 
