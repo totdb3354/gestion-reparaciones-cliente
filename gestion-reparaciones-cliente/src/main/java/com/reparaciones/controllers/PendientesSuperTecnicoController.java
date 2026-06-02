@@ -428,6 +428,10 @@ public class PendientesSuperTecnicoController {
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
             aplicarFiltros();
         });
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+        }
     }
 
     private void actualizarTextoFiltroTecnico() {

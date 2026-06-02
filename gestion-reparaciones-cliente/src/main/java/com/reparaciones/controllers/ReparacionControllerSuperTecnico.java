@@ -205,6 +205,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
+        }
     }
 
     @Override

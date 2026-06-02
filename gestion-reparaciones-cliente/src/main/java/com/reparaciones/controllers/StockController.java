@@ -153,6 +153,18 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        if (lblUltimaActStock != null) {
+            lblUltimaActStock.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActStock.setOnMouseClicked(e -> cargarStock());
+        }
+        if (lblUltimaActPedidos != null) {
+            lblUltimaActPedidos.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActPedidos.setOnMouseClicked(e -> cargarPedidos());
+        }
+        if (lblUltimaActProveedores != null) {
+            lblUltimaActProveedores.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActProveedores.setOnMouseClicked(e -> cargarProveedores());
+        }
     }
 
     @Override

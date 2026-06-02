@@ -137,6 +137,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         });
 
         cargarDatos();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
+        }
     }
 
     @Override

@@ -106,6 +106,10 @@ public class PulidoTecnicoController {
             aplicarFiltro();
         });
         cargar();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+        }
     }
 
     private void aplicarFiltro() {

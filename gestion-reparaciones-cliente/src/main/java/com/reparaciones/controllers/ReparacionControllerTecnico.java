@@ -179,6 +179,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
+        }
     }
 
     /** Detiene el poller periódico al salir de la vista. */

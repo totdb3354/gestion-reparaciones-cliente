@@ -125,6 +125,10 @@ public class HistorialPulidoController {
         tablaPulidos.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+        }
     }
 
     private void configurarFiltros() {
