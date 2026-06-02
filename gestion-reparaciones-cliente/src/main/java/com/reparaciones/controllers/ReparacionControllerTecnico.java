@@ -336,12 +336,14 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @Override
     public void recargar() {
         if (pnlMisPendientes.isVisible()) {
-            if (togglePendPul.isSelected()) { pulidoTecnicoController.cargar(); misPendientesController.cargar(); }
-            else                              misPendientesController.cargar();
+            if (togglePendPul.isSelected()) pulidoTecnicoController.cargar();
+            else                            misPendientesController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
+        // Badge data siempre fresco, independiente del panel visible
+        if (!pnlMisPendientes.isVisible() || togglePendPul.isSelected()) misPendientesController.cargar();
         actualizarBadges();
     }
 
