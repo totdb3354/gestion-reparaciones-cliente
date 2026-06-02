@@ -56,6 +56,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private TableColumn<Object, Void>   colEstado;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
+    @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -127,7 +128,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -298,6 +299,26 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 setGraphic(row instanceof ReparacionResumen rep ? labelExpandible("Observaciones", rep.getObservaciones()) : null);
+            }
+        });
+
+        colObservacionTelefono.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String obs = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+            else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+            return new javafx.beans.property.SimpleStringProperty(obs != null ? obs : "");
+        });
+        colObservacionTelefono.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String obs = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+                else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+                setGraphic(labelExpandible("Observación", obs));
             }
         });
 
@@ -673,7 +694,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
@@ -710,7 +731,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         }
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {

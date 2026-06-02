@@ -37,6 +37,7 @@ public class ReparacionResumen {
     private LocalDateTime updatedAt;
     private String        modelo;
     private String        comentarioAsignacion;
+    private String        observacionTelefono;
 
     /**
      * Constructor completo — llamado desde {@code ReparacionDAO.getResumenes()}.
@@ -155,6 +156,8 @@ public class ReparacionResumen {
     public boolean isEnCaminoSolicitud()   { return enCaminoSolicitud; }
     public String  getTiposSolicitud()     { return tiposSolicitud; }
     public String  getModelo()               { return modelo; }
-    public String  getComentarioAsignacion() { return comentarioAsignacion; }
-    public void setComentarioAsignacion(String c) { this.comentarioAsignacion = c; }
+    public String  getComentarioAsignacion()        { return comentarioAsignacion; }
+    public void    setComentarioAsignacion(String c) { this.comentarioAsignacion = c; }
+    public String  getObservacionTelefono()          { return observacionTelefono; }
+    public void    setObservacionTelefono(String o)  { this.observacionTelefono = o; }
 }

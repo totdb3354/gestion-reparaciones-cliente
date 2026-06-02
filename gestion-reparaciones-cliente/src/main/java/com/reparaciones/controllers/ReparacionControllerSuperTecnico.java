@@ -60,6 +60,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colEstado;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
+    @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -106,6 +107,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
+    private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -202,7 +204,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -482,6 +484,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             }
         });
 
+        colObservacionTelefono.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String obs = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+            else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+            return new javafx.beans.property.SimpleStringProperty(obs != null ? obs : "");
+        });
+        colObservacionTelefono.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String obs = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+                else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+                setGraphic(labelExpandible("Observación", obs));
+            }
+        });
+
         colIdAnterior.setCellFactory(col -> new TableCell<>() {
             private final Label lblLink = new Label();
             {
@@ -619,11 +641,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             {
                 ContextMenu menu = new ContextMenu();
                 TableColumn<?, ?>[] colRightClick = {null};
-                MenuItem copiar     = new MenuItem("📋  Copiar celda");
-                MenuItem editar     = new MenuItem("Editar");
-                MenuItem borrar     = new MenuItem("Borrar");
-                MenuItem aniadirInc = new MenuItem("Añadir incidencia");
+                MenuItem copiar      = new MenuItem("📋  Copiar celda");
+                MenuItem editar      = new MenuItem("Editar");
+                MenuItem borrar      = new MenuItem("Borrar");
+                MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
+                MenuItem editarObs   = new MenuItem("Editar observación");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -655,11 +678,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 borrar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarReparacion(rep); });
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
+                editarObs  .setOnAction(e -> { if (getItem() instanceof com.reparaciones.models.GrupoImei grupo) ReparacionControllerSuperTecnico.this.abrirDialogoObservacionTelefono(grupo); });
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs);
                 menu.setOnShowing(e -> {
+                    boolean esGrupo = getItem() instanceof com.reparaciones.models.GrupoImei;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
+                        editarObs.setVisible(esGrupo);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -667,6 +693,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     borrar      .setVisible(true);
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
+                    editarObs   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
@@ -932,7 +959,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
@@ -970,7 +997,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -1134,6 +1161,43 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             int idTec = cbTecnico.getValue().getIdTec();
             try {
                 reparacionDAO.marcarIncidenciaYAsignar(rep.getIdRep(), comentario, rep.getImei(), idTec);
+                dialog.close();
+                cargarDatos();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void abrirDialogoObservacionTelefono(com.reparaciones.models.GrupoImei grupo) {
+        TextArea tfObs = new TextArea(grupo.getObservacion() != null ? grupo.getObservacion() : "");
+        tfObs.setPromptText("Observación del teléfono...");
+        tfObs.setWrapText(true);
+        tfObs.setPrefRowCount(4);
+        tfObs.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 13px;");
+
+        Button btnConfirmar = new Button("Guardar");
+        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
+        btnConfirmar.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-text-fill: white;" +
+                " -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
+
+        VBox form = new VBox(8, new Label("Observación — IMEI " + grupo.getImei()), tfObs, btnConfirmar);
+        form.setPadding(new Insets(16));
+        form.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
+        form.setPrefWidth(480);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Observación del teléfono");
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setPrefWidth(520);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        btnConfirmar.setOnAction(e -> {
+            try {
+                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim());
                 dialog.close();
                 cargarDatos();
             } catch (SQLException ex) {
