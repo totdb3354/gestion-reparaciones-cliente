@@ -70,6 +70,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     // ── Sidebar + paneles ─────────────────────────────────────────────────────
     @FXML private Button btnTabHistorial;
     @FXML private Button btnTabMisPendientes;
+    @FXML private Label  lblBadgePendientes;
     @FXML private VBox   pnlHistorial;
     @FXML private VBox   pnlMisPendientes;
     @FXML private Label  lblUltimaActualizacion;
@@ -185,6 +186,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
+        actualizarBadges();
     }
 
     /** Detiene el poller periódico al salir de la vista. */
@@ -335,6 +337,19 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
+        actualizarBadges();
+    }
+
+    private void actualizarBadges() {
+        int misPend = misPendientesController.getTotalItems()
+                    + pulidoTecnicoController.getTotalItems();
+        setBadge(lblBadgePendientes, misPend);
+    }
+
+    private void setBadge(Label lbl, int count) {
+        if (count <= 0) { lbl.setVisible(false); lbl.setManaged(false); return; }
+        lbl.setText(count > 9 ? "9+" : String.valueOf(count));
+        lbl.setVisible(true); lbl.setManaged(true);
     }
 
     @FXML private void mostrarHistorial() {

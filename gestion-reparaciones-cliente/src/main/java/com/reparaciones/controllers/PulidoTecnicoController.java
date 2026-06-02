@@ -158,6 +158,8 @@ public class PulidoTecnicoController {
         return datosFiltrados != null ? new java.util.ArrayList<>(datosFiltrados) : java.util.List.of();
     }
 
+    public int getTotalItems() { return datos.size(); }
+
     public String getFiltroImei() { return filtroImei.getText(); }
     public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }
 

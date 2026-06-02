@@ -21,10 +21,22 @@
     <!-- ── Sidebar ── -->
     <left>
         <VBox styleClass="stock-sidebar" spacing="0">
-            <Button fx:id="btnTabPendientes"   text="Asignaciones"    maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn"        onAction="#abrirModalPendientes"/>
-            <Button fx:id="btnTabMisPendientes" text="Pendientes"    maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn"        onAction="#abrirMisPendientes"/>
+            <StackPane maxWidth="Infinity">
+                <Button fx:id="btnTabPendientes" text="Asignaciones" maxWidth="Infinity"
+                        styleClass="stock-sidebar-btn" onAction="#abrirModalPendientes"/>
+                <Label fx:id="lblBadgeAsignaciones" styleClass="sidebar-badge"
+                       visible="false" managed="false"
+                       StackPane.alignment="TOP_RIGHT" mouseTransparent="true"
+                       translateX="-4" translateY="4"/>
+            </StackPane>
+            <StackPane maxWidth="Infinity">
+                <Button fx:id="btnTabMisPendientes" text="Pendientes" maxWidth="Infinity"
+                        styleClass="stock-sidebar-btn" onAction="#abrirMisPendientes"/>
+                <Label fx:id="lblBadgePendientes" styleClass="sidebar-badge"
+                       visible="false" managed="false"
+                       StackPane.alignment="TOP_RIGHT" mouseTransparent="true"
+                       translateX="-4" translateY="4"/>
+            </StackPane>
             <Button fx:id="btnTabHistorial"    text="Historial"       maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarHistorial"/>
         </VBox>

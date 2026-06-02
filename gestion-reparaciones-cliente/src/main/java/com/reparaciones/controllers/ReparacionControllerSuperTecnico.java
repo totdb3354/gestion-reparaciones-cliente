@@ -71,6 +71,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private Button btnTabHistorial;
     @FXML private Button btnTabPendientes;
     @FXML private Button btnTabMisPendientes;
+    @FXML private Label  lblBadgeAsignaciones;
+    @FXML private Label  lblBadgePendientes;
     @FXML private VBox   pnlHistorial;
     @FXML private VBox   pnlPendientes;
     @FXML private VBox   pnlMisPendientes;
@@ -211,6 +213,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
+        actualizarBadges();
     }
 
     @Override
@@ -228,6 +231,22 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
+        actualizarBadges();
+    }
+
+    private void actualizarBadges() {
+        int asignaciones = pendientesSuperTecnicoController.getTotalItems()
+                         + pulidoSuperTecnicoController.getTotalItems();
+        int misPend = misPendientesController.getTotalItems()
+                    + misPulidosTecnicoController.getTotalItems();
+        setBadge(lblBadgeAsignaciones, asignaciones);
+        setBadge(lblBadgePendientes,   misPend);
+    }
+
+    private void setBadge(Label lbl, int count) {
+        if (count <= 0) { lbl.setVisible(false); lbl.setManaged(false); return; }
+        lbl.setText(count > 9 ? "9+" : String.valueOf(count));
+        lbl.setVisible(true); lbl.setManaged(true);
     }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────

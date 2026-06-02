@@ -847,6 +847,8 @@ public class PendientesSuperTecnicoController {
         return tablaPendientes.getItems();
     }
 
+    public int getTotalItems() { return datos.size(); }
+
     private void abrirEditorComentario(ReparacionResumen rep, String textoActual) {
         Label lblTitulo = new Label("Comentario de asignación");
         lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");

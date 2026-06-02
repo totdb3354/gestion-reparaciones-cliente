@@ -341,6 +341,8 @@ public class PendientesTecnicoController {
         return tablaPendientes.getItems();
     }
 
+    public int getTotalItems() { return datos.size(); }
+
     /**
      * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
      *
