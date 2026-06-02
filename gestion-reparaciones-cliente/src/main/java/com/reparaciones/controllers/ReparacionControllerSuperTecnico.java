@@ -233,11 +233,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @Override
     public void recargar() {
         if (pnlPendientes.isVisible()) {
-            if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
-            else                            pendientesSuperTecnicoController.cargar();
+            if (togglePendPul.isSelected()) { pulidoSuperTecnicoController.cargar(); pendientesSuperTecnicoController.cargar(); }
+            else                              pendientesSuperTecnicoController.cargar();
         } else if (pnlMisPendientes.isVisible()) {
-            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
-            else                               misPendientesController.cargar();
+            if (toggleMisPendPul.isSelected()) { misPulidosTecnicoController.cargar(); misPendientesController.cargar(); }
+            else                                 misPendientesController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
