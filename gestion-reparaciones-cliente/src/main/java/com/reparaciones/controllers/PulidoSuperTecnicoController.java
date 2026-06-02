@@ -65,6 +65,7 @@ public class PulidoSuperTecnicoController {
         cTecnico.setCellFactory(col -> new TableCell<>() {
             private final ComboBox<Tecnico> cb = new ComboBox<>();
             private boolean actualizando = false;
+            private ReparacionResumen repMostrado = null;
             {
                 cb.setMaxWidth(Double.MAX_VALUE);
                 cb.setStyle("-fx-font-size: 11px;");
@@ -91,8 +92,8 @@ public class PulidoSuperTecnicoController {
                 });
                 cb.setOnAction(e -> {
                     if (actualizando) return;
-                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
-                    ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                    if (repMostrado == null) return;
+                    ReparacionResumen rep = repMostrado;
                     Tecnico sel = cb.getValue();
                     if (sel == null) return;
                     if (sel.getIdTec() != rep.getIdTec()) {
@@ -125,10 +126,11 @@ public class PulidoSuperTecnicoController {
                 if (cb.isShowing()) return;
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null); setStyle(""); return;
+                    repMostrado = null; setGraphic(null); setStyle(""); return;
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                repMostrado = rep;
                 cb.getItems().setAll(tecnicos);
                 CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
                 Tecnico mostrar = cambio != null
