@@ -243,16 +243,12 @@ public class PulidoSuperTecnicoController {
                 iv.setOnMouseClicked(e -> {
                     if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                     ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                    ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(),
-                            "El técnico dejará de verla en su lista de pendientes.",
-                            "Borrar asignación", () -> {
-                                try {
-                                    pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
-                                    cambiosPendientes.remove(rep.getIdRep());
-                                    actualizarVisibilidadConfirmar();
-                                    cargar();
-                                } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
-                            });
+                    try {
+                        pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
+                        cambiosPendientes.remove(rep.getIdRep());
+                        actualizarVisibilidadConfirmar();
+                        cargar();
+                    } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
                 });
             }
             @Override protected void updateItem(Void item, boolean empty) {
