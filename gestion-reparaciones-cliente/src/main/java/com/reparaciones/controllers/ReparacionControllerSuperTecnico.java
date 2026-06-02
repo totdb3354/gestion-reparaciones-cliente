@@ -144,6 +144,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         pendientesSuperTecnicoController.setOnActualizar(() -> {
             cargarDatos();
             pendientesSuperTecnicoController.cargar();
+            misPendientesController.cargar();
             actualizarBadges();
         });
         misPendientesController.setOnCerrar(() -> {
