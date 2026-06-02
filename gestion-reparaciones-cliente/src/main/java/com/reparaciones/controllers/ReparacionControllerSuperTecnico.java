@@ -227,6 +227,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
     @FXML private void mostrarHistorial() {
+        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
     }
 
