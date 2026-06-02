@@ -332,6 +332,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     @FXML private void mostrarHistorial() {
+        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
         cargarDatos();
     }
