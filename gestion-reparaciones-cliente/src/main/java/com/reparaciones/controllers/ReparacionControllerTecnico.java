@@ -975,42 +975,78 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     @Override
     public void exportarCSV(Stage owner) {
-        List<ReparacionResumen> items;
-        String nombre;
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
         if (pnlMisPendientes.isVisible()) {
-            items  = misPendientesController.getItemsVisibles();
-            nombre = "mis_pendientes";
-        } else {
-            if (modoActual == Modo.MAESTRO) {
-                items = new ArrayList<>(datosFiltrados);
-            } else {
-                items = tablaItems.stream()
-                    .filter(o -> o instanceof ReparacionResumen)
-                    .map(o -> (ReparacionResumen) o)
-                    .collect(Collectors.toList());
+            List<ReparacionResumen> items = misPendientesController.getItemsVisibles();
+            List<String> cabeceras = List.of(
+                    "ID Reparación", "IMEI", "Fecha asig.", "Fecha fin",
+                    "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+            List<List<String>> filas = new ArrayList<>();
+            DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            for (ReparacionResumen r : items) {
+                filas.add(List.of(
+                        r.getIdRep(),
+                        com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
+                        r.getFechaAsig() != null ? r.getFechaAsig().format(fmtHora) : "",
+                        r.getFechaFin()  != null ? r.getFechaFin().format(fmtHora)  : "",
+                        r.getTipoComponente() != null ? r.getTipoComponente() : "",
+                        r.getObservaciones()  != null ? r.getObservaciones()  : "",
+                        r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
+                        r.isEsResuelto() ? "Sí" : "No",
+                        r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
+                ));
             }
-            nombre = "mis_reparaciones";
+            com.reparaciones.utils.CsvExporter.exportar(owner, "mis_pendientes", cabeceras, filas);
+            return;
         }
 
+        if (modoActual == Modo.MAESTRO) {
+            List<String> cabeceras = List.of(
+                    "IMEI", "Modelo", "Primera reparación", "Última reparación",
+                    "Nº reparaciones", "Inc. abiertas");
+            List<List<String>> filas = new ArrayList<>();
+            for (Object o : tablaItems) {
+                if (!(o instanceof GrupoImei g)) continue;
+                String modelo = g.getModelo();
+                filas.add(List.of(
+                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
+                        g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
+                        String.valueOf(g.getReparaciones().size()),
+                        String.valueOf(g.getCountIncAbiertas())
+                ));
+            }
+            com.reparaciones.utils.CsvExporter.exportar(owner, "mis_reparaciones", cabeceras, filas);
+            return;
+        }
+
+        // DETALLE
+        List<ReparacionResumen> items = tablaItems.stream()
+                .filter(o -> o instanceof ReparacionResumen)
+                .map(o -> (ReparacionResumen) o)
+                .collect(Collectors.toList());
         List<String> cabeceras = List.of(
                 "ID Reparación", "IMEI", "Fecha asig.", "Fecha fin",
-                "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+                "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (ReparacionResumen r : items) {
             filas.add(List.of(
                     r.getIdRep(),
                     com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
-                    r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "",
-                    r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "",
+                    r.getFechaAsig() != null ? r.getFechaAsig().format(fmtHora) : "",
+                    r.getFechaFin()  != null ? r.getFechaFin().format(fmtHora)  : "",
                     r.getTipoComponente() != null ? r.getTipoComponente() : "",
+                    r.isEsReutilizado() ? "Sí" : "No",
                     r.getObservaciones()  != null ? r.getObservaciones()  : "",
                     r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
                     r.isEsResuelto() ? "Sí" : "No",
                     r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
             ));
         }
-        com.reparaciones.utils.CsvExporter.exportar(owner, nombre, cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner, "mis_reparaciones", cabeceras, filas);
     }
 
     private void mostrarError(Exception e) {

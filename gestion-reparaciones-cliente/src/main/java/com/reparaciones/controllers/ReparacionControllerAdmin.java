@@ -773,27 +773,56 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @Override
     public void exportarCSV(Stage owner) {
-        List<ReparacionResumen> items = modoActual == Modo.DETALLE
-                ? tablaItems.stream().filter(o -> o instanceof ReparacionResumen).map(o -> (ReparacionResumen) o).collect(Collectors.toList())
-                : new ArrayList<>(datosFiltrados);
+        DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        List<String> cabeceras = List.of("ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
-                "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+        if (modoActual == Modo.MAESTRO) {
+            List<String> cabeceras = List.of(
+                    "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
+                    "Nº reparaciones", "Inc. abiertas");
+            List<List<String>> filas = new ArrayList<>();
+            for (Object o : tablaItems) {
+                if (!(o instanceof GrupoImei g)) continue;
+                String modelo  = g.getModelo();
+                String tecnico = g.getReparaciones().isEmpty() ? "" :
+                        (g.getReparaciones().get(0).getNombreTecnico() != null ? g.getReparaciones().get(0).getNombreTecnico() : "");
+                filas.add(List.of(
+                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        tecnico,
+                        g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
+                        g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
+                        String.valueOf(g.getReparaciones().size()),
+                        String.valueOf(g.getCountIncAbiertas())
+                ));
+            }
+            com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+            return;
+        }
+
+        // DETALLE
+        List<ReparacionResumen> items = tablaItems.stream()
+                .filter(o -> o instanceof ReparacionResumen)
+                .map(o -> (ReparacionResumen) o)
+                .collect(Collectors.toList());
+        List<String> cabeceras = List.of(
+                "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+                "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (ReparacionResumen r : items) {
-            filas.add(List.of(
-                    r.getIdRep(),
-                    com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
-                    r.getNombreTecnico() != null ? r.getNombreTecnico() : "",
-                    r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "",
-                    r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "",
-                    r.getTipoComponente() != null ? r.getTipoComponente() : "",
-                    r.getObservaciones()  != null ? r.getObservaciones()  : "",
-                    r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
-                    r.isEsResuelto() ? "Sí" : "No",
-                    r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
-            ));
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmtHora) : "");
+            fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmtHora)  : "");
+            fila.add(r.getTipoComponente() != null ? r.getTipoComponente() : "");
+            fila.add(r.isEsReutilizado() ? "Sí" : "No");
+            fila.add(r.getObservaciones()  != null ? r.getObservaciones()  : "");
+            fila.add(r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No");
+            fila.add(r.isEsResuelto() ? "Sí" : "No");
+            fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
+            filas.add(fila);
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
     }
