@@ -1156,6 +1156,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         if (pnlPendientes.isVisible()) {
+            if (togglePendPul.isSelected()) {
+                exportarPulidosPendientes(owner, pulidoSuperTecnicoController.getItemsVisibles(), true);
+                return;
+            }
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
@@ -1167,6 +1171,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
 
         if (pnlMisPendientes.isVisible()) {
+            if (toggleMisPendPul.isSelected()) {
+                exportarPulidosPendientes(owner, misPulidosTecnicoController.getItemsVisibles(), false);
+                return;
+            }
             List<ReparacionResumen> items = misPendientesController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
@@ -1174,6 +1182,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             List<List<String>> filas = new ArrayList<>();
             for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
             com.reparaciones.utils.CsvExporter.exportar(owner, "mis_pendientes", cabeceras, filas);
+            return;
+        }
+
+        if (toggleHistPul.isSelected()) {
+            exportarHistorialPulidos(owner, historialPulidoController.getItemsVisibles(), true);
             return;
         }
 
@@ -1228,6 +1241,47 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.isEsResuelto() ? "Sí" : "No");
         fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
         return fila;
+    }
+
+    private void exportarPulidosPendientes(Stage owner, List<ReparacionResumen> items, boolean conTecnico) {
+        List<String> cabeceras = conTecnico
+                ? List.of("ID", "IMEI", "Modelo", "Técnico", "Fecha asig.", "Comentario")
+                : List.of("ID", "IMEI", "Modelo", "Fecha asig.", "Comentario");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<List<String>> filas = new ArrayList<>();
+        for (ReparacionResumen r : items) {
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            String m = r.getModelo();
+            fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+            if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+            fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
+            filas.add(fila);
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner, "pulidos_pendientes", cabeceras, filas);
+    }
+
+    private void exportarHistorialPulidos(Stage owner, List<ReparacionResumen> items, boolean conTecnico) {
+        List<String> cabeceras = conTecnico
+                ? List.of("ID", "IMEI", "Modelo", "Técnico", "Fecha inicio", "Fecha fin", "Comentario")
+                : List.of("ID", "IMEI", "Modelo", "Fecha inicio", "Fecha fin", "Comentario");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<List<String>> filas = new ArrayList<>();
+        for (ReparacionResumen r : items) {
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            String m = r.getModelo();
+            fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+            if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+            fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "");
+            fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
+            filas.add(fila);
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_pulidos", cabeceras, filas);
     }
 
     private void mostrarError(Exception e) {
