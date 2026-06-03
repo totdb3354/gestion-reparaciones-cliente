@@ -801,6 +801,7 @@ public class PendientesSuperTecnicoController {
         ventana.setResizable(false);
         ventana.setTitle("Asignar reparación");
 
+        btnCancelar.setText("Cerrar");
         btnCancelar.setOnAction(ev -> ventana.close());
 
         btnConfirmar.setOnAction(ev -> {
@@ -814,8 +815,25 @@ public class PendientesSuperTecnicoController {
                         reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec(),
                                 comentario.isEmpty() ? null : comentario);
                 }
-                ventana.close();
                 cargar();
+                // Feedback visual y reset del formulario
+                btnConfirmar.setText("✓ Asignado");
+                btnConfirmar.setDisable(true);
+                new javafx.animation.Timeline(
+                    new javafx.animation.KeyFrame(javafx.util.Duration.millis(1200), e2 -> {
+                        btnConfirmar.setText("Asignar reparación");
+                    })
+                ).play();
+                tfImei.clear();
+                actualizandoModelo[0] = true;
+                tfModelo.clear();
+                modeloSel[0] = null;
+                modelosFiltrados.setPredicate(s -> true);
+                actualizandoModelo[0] = false;
+                checkboxes.forEach(cb -> { cb.setSelected(false); cb.setDisable(false); });
+                tfComentario.clear();
+                validar.run();
+                javafx.application.Platform.runLater(tfImei::requestFocus);
             } catch (SQLException ex) {
                 mostrarError(ex);
             }
