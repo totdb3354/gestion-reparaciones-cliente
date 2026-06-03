@@ -556,14 +556,21 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         } catch (SQLException e) { mostrarError(e); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15) filtroImei.setText(filtroImei.getText().substring(0, 15));
-            String val = filtroImei.getText();
-            if (val.isEmpty()) filtroImei.setStyle("");
-            else if (val.length() < 15)
+            String limpio = n.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(n)) { filtroImei.setText(limpio); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                filtroImei.setText(n + ", "); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty()) filtroImei.setStyle("");
+            else if (hayIncompleto)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
+            else if (hayValido)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else filtroImei.setStyle("");
             aplicarFiltros();
         });
         filtroFechaDesde.getEditor().setDisable(true); filtroFechaDesde.getEditor().setOpacity(1.0);
@@ -622,7 +629,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         String imeiStr = filtroImei.getText().trim();
         datosFiltrados = datos.stream().filter(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (desde != null || hasta != null) {
                 if (rep.getFechaFin() == null) return false;
                 LocalDate fechaFin = rep.getFechaFin().toLocalDate();
@@ -853,6 +861,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             filas.add(fila);
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) { Alertas.mostrarError(e.getMessage()); }
