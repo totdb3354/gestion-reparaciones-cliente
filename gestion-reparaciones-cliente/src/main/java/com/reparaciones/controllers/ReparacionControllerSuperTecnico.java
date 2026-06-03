@@ -810,10 +810,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
             String limpio = n.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
-            if (!limpio.equals(n)) { filtroImei.setText(limpio); return; }
+            if (!limpio.equals(n)) { javafx.application.Platform.runLater(() -> filtroImei.setText(limpio)); return; }
             String[] partes = n.split(",", -1);
             if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
-                filtroImei.setText(n + ", "); return;
+                javafx.application.Platform.runLater(() -> filtroImei.setText(n + ", ")); return;
             }
             boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
                     .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
