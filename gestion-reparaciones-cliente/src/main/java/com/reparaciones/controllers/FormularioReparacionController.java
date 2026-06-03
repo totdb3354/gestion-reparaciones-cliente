@@ -9,8 +9,6 @@ import com.reparaciones.models.Componente;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.Tecnico;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -21,7 +19,6 @@ import javafx.stage.Stage;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.geometry.Pos;
-import javafx.util.Duration;
 
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.StaleDataException;
@@ -68,8 +65,6 @@ public class FormularioReparacionController {
     private int           idTecEditar;
     private LocalDateTime updatedAtEdicion;
     private boolean esperandoConfirmacion = false;
-    private Timeline timelineReset;
-    private int segundosRestantes;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
     private final ComponenteDAO componenteDAO = new ComponenteDAO();
@@ -378,26 +373,11 @@ public class FormularioReparacionController {
 
     private void activarConfirmacion() {
         esperandoConfirmacion = true;
-        btnGuardar.setDisable(true);
-        segundosRestantes = 1;
-        btnGuardar.setText("Guardar (" + segundosRestantes + ")");
-
-        timelineReset = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
-            segundosRestantes--;
-            if (segundosRestantes > 0) {
-                btnGuardar.setText("Guardar (" + segundosRestantes + ")");
-            } else {
-                timelineReset.stop();
-                btnGuardar.setDisable(false);
-                btnGuardar.setText("✓  Confirmar guardar");
-            }
-        }));
-        timelineReset.setCycleCount(1);
-        timelineReset.play();
+        btnGuardar.setDisable(false);
+        btnGuardar.setText("✓  Confirmar guardar");
     }
 
     private void ejecutarGuardar() {
-        if (timelineReset != null) { timelineReset.stop(); timelineReset = null; }
         esperandoConfirmacion = false;
 
         if (modoEdicion) {
