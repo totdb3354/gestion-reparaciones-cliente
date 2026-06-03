@@ -809,8 +809,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            String limpio = n.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
-            if (!limpio.equals(n)) { javafx.application.Platform.runLater(() -> filtroImei.setText(limpio)); return; }
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
             String[] partes = n.split(",", -1);
             if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
                 javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
