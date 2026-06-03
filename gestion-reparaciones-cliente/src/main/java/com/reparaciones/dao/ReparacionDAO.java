@@ -342,6 +342,11 @@ public class ReparacionDAO {
                        "updatedAt", updatedAt));
     }
 
+    public void actualizarUrgente(String idRep, boolean urgente) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/urgente",
+                Map.of("urgente", urgente));
+    }
+
     /**
      * Edita el componente y observaciones de una reparación finalizada.
      *

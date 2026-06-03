@@ -230,6 +230,16 @@ public class FormularioReparacionController {
 
                 ctrl.initEditar(idRep, onGuardado);
                 stage.setTitle("Editar reparación — " + idRep);
+                stage.setOnCloseRequest(ev -> {
+                    if (!ctrl.hayCambiosSinGuardar()) return;
+                    ev.consume();
+                    com.reparaciones.utils.ConfirmDialog.mostrar(
+                        "Salir sin guardar",
+                        "Tienes cambios sin guardar que se perderán si cierras el formulario.",
+                        "Salir sin guardar",
+                        "Cancelar",
+                        stage::close);
+                });
                 stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                 stage.show();
             } catch (Exception e) {
@@ -551,6 +561,16 @@ public class FormularioReparacionController {
 
                 ctrl.init(imei, idRepAnterior, idAsignacion, onGuardado);
 
+                stage.setOnCloseRequest(ev -> {
+                    if (!ctrl.hayCambiosSinGuardar()) return;
+                    ev.consume();
+                    com.reparaciones.utils.ConfirmDialog.mostrar(
+                        "Salir sin guardar",
+                        "Tienes cambios sin guardar que se perderán si cierras el formulario.",
+                        "Salir sin guardar",
+                        "Cancelar",
+                        stage::close);
+                });
                 stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                 stage.show();
 
@@ -558,6 +578,10 @@ public class FormularioReparacionController {
                 Alertas.mostrarError(e.getMessage());
             }
         });
+    }
+
+    public boolean hayCambiosSinGuardar() {
+        return zonaGuardar != null && zonaGuardar.isVisible();
     }
 
     private void mostrarError(Exception e) {

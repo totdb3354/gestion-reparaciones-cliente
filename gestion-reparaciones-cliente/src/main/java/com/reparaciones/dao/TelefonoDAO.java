@@ -79,4 +79,9 @@ public class TelefonoDAO {
     public void eliminar(String imei) throws SQLException {
         ApiClient.delete("/api/telefonos/" + imei);
     }
+
+    public void actualizarObservacion(String imei, String observacion) throws SQLException {
+        ApiClient.patch("/api/telefonos/" + imei + "/observacion",
+                Map.of("observacion", observacion != null ? observacion : ""));
+    }
 }

@@ -56,6 +56,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private TableColumn<Object, Void>   colEstado;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
+    @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -127,7 +128,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -137,6 +138,12 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         });
 
         cargarDatos();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
     }
 
     @Override
@@ -292,6 +299,26 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 setGraphic(row instanceof ReparacionResumen rep ? labelExpandible("Observaciones", rep.getObservaciones()) : null);
+            }
+        });
+
+        colObservacionTelefono.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String obs = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+            else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+            return new javafx.beans.property.SimpleStringProperty(obs != null ? obs : "");
+        });
+        colObservacionTelefono.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String obs = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+                else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+                setGraphic(labelExpandible("Observación", obs));
             }
         });
 
@@ -529,14 +556,22 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         } catch (SQLException e) { mostrarError(e); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15) filtroImei.setText(filtroImei.getText().substring(0, 15));
-            String val = filtroImei.getText();
-            if (val.isEmpty()) filtroImei.setStyle("");
-            else if (val.length() < 15)
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty()) filtroImei.setStyle("");
+            else if (hayIncompleto)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
+            else if (hayValido)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else filtroImei.setStyle("");
             aplicarFiltros();
         });
         filtroFechaDesde.getEditor().setDisable(true); filtroFechaDesde.getEditor().setOpacity(1.0);
@@ -595,7 +630,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         String imeiStr = filtroImei.getText().trim();
         datosFiltrados = datos.stream().filter(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (desde != null || hasta != null) {
                 if (rep.getFechaFin() == null) return false;
                 LocalDate fechaFin = rep.getFechaFin().toLocalDate();
@@ -667,7 +703,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
@@ -704,7 +740,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         }
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -773,29 +809,66 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @Override
     public void exportarCSV(Stage owner) {
-        List<ReparacionResumen> items = modoActual == Modo.DETALLE
-                ? tablaItems.stream().filter(o -> o instanceof ReparacionResumen).map(o -> (ReparacionResumen) o).collect(Collectors.toList())
-                : new ArrayList<>(datosFiltrados);
+        DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        List<String> cabeceras = List.of("ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
-                "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+        if (modoActual == Modo.MAESTRO) {
+            List<String> cabeceras = List.of(
+                    "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
+                    "Nº reparaciones", "Inc. abiertas", "Observación");
+            List<List<String>> filas = new ArrayList<>();
+            for (Object o : tablaItems) {
+                if (!(o instanceof GrupoImei g)) continue;
+                String modelo  = g.getModelo();
+                String tecnico = g.getReparaciones().isEmpty() ? "" :
+                        (g.getReparaciones().get(0).getNombreTecnico() != null ? g.getReparaciones().get(0).getNombreTecnico() : "");
+                filas.add(List.of(
+                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        tecnico,
+                        g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
+                        g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
+                        String.valueOf(g.getReparaciones().size()),
+                        String.valueOf(g.getCountIncAbiertas()),
+                        g.getObservacion() != null ? g.getObservacion() : ""
+                ));
+            }
+            com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+            return;
+        }
+
+        // DETALLE
+        List<ReparacionResumen> items = tablaItems.stream()
+                .filter(o -> o instanceof ReparacionResumen)
+                .map(o -> (ReparacionResumen) o)
+                .collect(Collectors.toList());
+        List<String> cabeceras = List.of(
+                "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+                "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (ReparacionResumen r : items) {
-            filas.add(List.of(
-                    r.getIdRep(),
-                    com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
-                    r.getNombreTecnico() != null ? r.getNombreTecnico() : "",
-                    r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "",
-                    r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "",
-                    r.getTipoComponente() != null ? r.getTipoComponente() : "",
-                    r.getObservaciones()  != null ? r.getObservaciones()  : "",
-                    r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
-                    r.isEsResuelto() ? "Sí" : "No",
-                    r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
-            ));
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmtHora) : "");
+            fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmtHora)  : "");
+            fila.add(r.getTipoComponente() != null ? r.getTipoComponente() : "");
+            fila.add(r.isEsReutilizado() ? "Sí" : "No");
+            fila.add(r.getObservaciones()  != null ? r.getObservaciones()  : "");
+            fila.add(r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No");
+            fila.add(r.isEsResuelto() ? "Sí" : "No");
+            fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
+            filas.add(fila);
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) { Alertas.mostrarError(e.getMessage()); }

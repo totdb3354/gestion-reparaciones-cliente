@@ -493,3 +493,22 @@
     -fx-border-color: #001232;
 }
 /* stock-preview-same : #586376  — sin cambio               */
+
+/* ── Badge contador sidebar ─────────────────────────────── */
+.sidebar-badge {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 1 5 1 5;
+    -fx-background-radius: 8;
+    -fx-min-width: 14;
+    -fx-alignment: center;
+}
+.sidebar-item-inactive .sidebar-badge {
+    -fx-background-color: #001232;
+    -fx-text-fill: white;
+}
+.sidebar-item-active .sidebar-badge {
+    -fx-background-color: white;
+    -fx-text-fill: #001232;
+}
+

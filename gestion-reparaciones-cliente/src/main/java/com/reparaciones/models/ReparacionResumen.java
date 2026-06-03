@@ -23,6 +23,7 @@ public class ReparacionResumen {
     private String        observaciones;
     private boolean       esIncidencia;
     private boolean       esResuelto;
+    private boolean       esReutilizado;
     private String        incidencia;
     private String        idRepAnterior;
     private int           idTec;
@@ -36,6 +37,8 @@ public class ReparacionResumen {
     private LocalDateTime updatedAt;
     private String        modelo;
     private String        comentarioAsignacion;
+    private String        observacionTelefono;
+    private boolean       urgente;
 
     /**
      * Constructor completo — llamado desde {@code ReparacionDAO.getResumenes()}.
@@ -114,6 +117,9 @@ public class ReparacionResumen {
     /** @return {@code true} si la incidencia está resuelta */
     public boolean isEsResuelto() { return esResuelto; }
 
+    /** @return {@code true} si el componente fue reutilizado (no restó stock) */
+    public boolean isEsReutilizado() { return esReutilizado; }
+
     /** @return descripción de la incidencia, o {@code null} */
     public String getIncidencia() { return incidencia; }
 
@@ -151,6 +157,10 @@ public class ReparacionResumen {
     public boolean isEnCaminoSolicitud()   { return enCaminoSolicitud; }
     public String  getTiposSolicitud()     { return tiposSolicitud; }
     public String  getModelo()               { return modelo; }
-    public String  getComentarioAsignacion() { return comentarioAsignacion; }
-    public void setComentarioAsignacion(String c) { this.comentarioAsignacion = c; }
+    public String  getComentarioAsignacion()        { return comentarioAsignacion; }
+    public void    setComentarioAsignacion(String c) { this.comentarioAsignacion = c; }
+    public String  getObservacionTelefono()          { return observacionTelefono; }
+    public void    setObservacionTelefono(String o)  { this.observacionTelefono = o; }
+    public boolean isUrgente()                       { return urgente; }
+    public void    setUrgente(boolean urgente)       { this.urgente = urgente; }
 }

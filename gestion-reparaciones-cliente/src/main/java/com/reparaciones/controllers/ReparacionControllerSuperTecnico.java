@@ -60,6 +60,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colEstado;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
+    @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private MenuButton filtroTecnico;
@@ -71,6 +72,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private Button btnTabHistorial;
     @FXML private Button btnTabPendientes;
     @FXML private Button btnTabMisPendientes;
+    @FXML private Label  lblBadgeAsignaciones;
+    @FXML private Label  lblBadgePendientes;
     @FXML private VBox   pnlHistorial;
     @FXML private VBox   pnlPendientes;
     @FXML private VBox   pnlMisPendientes;
@@ -104,6 +107,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
+    private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -139,8 +143,17 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         configurarFilas();
         configurarFiltros();
 
-        pendientesSuperTecnicoController.setOnActualizar(this::cargarDatos);
-        misPendientesController.setOnCerrar(this::cargarDatos);
+        pendientesSuperTecnicoController.setOnActualizar(() -> {
+            cargarDatos();
+            pendientesSuperTecnicoController.cargar();
+            misPendientesController.cargar();
+            actualizarBadges();
+        });
+        misPendientesController.setOnCerrar(() -> {
+            cargarDatos();
+            misPendientesController.cargar();
+            actualizarBadges();
+        });
 
         // Toggle historial: Reparaciones ↔ Pulidos
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
@@ -191,7 +204,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -205,6 +218,15 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
+        actualizarBadges();
+        updateBadgeStyle(lblBadgeAsignaciones, false);
+        updateBadgeStyle(lblBadgePendientes,   false);
     }
 
     @Override
@@ -222,11 +244,34 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
+        // Badge data siempre fresco, independiente del panel visible
+        if (!pnlPendientes.isVisible()    || togglePendPul.isSelected())    pendientesSuperTecnicoController.cargar();
+        if (!pnlMisPendientes.isVisible() || toggleMisPendPul.isSelected()) misPendientesController.cargar();
+        actualizarBadges();
+    }
+
+    private void actualizarBadges() {
+        setBadge(lblBadgeAsignaciones, pendientesSuperTecnicoController.getTotalItems());
+        setBadge(lblBadgePendientes,   misPendientesController.getTotalItems());
+    }
+
+    private void setBadge(Label lbl, int count) {
+        javafx.scene.layout.StackPane pane = (javafx.scene.layout.StackPane) lbl.getParent();
+        if (count <= 0) { pane.setVisible(false); pane.setManaged(false); return; }
+        lbl.setText(count > 9 ? "9+" : String.valueOf(count));
+        pane.setVisible(true); pane.setManaged(true);
+    }
+
+    private void updateBadgeStyle(Label lbl, boolean active) {
+        javafx.scene.layout.StackPane outer = (javafx.scene.layout.StackPane) lbl.getParent().getParent();
+        outer.getStyleClass().removeAll("sidebar-item-active", "sidebar-item-inactive");
+        outer.getStyleClass().add(active ? "sidebar-item-active" : "sidebar-item-inactive");
     }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
     @FXML private void mostrarHistorial() {
+        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
     }
 
@@ -249,6 +294,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
+        updateBadgeStyle(lblBadgeAsignaciones, btnActivo == btnTabPendientes);
+        updateBadgeStyle(lblBadgePendientes,   btnActivo == btnTabMisPendientes);
         if (panel == pnlHistorial) {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
@@ -391,14 +438,36 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         });
 
         colComponente.setCellFactory(col -> new TableCell<>() {
+            private final Label lblTipo = new Label();
+            private final Label lblReut = new Label("Reutilizado");
+            private final VBox  box     = new VBox(1, lblTipo, lblReut);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> actualizarColores(sel);
+            {
+                box.setAlignment(Pos.CENTER_LEFT);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) { newRow.selectedProperty().addListener(selListener); actualizarColores(newRow.isSelected()); }
+                });
+            }
+            private void actualizarColores(boolean sel) {
+                lblTipo.setStyle("-fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblReut.setStyle("-fx-font-size: 10px; -fx-font-style: italic; -fx-text-fill: " + (sel ? "white" : "#9AA0AA") + ";");
+            }
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty); setGraphic(null);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setText(null); return; }
+                super.updateItem(item, empty);
+                setGraphic(null); setText(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) setText(grupo.getReparaciones().size() + " reparaciones");
-                else if (row instanceof ReparacionResumen rep) setText(rep.getTipoComponente());
-                else setText(null);
+                if (row instanceof GrupoImei grupo) {
+                    setText(grupo.getReparaciones().size() + " reparaciones");
+                } else if (row instanceof ReparacionResumen rep) {
+                    lblTipo.setText(rep.getTipoComponente() != null ? rep.getTipoComponente() : "");
+                    lblReut.setVisible(rep.isEsReutilizado()); lblReut.setManaged(rep.isEsReutilizado());
+                    actualizarColores(getTableRow() != null && getTableRow().isSelected());
+                    setGraphic(box);
+                }
             }
         });
 
@@ -412,6 +481,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     setGraphic(labelExpandible("Observaciones", rep.getObservaciones()));
                 else
                     setGraphic(null);
+            }
+        });
+
+        colObservacionTelefono.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String obs = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+            else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+            return new javafx.beans.property.SimpleStringProperty(obs != null ? obs : "");
+        });
+        colObservacionTelefono.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String obs = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
+                else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
+                setGraphic(labelExpandible("Observación", obs));
             }
         });
 
@@ -552,11 +641,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             {
                 ContextMenu menu = new ContextMenu();
                 TableColumn<?, ?>[] colRightClick = {null};
-                MenuItem copiar     = new MenuItem("📋  Copiar celda");
-                MenuItem editar     = new MenuItem("Editar");
-                MenuItem borrar     = new MenuItem("Borrar");
-                MenuItem aniadirInc = new MenuItem("Añadir incidencia");
+                MenuItem copiar      = new MenuItem("📋  Copiar celda");
+                MenuItem editar      = new MenuItem("Editar");
+                MenuItem borrar      = new MenuItem("Borrar");
+                MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
+                MenuItem editarObs   = new MenuItem("Editar observación");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -588,11 +678,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 borrar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarReparacion(rep); });
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
+                editarObs  .setOnAction(e -> { if (getItem() instanceof com.reparaciones.models.GrupoImei grupo) ReparacionControllerSuperTecnico.this.abrirDialogoObservacionTelefono(grupo); });
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs);
                 menu.setOnShowing(e -> {
+                    boolean esGrupo = getItem() instanceof com.reparaciones.models.GrupoImei;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
+                        editarObs.setVisible(esGrupo);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -600,6 +693,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     borrar      .setVisible(true);
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
+                    editarObs   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
@@ -715,18 +809,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15)
-                filtroImei.setText(filtroImei.getText().substring(0, 15));
-            String val = filtroImei.getText();
-            if (val.isEmpty())
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty())
                 filtroImei.setStyle("");
-            else if (val.length() < 15)
+            else if (hayIncompleto)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
+            else if (hayValido)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else
+                filtroImei.setStyle("");
             aplicarFiltros();
         });
         filtroFechaDesde.getEditor().setDisable(true);
@@ -787,7 +889,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         String imeiStr = filtroImei.getText().trim();
         datosFiltrados = datos.stream().filter(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (desde != null || hasta != null) {
                 if (rep.getFechaFin() == null) return false;
                 LocalDate fechaFin = rep.getFechaFin().toLocalDate();
@@ -865,7 +968,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
@@ -903,7 +1006,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -1077,6 +1180,43 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         dialog.showAndWait();
     }
 
+    private void abrirDialogoObservacionTelefono(com.reparaciones.models.GrupoImei grupo) {
+        TextArea tfObs = new TextArea(grupo.getObservacion() != null ? grupo.getObservacion() : "");
+        tfObs.setPromptText("Observación del teléfono...");
+        tfObs.setWrapText(true);
+        tfObs.setPrefRowCount(4);
+        tfObs.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
+                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 13px;");
+
+        Button btnConfirmar = new Button("Guardar");
+        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
+        btnConfirmar.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-text-fill: white;" +
+                " -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
+
+        VBox form = new VBox(8, new Label("Observación — IMEI " + grupo.getImei()), tfObs, btnConfirmar);
+        form.setPadding(new Insets(16));
+        form.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
+        form.setPrefWidth(480);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Observación del teléfono");
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setPrefWidth(520);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        btnConfirmar.setOnAction(e -> {
+            try {
+                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim());
+                dialog.close();
+                cargarDatos();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+        });
+
+        dialog.showAndWait();
+    }
+
     private void borrarIncidencia(ReparacionResumen rep) {
         ConfirmDialog.mostrar(
                 "Borrar incidencia",
@@ -1129,42 +1269,144 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     @Override
     public void exportarCSV(Stage owner) {
-        java.util.List<ReparacionResumen> items;
-        String nombre;
+        DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
         if (pnlPendientes.isVisible()) {
-            items  = pendientesSuperTecnicoController.getItemsVisibles();
-            nombre = "reparaciones_pendientes";
-        } else if (pnlMisPendientes.isVisible()) {
-            items  = misPendientesController.getItemsVisibles();
-            nombre = "mis_pendientes";
-        } else {
-            // En modo DETALLE: reparaciones del IMEI actual; en MAESTRO: todas las filtradas
-            items = modoActual == Modo.DETALLE
-                    ? tablaItems.stream().filter(o -> o instanceof ReparacionResumen).map(o -> (ReparacionResumen) o).collect(Collectors.toList())
-                    : new ArrayList<>(datosFiltrados);
-            nombre = "historial_reparaciones";
+            if (togglePendPul.isSelected()) {
+                exportarPulidosPendientes(owner, pulidoSuperTecnicoController.getItemsVisibles(), true);
+                return;
+            }
+            List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
+            List<String> cabeceras = List.of(
+                    "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+                    "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+            List<List<String>> filas = new ArrayList<>();
+            for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
+            com.reparaciones.utils.CsvExporter.exportar(owner, "reparaciones_pendientes", cabeceras, filas);
+            return;
         }
 
+        if (pnlMisPendientes.isVisible()) {
+            if (toggleMisPendPul.isSelected()) {
+                exportarPulidosPendientes(owner, misPulidosTecnicoController.getItemsVisibles(), false);
+                return;
+            }
+            List<ReparacionResumen> items = misPendientesController.getItemsVisibles();
+            List<String> cabeceras = List.of(
+                    "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+                    "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+            List<List<String>> filas = new ArrayList<>();
+            for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
+            com.reparaciones.utils.CsvExporter.exportar(owner, "mis_pendientes", cabeceras, filas);
+            return;
+        }
+
+        if (toggleHistPul.isSelected()) {
+            exportarHistorialPulidos(owner, historialPulidoController.getItemsVisibles(), true);
+            return;
+        }
+
+        if (modoActual == Modo.MAESTRO) {
+            List<String> cabeceras = List.of(
+                    "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
+                    "Nº reparaciones", "Inc. abiertas", "Observación");
+            List<List<String>> filas = new ArrayList<>();
+            for (Object o : tablaItems) {
+                if (!(o instanceof GrupoImei g)) continue;
+                String modelo  = g.getModelo();
+                String tecnico = g.getReparaciones().isEmpty() ? "" :
+                        (g.getReparaciones().get(0).getNombreTecnico() != null ? g.getReparaciones().get(0).getNombreTecnico() : "");
+                filas.add(List.of(
+                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        tecnico,
+                        g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
+                        g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
+                        String.valueOf(g.getReparaciones().size()),
+                        String.valueOf(g.getCountIncAbiertas()),
+                        g.getObservacion() != null ? g.getObservacion() : ""
+                ));
+            }
+            com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+            return;
+        }
+
+        // DETALLE
+        List<ReparacionResumen> items = tablaItems.stream()
+                .filter(o -> o instanceof ReparacionResumen)
+                .map(o -> (ReparacionResumen) o)
+                .collect(Collectors.toList());
         List<String> cabeceras = List.of(
                 "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
-                "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+                "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
+        for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
+        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+    }
+
+    private List<String> filaReparacion(ReparacionResumen r, DateTimeFormatter fmt) {
+        List<String> fila = new ArrayList<>();
+        fila.add(r.getIdRep());
+        fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+        fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+        fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+        fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "");
+        fila.add(r.getTipoComponente() != null ? r.getTipoComponente() : "");
+        fila.add(r.isEsReutilizado() ? "Sí" : "No");
+        fila.add(r.getObservaciones()  != null ? r.getObservaciones()  : "");
+        fila.add(r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No");
+        fila.add(r.isEsResuelto() ? "Sí" : "No");
+        fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
+        return fila;
+    }
+
+    private void exportarPulidosPendientes(Stage owner, List<ReparacionResumen> items, boolean conTecnico) {
+        List<String> cabeceras = conTecnico
+                ? List.of("ID", "IMEI", "Modelo", "Técnico", "Fecha asig.", "Comentario")
+                : List.of("ID", "IMEI", "Modelo", "Fecha asig.", "Comentario");
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<List<String>> filas = new ArrayList<>();
         for (ReparacionResumen r : items) {
-            filas.add(List.of(
-                    r.getIdRep(),
-                    com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
-                    r.getNombreTecnico() != null ? r.getNombreTecnico() : "",
-                    r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "",
-                    r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "",
-                    r.getTipoComponente() != null ? r.getTipoComponente() : "",
-                    r.getObservaciones()  != null ? r.getObservaciones()  : "",
-                    r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
-                    r.isEsResuelto() ? "Sí" : "No",
-                    r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
-            ));
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            String m = r.getModelo();
+            fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+            if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+            fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
+            filas.add(fila);
         }
-        com.reparaciones.utils.CsvExporter.exportar(owner, nombre, cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner, "pulidos_pendientes", cabeceras, filas);
+    }
+
+    private void exportarHistorialPulidos(Stage owner, List<ReparacionResumen> items, boolean conTecnico) {
+        List<String> cabeceras = conTecnico
+                ? List.of("ID", "IMEI", "Modelo", "Técnico", "Fecha inicio", "Fecha fin", "Comentario")
+                : List.of("ID", "IMEI", "Modelo", "Fecha inicio", "Fecha fin", "Comentario");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        List<List<String>> filas = new ArrayList<>();
+        for (ReparacionResumen r : items) {
+            List<String> fila = new ArrayList<>();
+            fila.add(r.getIdRep());
+            fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+            String m = r.getModelo();
+            fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+            if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+            fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "");
+            fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
+            filas.add(fila);
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_pulidos", cabeceras, filas);
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) {

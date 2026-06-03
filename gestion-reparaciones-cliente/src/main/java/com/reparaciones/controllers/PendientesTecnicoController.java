@@ -149,7 +149,9 @@ public class PendientesTecnicoController {
                 } else if (item.isEsIncidencia()) {
                     setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                } else setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                } else {
+                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                }
             }
             @Override protected void updateItem(ReparacionResumen item, boolean empty) {
                 super.updateItem(item, empty);
@@ -158,10 +160,11 @@ public class PendientesTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badge   = new Label();
-            private final Label lblTipo = new Label();
+            private final Label badgeUrgente = new Label();
+            private final Label badge        = new Label();
+            private final Label lblTipo      = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badge, lblTipo);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badge, lblTipo);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -171,6 +174,15 @@ public class PendientesTecnicoController {
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
                 lblTipo.setText("");
+                badge.setVisible(true); badge.setManaged(true);
+                if (rep.isUrgente()) {
+                    badgeUrgente.setText("Urgente");
+                    badgeUrgente.setStyle(base +
+                        "-fx-background-color: #FDDEDE; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + ";");
+                    badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
+                } else {
+                    badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
                     badge.setStyle(base +
@@ -203,11 +215,13 @@ public class PendientesTecnicoController {
                         javafx.scene.control.Tooltip.install(celdaBox,
                                 new javafx.scene.control.Tooltip(todos));
                     }
-                } else {
+                } else if (!rep.isUrgente()) {
                     badge.setText("Normal");
                     badge.setStyle(base +
                         "-fx-background-color: #E8EAF0;" +
                         "-fx-text-fill: #586376;");
+                } else {
+                    badge.setVisible(false); badge.setManaged(false);
                 }
                 setGraphic(celdaBox);
             }
@@ -236,6 +250,12 @@ public class PendientesTecnicoController {
         tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
     }
 
     // ─── Filtros ──────────────────────────────────────────────────────────────
@@ -257,13 +277,20 @@ public class PendientesTecnicoController {
         }
         if (filtroImei != null) {
             filtroImei.textProperty().addListener((obs, o, n) -> {
-                if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-                if (filtroImei.getText().length() > 15)
-                    filtroImei.setText(filtroImei.getText().substring(0, 15));
-                String val = filtroImei.getText();
-                if (val.isEmpty())          filtroImei.setStyle("");
-                else if (val.length() < 15) filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                else                        filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
+                String withoutSep = n.replace(", ", ",");
+                String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+                if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+                String[] partes = n.split(",", -1);
+                if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                    javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+                }
+                boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                        .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+                boolean hayValido = !parsearImeis(n).isEmpty();
+                if (n.trim().isEmpty()) filtroImei.setStyle("");
+                else if (hayIncompleto) filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                else if (hayValido)     filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
+                else                    filtroImei.setStyle("");
                 aplicarFiltros();
             });
         }
@@ -286,8 +313,9 @@ public class PendientesTecnicoController {
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
+        java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
         datosFiltrados.setPredicate(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!filtrarSol && !filtrarInc && !filtrarAsig) return true;
             boolean esSol  = rep.getEsSolicitud() > 0;
             boolean esInc  = rep.isEsIncidencia();
@@ -335,6 +363,8 @@ public class PendientesTecnicoController {
         return tablaPendientes.getItems();
     }
 
+    public int getTotalItems() { return datos.size(); }
+
     /**
      * Extrae el texto copiable de la celda seleccionada para la acción "Copiar celda".
      *
@@ -349,6 +379,13 @@ public class PendientesTecnicoController {
         if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) {

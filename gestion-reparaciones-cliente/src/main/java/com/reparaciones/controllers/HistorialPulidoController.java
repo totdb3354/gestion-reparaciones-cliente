@@ -84,18 +84,12 @@ public class HistorialPulidoController {
                     MenuItem borrar = new MenuItem("Borrar");
                     borrar.setOnAction(e -> {
                         if (getItem() == null) return;
-                        com.reparaciones.utils.ConfirmDialog.mostrar(
-                                "Borrar pulido",
-                                "Se eliminará el registro " + getItem().getIdRep() + ". Esta acción no se puede deshacer.",
-                                "Borrar pulido",
-                                () -> {
-                                    try {
-                                        pulidoDAO.eliminarPulido(getItem().getIdRep());
-                                        cargar();
-                                    } catch (java.sql.SQLException ex) {
-                                        Alertas.mostrarError(ex.getMessage());
-                                    }
-                                });
+                        try {
+                            pulidoDAO.eliminarPulido(getItem().getIdRep());
+                            cargar();
+                        } catch (java.sql.SQLException ex) {
+                            Alertas.mostrarError(ex.getMessage());
+                        }
                     });
                     menu.getItems().addAll(borrar, new SeparatorMenuItem(), copiar);
                 } else {
@@ -131,6 +125,12 @@ public class HistorialPulidoController {
         tablaPulidos.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
     }
 
     private void configurarFiltros() {
@@ -191,6 +191,10 @@ public class HistorialPulidoController {
         filtroTecnico.setText("Técnico");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
+    }
+
+    public java.util.List<ReparacionResumen> getItemsVisibles() {
+        return datosFiltrados != null ? new java.util.ArrayList<>(datosFiltrados) : java.util.List.of();
     }
 
     public String getFiltroImei() { return filtroImei.getText(); }

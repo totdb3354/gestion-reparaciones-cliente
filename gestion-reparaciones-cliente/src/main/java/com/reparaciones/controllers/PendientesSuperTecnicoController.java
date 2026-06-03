@@ -268,6 +268,22 @@ public class PendientesSuperTecnicoController {
                     PendientesSuperTecnicoController.this.abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
+                MenuItem toggleUrgente = new MenuItem();
+                toggleUrgente.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    boolean nuevoEstado = !rep.isUrgente();
+                    try {
+                        reparacionDAO.actualizarUrgente(rep.getIdRep(), nuevoEstado);
+                        rep.setUrgente(nuevoEstado);
+                        tablaPendientes.refresh();
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
+                menu.setOnShowing(e -> {
+                    if (getItem() != null)
+                        toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
+                });
+                menu.getItems().add(toggleUrgente);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -285,7 +301,9 @@ public class PendientesSuperTecnicoController {
                     setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
                             "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
-                } else if (item.getEsSolicitud() > 0) {
+                    return;
+                }
+                if (item.getEsSolicitud() > 0) {
                     setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
                 } else if (item.isEsIncidencia()) {
@@ -303,7 +321,11 @@ public class PendientesSuperTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badge = new Label();
+            private final Label badgeUrgente = new Label();
+            private final Label badge        = new Label();
+            private final javafx.scene.layout.VBox celdaBox =
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badge);
+            { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -311,23 +333,47 @@ public class PendientesSuperTecnicoController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
+                badge.setVisible(true); badge.setManaged(true);
+                if (rep.isUrgente()) {
+                    badgeUrgente.setText("Urgente");
+                    badgeUrgente.setStyle(base +
+                        "-fx-background-color: #FDDEDE; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + ";");
+                    badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
+                } else {
+                    badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
                     badge.setStyle(base +
                         "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + ";" +
                         "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
                 } else if (rep.getEsSolicitud() > 0) {
-                    badge.setText("Solicitud");
-                    badge.setStyle(base +
-                        "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BG + ";" +
-                        "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
-                } else {
+                    boolean recibido = "GESTIONADA".equals(rep.getEstadoSolicitud())
+                                       && rep.getStockSolicitud() > 0;
+                    boolean enCamino = rep.isEnCaminoSolicitud();
+                    if (recibido) {
+                        badge.setText("Recibido");
+                        badge.setStyle(base +
+                            "-fx-background-color: #E8F5E9; -fx-text-fill: #2E7D32;");
+                    } else if (enCamino) {
+                        badge.setText("En camino");
+                        badge.setStyle(base +
+                            "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
+                    } else {
+                        badge.setText("Solicitud");
+                        badge.setStyle(base +
+                            "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BG + ";" +
+                            "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    }
+                } else if (!rep.isUrgente()) {
                     badge.setText("Normal");
                     badge.setStyle(base +
                         "-fx-background-color: #E8EAF0;" +
                         "-fx-text-fill: #586376;");
+                } else {
+                    badge.setVisible(false); badge.setManaged(false);
                 }
-                setGraphic(badge);
+                setGraphic(celdaBox);
             }
         });
 
@@ -414,20 +460,34 @@ public class PendientesSuperTecnicoController {
         filtroSolicitud.getItems().addAll(itemSol, itemInc, itemAsig);
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15)
-                filtroImei.setText(filtroImei.getText().substring(0, 15));
-            String val = filtroImei.getText();
-            if (val.isEmpty())
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty())
                 filtroImei.setStyle("");
-            else if (val.length() < 15)
+            else if (hayIncompleto)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
+            else if (hayValido)
                 filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else
+                filtroImei.setStyle("");
             aplicarFiltros();
         });
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
     }
 
     private void actualizarTextoFiltroTecnico() {
@@ -459,8 +519,9 @@ public class PendientesSuperTecnicoController {
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
 
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
+        java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
         datosFiltrados.setPredicate(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
             if (filtrarSol || filtrarInc || filtrarAsig) {
                 boolean esSol  = rep.getEsSolicitud() > 0;
@@ -749,6 +810,7 @@ public class PendientesSuperTecnicoController {
         ventana.setResizable(false);
         ventana.setTitle("Asignar reparación");
 
+        btnCancelar.setText("Cerrar");
         btnCancelar.setOnAction(ev -> ventana.close());
 
         btnConfirmar.setOnAction(ev -> {
@@ -762,8 +824,25 @@ public class PendientesSuperTecnicoController {
                         reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec(),
                                 comentario.isEmpty() ? null : comentario);
                 }
-                ventana.close();
                 cargar();
+                // Feedback visual y reset del formulario
+                btnConfirmar.setText("✓ Asignado");
+                btnConfirmar.setDisable(true);
+                new javafx.animation.Timeline(
+                    new javafx.animation.KeyFrame(javafx.util.Duration.millis(1200), e2 -> {
+                        btnConfirmar.setText("Asignar reparación");
+                    })
+                ).play();
+                tfImei.clear();
+                actualizandoModelo[0] = true;
+                tfModelo.clear();
+                modeloSel[0] = null;
+                modelosFiltrados.setPredicate(s -> true);
+                actualizandoModelo[0] = false;
+                checkboxes.forEach(cb -> { cb.setSelected(false); cb.setDisable(false); });
+                tfComentario.clear();
+                validar.run();
+                javafx.application.Platform.runLater(tfImei::requestFocus);
             } catch (SQLException ex) {
                 mostrarError(ex);
             }
@@ -841,6 +920,8 @@ public class PendientesSuperTecnicoController {
         return tablaPendientes.getItems();
     }
 
+    public int getTotalItems() { return datos.size(); }
+
     private void abrirEditorComentario(ReparacionResumen rep, String textoActual) {
         Label lblTitulo = new Label("Comentario de asignación");
         lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
@@ -902,6 +983,13 @@ public class PendientesSuperTecnicoController {
         if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) {

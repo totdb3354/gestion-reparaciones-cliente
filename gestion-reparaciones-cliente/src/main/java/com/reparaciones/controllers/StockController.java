@@ -153,6 +153,24 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         poller.scheduleAtFixedRate(
                 () -> javafx.application.Platform.runLater(this::recargar),
                 60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        if (lblUltimaActStock != null) {
+            lblUltimaActStock.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActStock.setOnMouseClicked(e -> cargarStock());
+            lblUltimaActStock.setOnMouseEntered(e -> lblUltimaActStock.setUnderline(true));
+            lblUltimaActStock.setOnMouseExited(e -> lblUltimaActStock.setUnderline(false));
+        }
+        if (lblUltimaActPedidos != null) {
+            lblUltimaActPedidos.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActPedidos.setOnMouseClicked(e -> cargarPedidos());
+            lblUltimaActPedidos.setOnMouseEntered(e -> lblUltimaActPedidos.setUnderline(true));
+            lblUltimaActPedidos.setOnMouseExited(e -> lblUltimaActPedidos.setUnderline(false));
+        }
+        if (lblUltimaActProveedores != null) {
+            lblUltimaActProveedores.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActProveedores.setOnMouseClicked(e -> cargarProveedores());
+            lblUltimaActProveedores.setOnMouseEntered(e -> lblUltimaActProveedores.setUnderline(true));
+            lblUltimaActProveedores.setOnMouseExited(e -> lblUltimaActProveedores.setUnderline(false));
+        }
     }
 
     @Override
@@ -495,11 +513,13 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void cargarChartSku(Componente c) {
         int pendiente = 0;
-        try {
-            pendiente = compraDAO.getCantidadPendientePorComponente(c.getIdCom());
-        } catch (SQLException e) {
-            mostrarError(e);
-            return;
+        if (com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+            try {
+                pendiente = compraDAO.getCantidadPendientePorComponente(c.getIdCom());
+            } catch (SQLException e) {
+                mostrarError(e);
+                return;
+            }
         }
         lblChartSku.setText(c.getTipo());
         lblPlaceholder.setVisible(false);

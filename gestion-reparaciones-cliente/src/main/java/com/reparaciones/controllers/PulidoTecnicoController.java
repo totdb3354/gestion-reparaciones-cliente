@@ -106,6 +106,12 @@ public class PulidoTecnicoController {
             aplicarFiltro();
         });
         cargar();
+        if (lblUltimaActualizacion != null) {
+            lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
+            lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
+            lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
+            lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
     }
 
     private void aplicarFiltro() {
@@ -147,6 +153,12 @@ public class PulidoTecnicoController {
         if (btnCompletarSeleccionados != null)
             btnCompletarSeleccionados.setDisable(seleccionados.isEmpty());
     }
+
+    public java.util.List<ReparacionResumen> getItemsVisibles() {
+        return datosFiltrados != null ? new java.util.ArrayList<>(datosFiltrados) : java.util.List.of();
+    }
+
+    public int getTotalItems() { return datos.size(); }
 
     public String getFiltroImei() { return filtroImei.getText(); }
     public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }

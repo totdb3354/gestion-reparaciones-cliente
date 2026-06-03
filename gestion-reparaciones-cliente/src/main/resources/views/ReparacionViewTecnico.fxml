@@ -21,8 +21,15 @@
     <!-- ── Sidebar ── -->
     <left>
         <VBox styleClass="stock-sidebar" spacing="0">
-            <Button fx:id="btnTabMisPendientes" text="Pendientes"     maxWidth="Infinity"
-                    styleClass="stock-sidebar-btn-active" onAction="#abrirModalPendientes"/>
+            <StackPane maxWidth="Infinity">
+                <Button fx:id="btnTabMisPendientes" text="Pendientes" maxWidth="Infinity"
+                        styleClass="stock-sidebar-btn-active" onAction="#abrirModalPendientes"/>
+                <StackPane visible="false" managed="false"
+                           StackPane.alignment="CENTER_RIGHT" translateX="45"
+                           mouseTransparent="true">
+                    <Label fx:id="lblBadgePendientes" styleClass="sidebar-badge" mouseTransparent="true"/>
+                </StackPane>
+            </StackPane>
             <Button fx:id="btnTabHistorial"     text="Historial"      maxWidth="Infinity"
                     styleClass="stock-sidebar-btn"        onAction="#mostrarHistorial"/>
         </VBox>
@@ -68,6 +75,7 @@
                                     <TableColumn fx:id="colEstado" minWidth="110" prefWidth="120" maxWidth="150" text="Estado"/>
                                     <TableColumn fx:id="colIncidencia" minWidth="200" maxWidth="360" text="Incidencia"/>
                                     <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
+                                    <TableColumn fx:id="colObservacionTelefono" minWidth="150" maxWidth="300" text="Observación"/>
                                 </columns>
                             </TableView>
                             <Label fx:id="lblUltimaActualizacion"
