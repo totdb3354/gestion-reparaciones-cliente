@@ -267,8 +267,11 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     // ─── Configurar tabla Stock ───────────────────────────────────────────────
 
     private void configurarTablaStock() {
-        colTipo.setCellValueFactory(c ->
-                new javafx.beans.property.SimpleStringProperty(c.getValue().getTipo()));
+        colTipo.setCellValueFactory(c -> {
+            Componente comp = c.getValue();
+            String texto = comp.getIdComMaster() != null ? comp.getTipo() + "  (compartido)" : comp.getTipo();
+            return new javafx.beans.property.SimpleStringProperty(texto);
+        });
         colStockVal.setCellValueFactory(c ->
                 new javafx.beans.property.SimpleIntegerProperty(c.getValue().getStock()).asObject());
         colEnCamino.setCellValueFactory(c ->

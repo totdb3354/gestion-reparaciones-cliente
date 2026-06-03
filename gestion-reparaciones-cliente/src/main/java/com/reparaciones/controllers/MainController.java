@@ -242,7 +242,7 @@ public class MainController {
             try {
                 List<Componente> todos = new ComponenteDAO().getAllGestionados();
                 alertasCriticas = todos.stream()
-                        .filter(c -> c.getStock() <= c.getStockMinimo())
+                        .filter(c -> c.getIdComMaster() == null && c.getStock() <= c.getStockMinimo())
                         .collect(Collectors.toList());
             } catch (SQLException ex) { /* silencioso: polling de fondo */ }
             contenedorAlertas.getChildren().clear();
@@ -706,7 +706,7 @@ public class MainController {
         try {
             List<Componente> todos = new ComponenteDAO().getAllGestionados();
             alertasCriticas = todos.stream()
-                    .filter(c -> c.getStock() <= c.getStockMinimo())
+                    .filter(c -> c.getIdComMaster() == null && c.getStock() <= c.getStockMinimo())
                     .collect(Collectors.toList());
             if (!alertasCriticas.isEmpty()) iniciarPulso();
         } catch (SQLException e) {

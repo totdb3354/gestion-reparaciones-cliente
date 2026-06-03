@@ -43,6 +43,7 @@ public class Componente {
      * si no hay pedidos. Se rellena en consulta, no se persiste como campo propio.
      */
     private LocalDateTime ultimoPedido;
+    private Integer       idComMaster;
 
     /**
      * @param idCom          clave primaria del componente
@@ -93,6 +94,8 @@ public class Componente {
     /** @return fecha del pedido más reciente, o {@code null} si no hay pedidos */
     public LocalDateTime getUltimoPedido() { return ultimoPedido; }
     public void setUltimoPedido(LocalDateTime ultimoPedido) { this.ultimoPedido = ultimoPedido; }
+
+    public Integer getIdComMaster() { return idComMaster; }
 
     /** Devuelve el tipo para uso en ComboBox. */
     @Override
