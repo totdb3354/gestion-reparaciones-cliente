@@ -348,10 +348,23 @@ public class PendientesSuperTecnicoController {
                         "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + ";" +
                         "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
                 } else if (rep.getEsSolicitud() > 0) {
-                    badge.setText("Solicitud");
-                    badge.setStyle(base +
-                        "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BG + ";" +
-                        "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    boolean recibido = "GESTIONADA".equals(rep.getEstadoSolicitud())
+                                       && rep.getStockSolicitud() > 0;
+                    boolean enCamino = rep.isEnCaminoSolicitud();
+                    if (recibido) {
+                        badge.setText("Recibido");
+                        badge.setStyle(base +
+                            "-fx-background-color: #E8F5E9; -fx-text-fill: #2E7D32;");
+                    } else if (enCamino) {
+                        badge.setText("En camino");
+                        badge.setStyle(base +
+                            "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
+                    } else {
+                        badge.setText("Solicitud");
+                        badge.setStyle(base +
+                            "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BG + ";" +
+                            "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    }
                 } else if (!rep.isUrgente()) {
                     badge.setText("Normal");
                     badge.setStyle(base +
