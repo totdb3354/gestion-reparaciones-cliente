@@ -560,7 +560,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             if (!limpio.equals(n)) { javafx.application.Platform.runLater(() -> filtroImei.setText(limpio)); return; }
             String[] partes = n.split(",", -1);
             if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
-                javafx.application.Platform.runLater(() -> filtroImei.setText(n + ", ")); return;
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
             }
             boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
                     .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
