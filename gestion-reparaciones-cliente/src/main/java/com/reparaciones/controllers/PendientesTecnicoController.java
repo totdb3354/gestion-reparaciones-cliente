@@ -143,13 +143,21 @@ public class PendientesTecnicoController {
                             "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
                     return;
                 }
+                boolean urgente = item.isUrgente();
+                String rw = urgente ? "8" : "0";
+                String rc = urgente ? com.reparaciones.utils.Colores.FILA_URGENTE_BRD : "transparent";
                 if (item.getEsSolicitud() > 0) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
                 } else if (item.isEsIncidencia()) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                } else setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                } else if (urgente) {
+                    setStyle("-fx-border-width: 0 8 1 0; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + " " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                } else {
+                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                }
             }
             @Override protected void updateItem(ReparacionResumen item, boolean empty) {
                 super.updateItem(item, empty);
@@ -158,10 +166,11 @@ public class PendientesTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badge   = new Label();
-            private final Label lblTipo = new Label();
+            private final Label badgeUrgente = new Label();
+            private final Label badge        = new Label();
+            private final Label lblTipo      = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badge, lblTipo);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badge, lblTipo);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -171,6 +180,14 @@ public class PendientesTecnicoController {
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
                 lblTipo.setText("");
+                if (rep.isUrgente()) {
+                    badgeUrgente.setText("Urgente");
+                    badgeUrgente.setStyle(base +
+                        "-fx-background-color: #FDDEDE; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + ";");
+                    badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
+                } else {
+                    badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
                     badge.setStyle(base +

@@ -268,6 +268,22 @@ public class PendientesSuperTecnicoController {
                     PendientesSuperTecnicoController.this.abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
+                MenuItem toggleUrgente = new MenuItem();
+                toggleUrgente.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    boolean nuevoEstado = !rep.isUrgente();
+                    try {
+                        reparacionDAO.actualizarUrgente(rep.getIdRep(), nuevoEstado);
+                        rep.setUrgente(nuevoEstado);
+                        tablaPendientes.refresh();
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
+                menu.setOnShowing(e -> {
+                    if (getItem() != null)
+                        toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
+                });
+                menu.getItems().add(toggleUrgente);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -285,12 +301,20 @@ public class PendientesSuperTecnicoController {
                     setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
                             "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
-                } else if (item.getEsSolicitud() > 0) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    return;
+                }
+                boolean urgente = item.isUrgente();
+                String rw = urgente ? "8" : "0";
+                String rc = urgente ? com.reparaciones.utils.Colores.FILA_URGENTE_BRD : "transparent";
+                if (item.getEsSolicitud() > 0) {
+                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
                 } else if (item.isEsIncidencia()) {
-                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                } else if (urgente) {
+                    setStyle("-fx-border-width: 0 8 1 0; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + " " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
                 } else {
                     setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
                 }
@@ -303,7 +327,11 @@ public class PendientesSuperTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badge = new Label();
+            private final Label badgeUrgente = new Label();
+            private final Label badge        = new Label();
+            private final javafx.scene.layout.VBox celdaBox =
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badge);
+            { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -311,6 +339,14 @@ public class PendientesSuperTecnicoController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
+                if (rep.isUrgente()) {
+                    badgeUrgente.setText("Urgente");
+                    badgeUrgente.setStyle(base +
+                        "-fx-background-color: #FDDEDE; -fx-text-fill: " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + ";");
+                    badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
+                } else {
+                    badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
                     badge.setStyle(base +
@@ -327,7 +363,7 @@ public class PendientesSuperTecnicoController {
                         "-fx-background-color: #E8EAF0;" +
                         "-fx-text-fill: #586376;");
                 }
-                setGraphic(badge);
+                setGraphic(celdaBox);
             }
         });
 

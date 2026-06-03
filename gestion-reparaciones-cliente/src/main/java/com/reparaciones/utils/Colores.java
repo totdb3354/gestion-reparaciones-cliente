@@ -51,6 +51,9 @@ public final class Colores {
     public static final String FILA_SOLICITUD_BG   = "#FDEBC8";
     public static final String FILA_SOLICITUD_BRD  = "#C07800";
 
+    /** Fila marcada como urgente — borde derecho rojo */
+    public static final String FILA_URGENTE_BRD    = "#C62828";
+
     /** Fila con cambio pendiente de confirmar — fondo cyan claro, borde teal */
     public static final String FILA_MODIFICADA_BG  = "#E0F7FA";
     public static final String FILA_MODIFICADA_BRD = "#00838F";
