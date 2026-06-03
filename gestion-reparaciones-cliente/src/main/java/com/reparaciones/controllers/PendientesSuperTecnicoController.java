@@ -333,6 +333,7 @@ public class PendientesSuperTecnicoController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
+                badge.setVisible(true); badge.setManaged(true);
                 if (rep.isUrgente()) {
                     badgeUrgente.setText("Urgente");
                     badgeUrgente.setStyle(base +
@@ -351,11 +352,13 @@ public class PendientesSuperTecnicoController {
                     badge.setStyle(base +
                         "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BG + ";" +
                         "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
-                } else {
+                } else if (!rep.isUrgente()) {
                     badge.setText("Normal");
                     badge.setStyle(base +
                         "-fx-background-color: #E8EAF0;" +
                         "-fx-text-fill: #586376;");
+                } else {
+                    badge.setVisible(false); badge.setManaged(false);
                 }
                 setGraphic(celdaBox);
             }
