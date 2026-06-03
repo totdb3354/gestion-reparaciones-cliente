@@ -1068,7 +1068,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         if (modoActual == Modo.MAESTRO) {
             List<String> cabeceras = List.of(
                     "IMEI", "Modelo", "Primera reparación", "Última reparación",
-                    "Nº reparaciones", "Inc. abiertas");
+                    "Nº reparaciones", "Inc. abiertas", "Observación");
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
                 if (!(o instanceof GrupoImei g)) continue;
@@ -1079,7 +1079,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                         g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
                         g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
                         String.valueOf(g.getReparaciones().size()),
-                        String.valueOf(g.getCountIncAbiertas())
+                        String.valueOf(g.getCountIncAbiertas()),
+                        g.getObservacion() != null ? g.getObservacion() : ""
                 ));
             }
             com.reparaciones.utils.CsvExporter.exportar(owner, "mis_reparaciones", cabeceras, filas);
