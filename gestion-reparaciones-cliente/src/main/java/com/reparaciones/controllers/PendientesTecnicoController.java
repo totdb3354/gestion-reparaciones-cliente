@@ -143,18 +143,12 @@ public class PendientesTecnicoController {
                             "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
                     return;
                 }
-                boolean urgente = item.isUrgente();
-                String rw = urgente ? "8" : "0";
-                String rc = urgente ? com.reparaciones.utils.Colores.FILA_URGENTE_BRD : "transparent";
                 if (item.getEsSolicitud() > 0) {
-                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
+                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";");
                 } else if (item.isEsIncidencia()) {
-                    setStyle("-fx-border-width: 0 " + rw + " 1 8; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent " + rc + " " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                } else if (urgente) {
-                    setStyle("-fx-border-width: 0 8 1 0; -fx-border-insets: 1 0 0 0;" +
-                            "-fx-border-color: transparent " + com.reparaciones.utils.Colores.FILA_URGENTE_BRD + " " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
+                    setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
+                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
                 } else {
                     setStyle("-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " transparent;");
                 }
