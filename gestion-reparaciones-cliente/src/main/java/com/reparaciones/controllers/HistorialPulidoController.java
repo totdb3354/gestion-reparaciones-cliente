@@ -67,6 +67,7 @@ public class HistorialPulidoController {
         tablaPulidos.setItems(datosFiltrados);
         tablaPulidos.setColumnResizePolicy(param -> true);
 
+        javafx.scene.image.Image imgEditar = new javafx.scene.image.Image(getClass().getResourceAsStream("/images/editar.png"));
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {
             {
                 ContextMenu menu = new ContextMenu();
@@ -82,6 +83,9 @@ public class HistorialPulidoController {
                 });
                 if (com.reparaciones.Sesion.esSuperTecnico()) {
                     MenuItem editarModelo = new MenuItem("Editar modelo");
+                    javafx.scene.image.ImageView ivEditarModelo = new javafx.scene.image.ImageView(imgEditar);
+                    ivEditarModelo.setFitWidth(14); ivEditarModelo.setFitHeight(14); ivEditarModelo.setPreserveRatio(true);
+                    editarModelo.setGraphic(ivEditarModelo);
                     editarModelo.setOnAction(e -> {
                         if (getItem() == null) return;
                         abrirSelectorModelo(getItem());
