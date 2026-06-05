@@ -207,6 +207,15 @@ public class PulidoSuperTecnicoController {
                     abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
+                MenuItem editarModelo = new MenuItem("Editar modelo");
+                ImageView ivEditarModelo = new ImageView(imgEditar);
+                ivEditarModelo.setFitWidth(14); ivEditarModelo.setFitHeight(14); ivEditarModelo.setPreserveRatio(true);
+                editarModelo.setGraphic(ivEditarModelo);
+                editarModelo.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    abrirSelectorModelo(getItem());
+                });
+                menu.getItems().add(editarModelo);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -646,5 +655,72 @@ public class PulidoSuperTecnicoController {
         if (col == cComentario){ CambioPendiente c = cambiosPendientes.get(rep.getIdRep());
             return c != null ? c.comentarioAsignacion() : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : ""); }
         return null;
+    }
+
+    private void abrirSelectorModelo(ReparacionResumen rep) {
+        javafx.collections.ObservableList<String> todos =
+                javafx.collections.FXCollections.observableArrayList(
+                        com.reparaciones.controllers.FormularioReparacionController.MODELOS_ORDENADOS);
+        javafx.collections.transformation.FilteredList<String> filtrados =
+                new javafx.collections.transformation.FilteredList<>(todos, s -> true);
+
+        javafx.scene.control.TextField tfFiltro = new javafx.scene.control.TextField();
+        tfFiltro.setPromptText("Filtrar modelo…");
+        tfFiltro.textProperty().addListener((obs, o, n) -> {
+            String lower = n == null ? "" : n.trim().toLowerCase();
+            filtrados.setPredicate(c -> lower.isEmpty()
+                    || com.reparaciones.controllers.FormularioReparacionController
+                            .traducirModelo(c).toLowerCase().contains(lower));
+        });
+
+        javafx.scene.control.ListView<String> lista = new javafx.scene.control.ListView<>(filtrados);
+        lista.setPrefHeight(220);
+        lista.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+            @Override protected void updateItem(String m, boolean empty) {
+                super.updateItem(m, empty);
+                setText((empty || m == null) ? null
+                        : com.reparaciones.controllers.FormularioReparacionController.traducirModelo(m));
+            }
+        });
+        if (rep.getModelo() != null && !rep.getModelo().isEmpty()) {
+            lista.getSelectionModel().select(rep.getModelo());
+            lista.scrollTo(rep.getModelo());
+        }
+
+        javafx.scene.control.Button btnConfirmar = new javafx.scene.control.Button("Guardar");
+        javafx.scene.control.Button btnCancelar  = new javafx.scene.control.Button("Cancelar");
+        btnConfirmar.disableProperty().bind(lista.getSelectionModel().selectedItemProperty().isNull());
+
+        javafx.scene.layout.HBox botones = new javafx.scene.layout.HBox(10, btnCancelar, btnConfirmar);
+        botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+
+        javafx.scene.layout.VBox contenido = new javafx.scene.layout.VBox(10,
+                new javafx.scene.control.Label("Selecciona el modelo:"),
+                tfFiltro, lista, botones);
+        contenido.setPadding(new javafx.geometry.Insets(20));
+        contenido.setPrefWidth(320);
+        contenido.setStyle("-fx-background-color: #DDE1E7;");
+
+        javafx.stage.Stage ventana = new javafx.stage.Stage();
+        ventana.setTitle("Editar modelo");
+        ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        ventana.setScene(scene);
+
+        btnCancelar.setOnAction(ev -> ventana.close());
+        btnConfirmar.setOnAction(ev -> {
+            String codigoInterno = lista.getSelectionModel().getSelectedItem();
+            if (codigoInterno == null) return;
+            try {
+                new com.reparaciones.dao.TelefonoDAO().insertar(rep.getImei(), codigoInterno);
+                ventana.close();
+                cargar();
+            } catch (java.sql.SQLException ex) {
+                com.reparaciones.utils.Alertas.mostrarError(ex.getMessage());
+            }
+        });
+
+        ventana.showAndWait();
     }
 }
