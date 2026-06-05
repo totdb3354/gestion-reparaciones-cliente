@@ -742,20 +742,29 @@ public class PendientesSuperTecnicoController {
             validar.run();
             String imeiActual = tfImei.getText();
             if (imeiActual.length() == 15 && modeloSel[0] == null && imeiYaConsultados.add(imeiActual)) {
+                tfModelo.setPromptText("Buscando...");
                 Thread t = new Thread(() -> {
                     try {
                         String modelo = telefonoDAO.getModelo(imeiActual);
-                        if (modelo != null && !modelo.isEmpty()) {
-                            javafx.application.Platform.runLater(() -> {
-                                if (tfImei.getText().equals(imeiActual) && modeloSel[0] == null) {
-                                    confirmarModelo.accept(modelo);
-                                }
-                            });
-                        }
-                    } catch (Exception ex) { /* silencioso — el técnico selecciona manualmente */ }
+                        javafx.application.Platform.runLater(() -> {
+                            if (!tfImei.getText().equals(imeiActual)) return;
+                            if (modelo != null && !modelo.isEmpty() && modeloSel[0] == null) {
+                                confirmarModelo.accept(modelo);
+                            } else if (modeloSel[0] == null) {
+                                tfModelo.setPromptText("No encontrado — selecciona manualmente");
+                            }
+                        });
+                    } catch (Exception ex) {
+                        javafx.application.Platform.runLater(() -> {
+                            if (tfImei.getText().equals(imeiActual) && modeloSel[0] == null)
+                                tfModelo.setPromptText("Error al consultar — selecciona manualmente");
+                        });
+                    }
                 });
                 t.setDaemon(true);
                 t.start();
+            } else if (imeiActual.length() < 15 && modeloSel[0] == null) {
+                tfModelo.setPromptText("— Selecciona modelo —");
             }
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
