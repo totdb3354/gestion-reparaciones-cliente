@@ -634,7 +634,7 @@ public class PendientesSuperTecnicoController {
         popupModelo.getContent().add(listaModelos);
 
         String[] modeloSel = {null};
-        java.util.Set<String> imeiYaConsultados = new java.util.HashSet<>();
+        String[] ultimoImeiConsultado = {null};
         boolean[] actualizandoModelo = {false};
 
         // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
@@ -741,7 +741,25 @@ public class PendientesSuperTecnicoController {
             if (tfImei.getText().length() > 15) tfImei.setText(tfImei.getText().substring(0, 15));
             validar.run();
             String imeiActual = tfImei.getText();
-            if (imeiActual.length() == 15 && modeloSel[0] == null && imeiYaConsultados.add(imeiActual)) {
+            if (imeiActual.length() < 15) {
+                if (modeloSel[0] != null) {
+                    actualizandoModelo[0] = true;
+                    tfModelo.clear();
+                    actualizandoModelo[0] = false;
+                    modeloSel[0] = null;
+                    validar.run();
+                }
+                ultimoImeiConsultado[0] = null;
+                tfModelo.setPromptText("— Selecciona modelo —");
+            } else if (!imeiActual.equals(ultimoImeiConsultado[0])) {
+                ultimoImeiConsultado[0] = imeiActual;
+                if (modeloSel[0] != null) {
+                    actualizandoModelo[0] = true;
+                    tfModelo.clear();
+                    actualizandoModelo[0] = false;
+                    modeloSel[0] = null;
+                    validar.run();
+                }
                 tfModelo.setPromptText("Buscando...");
                 Thread t = new Thread(() -> {
                     try {
@@ -763,8 +781,6 @@ public class PendientesSuperTecnicoController {
                 });
                 t.setDaemon(true);
                 t.start();
-            } else if (imeiActual.length() < 15 && modeloSel[0] == null) {
-                tfModelo.setPromptText("— Selecciona modelo —");
             }
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
