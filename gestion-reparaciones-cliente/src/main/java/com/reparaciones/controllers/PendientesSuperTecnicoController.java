@@ -634,6 +634,7 @@ public class PendientesSuperTecnicoController {
         popupModelo.getContent().add(listaModelos);
 
         String[] modeloSel = {null};
+        java.util.Set<String> imeiYaConsultados = new java.util.HashSet<>();
         boolean[] actualizandoModelo = {false};
 
         // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
@@ -740,7 +741,7 @@ public class PendientesSuperTecnicoController {
             if (tfImei.getText().length() > 15) tfImei.setText(tfImei.getText().substring(0, 15));
             validar.run();
             String imeiActual = tfImei.getText();
-            if (imeiActual.length() == 15 && modeloSel[0] == null) {
+            if (imeiActual.length() == 15 && modeloSel[0] == null && imeiYaConsultados.add(imeiActual)) {
                 Thread t = new Thread(() -> {
                     try {
                         String modelo = telefonoDAO.getModelo(imeiActual);
