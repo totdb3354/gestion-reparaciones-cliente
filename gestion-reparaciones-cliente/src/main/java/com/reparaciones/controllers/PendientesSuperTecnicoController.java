@@ -739,6 +739,23 @@ public class PendientesSuperTecnicoController {
             if (!n.matches("\\d*")) tfImei.setText(n.replaceAll("[^\\d]", ""));
             if (tfImei.getText().length() > 15) tfImei.setText(tfImei.getText().substring(0, 15));
             validar.run();
+            String imeiActual = tfImei.getText();
+            if (imeiActual.length() == 15 && modeloSel[0] == null) {
+                Thread t = new Thread(() -> {
+                    try {
+                        String modelo = telefonoDAO.getModelo(imeiActual);
+                        if (modelo != null && !modelo.isEmpty()) {
+                            javafx.application.Platform.runLater(() -> {
+                                if (tfImei.getText().equals(imeiActual) && modeloSel[0] == null) {
+                                    confirmarModelo.accept(modelo);
+                                }
+                            });
+                        }
+                    } catch (Exception ex) { /* silencioso — el técnico selecciona manualmente */ }
+                });
+                t.setDaemon(true);
+                t.start();
+            }
         });
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
 
