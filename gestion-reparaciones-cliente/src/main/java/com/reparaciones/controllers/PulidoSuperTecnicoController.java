@@ -187,11 +187,29 @@ public class PulidoSuperTecnicoController {
                 MenuItem copiar = new MenuItem("📋  Copiar celda");
                 copiar.setOnAction(e -> {
                     if (getItem() == null || colRightClick[0] == null) return;
-                    String texto = textoDeCelda(getItem(), colRightClick[0]);
+                    TableColumn<?, ?> col = colRightClick[0];
+                    String texto = textoDeCelda(getItem(), col);
                     if (texto == null || texto.isEmpty()) return;
                     javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+                    getChildrenUnmodifiable().stream()
+                        .filter(n -> n instanceof TableCell && ((TableCell<?, ?>) n).getTableColumn() == col)
+                        .findFirst()
+                        .ifPresent(cell -> {
+                            javafx.beans.property.DoubleProperty flashAlpha = new javafx.beans.property.SimpleDoubleProperty(1.0);
+                            flashAlpha.addListener((obs2, o2, n2) -> {
+                                double a = n2.doubleValue();
+                                if (a <= 0.02) cell.setStyle("");
+                                else cell.setStyle(String.format(java.util.Locale.US,
+                                    "-fx-background-color: rgba(224,247,250,%.2f);", a));
+                            });
+                            cell.setStyle("-fx-background-color: rgba(224,247,250,1.0);");
+                            new javafx.animation.Timeline(
+                                new javafx.animation.KeyFrame(javafx.util.Duration.millis(600),
+                                    new javafx.animation.KeyValue(flashAlpha, 0.0))
+                            ).play();
+                        });
                 });
                 menu.getItems().add(copiar);
                 MenuItem editarComentario = new MenuItem("Editar comentario");
@@ -298,9 +316,26 @@ public class PulidoSuperTecnicoController {
         } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15)
-                filtroImei.setText(filtroImei.getText().substring(0, 15));
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty())
+                filtroImei.setStyle("");
+            else if (hayIncompleto)
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
+                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else if (hayValido)
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
+                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else
+                filtroImei.setStyle("");
             aplicarFiltros();
         });
     }
@@ -317,9 +352,9 @@ public class PulidoSuperTecnicoController {
         List<Integer> idsTecSelec = new ArrayList<>();
         for (int i = 0; i < cbsTecnico.size(); i++)
             if (cbsTecnico.get(i).isSelected()) idsTecSelec.add(tecnicos.get(i).getIdTec());
-        String imeiStr = filtroImei.getText().trim();
+        java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
         datosFiltrados.setPredicate(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
             return true;
         });
@@ -328,8 +363,16 @@ public class PulidoSuperTecnicoController {
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();
+        filtroImei.setStyle("");
         cbsTecnico.forEach(cb -> cb.setSelected(false));
         filtroTecnico.setText("Técnico");
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     // ─── Carga ────────────────────────────────────────────────────────────────
@@ -358,14 +401,16 @@ public class PulidoSuperTecnicoController {
 
     @FXML
     private void abrirFormularioAsignacion() {
+        Image imgEditar = new Image(getClass().getResourceAsStream("/images/editar.png"));
+
         // ── Cabecera ──────────────────────────────────────────────────────────
         Label lblTitulo = new Label("Asignar pulidos");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-        Label lblSub = new Label("El técnico y comentario se mantienen entre escaneos.");
+        Label lblSub = new Label("Los valores por defecto se aplican al escanear. Edítalos individualmente en la lista.");
         lblSub.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
 
-        // ── Técnico ───────────────────────────────────────────────────────────
-        Label lblTecnico = new Label("Técnico a asignar");
+        // ── Técnico (por defecto) ─────────────────────────────────────────────
+        Label lblTecnico = new Label("Técnico por defecto");
         lblTecnico.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<Tecnico> cbTecnico = new ComboBox<>();
         cbTecnico.setMaxWidth(Double.MAX_VALUE);
@@ -376,8 +421,8 @@ public class PulidoSuperTecnicoController {
         try { cbTecnico.getItems().addAll(tecnicoDAO.getAllActivos()); }
         catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
 
-        // ── Comentario (opcional, sticky) ────────────────────────────────────
-        Label lblComentario = new Label("Comentario (opcional)");
+        // ── Comentario (por defecto) ──────────────────────────────────────────
+        Label lblComentario = new Label("Comentario por defecto (opcional)");
         lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         TextArea tfComentario = new TextArea();
         tfComentario.setWrapText(true);
@@ -386,7 +431,7 @@ public class PulidoSuperTecnicoController {
         tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                 "-fx-border-radius: 4; -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
 
-        // ── IMEI (auto-envío) ─────────────────────────────────────────────────
+        // ── IMEI ──────────────────────────────────────────────────────────────
         Label lblImei = new Label("IMEI");
         lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         TextField tfImei = new TextField();
@@ -397,7 +442,7 @@ public class PulidoSuperTecnicoController {
         Label lblError = new Label();
         lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR +
                 "; -fx-wrap-text: true;");
-        lblError.setMaxWidth(384);
+        lblError.setMaxWidth(424);
 
         // ── Lista en vivo ─────────────────────────────────────────────────────
         Label lblListaTitulo = new Label("Nada añadido aún");
@@ -409,7 +454,7 @@ public class PulidoSuperTecnicoController {
         listaItems.setStyle("-fx-background-color: white;");
         ScrollPane scroll = new ScrollPane(listaItems);
         scroll.setFitToWidth(true);
-        scroll.setPrefHeight(160);
+        scroll.setPrefHeight(200);
         scroll.setStyle("-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-border-width: 1;" +
                 " -fx-background: white; -fx-background-color: white;");
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -419,70 +464,180 @@ public class PulidoSuperTecnicoController {
         Button btnGuardar = new Button("Guardar");
         btnGuardar.setMaxWidth(Double.MAX_VALUE);
         btnGuardar.getStyleClass().add("btn-primary");
+        btnGuardar.disableProperty().bind(cbTecnico.valueProperty().isNull());
+
+        // ── Datos del lote ────────────────────────────────────────────────────
+        record ImeiConf(String imei, Tecnico[] tec, String[] com) {}
+        List<ImeiConf> lote = new ArrayList<>();
+        int[] contador = {0};
 
         // ── Lógica de envío ───────────────────────────────────────────────────
-        int[] contador = {0};
-        boolean[] enviando = {false};
-        List<String> idAPs = new ArrayList<>();
         Runnable intentarEnviar = () -> {
-            if (enviando[0]) return;
             String imei = tfImei.getText().trim();
             if (imei.length() != 15) return;
+            if (lote.stream().anyMatch(e -> e.imei().equals(imei))) {
+                lblError.setText("Este IMEI ya está en la lista."); return;
+            }
             Tecnico tec = cbTecnico.getValue();
             if (tec == null) { lblError.setText("Selecciona un técnico primero."); return; }
-            enviando[0] = true;
-            try {
-                String comentario = tfComentario.getText().trim();
-                telefonoDAO.insertar(imei);
-                String idAP = pulidoDAO.insertarAsignacionPulido(imei, tec.getIdTec(),
-                        comentario.isEmpty() ? null : comentario);
-                idAPs.add(idAP);
-                contador[0]++;
-                if (contador[0] == 1) listaItems.getChildren().remove(lblPlaceholder);
 
-                Label lblImeiItem = new Label(imei);
-                lblImeiItem.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
-                javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
-                HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-                Button btnX = new Button("✕");
-                btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: #B0B8C8;" +
-                        " -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;");
-                btnX.setOnMouseEntered(e -> btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: " +
-                        com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD +
-                        "; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
-                btnX.setOnMouseExited(e -> btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: #B0B8C8;" +
-                        " -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
-                HBox fila = new HBox(8, lblImeiItem, spacer, btnX);
-                fila.setAlignment(Pos.CENTER_LEFT);
-                fila.setStyle("-fx-padding: 5 8 5 8; -fx-border-color: transparent transparent #E8EAF0 transparent;" +
-                        " -fx-border-width: 0 0 1 0;");
-                btnX.setOnAction(ev -> {
-                    try {
-                        if (idAP != null) { pulidoDAO.eliminarAsignacionPulido(idAP); idAPs.remove(idAP); }
-                        listaItems.getChildren().remove(fila);
-                        contador[0]--;
-                        if (contador[0] == 0) listaItems.getChildren().add(0, lblPlaceholder);
-                        actualizarTituloLista(lblListaTitulo, contador[0]);
-                    } catch (SQLException ex) { lblError.setText(ex.getMessage()); }
-                });
-                listaItems.getChildren().add(fila);
-                javafx.application.Platform.runLater(() -> scroll.setVvalue(1.0));
+            Tecnico[] tecSel = {tec};
+            String[] comSel = {tfComentario.getText().trim()};
+            ImeiConf entry = new ImeiConf(imei, tecSel, comSel);
+            lote.add(entry);
+            contador[0]++;
+            if (contador[0] == 1) listaItems.getChildren().remove(lblPlaceholder);
 
+            // ── Fila con editor expandible por IMEI ───────────────────────────
+            boolean[] expandido = {false};
+            double EDITOR_H = 120.0;
+
+            Label lblImeiRow = new Label(imei);
+            lblImeiRow.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54; -fx-font-weight: bold;" +
+                    " -fx-font-family: monospace;");
+
+            Label lblTecPill = new Label(tecSel[0].getNombre());
+            lblTecPill.setStyle("-fx-background-color: #001232; -fx-text-fill: white;" +
+                    " -fx-font-size: 10px; -fx-padding: 2 8 2 8; -fx-background-radius: 20;");
+
+            String snipIni = comSel[0].isEmpty() ? "Sin comentario" :
+                    (comSel[0].length() > 22 ? comSel[0].substring(0, 19) + "..." : comSel[0]);
+            Label lblComSnip = new Label(snipIni);
+            lblComSnip.setStyle(comSel[0].isEmpty()
+                    ? "-fx-font-size: 10px; -fx-text-fill: #B0B8C8; -fx-font-style: italic;"
+                    : "-fx-font-size: 10px; -fx-text-fill: #586376;");
+
+            ImageView ivEditRow = new ImageView(imgEditar);
+            ivEditRow.setFitWidth(12); ivEditRow.setFitHeight(12); ivEditRow.setPreserveRatio(true);
+            Button btnEditRow = new Button();
+            btnEditRow.setGraphic(ivEditRow);
+            btnEditRow.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 4;");
+            btnEditRow.setOnMouseEntered(e -> btnEditRow.setStyle(
+                    "-fx-background-color: #EEF1F5; -fx-cursor: hand; -fx-padding: 4; -fx-background-radius: 4;"));
+            btnEditRow.setOnMouseExited(e -> btnEditRow.setStyle(
+                    "-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 4;"));
+
+            Button btnX = new Button("✕");
+            btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: #B0B8C8;" +
+                    " -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;");
+            btnX.setOnMouseEntered(e -> btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: " +
+                    com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD +
+                    "; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
+            btnX.setOnMouseExited(e -> btnX.setStyle("-fx-background-color: transparent; -fx-text-fill: #B0B8C8;" +
+                    " -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
+
+            javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+            HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+            HBox cabecera = new HBox(8, lblImeiRow, lblTecPill, spacer, lblComSnip, btnEditRow, btnX);
+            cabecera.setAlignment(Pos.CENTER_LEFT);
+            cabecera.setPrefHeight(42);
+            cabecera.setStyle("-fx-padding: 0 8 0 8;");
+
+            // Editor
+            ComboBox<Tecnico> cbEdit = new ComboBox<>();
+            cbEdit.getItems().addAll(tecnicos);
+            cbEdit.setValue(tecSel[0]);
+            cbEdit.setMaxWidth(Double.MAX_VALUE);
+            cbEdit.setStyle("-fx-font-size: 12px;");
+            cbEdit.setConverter(new javafx.util.StringConverter<>() {
+                @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+                @Override public Tecnico fromString(String s) { return null; }
+            });
+
+            TextField tfComEdit = new TextField(comSel[0]);
+            tfComEdit.setPromptText("Comentario...");
+            tfComEdit.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                    "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 12px; -fx-padding: 6;");
+
+            Button btnAplicar = new Button("Aplicar");
+            btnAplicar.getStyleClass().add("btn-primary");
+            Button btnCancelEdit = new Button("Cancelar");
+            btnCancelEdit.getStyleClass().add("btn-secondary");
+            HBox botonesEdit = new HBox(8, btnCancelEdit, btnAplicar);
+            botonesEdit.setAlignment(Pos.CENTER_RIGHT);
+
+            VBox editor = new VBox(6, cbEdit, tfComEdit, botonesEdit);
+            editor.setStyle("-fx-background-color: #EEF1F5; -fx-padding: 8 12 8 12;");
+            editor.setPrefHeight(0);
+            editor.setMinHeight(0);
+            editor.setMaxHeight(0);
+            javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(10000, 0);
+            editor.setClip(clip);
+
+            Runnable toggleEditor = () -> {
+                if (!expandido[0]) {
+                    expandido[0] = true;
+                    editor.setMaxHeight(EDITOR_H);
+                    new javafx.animation.Timeline(
+                        new javafx.animation.KeyFrame(javafx.util.Duration.millis(200),
+                            new javafx.animation.KeyValue(editor.prefHeightProperty(), EDITOR_H,
+                                    javafx.animation.Interpolator.EASE_BOTH),
+                            new javafx.animation.KeyValue(clip.heightProperty(), EDITOR_H,
+                                    javafx.animation.Interpolator.EASE_BOTH))
+                    ).play();
+                } else {
+                    expandido[0] = false;
+                    javafx.animation.Timeline t2 = new javafx.animation.Timeline(
+                        new javafx.animation.KeyFrame(javafx.util.Duration.millis(150),
+                            new javafx.animation.KeyValue(editor.prefHeightProperty(), 0,
+                                    javafx.animation.Interpolator.EASE_BOTH),
+                            new javafx.animation.KeyValue(clip.heightProperty(), 0,
+                                    javafx.animation.Interpolator.EASE_BOTH))
+                    );
+                    t2.setOnFinished(ev2 -> editor.setMaxHeight(0));
+                    t2.play();
+                }
+            };
+
+            btnEditRow.setOnAction(e -> toggleEditor.run());
+
+            btnAplicar.setOnAction(e -> {
+                Tecnico nuevoTec = cbEdit.getValue();
+                if (nuevoTec == null) return;
+                tecSel[0] = nuevoTec;
+                comSel[0] = tfComEdit.getText().trim();
+                lblTecPill.setText(tecSel[0].getNombre());
+                String snip = comSel[0].isEmpty() ? "Sin comentario" :
+                        (comSel[0].length() > 22 ? comSel[0].substring(0, 19) + "..." : comSel[0]);
+                lblComSnip.setText(snip);
+                lblComSnip.setStyle(comSel[0].isEmpty()
+                        ? "-fx-font-size: 10px; -fx-text-fill: #B0B8C8; -fx-font-style: italic;"
+                        : "-fx-font-size: 10px; -fx-text-fill: #586376;");
+                toggleEditor.run();
+            });
+
+            btnCancelEdit.setOnAction(e -> {
+                cbEdit.setValue(tecSel[0]);
+                tfComEdit.setText(comSel[0]);
+                toggleEditor.run();
+            });
+
+            VBox[] filaRef = {null};
+            btnX.setOnAction(ev -> {
+                lote.remove(entry);
+                listaItems.getChildren().remove(filaRef[0]);
+                contador[0]--;
+                if (contador[0] == 0) listaItems.getChildren().add(0, lblPlaceholder);
                 actualizarTituloLista(lblListaTitulo, contador[0]);
-                lblError.setText("");
-                javafx.application.Platform.runLater(() -> {
-                    tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #8AC7AF;");
-                    tfImei.clear();
-                    tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #C2C8D0;");
-                    tfImei.requestFocus();
-                    enviando[0] = false;
-                });
-            } catch (SQLException ex) {
-                lblError.setText(ex.getMessage());
-                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: " +
-                        com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                enviando[0] = false;
-            }
+            });
+
+            VBox filaContenedor = new VBox(0, cabecera, editor);
+            filaContenedor.setStyle("-fx-background-color: white;" +
+                    " -fx-border-color: transparent transparent #E8EAF0 transparent;" +
+                    " -fx-border-width: 0 0 1 0;");
+            filaRef[0] = filaContenedor;
+
+            listaItems.getChildren().add(filaContenedor);
+            javafx.application.Platform.runLater(() -> scroll.setVvalue(1.0));
+
+            actualizarTituloLista(lblListaTitulo, contador[0]);
+            lblError.setText("");
+            javafx.application.Platform.runLater(() -> {
+                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #8AC7AF;");
+                tfImei.clear();
+                tfImei.setStyle(IMEI_STYLE_BASE + "-fx-border-color: #C2C8D0;");
+                tfImei.requestFocus();
+            });
         };
 
         tfImei.textProperty().addListener((obs, o, n) -> {
@@ -514,30 +669,37 @@ public class PulidoSuperTecnicoController {
                 lblListaTitulo, scroll,
                 btnGuardar);
         contenido.setPadding(new Insets(28));
-        contenido.setPrefWidth(440);
+        contenido.setPrefWidth(480);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         ventana.setResizable(true);
-        ventana.setMinWidth(440);
-        ventana.setMinHeight(500);
+        ventana.setMinWidth(480);
+        ventana.setMinHeight(540);
         ventana.setTitle("Asignar pulidos");
-        btnGuardar.setOnAction(ev -> { ventana.close(); cargar(); });
+        btnGuardar.setOnAction(ev -> {
+            if (lote.isEmpty()) { ventana.close(); return; }
+            try {
+                for (ImeiConf e : lote) {
+                    telefonoDAO.insertar(e.imei());
+                    pulidoDAO.insertarAsignacionPulido(e.imei(), e.tec()[0].getIdTec(),
+                            (e.com()[0] == null || e.com()[0].isEmpty()) ? null : e.com()[0]);
+                }
+                ventana.close();
+                cargar();
+            } catch (SQLException ex) {
+                lblError.setText(ex.getMessage());
+            }
+        });
         ventana.setOnCloseRequest(ev -> {
-            if (contador[0] == 0) return;
+            if (lote.isEmpty()) return;
             ev.consume();
             ConfirmDialog.mostrar(
                     "Descartar cambios",
-                    "Se eliminarán los " + contador[0] + " IMEI" + (contador[0] == 1 ? "" : "s") + " escaneados.",
+                    "Se descartarán los " + lote.size() + " IMEI" + (lote.size() == 1 ? "" : "s") + " escaneados.",
                     "Descartar",
-                    () -> {
-                        for (String id : new ArrayList<>(idAPs)) {
-                            try { pulidoDAO.eliminarAsignacionPulido(id); }
-                            catch (SQLException ex) { /* ignorar errores individuales al descartar */ }
-                        }
-                        ventana.close();
-                    });
+                    () -> ventana.close());
         });
 
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);

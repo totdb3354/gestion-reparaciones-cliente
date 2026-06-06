@@ -75,11 +75,29 @@ public class HistorialPulidoController {
                 MenuItem copiar = new MenuItem("📋  Copiar celda");
                 copiar.setOnAction(e -> {
                     if (getItem() == null || colRightClick[0] == null) return;
-                    String texto = textoDeCelda(getItem(), colRightClick[0]);
+                    TableColumn<?, ?> col = colRightClick[0];
+                    String texto = textoDeCelda(getItem(), col);
                     if (texto == null || texto.isEmpty()) return;
                     javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+                    getChildrenUnmodifiable().stream()
+                        .filter(n -> n instanceof TableCell && ((TableCell<?, ?>) n).getTableColumn() == col)
+                        .findFirst()
+                        .ifPresent(cell -> {
+                            javafx.beans.property.DoubleProperty flashAlpha = new javafx.beans.property.SimpleDoubleProperty(1.0);
+                            flashAlpha.addListener((obs2, o2, n2) -> {
+                                double a = n2.doubleValue();
+                                if (a <= 0.02) cell.setStyle("");
+                                else cell.setStyle(String.format(java.util.Locale.US,
+                                    "-fx-background-color: rgba(224,247,250,%.2f);", a));
+                            });
+                            cell.setStyle("-fx-background-color: rgba(224,247,250,1.0);");
+                            new javafx.animation.Timeline(
+                                new javafx.animation.KeyFrame(javafx.util.Duration.millis(600),
+                                    new javafx.animation.KeyValue(flashAlpha, 0.0))
+                            ).play();
+                        });
                 });
                 if (com.reparaciones.Sesion.esSuperTecnico()) {
                     MenuItem editarModelo = new MenuItem("Editar modelo");
@@ -159,9 +177,26 @@ public class HistorialPulidoController {
         } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) filtroImei.setText(n.replaceAll("[^\\d]", ""));
-            if (filtroImei.getText().length() > 15)
-                filtroImei.setText(filtroImei.getText().substring(0, 15));
+            String withoutSep = n.replace(", ", ",");
+            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
+            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
+            String[] partes = n.split(",", -1);
+            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            }
+            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
+                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
+            boolean hayValido = !parsearImeis(n).isEmpty();
+            if (n.trim().isEmpty())
+                filtroImei.setStyle("");
+            else if (hayIncompleto)
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
+                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else if (hayValido)
+                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
+                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
+            else
+                filtroImei.setStyle("");
             aplicarFiltros();
         });
 
@@ -184,8 +219,9 @@ public class HistorialPulidoController {
         String imeiStr = filtroImei.getText().trim();
         LocalDate desde = filtroFechaDesde.getValue();
         LocalDate hasta = filtroFechaHasta.getValue();
+        java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
         datosFiltrados.setPredicate(rep -> {
-            if (imeiStr.length() == 15 && !rep.getImei().equals(imeiStr)) return false;
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
             if (desde != null && rep.getFechaFin() != null && rep.getFechaFin().toLocalDate().isBefore(desde)) return false;
             if (hasta != null && rep.getFechaFin() != null && rep.getFechaFin().toLocalDate().isAfter(hasta)) return false;
@@ -196,10 +232,18 @@ public class HistorialPulidoController {
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();
+        filtroImei.setStyle("");
         cbsTecnico.forEach(cb -> cb.setSelected(false));
         filtroTecnico.setText("Técnico");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
+    }
+
+    private static java.util.Set<String> parsearImeis(String texto) {
+        if (texto == null || texto.isBlank()) return java.util.Set.of();
+        return java.util.Arrays.stream(texto.split(",", -1))
+                .map(String::trim).filter(s -> s.length() == 15)
+                .collect(java.util.stream.Collectors.toSet());
     }
 
     public java.util.List<ReparacionResumen> getItemsVisibles() {
