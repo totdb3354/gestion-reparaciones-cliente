@@ -204,7 +204,8 @@ public class HistorialPulidoController {
                 }
             });
             VBox popupContenedor = new VBox(listaTecFiltro);
-            popupContenedor.getStyleClass().add("combo-box-popup");
+            popupContenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
+            popupContenedor.setMinWidth(filtroTecnico.getPrefWidth());
             Popup popupTec = new Popup();
             popupTec.setAutoHide(true);
             popupTec.getContent().add(popupContenedor);
