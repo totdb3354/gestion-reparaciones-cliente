@@ -375,6 +375,12 @@
     -fx-text-fill: #FFFFFF;
 }
 
+.combo-box-popup .list-view .list-cell:filled:hover .check-box .box,
+.combo-box-popup .list-view .list-cell:filled:selected .check-box .box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #FFFFFF;
+}
+
 
 /* ── 8. DatePicker ──────────────────────────────────────────────────────────── */
 
