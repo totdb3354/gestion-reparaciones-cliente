@@ -375,9 +375,18 @@
     -fx-text-fill: #FFFFFF;
 }
 
-.combo-box-popup .list-view .list-cell:filled:hover .check-box .box,
-.combo-box-popup .list-view .list-cell:filled:selected .check-box .box {
-    -fx-background-color: #FFFFFF;
+/* MultiSelectComboBox popup — iguala el estilo visual del MenuButton/ContextMenu */
+.multi-select-popup .list-view {
+    -fx-padding: 4 0 4 0;
+}
+
+.multi-select-popup .list-view .list-cell {
+    -fx-font-weight: normal;
+}
+
+.multi-select-popup .list-view .list-cell:filled:hover .check-box .box,
+.multi-select-popup .list-view .list-cell:filled:selected .check-box .box {
+    -fx-background-color: transparent;
     -fx-border-color: #FFFFFF;
 }
 
