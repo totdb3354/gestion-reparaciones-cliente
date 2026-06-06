@@ -1107,6 +1107,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         Label lblTecnico = new Label("Técnico asignado");
         ComboBox<Tecnico> cbTecnico = new ComboBox<>();
         cbTecnico.setMaxWidth(Double.MAX_VALUE);
+        cbTecnico.setVisibleRowCount(8);
         cbTecnico.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
                 "-fx-border-radius: 4; -fx-background-radius: 4;");
 

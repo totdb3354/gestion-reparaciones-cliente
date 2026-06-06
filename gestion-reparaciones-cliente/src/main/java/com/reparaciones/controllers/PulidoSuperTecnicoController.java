@@ -68,6 +68,7 @@ public class PulidoSuperTecnicoController {
             private ReparacionResumen repMostrado = null;
             {
                 cb.setMaxWidth(Double.MAX_VALUE);
+                cb.setVisibleRowCount(8);
                 cb.setStyle("-fx-font-size: 11px;");
                 cb.setConverter(new javafx.util.StringConverter<>() {
                     @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
@@ -414,6 +415,7 @@ public class PulidoSuperTecnicoController {
         lblTecnico.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<Tecnico> cbTecnico = new ComboBox<>();
         cbTecnico.setMaxWidth(Double.MAX_VALUE);
+        cbTecnico.setVisibleRowCount(8);
         cbTecnico.setConverter(new javafx.util.StringConverter<>() {
             @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
             @Override public Tecnico fromString(String s) { return null; }
@@ -538,6 +540,7 @@ public class PulidoSuperTecnicoController {
             cbEdit.getItems().addAll(tecnicos);
             cbEdit.setValue(tecSel[0]);
             cbEdit.setMaxWidth(Double.MAX_VALUE);
+            cbEdit.setVisibleRowCount(8);
             cbEdit.setStyle("-fx-font-size: 12px;");
             cbEdit.setConverter(new javafx.util.StringConverter<>() {
                 @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }

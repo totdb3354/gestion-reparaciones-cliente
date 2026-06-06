@@ -86,6 +86,7 @@ public class PendientesSuperTecnicoController {
             private boolean actualizando = false;
             {
                 cb.setMaxWidth(Double.MAX_VALUE);
+                cb.setVisibleRowCount(8);
                 cb.setStyle("-fx-font-size: 11px;");
                 cb.setConverter(new javafx.util.StringConverter<>() {
                     @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
