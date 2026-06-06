@@ -462,6 +462,7 @@ public class PulidoSuperTecnicoController {
         Button btnGuardar = new Button("Guardar");
         btnGuardar.setMaxWidth(Double.MAX_VALUE);
         btnGuardar.getStyleClass().add("btn-primary");
+        btnGuardar.disableProperty().bind(cbTecnico.valueProperty().isNull());
 
         // ── Lógica de envío ───────────────────────────────────────────────────
         int[] contador = {0};
@@ -552,9 +553,8 @@ public class PulidoSuperTecnicoController {
         ventana.setTitle("Asignar pulidos");
         btnGuardar.setOnAction(ev -> {
             if (imeis.isEmpty()) { ventana.close(); return; }
-            Tecnico tec = cbTecnico.getValue();
-            if (tec == null) { lblError.setText("Selecciona un técnico primero."); return; }
             String comentario = tfComentario.getText().trim();
+            Tecnico tec = cbTecnico.getValue();
             btnGuardar.setDisable(true);
             try {
                 for (String imei : imeis) {
