@@ -589,6 +589,7 @@ public class PendientesSuperTecnicoController {
         cbSoloIncidencias.setSelected(false);
         cbSoloAsignaciones.setSelected(false);
         filtroSolicitud.setText("Tipo");
+        aplicarFiltros();
     }
 
     public void setOnActualizar(Runnable onActualizar) { this.onActualizar = onActualizar; }
