@@ -7,7 +7,10 @@ import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.utils.MultiSelectComboBox;
 import com.reparaciones.utils.StaleDataException;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -19,13 +22,16 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PulidoSuperTecnicoController {
 
@@ -37,7 +43,7 @@ public class PulidoSuperTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
-    @FXML private MenuButton filtroTecnico;
+    @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private Button     btnConfirmarCambios;
@@ -51,7 +57,9 @@ public class PulidoSuperTecnicoController {
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private FilteredList<ReparacionResumen> datosFiltrados;
 
-    private final List<CheckBox> cbsTecnico = new ArrayList<>();
+    private final Set<Integer>   idsTecFiltro  = new HashSet<>();
+    private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
+    private ListView<Tecnico>    listaTecFiltro;
     private final List<Tecnico>  tecnicos   = new ArrayList<>();
     private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion,
                                    java.time.LocalDateTime updatedAt) {}
@@ -303,17 +311,43 @@ public class PulidoSuperTecnicoController {
     private void configurarFiltros() {
         try {
             tecnicos.addAll(tecnicoDAO.getAllActivos());
-            for (Tecnico t : tecnicos) {
-                CheckBox cb = new CheckBox(t.getNombre());
-                cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-                cb.selectedProperty().addListener((obs, o, n) -> {
-                    actualizarTextoFiltroTecnico();
-                    aplicarFiltros();
-                });
-                cbsTecnico.add(cb);
-                CustomMenuItem item = new CustomMenuItem(cb, false);
-                filtroTecnico.getItems().add(item);
-            }
+            filtroTecnico.setButtonCell(new ListCell<>() {
+                { etiquetaTec.addListener((obs, o, n) -> setText(n)); setText(etiquetaTec.get()); }
+                @Override protected void updateItem(Tecnico t, boolean empty) {
+                    super.updateItem(t, empty); setText(etiquetaTec.get());
+                }
+            });
+            listaTecFiltro = new ListView<>(FXCollections.observableArrayList(tecnicos));
+            listaTecFiltro.setMaxHeight(Math.min(tecnicos.size(), 8) * 30.0);
+            listaTecFiltro.setCellFactory(lv -> new ListCell<>() {
+                private final CheckBox check = new CheckBox();
+                {
+                    check.setMouseTransparent(true);
+                    check.setFocusTraversable(false);
+                    setOnMouseClicked(e -> {
+                        if (getItem() == null) return;
+                        int id = getItem().getIdTec();
+                        if (idsTecFiltro.contains(id)) idsTecFiltro.remove(id);
+                        else idsTecFiltro.add(id);
+                        listaTecFiltro.refresh();
+                        actualizarTextoFiltroTecnico();
+                        aplicarFiltros();
+                    });
+                }
+                @Override protected void updateItem(Tecnico t, boolean empty) {
+                    super.updateItem(t, empty);
+                    if (empty || t == null) { setGraphic(null); setText(null); return; }
+                    check.setSelected(idsTecFiltro.contains(t.getIdTec()));
+                    setGraphic(check);
+                    setText(t.getNombre());
+                }
+            });
+            VBox popupContenedor = new VBox(listaTecFiltro);
+            popupContenedor.getStyleClass().add("combo-box-popup");
+            Popup popupTec = new Popup();
+            popupTec.setAutoHide(true);
+            popupTec.getContent().add(popupContenedor);
+            filtroTecnico.setCustomPopup(popupTec);
         } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
@@ -342,17 +376,17 @@ public class PulidoSuperTecnicoController {
     }
 
     private void actualizarTextoFiltroTecnico() {
-        long sel = cbsTecnico.stream().filter(CheckBox::isSelected).count();
-        filtroTecnico.setText(sel == 0 ? "Técnico" : sel == 1
-                ? cbsTecnico.stream().filter(CheckBox::isSelected).findFirst().map(CheckBox::getText).orElse("Técnico")
-                : sel + " técnicos");
+        List<String> nombres = tecnicos.stream()
+                .filter(t -> idsTecFiltro.contains(t.getIdTec()))
+                .map(Tecnico::getNombre).toList();
+        etiquetaTec.set(nombres.isEmpty() ? "Técnico"
+                : nombres.size() == 1 ? nombres.get(0)
+                : nombres.size() + " técnicos");
     }
 
     private void aplicarFiltros() {
         if (datosFiltrados == null) return;
-        List<Integer> idsTecSelec = new ArrayList<>();
-        for (int i = 0; i < cbsTecnico.size(); i++)
-            if (cbsTecnico.get(i).isSelected()) idsTecSelec.add(tecnicos.get(i).getIdTec());
+        List<Integer> idsTecSelec = new ArrayList<>(idsTecFiltro);
         java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
@@ -365,8 +399,10 @@ public class PulidoSuperTecnicoController {
     private void limpiarFiltros() {
         filtroImei.clear();
         filtroImei.setStyle("");
-        cbsTecnico.forEach(cb -> cb.setSelected(false));
-        filtroTecnico.setText("Técnico");
+        idsTecFiltro.clear();
+        if (listaTecFiltro != null) listaTecFiltro.refresh();
+        etiquetaTec.set("Técnico");
+        aplicarFiltros();
     }
 
     private static java.util.Set<String> parsearImeis(String texto) {
