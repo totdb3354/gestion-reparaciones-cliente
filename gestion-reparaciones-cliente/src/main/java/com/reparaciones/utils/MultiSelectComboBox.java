@@ -1,5 +1,6 @@
 package com.reparaciones.utils;
 
+import javafx.geometry.Bounds;
 import javafx.scene.control.ComboBox;
 import javafx.stage.Popup;
 
@@ -21,7 +22,8 @@ public class MultiSelectComboBox<T> extends ComboBox<T> {
         if (customPopup.isShowing()) {
             customPopup.hide();
         } else {
-            javafx.geometry.Bounds b = localToScreen(getBoundsInLocal());
+            Bounds b = localToScreen(getBoundsInLocal());
+            if (b == null) return;
             customPopup.show(this, b.getMinX(), b.getMaxY() + 4);
         }
     }
