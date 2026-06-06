@@ -555,7 +555,6 @@ public class PulidoSuperTecnicoController {
             if (imeis.isEmpty()) { ventana.close(); return; }
             String comentario = tfComentario.getText().trim();
             Tecnico tec = cbTecnico.getValue();
-            btnGuardar.setDisable(true);
             try {
                 for (String imei : imeis) {
                     telefonoDAO.insertar(imei);
@@ -566,7 +565,6 @@ public class PulidoSuperTecnicoController {
                 cargar();
             } catch (SQLException ex) {
                 lblError.setText(ex.getMessage());
-                btnGuardar.setDisable(false);
             }
         });
         ventana.setOnCloseRequest(ev -> {
