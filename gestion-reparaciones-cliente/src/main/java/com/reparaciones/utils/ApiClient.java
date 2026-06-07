@@ -283,6 +283,7 @@ public class ApiClient {
             case 403 -> throw new SQLException("No tienes permisos para realizar esta acción.");
             case 404 -> throw new SQLException("Recurso no encontrado.");
             case 409 -> throw new StaleDataException(msg);
+            case 422 -> throw new SQLException("Contraseña actual incorrecta.");
             default  -> {
                 if (status >= 500)
                     throw new SQLException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.");

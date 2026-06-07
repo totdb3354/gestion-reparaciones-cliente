@@ -96,16 +96,16 @@ public class CambiarPasswordController {
 
         btnGuardar.setDisable(true);
         Stage ventana = (Stage) btnGuardar.getScene().getWindow();
+        javafx.stage.Window mainWindow = ventana.getOwner();
         try {
             usuarioDAO.cambiarPassword(actual, nueva);
             ventana.close();
-            new Alert(Alert.AlertType.INFORMATION, "Contraseña cambiada correctamente.").showAndWait();
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Contraseña cambiada correctamente.");
+            if (mainWindow != null) alert.initOwner(mainWindow);
+            alert.showAndWait();
         } catch (SQLException ex) {
             btnGuardar.setDisable(false);
-            String msg = ex.getMessage() != null ? ex.getMessage() : "";
-            mostrarError(msg.startsWith("Sesión expirada")
-                    ? "Contraseña actual incorrecta."
-                    : msg);
+            mostrarError(ex.getMessage() != null ? ex.getMessage() : "Error al cambiar la contraseña.");
         }
     }
 
