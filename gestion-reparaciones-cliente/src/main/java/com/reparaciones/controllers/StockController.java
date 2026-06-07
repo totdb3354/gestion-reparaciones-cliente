@@ -103,10 +103,14 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     @FXML private TableColumn<Proveedor, String>   cpvDivisa;
     @FXML private TableColumn<Proveedor, String>   cpvActivo;
     @FXML private TableColumn<Proveedor, String>   cpvComentario;
-    @FXML private MenuButton                       menuFiltroProveedores;
-    @FXML private MenuButton                       menuFiltroProveedorPedidos;
-    private final java.util.List<CheckBox> cbsProveedor         = new java.util.ArrayList<>();
-    private final java.util.List<CheckBox> cbsProveedorPedidos  = new java.util.ArrayList<>();
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<Proveedor> menuFiltroProveedores;
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<Proveedor> menuFiltroProveedorPedidos;
+    private final java.util.Set<String> seleccionadosProv    = new java.util.LinkedHashSet<>();
+    private final java.util.Set<String> seleccionadosPedidos = new java.util.LinkedHashSet<>();
+    private final javafx.beans.property.StringProperty etiquetaProvStock   = new javafx.beans.property.SimpleStringProperty("Proveedor");
+    private final javafx.beans.property.StringProperty etiquetaProvPedidos = new javafx.beans.property.SimpleStringProperty("Proveedor");
+    private javafx.scene.control.ListView<Proveedor> listaProvStock;
+    private javafx.scene.control.ListView<Proveedor> listaProvPedidos;
     private Runnable onFiltroPedidosProveedor = () -> {};
 
     // ── Última actualización ──────────────────────────────────────────────────
@@ -243,7 +247,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @FXML private void limpiarFiltrosPedidos() {
         cbsEstado.forEach(cb -> cb.setSelected(false));
-        cbsProveedorPedidos.forEach(cb -> cb.setSelected(false));
+        seleccionadosPedidos.clear();
+        if (listaProvPedidos != null) listaProvPedidos.refresh();
+        etiquetaProvPedidos.set("Proveedor");
         txtBuscadorPedidos.clear();
         dpPedidosDesde.setValue(null);
         dpPedidosHasta.setValue(null);
@@ -895,7 +901,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             java.util.List<String> sel     = cbsEstado.stream()
                     .filter(CheckBox::isSelected).map(CheckBox::getText)
                     .collect(java.util.stream.Collectors.toList());
-            java.util.List<String> selProv = nombresSeleccionados(cbsProveedorPedidos);
+            java.util.List<String> selProv = new java.util.ArrayList<>(seleccionadosPedidos);
             String texto = txtBuscadorPedidos.getText();
             java.time.LocalDate desde = dpPedidosDesde.getValue();
             java.time.LocalDate hasta = dpPedidosHasta.getValue();
@@ -1222,40 +1228,108 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void poblarFiltrosProveedor() {
-        java.util.List<String> selProv    = nombresSeleccionados(cbsProveedor);
-        java.util.List<String> selPedidos = nombresSeleccionados(cbsProveedorPedidos);
+        java.util.List<Proveedor> activos = datosProveedores.stream()
+                .filter(Proveedor::isActivo)
+                .collect(java.util.stream.Collectors.toList());
 
-        cbsProveedor.clear();        menuFiltroProveedores.getItems().clear();
-        cbsProveedorPedidos.clear(); menuFiltroProveedorPedidos.getItems().clear();
+        if (listaProvStock == null) {
+            // ── Setup menuFiltroProveedores ──────────────────────────────────
+            listaProvStock = new javafx.scene.control.ListView<>();
+            listaProvStock.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+                private final CheckBox cb = new CheckBox();
+                { setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY); }
+                @Override protected void updateItem(Proveedor p, boolean empty) {
+                    super.updateItem(p, empty);
+                    if (empty || p == null) { setGraphic(null); return; }
+                    cb.setText(p.getNombre());
+                    cb.setSelected(seleccionadosProv.contains(p.getNombre()));
+                    cb.setOnAction(e -> {
+                        if (cb.isSelected()) seleccionadosProv.add(p.getNombre());
+                        else                 seleccionadosProv.remove(p.getNombre());
+                        actualizarTextoFiltroProveedor(etiquetaProvStock, seleccionadosProv);
+                        aplicarFiltroProveedores();
+                    });
+                    setGraphic(cb);
+                }
+            });
+            menuFiltroProveedores.setButtonCell(new javafx.scene.control.ListCell<>() {
+                {
+                    etiquetaProvStock.addListener((obs, o, n) ->
+                            javafx.application.Platform.runLater(() -> setText(n)));
+                    javafx.application.Platform.runLater(() -> setText(etiquetaProvStock.get()));
+                }
+                @Override protected void updateItem(Proveedor p, boolean empty) {
+                    super.updateItem(p, empty);
+                    javafx.application.Platform.runLater(() -> setText(etiquetaProvStock.get()));
+                }
+            });
+            javafx.scene.layout.VBox contenedorProv = new javafx.scene.layout.VBox(listaProvStock);
+            contenedorProv.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
+            contenedorProv.setPrefWidth(menuFiltroProveedores.getPrefWidth());
+            contenedorProv.setMaxWidth(menuFiltroProveedores.getPrefWidth());
+            javafx.stage.Popup popupProv = new javafx.stage.Popup();
+            popupProv.setAutoHide(true);
+            popupProv.getContent().add(contenedorProv);
+            menuFiltroProveedores.setCustomPopup(popupProv);
 
-        for (Proveedor p : datosProveedores) {
-            if (!p.isActivo()) continue;
-            CheckBox cb1 = new CheckBox(p.getNombre());
-            CheckBox cb2 = new CheckBox(p.getNombre());
-            cb1.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-            cb2.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-            if (selProv.contains(p.getNombre()))    cb1.setSelected(true);
-            if (selPedidos.contains(p.getNombre())) cb2.setSelected(true);
-            cb1.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedores, cbsProveedor, "Proveedor"); aplicarFiltroProveedores(); });
-            cb2.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedorPedidos, cbsProveedorPedidos, "Proveedor"); aplicarFiltroPedidosProveedor(); });
-            cbsProveedor.add(cb1);        menuFiltroProveedores.getItems().add(new CustomMenuItem(cb1, false));
-            cbsProveedorPedidos.add(cb2); menuFiltroProveedorPedidos.getItems().add(new CustomMenuItem(cb2, false));
+            // ── Setup menuFiltroProveedorPedidos ─────────────────────────────
+            listaProvPedidos = new javafx.scene.control.ListView<>();
+            listaProvPedidos.setCellFactory(lv -> new javafx.scene.control.ListCell<>() {
+                private final CheckBox cb = new CheckBox();
+                { setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY); }
+                @Override protected void updateItem(Proveedor p, boolean empty) {
+                    super.updateItem(p, empty);
+                    if (empty || p == null) { setGraphic(null); return; }
+                    cb.setText(p.getNombre());
+                    cb.setSelected(seleccionadosPedidos.contains(p.getNombre()));
+                    cb.setOnAction(e -> {
+                        if (cb.isSelected()) seleccionadosPedidos.add(p.getNombre());
+                        else                 seleccionadosPedidos.remove(p.getNombre());
+                        actualizarTextoFiltroProveedor(etiquetaProvPedidos, seleccionadosPedidos);
+                        aplicarFiltroPedidosProveedor();
+                    });
+                    setGraphic(cb);
+                }
+            });
+            menuFiltroProveedorPedidos.setButtonCell(new javafx.scene.control.ListCell<>() {
+                {
+                    etiquetaProvPedidos.addListener((obs, o, n) ->
+                            javafx.application.Platform.runLater(() -> setText(n)));
+                    javafx.application.Platform.runLater(() -> setText(etiquetaProvPedidos.get()));
+                }
+                @Override protected void updateItem(Proveedor p, boolean empty) {
+                    super.updateItem(p, empty);
+                    javafx.application.Platform.runLater(() -> setText(etiquetaProvPedidos.get()));
+                }
+            });
+            javafx.scene.layout.VBox contenedorPedidos = new javafx.scene.layout.VBox(listaProvPedidos);
+            contenedorPedidos.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
+            contenedorPedidos.setPrefWidth(menuFiltroProveedorPedidos.getPrefWidth());
+            contenedorPedidos.setMaxWidth(menuFiltroProveedorPedidos.getPrefWidth());
+            javafx.stage.Popup popupPedidos = new javafx.stage.Popup();
+            popupPedidos.setAutoHide(true);
+            popupPedidos.getContent().add(contenedorPedidos);
+            menuFiltroProveedorPedidos.setCustomPopup(popupPedidos);
         }
+
+        listaProvStock.getItems().setAll(activos);
+        listaProvStock.setMaxHeight(activos.size() * 30.0 + 4);
+        listaProvStock.refresh();
+
+        listaProvPedidos.getItems().setAll(activos);
+        listaProvPedidos.setMaxHeight(activos.size() * 30.0 + 4);
+        listaProvPedidos.refresh();
     }
 
-    private java.util.List<String> nombresSeleccionados(java.util.List<CheckBox> cbs) {
-        return cbs.stream().filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toList());
-    }
-
-    private void actualizarTextoFiltroProveedor(MenuButton menu, java.util.List<CheckBox> cbs, String placeholder) {
-        java.util.List<String> sel = nombresSeleccionados(cbs);
-        if      (sel.isEmpty())    menu.setText(placeholder);
-        else if (sel.size() == 1)  menu.setText(sel.get(0));
-        else                       menu.setText(sel.size() + " proveedores");
+    private void actualizarTextoFiltroProveedor(javafx.beans.property.StringProperty etiqueta,
+                                                java.util.Set<String> sel) {
+        if      (sel.isEmpty())   etiqueta.set("Proveedor");
+        else if (sel.size() == 1) etiqueta.set(sel.iterator().next());
+        else                      etiqueta.set(sel.size() + " proveedores");
     }
 
     private void aplicarFiltroProveedores() {
-        java.util.List<String> sel = nombresSeleccionados(cbsProveedor);
+        java.util.List<String> sel = new java.util.ArrayList<>(seleccionadosProv);
         ((FilteredList<Proveedor>) tablaProveedores.getItems())
                 .setPredicate(p -> sel.isEmpty() || sel.contains(p.getNombre()));
     }

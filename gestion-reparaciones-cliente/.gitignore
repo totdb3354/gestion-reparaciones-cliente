@@ -10,8 +10,10 @@ target/
 .DS_Store
 Thumbs.db
 
-# Claude Code — configuración local
+# Claude Code — configuración local y planes
 .claude/
+.codegraph/
+docs/superpowers/
 
 # Configuración local — contiene la IP/URL de producción
 src/main/resources/config.properties
