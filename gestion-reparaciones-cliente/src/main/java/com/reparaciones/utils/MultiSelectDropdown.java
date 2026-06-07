@@ -19,6 +19,8 @@ public final class MultiSelectDropdown {
 
     private MultiSelectDropdown() {}
 
+    private static final int MAX_VISIBLE_ROWS = 8;
+
     // ── Handle ────────────────────────────────────────────────────────────────
 
     public static final class Handle {
@@ -66,7 +68,7 @@ public final class MultiSelectDropdown {
         }
 
         listView.getItems().setAll(items);
-        listView.setMaxHeight(items.size() * 30.0 + 4);
+        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * 30.0 + 4);
         listView.refresh();
         return new Handle(listView);
     }
@@ -88,7 +90,7 @@ public final class MultiSelectDropdown {
         }
 
         listView.getItems().setAll(items);
-        listView.setMaxHeight(items.size() * 30.0 + 4);
+        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * 30.0 + 4);
         listView.refresh();
         return new Handle(listView);
     }
