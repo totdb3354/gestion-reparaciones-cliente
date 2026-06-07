@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import com.reparaciones.utils.MultiSelectComboBox?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.chart.*?>
@@ -37,7 +38,7 @@
                     <Button text="Limpiar filtros" onAction="#limpiarFiltros" styleClass="btn-secondary"/>
                 </HBox>
                 <HBox alignment="CENTER_LEFT" spacing="8">
-                    <MenuButton fx:id="menuTecnicos" text="Técnicos" prefWidth="160"/>
+                    <MultiSelectComboBox fx:id="menuTecnicos" prefWidth="160"/>
                     <CheckBox fx:id="chkTodos" text="Todos"
                               style="-fx-text-fill: #000000; -fx-font-weight: bold;"/>
                     <CheckBox fx:id="chkActividad" text="Actividad"
