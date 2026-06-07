@@ -307,6 +307,10 @@
     -fx-padding: 4 0 4 12;
 }
 
+.combo-box-base .list-cell:empty {
+    -fx-text-fill: #FAFAFA;
+}
+
 .combo-box-base .arrow-button {
     -fx-background-color: transparent;
     -fx-background-radius: 24;
