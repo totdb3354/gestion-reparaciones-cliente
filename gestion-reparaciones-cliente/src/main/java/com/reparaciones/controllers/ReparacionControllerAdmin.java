@@ -100,7 +100,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     private final Set<Integer>   idsTecFiltro  = new HashSet<>();
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
-    private ListView<Tecnico>    listaTecFiltro;
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>  tecnicosLista  = new ArrayList<>();
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
@@ -555,45 +555,14 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private void configurarFiltros() {
         try {
             tecnicosLista.addAll(tecnicoDAO.getAll());
-            filtroTecnico.setButtonCell(new ListCell<>() {
-                { etiquetaTec.addListener((obs, o, n) -> setText(n)); javafx.application.Platform.runLater(() -> setText(etiquetaTec.get())); }
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, false); setText(etiquetaTec.get());
-                }
-            });
-            listaTecFiltro = new ListView<>(FXCollections.observableArrayList(tecnicosLista));
-            listaTecFiltro.setMaxHeight(Math.min(tecnicosLista.size(), 8) * 30.0);
-            listaTecFiltro.setCellFactory(lv -> new ListCell<>() {
-                private final CheckBox check = new CheckBox();
-                {
-                    check.setMouseTransparent(true);
-                    check.setFocusTraversable(false);
-                    setOnMouseClicked(e -> {
-                        if (getItem() == null) return;
-                        int id = getItem().getIdTec();
-                        if (idsTecFiltro.contains(id)) idsTecFiltro.remove(id);
-                        else idsTecFiltro.add(id);
-                        listaTecFiltro.refresh();
-                        actualizarTextoFiltroTecnico();
-                        aplicarFiltros();
-                    });
-                }
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, empty);
-                    if (empty || t == null) { setGraphic(null); setText(null); return; }
-                    check.setSelected(idsTecFiltro.contains(t.getIdTec()));
-                    setGraphic(check);
-                    setText(t.getNombre());
-                }
-            });
-            VBox popupContenedor = new VBox(listaTecFiltro);
-            popupContenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
-            popupContenedor.setPrefWidth(filtroTecnico.getPrefWidth());
-            popupContenedor.setMaxWidth(filtroTecnico.getPrefWidth());
-            Popup popupTec = new Popup();
-            popupTec.setAutoHide(true);
-            popupTec.getContent().add(popupContenedor);
-            filtroTecnico.setCustomPopup(popupTec);
+            filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+                filtroTecnico, tecnicosLista,
+                Tecnico::getNombre,
+                t -> idsTecFiltro.contains(t.getIdTec()),
+                (t, checked) -> { if (checked) idsTecFiltro.add(t.getIdTec());
+                                  else         idsTecFiltro.remove(t.getIdTec());
+                                  actualizarTextoFiltroTecnico(); aplicarFiltros(); },
+                etiquetaTec);
         } catch (SQLException e) { mostrarError(e); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
@@ -837,7 +806,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             idsTecFiltro.clear();
             tecnicosLista.stream().filter(t -> t.getNombre().equals(tecnico))
                     .findFirst().ifPresent(t -> idsTecFiltro.add(t.getIdTec()));
-            if (listaTecFiltro != null) listaTecFiltro.refresh();
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
             actualizarTextoFiltroTecnico();
         }
         filtroFechaDesde.setValue(desde);
@@ -848,7 +817,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private void limpiarFiltros() {
         filtroImei.clear(); filtroImei.setStyle("");
         idsTecFiltro.clear();
-        if (listaTecFiltro != null) listaTecFiltro.refresh();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
         etiquetaTec.set("Técnico");
         filtroFechaDesde.setValue(null); filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
