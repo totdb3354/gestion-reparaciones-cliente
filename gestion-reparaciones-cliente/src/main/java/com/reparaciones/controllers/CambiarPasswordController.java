@@ -113,10 +113,12 @@ public class CambiarPasswordController {
         lblError.setText(msg);
         lblError.setVisible(true);
         lblError.setManaged(true);
+        ((Stage) lblError.getScene().getWindow()).sizeToScene();
     }
 
     private void ocultarError() {
         lblError.setVisible(false);
         lblError.setManaged(false);
+        ((Stage) lblError.getScene().getWindow()).sizeToScene();
     }
 }
