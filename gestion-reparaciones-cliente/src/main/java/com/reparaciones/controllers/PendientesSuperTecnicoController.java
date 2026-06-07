@@ -434,7 +434,7 @@ public class PendientesSuperTecnicoController {
             filtroTecnico.setButtonCell(new ListCell<>() {
                 { etiquetaTec.addListener((obs, o, n) -> setText(n)); setText(etiquetaTec.get()); }
                 @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, empty); setText(etiquetaTec.get());
+                    super.updateItem(t, false); setText(etiquetaTec.get());
                 }
             });
             listaTecFiltro = new ListView<>(FXCollections.observableArrayList(tecnicos));
