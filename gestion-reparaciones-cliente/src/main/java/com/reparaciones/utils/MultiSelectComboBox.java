@@ -1,13 +1,10 @@
 package com.reparaciones.utils;
 
 import javafx.geometry.Bounds;
+import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.stage.Popup;
 
-/**
- * ComboBox cuyo popup nativo es reemplazado por un Popup propio,
- * permitiendo multi-selección sin cerrar al hacer clic.
- */
 public class MultiSelectComboBox<T> extends ComboBox<T> {
 
     private Popup customPopup;
@@ -24,6 +21,10 @@ public class MultiSelectComboBox<T> extends ComboBox<T> {
         } else {
             Bounds b = localToScreen(getBoundsInLocal());
             if (b == null) return;
+            if (getScene() != null && !customPopup.getContent().isEmpty()
+                    && customPopup.getContent().get(0) instanceof Parent p) {
+                p.getStylesheets().setAll(getScene().getStylesheets());
+            }
             customPopup.show(this, b.getMinX(), b.getMaxY() + 4);
         }
     }
