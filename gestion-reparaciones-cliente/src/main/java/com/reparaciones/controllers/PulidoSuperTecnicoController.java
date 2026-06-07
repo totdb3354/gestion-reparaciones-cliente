@@ -344,7 +344,8 @@ public class PulidoSuperTecnicoController {
             });
             VBox popupContenedor = new VBox(listaTecFiltro);
             popupContenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
-            popupContenedor.setMinWidth(filtroTecnico.getPrefWidth());
+            popupContenedor.setPrefWidth(filtroTecnico.getPrefWidth());
+            popupContenedor.setMaxWidth(filtroTecnico.getPrefWidth());
             Popup popupTec = new Popup();
             popupTec.setAutoHide(true);
             popupTec.getContent().add(popupContenedor);

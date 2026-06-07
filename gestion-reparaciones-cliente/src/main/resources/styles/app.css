@@ -382,6 +382,7 @@
 
 .multi-select-popup .list-view .list-cell {
     -fx-font-weight: normal;
+    -fx-text-overrun: ellipsis;
 }
 
 .multi-select-popup .list-view .list-cell:filled:hover .check-box .box,
