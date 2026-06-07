@@ -2,6 +2,7 @@ package com.reparaciones.utils;
 
 import javafx.geometry.Bounds;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.stage.Popup;
 
@@ -21,9 +22,10 @@ public class MultiSelectComboBox<T> extends ComboBox<T> {
         } else {
             Bounds b = localToScreen(getBoundsInLocal());
             if (b == null) return;
-            if (getScene() != null && !customPopup.getContent().isEmpty()
+            Scene scene = getScene();
+            if (scene != null && !customPopup.getContent().isEmpty()
                     && customPopup.getContent().get(0) instanceof Parent p) {
-                p.getStylesheets().setAll(getScene().getStylesheets());
+                p.getStylesheets().setAll(scene.getRoot().getStylesheets());
             }
             customPopup.show(this, b.getMinX(), b.getMaxY() + 4);
         }
