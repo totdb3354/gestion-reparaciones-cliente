@@ -78,7 +78,7 @@ public class PendientesSuperTecnicoController {
     private CheckBox cbSoloAsignaciones;
     private final Set<Integer>   idsTecFiltro  = new HashSet<>();
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
-    private ListView<Tecnico>    listaTecFiltro;
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>         tecnicos         = new ArrayList<>();
     private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion, java.time.LocalDateTime updatedAt) {}
     private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
@@ -431,45 +431,14 @@ public class PendientesSuperTecnicoController {
         // Filtro técnico
         try {
             tecnicos.addAll(tecnicoDAO.getAllActivos());
-            filtroTecnico.setButtonCell(new ListCell<>() {
-                { etiquetaTec.addListener((obs, o, n) -> setText(n)); javafx.application.Platform.runLater(() -> setText(etiquetaTec.get())); }
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, false); setText(etiquetaTec.get());
-                }
-            });
-            listaTecFiltro = new ListView<>(FXCollections.observableArrayList(tecnicos));
-            listaTecFiltro.setMaxHeight(Math.min(tecnicos.size(), 8) * 30.0);
-            listaTecFiltro.setCellFactory(lv -> new ListCell<>() {
-                private final CheckBox check = new CheckBox();
-                {
-                    check.setMouseTransparent(true);
-                    check.setFocusTraversable(false);
-                    setOnMouseClicked(e -> {
-                        if (getItem() == null) return;
-                        int id = getItem().getIdTec();
-                        if (idsTecFiltro.contains(id)) idsTecFiltro.remove(id);
-                        else idsTecFiltro.add(id);
-                        listaTecFiltro.refresh();
-                        actualizarTextoFiltroTecnico();
-                        aplicarFiltros();
-                    });
-                }
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, empty);
-                    if (empty || t == null) { setGraphic(null); setText(null); return; }
-                    check.setSelected(idsTecFiltro.contains(t.getIdTec()));
-                    setGraphic(check);
-                    setText(t.getNombre());
-                }
-            });
-            VBox popupContenedor = new VBox(listaTecFiltro);
-            popupContenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
-            popupContenedor.setPrefWidth(filtroTecnico.getPrefWidth());
-            popupContenedor.setMaxWidth(filtroTecnico.getPrefWidth());
-            Popup popupTec = new Popup();
-            popupTec.setAutoHide(true);
-            popupTec.getContent().add(popupContenedor);
-            filtroTecnico.setCustomPopup(popupTec);
+            filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+                filtroTecnico, tecnicos,
+                Tecnico::getNombre,
+                t -> idsTecFiltro.contains(t.getIdTec()),
+                (t, checked) -> { if (checked) idsTecFiltro.add(t.getIdTec());
+                                  else         idsTecFiltro.remove(t.getIdTec());
+                                  actualizarTextoFiltroTecnico(); aplicarFiltros(); },
+                etiquetaTec);
         } catch (SQLException e) { mostrarError(e); }
 
         // Filtro tipo
@@ -585,7 +554,7 @@ public class PendientesSuperTecnicoController {
         filtroImei.clear();
         filtroImei.setStyle("");
         idsTecFiltro.clear();
-        if (listaTecFiltro != null) listaTecFiltro.refresh();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
         etiquetaTec.set("Técnico");
         cbSoloSolicitudes.setSelected(false);
         cbSoloIncidencias.setSelected(false);
