@@ -304,7 +304,7 @@
     -fx-text-fill: #FAFAFA;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 4 0 4 12;
+    -fx-padding: 6 0 6 12;
 }
 
 .combo-box-base .list-cell:empty {
@@ -314,7 +314,7 @@
 .combo-box-base .arrow-button {
     -fx-background-color: transparent;
     -fx-background-radius: 24;
-    -fx-padding: 4 12 4 4;
+    -fx-padding: 6 12 6 4;
 }
 
 .combo-box-base .arrow {
