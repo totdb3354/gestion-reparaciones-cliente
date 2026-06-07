@@ -25,6 +25,12 @@ import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import com.reparaciones.utils.MultiSelectComboBox;
+import java.util.HashSet;
+import java.util.Set;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.stage.Popup;
 
 /**
  * Controlador de la tabla de asignaciones pendientes (vista del supertécnico).
@@ -51,7 +57,7 @@ public class PendientesSuperTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private TextField  filtroImei;
-    @FXML private MenuButton filtroTecnico;
+    @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private MenuButton filtroSolicitud;
 
     private final ReparacionDAO  reparacionDAO = new ReparacionDAO();
@@ -70,7 +76,9 @@ public class PendientesSuperTecnicoController {
     private CheckBox cbSoloSolicitudes;
     private CheckBox cbSoloIncidencias;
     private CheckBox cbSoloAsignaciones;
-    private final List<CheckBox>        cbsTecnico       = new ArrayList<>();
+    private final Set<Integer>   idsTecFiltro  = new HashSet<>();
+    private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>         tecnicos         = new ArrayList<>();
     private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion, java.time.LocalDateTime updatedAt) {}
     private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
@@ -86,6 +94,7 @@ public class PendientesSuperTecnicoController {
             private boolean actualizando = false;
             {
                 cb.setMaxWidth(Double.MAX_VALUE);
+                cb.setVisibleRowCount(8);
                 cb.setStyle("-fx-font-size: 11px;");
                 cb.setConverter(new javafx.util.StringConverter<>() {
                     @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
@@ -422,17 +431,14 @@ public class PendientesSuperTecnicoController {
         // Filtro técnico
         try {
             tecnicos.addAll(tecnicoDAO.getAllActivos());
-            for (Tecnico t : tecnicos) {
-                CheckBox cb = new CheckBox(t.getNombre());
-                cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-                cb.selectedProperty().addListener((obs, o, n) -> {
-                    actualizarTextoFiltroTecnico();
-                    aplicarFiltros();
-                });
-                cbsTecnico.add(cb);
-                CustomMenuItem item = new CustomMenuItem(cb, false);
-                filtroTecnico.getItems().add(item);
-            }
+            filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+                filtroTecnico, tecnicos,
+                Tecnico::getNombre,
+                t -> idsTecFiltro.contains(t.getIdTec()),
+                (t, checked) -> { if (checked) idsTecFiltro.add(t.getIdTec());
+                                  else         idsTecFiltro.remove(t.getIdTec());
+                                  actualizarTextoFiltroTecnico(); aplicarFiltros(); },
+                etiquetaTec);
         } catch (SQLException e) { mostrarError(e); }
 
         // Filtro tipo
@@ -491,11 +497,19 @@ public class PendientesSuperTecnicoController {
     }
 
     private void actualizarTextoFiltroTecnico() {
-        long sel = cbsTecnico.stream().filter(CheckBox::isSelected).count();
-        filtroTecnico.setText(sel == 0 ? "Técnico" : sel == 1
-                ? cbsTecnico.stream().filter(CheckBox::isSelected)
-                        .findFirst().map(CheckBox::getText).orElse("Técnico")
-                : sel + " técnicos");
+        long sel = idsTecFiltro.size();
+        if (sel == 0) {
+            etiquetaTec.set("Técnico");
+        } else if (sel == 1) {
+            int id = idsTecFiltro.iterator().next();
+            String nombre = tecnicos.stream()
+                    .filter(t -> t.getIdTec() == id)
+                    .findFirst().map(Tecnico::getNombre).orElse("Técnico");
+            etiquetaTec.set(nombre);
+        } else {
+            etiquetaTec.set(sel + " técnicos");
+        }
+        // The button cell observes etiquetaTec and updates its own text automatically.
     }
 
     private void actualizarTextoFiltroSolicitud() {
@@ -511,9 +525,7 @@ public class PendientesSuperTecnicoController {
 
     private void aplicarFiltros() {
         if (datosFiltrados == null) return;
-        List<Integer> idsTecSelec = new ArrayList<>();
-        for (int i = 0; i < cbsTecnico.size(); i++)
-            if (cbsTecnico.get(i).isSelected()) idsTecSelec.add(tecnicos.get(i).getIdTec());
+        List<Integer> idsTecSelec = new ArrayList<>(idsTecFiltro);
         boolean filtrarSol  = cbSoloSolicitudes.isSelected();
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
@@ -541,12 +553,14 @@ public class PendientesSuperTecnicoController {
     private void limpiarFiltros() {
         filtroImei.clear();
         filtroImei.setStyle("");
-        cbsTecnico.forEach(cb -> cb.setSelected(false));
+        idsTecFiltro.clear();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
+        etiquetaTec.set("Técnico");
         cbSoloSolicitudes.setSelected(false);
         cbSoloIncidencias.setSelected(false);
         cbSoloAsignaciones.setSelected(false);
-        filtroTecnico.setText("Técnico");
         filtroSolicitud.setText("Tipo");
+        aplicarFiltros();
     }
 
     public void setOnActualizar(Runnable onActualizar) { this.onActualizar = onActualizar; }

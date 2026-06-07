@@ -3,11 +3,13 @@ package com.reparaciones.controllers;
 import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
+import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.models.GrupoImei;
 import com.reparaciones.models.ReparacionResumen;
-import com.reparaciones.models.Tecnico;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -27,9 +29,11 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
@@ -63,7 +67,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
-    @FXML private MenuButton filtroTecnico;
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private DatePicker filtroFechaDesde;
     @FXML private DatePicker filtroFechaHasta;
     @FXML private MenuButton filtroIncidencias;
@@ -123,7 +127,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private Label  lblNavModelo;
     private Label  lblNavCount;
 
-    private final List<CheckBox> checksTecnico = new java.util.ArrayList<>();
+    private final Set<Integer>   idsTecFiltro  = new HashSet<>();
+    private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
+    private final List<Tecnico>  tecnicosLista  = new ArrayList<>();
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     private final java.util.concurrent.ScheduledExecutorService poller =
@@ -793,17 +800,15 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     private void configurarFiltros() {
         try {
-            List<com.reparaciones.models.Tecnico> tecnicos = tecnicoDAO.getAll();
-            for (com.reparaciones.models.Tecnico t : tecnicos) {
-                CheckBox cb = new CheckBox(t.getNombre());
-                cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-                cb.selectedProperty().addListener((obs, o, n) -> {
-                    actualizarTextoFiltroTecnico();
-                    aplicarFiltros();
-                });
-                checksTecnico.add(cb);
-                filtroTecnico.getItems().add(new CustomMenuItem(cb, false));
-            }
+            tecnicosLista.addAll(tecnicoDAO.getAll());
+            filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+                filtroTecnico, tecnicosLista,
+                Tecnico::getNombre,
+                t -> idsTecFiltro.contains(t.getIdTec()),
+                (t, checked) -> { if (checked) idsTecFiltro.add(t.getIdTec());
+                                  else         idsTecFiltro.remove(t.getIdTec());
+                                  actualizarTextoFiltroTecnico(); aplicarFiltros(); },
+                etiquetaTec);
         } catch (SQLException e) {
             mostrarError(e);
         }
@@ -859,14 +864,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         boolean filtrarAbiertas = cbIncidenciasAbiertas.isSelected();
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
-        List<String> tecnicosSeleccionados = checksTecnico.stream()
-                .filter(CheckBox::isSelected).map(CheckBox::getText).collect(Collectors.toList());
-
         if (modoActual == Modo.DETALLE) {
             List<ReparacionResumen> filtradas = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
                 .filter(rep -> {
-                    if (!tecnicosSeleccionados.isEmpty() && !tecnicosSeleccionados.contains(rep.getNombreTecnico())) return false;
+                    if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
                     if (desde != null || hasta != null) {
                         if (rep.getFechaFin() == null) return false;
                         LocalDate fechaFin = rep.getFechaFin().toLocalDate();
@@ -1047,18 +1049,28 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     }
 
     private void actualizarTextoFiltroTecnico() {
-        List<String> seleccionados = checksTecnico.stream()
-                .filter(CheckBox::isSelected).map(CheckBox::getText).collect(Collectors.toList());
-        if (seleccionados.isEmpty())         filtroTecnico.setText("Técnico");
-        else if (seleccionados.size() == 1) filtroTecnico.setText(seleccionados.get(0));
-        else                                filtroTecnico.setText(seleccionados.size() + " técnicos");
+        long sel = idsTecFiltro.size();
+        if (sel == 0) {
+            etiquetaTec.set("Técnico");
+        } else if (sel == 1) {
+            int id = idsTecFiltro.iterator().next();
+            String nombre = tecnicosLista.stream()
+                    .filter(t -> t.getIdTec() == id)
+                    .findFirst().map(Tecnico::getNombre).orElse("Técnico");
+            etiquetaTec.set(nombre);
+        } else {
+            etiquetaTec.set(sel + " técnicos");
+        }
     }
 
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
         mostrarHistorial();
         if (modoActual == Modo.DETALLE) volverAGrupos();
         if (tecnico != null) {
-            checksTecnico.forEach(cb -> cb.setSelected(cb.getText().equals(tecnico)));
+            idsTecFiltro.clear();
+            tecnicosLista.stream().filter(t -> t.getNombre().equals(tecnico))
+                    .findFirst().ifPresent(t -> idsTecFiltro.add(t.getIdTec()));
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
             actualizarTextoFiltroTecnico();
         }
         filtroFechaDesde.setValue(desde);
@@ -1069,8 +1081,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private void limpiarFiltros() {
         filtroImei.clear();
         filtroImei.setStyle("");
-        checksTecnico.forEach(cb -> cb.setSelected(false));
-        filtroTecnico.setText("Técnico");
+        idsTecFiltro.clear();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
+        etiquetaTec.set("Técnico");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
@@ -1107,6 +1120,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         Label lblTecnico = new Label("Técnico asignado");
         ComboBox<Tecnico> cbTecnico = new ComboBox<>();
         cbTecnico.setMaxWidth(Double.MAX_VALUE);
+        cbTecnico.setVisibleRowCount(8);
         cbTecnico.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
                 "-fx-border-radius: 4; -fx-background-radius: 4;");
 

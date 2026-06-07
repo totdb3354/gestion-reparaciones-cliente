@@ -4,6 +4,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
+<?import com.reparaciones.utils.MultiSelectComboBox?>
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
@@ -34,7 +35,7 @@
                 <VBox.margin><Insets bottom="8"/></VBox.margin>
                 <Label styleClass="vista-titulo" text="Historial de reparaciones" HBox.hgrow="ALWAYS"/>
                 <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
-                <MenuButton fx:id="filtroTecnico" text="Técnico" prefWidth="130"/>
+                <MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
                 <Label text="Desde:" style="-fx-font-size: 12px;"/>
                 <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
                 <Label text="Hasta:" style="-fx-font-size: 12px;"/>

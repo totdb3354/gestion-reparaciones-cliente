@@ -304,13 +304,17 @@
     -fx-text-fill: #FAFAFA;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-padding: 4 0 4 12;
+    -fx-padding: 6 0 6 12;
+}
+
+.combo-box-base .list-cell:empty {
+    -fx-text-fill: #FAFAFA;
 }
 
 .combo-box-base .arrow-button {
     -fx-background-color: transparent;
     -fx-background-radius: 24;
-    -fx-padding: 4 12 4 4;
+    -fx-padding: 6 12 6 4;
 }
 
 .combo-box-base .arrow {
@@ -330,6 +334,64 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);
 }
 
+.combo-box-popup .list-view .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+}
+
+.combo-box-popup .list-view .scroll-bar:vertical .track {
+    -fx-background-color: #E8EAF0;
+    -fx-background-radius: 4;
+    -fx-border-color: transparent;
+}
+
+.combo-box-popup .list-view .scroll-bar:vertical .thumb {
+    -fx-background-color: #2C3B54;
+    -fx-background-radius: 4;
+}
+
+.combo-box-popup .list-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #001232;
+}
+
+.combo-box-popup .list-view .scroll-bar:vertical .increment-button,
+.combo-box-popup .list-view .scroll-bar:vertical .decrement-button {
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal {
+    -fx-pref-height: 8;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal .track {
+    -fx-background-color: #E8EAF0;
+    -fx-background-radius: 4;
+    -fx-border-color: transparent;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal .thumb {
+    -fx-background-color: #2C3B54;
+    -fx-background-radius: 4;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #001232;
+}
+
+.combo-box-popup .list-view .scroll-bar:horizontal .increment-button,
+.combo-box-popup .list-view .scroll-bar:horizontal .decrement-button {
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-max-width: 0;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
 .combo-box-popup .list-view .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #001232;
@@ -344,6 +406,22 @@
     -fx-background-radius: 8;
     -fx-background-insets: 2 6 2 6;
     -fx-text-fill: #FFFFFF;
+}
+
+/* MultiSelectComboBox popup — iguala el estilo visual del MenuButton/ContextMenu */
+.multi-select-popup .list-view {
+    -fx-padding: 4 0 4 0;
+}
+
+.multi-select-popup .list-view .list-cell {
+    -fx-font-weight: normal;
+    -fx-text-overrun: ellipsis;
+}
+
+.multi-select-popup .list-view .list-cell:filled:hover .check-box .box,
+.multi-select-popup .list-view .list-cell:filled:selected .check-box .box {
+    -fx-background-color: transparent;
+    -fx-border-color: #FFFFFF;
 }
 
 

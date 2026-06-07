@@ -272,6 +272,7 @@ public class FormularioCompraController {
         colProveedor.setCellFactory(col -> new TableCell<>() {
             private final ComboBox<Proveedor> combo = new ComboBox<>(proveedoresDisponibles);
             {
+                combo.setVisibleRowCount(8);
                 combo.setCellFactory(lv -> new ListCell<>() {
                     {
                         setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)

@@ -58,6 +58,7 @@ public class FormularioCompraEditarController {
         } catch (SQLException e) {
             mostrarError(e);
         }
+        cmbProveedor.setVisibleRowCount(8);
 
         cmbDivisa.getItems().setAll(List.of("EUR", "USD"));
 

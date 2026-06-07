@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.reparaciones.utils.MultiSelectComboBox?>
 
 <VBox xmlns:fx="http://javafx.com/fxml/1"
       xmlns="http://javafx.com/javafx/25"
@@ -13,7 +14,7 @@
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Historial de pulidos" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
-        <MenuButton fx:id="filtroTecnico" text="Técnico" prefWidth="130"/>
+        <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
         <Label text="Desde:" style="-fx-font-size: 12px;"/>
         <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
         <Label text="Hasta:" style="-fx-font-size: 12px;"/>

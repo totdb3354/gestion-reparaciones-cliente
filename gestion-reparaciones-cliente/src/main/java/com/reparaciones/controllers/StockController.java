@@ -103,10 +103,14 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     @FXML private TableColumn<Proveedor, String>   cpvDivisa;
     @FXML private TableColumn<Proveedor, String>   cpvActivo;
     @FXML private TableColumn<Proveedor, String>   cpvComentario;
-    @FXML private MenuButton                       menuFiltroProveedores;
-    @FXML private MenuButton                       menuFiltroProveedorPedidos;
-    private final java.util.List<CheckBox> cbsProveedor         = new java.util.ArrayList<>();
-    private final java.util.List<CheckBox> cbsProveedorPedidos  = new java.util.ArrayList<>();
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<Proveedor> menuFiltroProveedores;
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<Proveedor> menuFiltroProveedorPedidos;
+    private final java.util.Set<String> seleccionadosProv    = new java.util.LinkedHashSet<>();
+    private final java.util.Set<String> seleccionadosPedidos = new java.util.LinkedHashSet<>();
+    private final javafx.beans.property.StringProperty etiquetaProvStock   = new javafx.beans.property.SimpleStringProperty("Proveedor");
+    private final javafx.beans.property.StringProperty etiquetaProvPedidos = new javafx.beans.property.SimpleStringProperty("Proveedor");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroProvStockHandle;
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroProvPedidosHandle;
     private Runnable onFiltroPedidosProveedor = () -> {};
 
     // ── Última actualización ──────────────────────────────────────────────────
@@ -243,7 +247,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @FXML private void limpiarFiltrosPedidos() {
         cbsEstado.forEach(cb -> cb.setSelected(false));
-        cbsProveedorPedidos.forEach(cb -> cb.setSelected(false));
+        seleccionadosPedidos.clear();
+        if (filtroProvPedidosHandle != null) filtroProvPedidosHandle.refresh();
+        etiquetaProvPedidos.set("Proveedor");
         txtBuscadorPedidos.clear();
         dpPedidosDesde.setValue(null);
         dpPedidosHasta.setValue(null);
@@ -895,7 +901,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             java.util.List<String> sel     = cbsEstado.stream()
                     .filter(CheckBox::isSelected).map(CheckBox::getText)
                     .collect(java.util.stream.Collectors.toList());
-            java.util.List<String> selProv = nombresSeleccionados(cbsProveedorPedidos);
+            java.util.List<String> selProv = new java.util.ArrayList<>(seleccionadosPedidos);
             String texto = txtBuscadorPedidos.getText();
             java.time.LocalDate desde = dpPedidosDesde.getValue();
             java.time.LocalDate hasta = dpPedidosHasta.getValue();
@@ -1222,40 +1228,40 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void poblarFiltrosProveedor() {
-        java.util.List<String> selProv    = nombresSeleccionados(cbsProveedor);
-        java.util.List<String> selPedidos = nombresSeleccionados(cbsProveedorPedidos);
+        java.util.List<Proveedor> activos = datosProveedores.stream()
+                .filter(Proveedor::isActivo)
+                .collect(java.util.stream.Collectors.toList());
 
-        cbsProveedor.clear();        menuFiltroProveedores.getItems().clear();
-        cbsProveedorPedidos.clear(); menuFiltroProveedorPedidos.getItems().clear();
+        filtroProvStockHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            menuFiltroProveedores, activos,
+            Proveedor::getNombre,
+            p -> seleccionadosProv.contains(p.getNombre()),
+            (p, checked) -> { if (checked) seleccionadosProv.add(p.getNombre());
+                              else         seleccionadosProv.remove(p.getNombre());
+                              actualizarTextoFiltroProveedor(etiquetaProvStock, seleccionadosProv);
+                              aplicarFiltroProveedores(); },
+            etiquetaProvStock);
 
-        for (Proveedor p : datosProveedores) {
-            if (!p.isActivo()) continue;
-            CheckBox cb1 = new CheckBox(p.getNombre());
-            CheckBox cb2 = new CheckBox(p.getNombre());
-            cb1.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-            cb2.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
-            if (selProv.contains(p.getNombre()))    cb1.setSelected(true);
-            if (selPedidos.contains(p.getNombre())) cb2.setSelected(true);
-            cb1.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedores, cbsProveedor, "Proveedor"); aplicarFiltroProveedores(); });
-            cb2.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroProveedor(menuFiltroProveedorPedidos, cbsProveedorPedidos, "Proveedor"); aplicarFiltroPedidosProveedor(); });
-            cbsProveedor.add(cb1);        menuFiltroProveedores.getItems().add(new CustomMenuItem(cb1, false));
-            cbsProveedorPedidos.add(cb2); menuFiltroProveedorPedidos.getItems().add(new CustomMenuItem(cb2, false));
-        }
+        filtroProvPedidosHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            menuFiltroProveedorPedidos, activos,
+            Proveedor::getNombre,
+            p -> seleccionadosPedidos.contains(p.getNombre()),
+            (p, checked) -> { if (checked) seleccionadosPedidos.add(p.getNombre());
+                              else         seleccionadosPedidos.remove(p.getNombre());
+                              actualizarTextoFiltroProveedor(etiquetaProvPedidos, seleccionadosPedidos);
+                              aplicarFiltroPedidosProveedor(); },
+            etiquetaProvPedidos);
     }
 
-    private java.util.List<String> nombresSeleccionados(java.util.List<CheckBox> cbs) {
-        return cbs.stream().filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toList());
-    }
-
-    private void actualizarTextoFiltroProveedor(MenuButton menu, java.util.List<CheckBox> cbs, String placeholder) {
-        java.util.List<String> sel = nombresSeleccionados(cbs);
-        if      (sel.isEmpty())    menu.setText(placeholder);
-        else if (sel.size() == 1)  menu.setText(sel.get(0));
-        else                       menu.setText(sel.size() + " proveedores");
+    private void actualizarTextoFiltroProveedor(javafx.beans.property.StringProperty etiqueta,
+                                                java.util.Set<String> sel) {
+        if      (sel.isEmpty())   etiqueta.set("Proveedor");
+        else if (sel.size() == 1) etiqueta.set(sel.iterator().next());
+        else                      etiqueta.set(sel.size() + " proveedores");
     }
 
     private void aplicarFiltroProveedores() {
-        java.util.List<String> sel = nombresSeleccionados(cbsProveedor);
+        java.util.List<String> sel = new java.util.ArrayList<>(seleccionadosProv);
         ((FilteredList<Proveedor>) tablaProveedores.getItems())
                 .setPredicate(p -> sel.isEmpty() || sel.contains(p.getNombre()));
     }

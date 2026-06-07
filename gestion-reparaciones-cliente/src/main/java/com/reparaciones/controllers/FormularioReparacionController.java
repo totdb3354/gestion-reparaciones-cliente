@@ -725,6 +725,7 @@ public class FormularioReparacionController {
             cbSku.setMinWidth(170);
             cbSku.setPrefWidth(170);
             cbSku.setMaxWidth(170);
+            cbSku.setVisibleRowCount(8);
             cbSku.setStyle("-fx-font-size: 11px;");
 
             cbSku.setCellFactory(lv -> new ListCell<>() {
@@ -1544,6 +1545,7 @@ public class FormularioReparacionController {
             cbTecnicoFila = new ComboBox<>();
             cbTecnicoFila.getItems().setAll(tecnicos);
             cbTecnicoFila.setPrefWidth(150);
+            cbTecnicoFila.setVisibleRowCount(8);
             cbTecnicoFila.setStyle("-fx-font-size: 11px;");
             cbTecnicoFila.setCellFactory(lv -> new ListCell<>() {
                 @Override protected void updateItem(Tecnico t, boolean empty) {
