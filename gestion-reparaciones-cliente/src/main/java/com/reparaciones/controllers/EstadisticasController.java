@@ -23,10 +23,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.Slider;
 import javafx.scene.control.Tooltip;
-import javafx.stage.Popup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -94,7 +92,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     // label del botón MultiSelectComboBox
     private final StringProperty        etiquetaTecs = new SimpleStringProperty("Técnicos");
     // ListView del popup de técnicos (null hasta que se carga)
-    private ListView<Tecnico>           listaTecnicos;
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     // todos los técnicos cargados (activos + inactivos, null = separador)
     private final java.util.List<Tecnico> todosLosTecnicos = new java.util.ArrayList<>();
     // Serie actualmente resaltada (null = ninguna)
@@ -226,64 +224,48 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             }
         }
 
-        menuTecnicos.setButtonCell(new ListCell<>() {
-            { etiquetaTecs.addListener((obs, o, n) -> setText(n)); javafx.application.Platform.runLater(() -> setText(etiquetaTecs.get())); }
-            @Override protected void updateItem(Tecnico t, boolean empty) {
-                super.updateItem(t, false); setText(etiquetaTecs.get());
-            }
-        });
-
-        listaTecnicos = new ListView<>(FXCollections.observableArrayList(todosLosTecnicos));
-        listaTecnicos.setMaxHeight(Math.min(todosLosTecnicos.size(), 10) * 30.0);
-        listaTecnicos.setCellFactory(lv -> new ListCell<>() {
-            private final CheckBox check = new CheckBox();
-            {
-                check.setMouseTransparent(true);
-                check.setFocusTraversable(false);
-                setOnMouseClicked(e -> {
-                    if (getItem() == null) return;
-                    String nombre = getItem().getNombre();
-                    if (nombresSeleccionadosTec.contains(nombre)) nombresSeleccionadosTec.remove(nombre);
-                    else nombresSeleccionadosTec.add(nombre);
-                    listaTecnicos.refresh();
-                    actualizarTextoMenuTecnicos();
-                    renderVentana((int) sliderVentana.getValue());
-                });
-            }
-            @Override protected void updateItem(Tecnico t, boolean empty) {
-                super.updateItem(t, empty);
-                if (empty) { setGraphic(null); setText(null); setStyle(""); return; }
-                if (t == null) {
-                    // separador entre activos e inactivos
-                    setGraphic(null);
-                    setText(null);
-                    setMouseTransparent(true);
-                    setStyle("-fx-border-color: transparent transparent #AAAAAA transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 0 0; -fx-pref-height: 8;");
-                    return;
+        filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            menuTecnicos,
+            todosLosTecnicos,
+            lv -> new ListCell<Tecnico>() {
+                private final CheckBox check = new CheckBox();
+                {
+                    check.setMouseTransparent(true);
+                    check.setFocusTraversable(false);
+                    setOnMouseClicked(e -> {
+                        if (getItem() == null) return;
+                        String nombre = getItem().getNombre();
+                        if (nombresSeleccionadosTec.contains(nombre)) nombresSeleccionadosTec.remove(nombre);
+                        else nombresSeleccionadosTec.add(nombre);
+                        filtroTecHandle.refresh();
+                        actualizarTextoMenuTecnicos();
+                        renderVentana((int) sliderVentana.getValue());
+                    });
                 }
-                setMouseTransparent(false);
-                boolean activo = t.isActivo();
-                check.setSelected(nombresSeleccionadosTec.contains(t.getNombre()));
-                setGraphic(check);
-                String colorHex = coloresPorNombre.getOrDefault(t.getNombre(), "#888888");
-                if (activo) {
-                    setText(t.getNombre());
-                    setStyle("-fx-text-fill: " + colorHex + "; -fx-font-weight: bold;");
-                } else {
-                    setText(t.getNombre() + " (inactivo)");
-                    setStyle("-fx-text-fill: #9A9A9A; -fx-font-style: italic;");
+                @Override protected void updateItem(Tecnico t, boolean empty) {
+                    super.updateItem(t, empty);
+                    if (empty) { setGraphic(null); setText(null); setStyle(""); return; }
+                    if (t == null) {
+                        setGraphic(null); setText(null);
+                        setMouseTransparent(true);
+                        setStyle("-fx-border-color: transparent transparent #AAAAAA transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 0 0; -fx-pref-height: 8;");
+                        return;
+                    }
+                    setMouseTransparent(false);
+                    boolean activo = t.isActivo();
+                    check.setSelected(nombresSeleccionadosTec.contains(t.getNombre()));
+                    setGraphic(check);
+                    String colorHex = coloresPorNombre.getOrDefault(t.getNombre(), "#888888");
+                    if (activo) {
+                        setText(t.getNombre());
+                        setStyle("-fx-text-fill: " + colorHex + "; -fx-font-weight: bold;");
+                    } else {
+                        setText(t.getNombre() + " (inactivo)");
+                        setStyle("-fx-text-fill: #9A9A9A; -fx-font-style: italic;");
+                    }
                 }
-            }
-        });
-
-        VBox popupContenedor = new VBox(listaTecnicos);
-        popupContenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
-        popupContenedor.setPrefWidth(menuTecnicos.getPrefWidth());
-        popupContenedor.setMaxWidth(menuTecnicos.getPrefWidth());
-        Popup popupTec = new Popup();
-        popupTec.setAutoHide(true);
-        popupTec.getContent().add(popupContenedor);
-        menuTecnicos.setCustomPopup(popupTec);
+            },
+            etiquetaTecs);
 
         actualizarTextoMenuTecnicos();
     }
@@ -858,7 +840,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         nombresSeleccionadosTec.clear();
         todosLosTecnicos.stream().filter(t -> t != null && t.isActivo())
                 .forEach(t -> nombresSeleccionadosTec.add(t.getNombre()));
-        if (listaTecnicos != null) listaTecnicos.refresh();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
         chkTodos.setSelected(true);
         chkMedia.setSelected(true);
         chkActividad.setSelected(true);
