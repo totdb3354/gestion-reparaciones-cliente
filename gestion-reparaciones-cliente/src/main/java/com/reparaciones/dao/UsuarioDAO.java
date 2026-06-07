@@ -117,4 +117,16 @@ public class UsuarioDAO {
                 "password",      password,
                 "rol",           rol));
     }
+
+    /**
+     * Cambia la contraseña del usuario autenticado.
+     *
+     * @param passwordActual contraseña actual del usuario
+     * @param passwordNueva  nueva contraseña
+     * @throws SQLException si la contraseña actual es incorrecta o falla la llamada al servidor
+     */
+    public void cambiarPassword(String passwordActual, String passwordNueva) throws SQLException {
+        ApiClient.patch("/api/auth/cambiar-password",
+                Map.of("passwordActual", passwordActual, "passwordNueva", passwordNueva));
+    }
 }

@@ -776,11 +776,13 @@ public class MainController {
      * y "Cerrar Sesión".</p>
      */
     private void inicializarMenuUsuario() {
-        MenuItem itemDescargar = new MenuItem("Descargar CSV");
-        SeparatorMenuItem sep  = new SeparatorMenuItem();
-        MenuItem itemCerrar    = new MenuItem("Cerrar Sesión");
+        MenuItem itemDescargar       = new MenuItem("Descargar CSV");
+        MenuItem itemCambiarPassword = new MenuItem("Cambiar contraseña");
+        SeparatorMenuItem sep        = new SeparatorMenuItem();
+        MenuItem itemCerrar          = new MenuItem("Cerrar Sesión");
 
         itemDescargar.setOnAction(e -> descargarCSV());
+        itemCambiarPassword.setOnAction(e -> abrirCambiarPassword());
         itemCerrar.setOnAction(e -> cerrarSesion());
 
         menuUsuario = new ContextMenu();
@@ -791,7 +793,7 @@ public class MainController {
             itemLogs.setOnAction(e -> abrirLogs());
             menuUsuario.getItems().addAll(itemGestionar, itemLogs, new SeparatorMenuItem());
         }
-        menuUsuario.getItems().addAll(itemDescargar, sep, itemCerrar);
+        menuUsuario.getItems().addAll(itemDescargar, itemCambiarPassword, sep, itemCerrar);
     }
 
     /** Delega la exportación CSV al controlador activo si implementa {@link com.reparaciones.utils.Exportable}. */
@@ -829,6 +831,22 @@ public class MainController {
             ventana.setScene(new Scene(root));
             ventana.setResizable(true);
             ventana.show();
+        } catch (IOException e) {
+            mostrarError(e);
+        }
+    }
+
+    private void abrirCambiarPassword() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/CambiarPasswordView.fxml"));
+            Parent root = loader.load();
+            Stage ventana = new Stage();
+            ventana.initModality(Modality.APPLICATION_MODAL);
+            ventana.initOwner(btnUsuario.getScene().getWindow());
+            ventana.setTitle("Cambiar contraseña");
+            ventana.setScene(new Scene(root));
+            ventana.setResizable(false);
+            ventana.showAndWait();
         } catch (IOException e) {
             mostrarError(e);
         }
