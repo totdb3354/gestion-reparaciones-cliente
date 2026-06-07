@@ -173,7 +173,7 @@ public class HistorialPulidoController {
         try {
             tecnicos.addAll(tecnicoDAO.getAllActivos());
             filtroTecnico.setButtonCell(new ListCell<>() {
-                { etiquetaTec.addListener((obs, o, n) -> setText(n)); setText(etiquetaTec.get()); }
+                { etiquetaTec.addListener((obs, o, n) -> setText(n)); javafx.application.Platform.runLater(() -> setText(etiquetaTec.get())); }
                 @Override protected void updateItem(Tecnico t, boolean empty) {
                     super.updateItem(t, false); setText(etiquetaTec.get());
                 }
