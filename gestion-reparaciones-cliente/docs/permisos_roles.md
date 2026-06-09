@@ -1,126 +1,133 @@
 # Permisos por rol
 
-> Arquitectura de roles actual (2 roles) y futura (3 roles tras la migración).
+Arquitectura actual con 3 roles: **TECNICO**, **SUPERTECNICO**, **ADMIN**.
 
 ---
 
-## Arquitectura actual — 2 roles
+## TECNICO
 
-### TECNICO
-
-#### Reparaciones — sus propias asignaciones
+### Reparaciones — sus propias asignaciones
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver asignaciones propias | `PendientesTecnicoController.cargar()` | `ReparacionDAO.getAsignacionesPorTecnico(idTec)` |
-| Ver solicitudes de pieza | `PendientesTecnicoController` | `ReparacionDAO.getSolicitudesPorAsignacion(idAsig)` |
-| Abrir formulario de reparación | `FormularioReparacionController.abrir()` | — |
-| Guardar reparación (nueva) | `FormularioReparacionController.guardar()` | `ReparacionDAO.insertar()` + `ComponenteDAO.actualizarStock()` |
-| Editar reparación propia | `FormularioReparacionController.initEditar()` | `ReparacionDAO.editarReparacion()` |
-| Ver historial propio | `ReparacionControllerTecnico` | `ReparacionDAO.getReparacionesPorTecnico(idTec)` |
-| Ver historial de un IMEI | `ReparacionControllerTecnico.abrirHistorialImei()` | `ReparacionDAO.getResumenPorImei(imei)` |
+| Ver asignaciones propias | `PendientesTecnicoController` | `ReparacionDAO.getAsignaciones(idTec)` |
+| Ver solicitudes de pieza por asignación | `PendientesTecnicoController` | `ReparacionDAO.getSolicitudesPorAsignacion` |
+| Abrir formulario de reparación | `FormularioReparacionController` | — |
+| Guardar reparación (nueva) | `FormularioReparacionController` | `ReparacionDAO.insertarCompleta` + `ComponenteDAO.actualizarStock` |
+| Editar reparación propia | `FormularioReparacionController` | `ReparacionDAO.editarReparacion` |
+| Marcar componente agotado | `FormularioReparacionController` | `ReparacionDAO.agotarComponente` |
+| Ver historial propio | `HistorialReparacionController` | `ReparacionDAO.getHistorial(idTec)` |
+| Ver historial de un IMEI | `HistorialReparacionController` | `ReparacionDAO.getHistorialPorImei` |
 
-#### Stock — solo lectura en formulario de reparación
+### Pulidos — solo historial propio
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Leer componentes por tipo | `FormularioReparacionController.cargarFilas()` | `ComponenteDAO.getAgrupadosPorTipo()` |
-| Leer chasis por color | `FormularioReparacionController` (FilaUI) | `ComponenteDAO.getChasisPorColor(color)` |
+| Ver historial de pulidos propios | `HistorialPulidoController` | `ReparacionDAO.getHistorial(idTec)` filtrado a asignaciones `A*` |
 
-#### Estadísticas — solo datos propios
+### Stock — solo lectura en formulario de reparación
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver estadísticas de reparaciones | `EstadisticasController` | `ReparacionDAO.getEstadisticasPorTecnico(...)` (filtrado a idTec) |
-| Navegar al historial desde gráfica | `EstadisticasController` (vértice propio) | `Navegable.navegarAReparaciones(desde, hasta, nombreTecnico)` |
+| Leer componentes por tipo | `FormularioReparacionController` | `ComponenteDAO.getAgrupadosPorTipo` |
+| Leer chasis por color | `FormularioReparacionController` | `ComponenteDAO.getChasisPorColor` |
+
+### Estadísticas — solo datos propios
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Ver estadísticas de reparaciones | `EstadisticasController` | `ReparacionDAO.getEstadisticasPorTecnico` (filtrado a idTec) |
+
+### Cuenta
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Cambiar contraseña | `CambiarPasswordController` | `UsuarioDAO.cambiarPassword` |
 
 ---
 
-### ADMIN
+## SUPERTECNICO
 
-Incluye todo lo de TECNICO, más:
+Todo lo de TECNICO más:
 
-#### Reparaciones — gestión global
+### Reparaciones — gestión global
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver todas las asignaciones | `PendientesAdminController.cargar()` | `ReparacionDAO.getAsignaciones()` |
-| Asignar reparación (nueva) | `PendientesAdminController.abrirFormularioAsignacion()` | `TelefonoDAO.insertar()` + `ReparacionDAO.insertarAsignacion()` |
-| Reasignar técnico | `PendientesAdminController.confirmarCambiosTecnico()` | `ReparacionDAO.actualizarTecnico(idRep, idTec, updatedAt)` |
-| Borrar asignación | `PendientesAdminController` (botón borrar) | `ReparacionDAO.eliminarAsignacion(idAsig)` |
-| Borrar incidencia al borrar asignación | `PendientesAdminController` | `ReparacionDAO.borrarIncidenciaPorImei(imei)` |
-| Ver historial completo (todos) | `ReparacionControllerAdmin` | `ReparacionDAO.getReparacionesResumen()` |
-| Ver historial de un IMEI | `ReparacionControllerAdmin.abrirHistorialImei()` | `ReparacionDAO.getResumenPorImei(imei)` |
-| Exportar historial CSV | `ReparacionControllerAdmin.exportarCSV()` | `CsvExporter.exportar()` |
+| Ver todas las asignaciones | `PendientesSuperTecnicoController` | `ReparacionDAO.getAsignaciones()` |
+| Asignar reparación (nueva) | `PendientesSuperTecnicoController` | `TelefonoDAO.insertar` + `ReparacionDAO.insertarAsignacion` |
+| Reasignar técnico | `PendientesSuperTecnicoController` | `ReparacionDAO.actualizarTecnico` |
+| Editar asignación (técnico + comentario) | `PendientesSuperTecnicoController` | `ReparacionDAO.actualizarAsignacion` |
+| Marcar urgente | `PendientesSuperTecnicoController` | `ReparacionDAO.actualizarUrgente` |
+| Borrar asignación | `PendientesSuperTecnicoController` | `ReparacionDAO.eliminarAsignacion` |
+| Marcar incidencia y reasignar | `PendientesSuperTecnicoController` | `ReparacionDAO.marcarIncidenciaYAsignar` |
+| Borrar incidencia | `PendientesSuperTecnicoController` | `ReparacionDAO.borrarIncidenciaPorImei` |
+| Ver historial completo (todos los técnicos) | `HistorialReparacionController` | `ReparacionDAO.getHistorial()` |
+| Exportar historial CSV | `HistorialReparacionController` | `CsvExporter.exportar` |
 
-#### Stock — gestión completa
+### Pulidos — gestión completa
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver stock con info de pedidos | `StockController.cargarStock()` | `ComponenteDAO.getAllGestionados()` |
-| Editar stock manualmente | `StockController.editarStock()` | `ComponenteDAO.actualizar()` |
-| Ajustar stock mínimo | `StockController.ajustarMinimo()` | `ComponenteDAO.setStockMinimo(idCom, valor)` |
-| Activar / desactivar componente | `StockController.toggleActivarComponente()` | `ComponenteDAO.setActivo(idCom, activo)` |
-| Insertar componente | `StockController` | `ComponenteDAO.insertar(componente)` |
-| Eliminar componente | `StockController` | `ComponenteDAO.eliminar(idCom)` |
-| Ver pedidos pendientes | `StockController.cargarPedidos()` | `CompraComponenteDAO.getPendientes()` |
-| Crear pedido | `FormularioCompraController.confirmar()` | `CompraComponenteDAO.insertar(...)` |
-| Editar pedido | `FormularioCompraEditarController.guardar()` | `CompraComponenteDAO.editar(...)` |
-| Recibir pedido (completo) | `StockController` | `CompraComponenteDAO.confirmarRecibido()` + `ComponenteDAO.actualizarStock()` |
-| Recibir pedido (parcial) | `StockController` | `CompraComponenteDAO.confirmarParcial()` + `ComponenteDAO.actualizarStock()` |
-| Cancelar pedido | `StockController` | `CompraComponenteDAO.cancelar()` |
-| Ver proveedores | `StockController.cargarProveedores()` | `ProveedorDAO.getAll()` |
-| Añadir proveedor | `StockController` | `ProveedorDAO.insertar(nombre)` |
-| Activar / desactivar proveedor | `StockController` | `ProveedorDAO.setActivo(idProv, activo)` |
-| Cambiar divisa proveedor | `StockController.cambiarDivisa()` | `ProveedorDAO.setDivisa(idProv, divisa)` |
-| Borrar proveedor | `StockController` | `ProveedorDAO.borrar(idProv)` |
-| Exportar stock / pedidos / proveedores CSV | `StockController.exportarCSV()` | `CsvExporter.exportar()` |
+| Ver todos los pulidos pendientes | `PulidoSuperTecnicoController` | `ReparacionDAO.getAsignaciones()` filtrado a `A*` |
+| Asignar pulido | `PulidoSuperTecnicoController` | `TelefonoDAO.insertar` + `ReparacionDAO.insertarAsignacion` (IMEI lookup automático) |
+| Completar lote de pulidos | `PulidoSuperTecnicoController` | `ReparacionDAO.completarPulidoLote` |
+| Eliminar asignación de pulido | `PulidoSuperTecnicoController` | `ReparacionDAO.eliminarAsignacion` |
+| Editar comentario de asignación | `PulidoSuperTecnicoController` | `ReparacionDAO.actualizarAsignacion` |
+| Editar modelo del teléfono | `PulidoSuperTecnicoController` | `TelefonoDAO.insertar` (upsert) |
+| Ver historial completo de pulidos | `HistorialPulidoController` | `ReparacionDAO.getHistorial()` filtrado a `A*` |
 
-#### Estadísticas — datos globales
+### Stock — gestión completa
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver estadísticas de todos los técnicos | `EstadisticasController` | `ReparacionDAO.getEstadisticasPorTecnico(...)` |
-| Ver evolución de stock | `EstadisticasController` | `ComponenteDAO.getEvolucionStock(granularidad, desde, hasta)` |
-| Navegar al historial desde cualquier vértice | `EstadisticasController` | `Navegable.navegarAReparaciones(desde, hasta, tecnico)` |
+| Ver stock con info de pedidos | `StockController` | `ComponenteDAO.getAllGestionados` |
+| Editar stock manualmente | `StockController` | `ComponenteDAO.actualizar` |
+| Ajustar stock mínimo | `StockController` | `ComponenteDAO.setStockMinimo` |
+| Activar / desactivar componente | `StockController` | `ComponenteDAO.setActivo` |
+| Insertar componente | `StockController` | `ComponenteDAO.insertar` |
+| Eliminar componente | `StockController` | `ComponenteDAO.eliminar` |
+| Ver pedidos pendientes | `StockController` | `CompraComponenteDAO.getPendientes` |
+| Crear pedido | `FormularioCompraController` | `CompraComponenteDAO.insertar` |
+| Editar pedido | `FormularioCompraEditarController` | `CompraComponenteDAO.editar` |
+| Recibir pedido (completo / parcial) | `StockController` | `CompraComponenteDAO.confirmarRecibido` / `confirmarParcial` |
+| Cancelar pedido | `StockController` | `CompraComponenteDAO.cancelar` |
+| Gestión de proveedores | `StockController` | `ProveedorDAO.*` |
+| Exportar stock / pedidos / proveedores CSV | `StockController` | `CsvExporter.exportar` |
 
-#### Gestión de usuarios *(pendiente — se implementa en la migración)*
+### Estadísticas — datos globales
 | Acción | Controlador | DAO / método |
 |--------|-------------|--------------|
-| Ver usuarios | — | `UsuarioDAO.getAll()` *(por implementar)* |
-| Crear técnico | — | `UsuarioDAO.registrarTecnico()` *(existe)* |
-| Crear admin | — | `UsuarioDAO.registrarAdmin()` *(por implementar)* |
-| Activar / desactivar usuario | — | `UsuarioDAO.activarTecnico()` / `desactivarTecnico()` *(existen)* |
-| Asignar rol | — | `UsuarioDAO.setRol()` *(por implementar)* |
+| Ver estadísticas de todos los técnicos | `EstadisticasController` | `ReparacionDAO.getEstadisticasPorTecnico` |
+| Ver evolución de stock | `EstadisticasController` | `ComponenteDAO.getEvolucionStock` |
+
+### Cuenta
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Cambiar contraseña | `CambiarPasswordController` | `UsuarioDAO.cambiarPassword` |
 
 ---
 
-## Arquitectura futura — 3 roles *(tras la migración)*
+## ADMIN
 
-> Separación entre administración del sistema y gestión operativa del taller.
+### Gestión de usuarios
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Ver técnicos y usuarios | `AdminController` | `UsuarioDAO.getUsuariosTecnicos` |
+| Crear técnico | `AdminController` | `UsuarioDAO.registrarTecnico` |
+| Activar / desactivar técnico | `AdminController` | `UsuarioDAO.activarTecnico` / `desactivarTecnico` |
+| Eliminar técnico | `AdminController` | `UsuarioDAO.eliminarTecnico` |
 
-### TECNICO
-- ✅ Sus propias reparaciones y asignaciones
-- ✅ Estadísticas propias
-- ✅ Stock — solo lectura en formulario de reparación
-- ✅ Historial IMEI
-- ✅ Exportar CSV
+### Logs de actividad
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Ver log de actividad global | `LogController` (cliente) | `LogDAO.getAll` |
 
-### SUPERTECNICO
-- ✅ Todo lo de TECNICO
-- ✅ Todas las asignaciones (asignar, reasignar, borrar)
-- ✅ Historial completo (todos los técnicos)
-- ✅ Stock — gestión completa (edición, mínimos, activar/desactivar)
-- ✅ Pedidos (crear, editar, recibir, cancelar)
-- ✅ Proveedores (gestión completa)
-- ✅ Estadísticas globales (todos los técnicos)
-- ✅ Notificaciones/campana de solicitudes
-- ✅ Alertas de stock bajo
-- ✅ Exportar CSV
-- ❌ Gestión de usuarios
-- ❌ Ver logs de actividad
+### Historial — solo lectura
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Ver historial de reparaciones | `HistorialReparacionController` | `ReparacionDAO.getHistorial()` |
+| Ver historial de un IMEI | `HistorialReparacionController` | `ReparacionDAO.getHistorialPorImei` |
+| Exportar CSV | `HistorialReparacionController` | `CsvExporter.exportar` |
 
-### ADMIN
-- ✅ Gestión de usuarios (crear, desactivar, asignar roles)
-- ✅ Estadísticas globales — solo lectura
-- ✅ Stock — solo consulta (sin editar, sin pedidos)
-- ✅ Historial de reparaciones — solo lectura (sin asignar ni editar)
-- ✅ Ver logs de actividad
-- ✅ Historial IMEI
-- ✅ Exportar CSV
-- ❌ Asignaciones, pedidos, proveedores
-- ❌ Notificaciones/campana
+### Estadísticas — solo lectura
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Ver estadísticas globales | `EstadisticasController` | `ReparacionDAO.getEstadisticasPorTecnico` |
+
+### Cuenta
+| Acción | Controlador | DAO / método |
+|--------|-------------|--------------|
+| Cambiar contraseña | `CambiarPasswordController` | `UsuarioDAO.cambiarPassword` |

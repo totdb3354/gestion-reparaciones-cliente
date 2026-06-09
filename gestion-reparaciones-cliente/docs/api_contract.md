@@ -11,11 +11,10 @@ Los IDs de reparación (`R*`, `A*`) los genera el servidor internamente — no s
 
 ## Auth
 
-| Método | URL | Body | DAO |
-|--------|-----|------|-----|
-| `POST` | `/api/auth/login` | `{usuario, password}` | `UsuarioDAO.login` |
-
-Respuesta: `{idUsu, nombreUsuario, rol, idTec, token}`.
+| Método | URL | Body | Respuesta |
+|--------|-----|------|-----------|
+| `POST` | `/api/auth/login` | `{usuario, password}` | `{idUsu, nombreUsuario, rol, idTec, token}` |
+| `PATCH` | `/api/auth/cambiar-password` | `{passwordActual, passwordNueva}` | 204 / 400 (nueva < 6 chars) / 422 (actual incorrecta) |
 
 ---
 
@@ -79,8 +78,10 @@ Respuesta: `{idUsu, nombreUsuario, rol, idTec, token}`.
 | Método | URL | Body / Params | DAO |
 |--------|-----|---------------|-----|
 | `GET` | `/api/telefonos` | — | `TelefonoDAO.getAll` |
-| `GET` | `/api/telefonos/{imei}/exists` | — | `TelefonoDAO.exists` → `{result: bool}` |
-| `POST` | `/api/telefonos` | `{imei}` | `TelefonoDAO.insertar` |
+| `GET` | `/api/telefonos/{imei}/exists` | — | `TelefonoDAO.exists` → `{value: bool}` |
+| `GET` | `/api/telefonos/{imei}/modelo` | — | BD → imeicheck.com fallback → `{value: string}` |
+| `POST` | `/api/telefonos` | `{imei, modelo?}` | `TelefonoDAO.insertar` (upsert — actualiza modelo si ya existe) |
+| `PATCH` | `/api/telefonos/{imei}/observacion` | `{observacion}` | `TelefonoDAO.actualizarObservacion` (solo SUPERTECNICO) |
 | `DELETE` | `/api/telefonos/{imei}` | — | `TelefonoDAO.eliminar` |
 
 ---
@@ -116,30 +117,32 @@ El servidor hace la llamada a la API Frankfurter y cachea el resultado en BD. El
 
 | Método | URL | Body / Params | DAO |
 |--------|-----|---------------|-----|
-| `GET` | `/api/reparaciones/historial` | — | `ReparacionDAO.getReparacionesResumen` |
-| `GET` | `/api/reparaciones/historial?tecnico={idTec}` | — | `ReparacionDAO.getReparacionesPorTecnico` |
-| `GET` | `/api/reparaciones/historial/imei/{imei}` | — | `ReparacionDAO.getResumenPorImei` |
-| `GET` | `/api/reparaciones/asignaciones` | — | `ReparacionDAO.getAsignaciones` |
+| `GET` | `/api/reparaciones/historial?tecnico={idTec?}` | — | `ReparacionDAO.getHistorial` (sin param = todos) |
+| `GET` | `/api/reparaciones/historial/imei/{imei}` | — | `ReparacionDAO.getHistorialPorImei` |
+| `GET` | `/api/reparaciones/asignaciones?tecnico={idTec?}` | — | `ReparacionDAO.getAsignaciones` (sin param = todas) |
 | `GET` | `/api/reparaciones/asignaciones/{idRep}` | — | `ReparacionDAO.getAsignacionById` |
-| `GET` | `/api/reparaciones/asignaciones?tecnico={idTec}` | — | `ReparacionDAO.getAsignacionesPorTecnico` |
 | `GET` | `/api/reparaciones/asignaciones/{idRep}/solicitudes` | — | `ReparacionDAO.getSolicitudesPorAsignacion` |
-| `GET` | `/api/reparaciones/imei/{imei}` | — | `ReparacionDAO.getByImei` |
-| `GET` | `/api/reparaciones/imei/{imei}/count` | — | `ReparacionDAO.countByImei` → `{count: int}` |
-| `GET` | `/api/reparaciones/imei/{imei}/incidencia-activa` | — | `ReparacionDAO.getIncidenciaActivaPorImei` → `{idRep}` o `null` |
-| `GET` | `/api/reparaciones/imei/{imei}/tiene-asignacion?tecnico={idTec}` | — | `ReparacionDAO.existeAsignacionParaTecnico` → `{result: bool}` |
-| `GET` | `/api/reparaciones/imei/{imei}/ya-reparados?excluir={idRep}` | — | `ReparacionDAO.getIdComsYaReparados` → `[idCom, ...]` |
 | `GET` | `/api/reparaciones/{idRep}/detalle-edicion` | — | `ReparacionDAO.getDetalleEdicion` |
-| `GET` | `/api/reparaciones/{idRep}/referenciadora` | — | `ReparacionDAO.getReferenciadora` → `{idRep}` o `null` |
+| `GET` | `/api/reparaciones/{idRep}/referenciadora` | — | `ReparacionDAO.getReferenciadora` → `{idRep}` o null |
+| `GET` | `/api/reparaciones/imei/{imei}` | — | `ReparacionDAO.getByImei` |
+| `GET` | `/api/reparaciones/imei/{imei}/count` | — | `ReparacionDAO.countByImei` → `{value: int}` |
+| `GET` | `/api/reparaciones/imei/{imei}/incidencia-activa` | — | `ReparacionDAO.getIncidenciaActivaPorImei` → `{idRep}` o null |
+| `GET` | `/api/reparaciones/imei/{imei}/tiene-asignacion?tecnico={idTec}` | — | `ReparacionDAO.existeAsignacionParaTecnico` → `{result: bool}` |
+| `GET` | `/api/reparaciones/imei/{imei}/tecnicos-asignados` | — | `ReparacionDAO.getTecnicosConAsignacionActiva` → `[idTec, ...]` |
+| `GET` | `/api/reparaciones/imei/{imei}/ya-reparados?excluir={idRep}` | — | `ReparacionDAO.getIdComsYaReparados` → `[idCom, ...]` |
 | `GET` | `/api/reparaciones/estadisticas?granularidad=mes&desde=...&hasta=...` | — | `ReparacionDAO.getEstadisticasPorTecnico` |
-| `POST` | `/api/reparaciones/asignaciones` | `{imei, idTec}` | `ReparacionDAO.insertarAsignacion` → `{idRep}` |
+| `POST` | `/api/reparaciones/asignaciones` | `{imei, idTec, comentario?}` | `ReparacionDAO.insertarAsignacion` → `{value: idRep}` (SUPERTECNICO) |
 | `POST` | `/api/reparaciones/completa` | `{filas, imei, idTec, idRepAnterior, idAsignacion}` | `ReparacionDAO.insertarCompleta` |
+| `POST` | `/api/reparaciones/{idAsignacion}/agotar-componente` | `{idCom, cantidad, descripcion}` | `ReparacionDAO.agotarComponente` |
+| `POST` | `/api/reparaciones/{idRep}/incidencia` | `{comentario, imei, idTec}` | `ReparacionDAO.marcarIncidenciaYAsignar` (SUPERTECNICO) |
 | `PATCH` | `/api/reparaciones/{idRep}/completar` | — | `ReparacionDAO.completar` |
-| `PATCH` | `/api/reparaciones/asignaciones/{idRep}/tecnico` | `{idTec, updatedAt}` | `ReparacionDAO.actualizarTecnico` (optimista) |
-| `PUT` | `/api/reparaciones/{idRep}` | `{idComNuevo, esReutilizadoNuevo, observacionNueva, piezaViejaRota, nNuevas}` | `ReparacionDAO.editarReparacion` |
-| `POST` | `/api/reparaciones/{idRep}/incidencia` | `{comentario, imei, idTec}` | `ReparacionDAO.marcarIncidenciaYAsignar` |
-| `DELETE` | `/api/reparaciones/imei/{imei}/incidencia-activa` | — | `ReparacionDAO.borrarIncidenciaPorImei` |
-| `DELETE` | `/api/reparaciones/asignaciones/{idAsig}` | — | `ReparacionDAO.eliminarAsignacion` |
-| `DELETE` | `/api/reparaciones/{idRep}` | — | `ReparacionDAO.eliminar` |
+| `PATCH` | `/api/reparaciones/asignaciones/{idRep}/urgente` | `{urgente}` | `ReparacionDAO.actualizarUrgente` (SUPERTECNICO) |
+| `PATCH` | `/api/reparaciones/asignaciones/{idRep}/tecnico` | `{idTec, updatedAt}` | `ReparacionDAO.actualizarTecnico` (SUPERTECNICO, optimista) |
+| `PATCH` | `/api/reparaciones/asignaciones/{idRep}` | `{idTec, comentarioAsignacion, updatedAt}` | `ReparacionDAO.actualizarAsignacion` (SUPERTECNICO, optimista) |
+| `PUT` | `/api/reparaciones/{idRep}` | `{idComNuevo, esReutilizadoNuevo, observacionNueva, nNuevas, updatedAt}` | `ReparacionDAO.editarReparacion` |
+| `DELETE` | `/api/reparaciones/imei/{imei}/incidencia-activa` | — | `ReparacionDAO.borrarIncidenciaPorImei` (SUPERTECNICO) |
+| `DELETE` | `/api/reparaciones/asignaciones/{idAsig}` | — | `ReparacionDAO.eliminarAsignacion` (SUPERTECNICO) |
+| `DELETE` | `/api/reparaciones/{idRep}` | — | `ReparacionDAO.eliminar` (SUPERTECNICO) |
 
 ---
 
@@ -159,18 +162,27 @@ El servidor hace la llamada a la API Frankfurter y cachea el resultado en BD. El
 
 ---
 
+## Logs de actividad (solo ADMIN)
+
+| Método | URL | Body / Params | DAO |
+|--------|-----|---------------|-----|
+| `GET` | `/api/logs` | — | `LogDAO.getAll` |
+
+---
+
 ## Resumen
 
 | Recurso | Endpoints |
 |---------|-----------|
-| Auth | 1 |
+| Auth | 2 |
 | Usuarios/Técnicos (gestión) | 6 |
 | Técnicos (listas) | 2 |
 | Componentes | 12 |
 | Proveedores | 7 |
-| Teléfonos | 4 |
+| Teléfonos | 6 |
 | Tipo de Cambio | 1 |
 | Pedidos | 10 |
-| Reparaciones | 25 |
+| Reparaciones | 27 |
 | Solicitudes / Reparacion_componente | 9 |
-| **Total** | **77** |
+| Logs | 1 |
+| **Total** | **83** |
