@@ -390,7 +390,7 @@ public class FormularioReparacionController {
     private void ejecutarGuardarNueva() {
         // 1. Filas agotadas: descontar stock + crear solicitud, sin crear R*
         for (FilaUI fila : filasUI) {
-            if (!fila.isAgotado()) continue;
+            if (!fila.esAgotadoNuevo()) continue;
             try {
                 reparacionDAO.agotarComponente(
                         idAsignacion,
@@ -410,7 +410,7 @@ public class FormularioReparacionController {
         // 2. Filas normales → insertarCompleta
         List<FilaReparacion> filasActivas = new ArrayList<>();
         for (FilaUI fila : filasUI) {
-            if (fila.isAgotado()) continue;
+            if (fila.esAgotadoNuevo()) continue;
             if (fila.isActiva()) {
                 boolean esSolicitudNueva = fila.isSolicitud() && fila.isSolicitudNueva();
                 boolean tieneUso = fila.getCantidad() > 0 || fila.isReutilizado();
@@ -450,7 +450,7 @@ public class FormularioReparacionController {
 
         // Si solo había filas agotadas, cerrar sin crear reparación
         boolean soloAgotadas = filasActivas.isEmpty()
-                && filasUI.stream().anyMatch(FilaUI::isAgotado);
+                && filasUI.stream().anyMatch(FilaUI::esAgotadoNuevo);
         if (soloAgotadas) {
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
@@ -1277,7 +1277,7 @@ public class FormularioReparacionController {
         // ── Estado público ────────────────────────────────────────────────────
 
         boolean isActiva() {
-            return cantidad > 0 || chkReutilizado.isSelected() || solicitudNuevaEnEstaSesion || agotadoConfirmado;
+            return cantidad > 0 || chkReutilizado.isSelected() || solicitudNuevaEnEstaSesion || (agotadoConfirmado && !solicitudActiva);
         }
 
         boolean tieneUso() {
@@ -1332,6 +1332,15 @@ public class FormularioReparacionController {
 
         boolean isAgotado() {
             return agotadoConfirmado;
+        }
+
+        /**
+         * @return {@code true} solo si el agotado se confirmó en esta sesión.
+         * Una solicitud cargada de BD ({@code solicitudActiva}) ya está persistida —
+         * no debe re-enviarse a {@code agotarComponente} al guardar.
+         */
+        boolean esAgotadoNuevo() {
+            return agotadoConfirmado && !solicitudActiva;
         }
 
         String getDescripcionAgotado() {
@@ -1448,9 +1457,12 @@ public class FormularioReparacionController {
                         cantidad = 0;
                         actualizarContador();
                         chkReutilizado.setSelected(false);
-                        chkReutilizado.setDisable(true);
+                        chkReutilizado.setDisable(enCamino);
                         btnMas.setDisable(true);
                         btnMenos.setDisable(true);
+                        // SKU fijado al componente solicitado: al completar con reutilizado el
+                        // servidor resuelve la solicitud emparejando por ID_COM exacto.
+                        cbSku.setDisable(true);
                         if (enCamino) {
                             btnSolicitud.setText("⚠ En camino");
                             btnSolicitud.setStyle(STYLE_SOL_EN_CAMINO);
