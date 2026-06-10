@@ -655,6 +655,18 @@ public class PendientesSuperTecnicoController {
         Label lblTecnicos = new Label("Técnicos a asignar");
         lblTecnicos.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
 
+        // Píldora con el nº de técnicos que ya tienen este IMEI asignado (filas deshabilitadas).
+        // Se actualiza en validar(); oculta cuando N = 0 o el IMEI aún no es válido.
+        Label pillAsignados = new Label();
+        pillAsignados.setStyle(
+                "-fx-background-color: #FCE7C3; -fx-text-fill: #9A6B00;" +
+                "-fx-font-size: 10.5px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 20; -fx-padding: 2 9 2 9;");
+        pillAsignados.setVisible(false);
+        pillAsignados.setManaged(false);
+        HBox headerTecnicos = new HBox(8, lblTecnicos, pillAsignados);
+        headerTecnicos.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
         List<Tecnico> tecnicosModal = new ArrayList<>();
         List<CheckBox> checkboxes = new ArrayList<>();
         VBox cbContainer = new VBox(6);
@@ -724,6 +736,11 @@ public class PendientesSuperTecnicoController {
                                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
                 lblImeiErr.setText(!imeiStr.isEmpty() ? "El IMEI debe tener exactamente 15 dígitos" : "");
             }
+
+            long nAsignados = checkboxes.stream().filter(CheckBox::isDisabled).count();
+            pillAsignados.setText(nAsignados + (nAsignados == 1 ? " asignado" : " asignados"));
+            pillAsignados.setVisible(nAsignados >= 1);
+            pillAsignados.setManaged(nAsignados >= 1);
 
             boolean algunoSeleccionado = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
             boolean modeloOk = modeloSel[0] != null;
@@ -857,7 +874,7 @@ public class PendientesSuperTecnicoController {
                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
 
         // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, lblTecnicos, scrollTecnicos, lblComentario, tfComentario, botones);
+        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, headerTecnicos, scrollTecnicos, lblComentario, tfComentario, botones);
         contenido.setPadding(new Insets(28));
         contenido.setPrefWidth(440);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
