@@ -362,7 +362,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
         adaptarFiltrosDetalle();
         lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
-        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(this::aplicarAnchosDetalle));
+        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
+            aplicarAnchosDetalle();
+            tablaReparaciones.refresh();
+        }));
         aplicarFiltros();
     }
 
