@@ -21,7 +21,9 @@
         <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="lblContadorPulidos" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
+        <Label fx:id="lblContadorPulidos" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;">
+            <HBox.margin><Insets right="150"/></HBox.margin>
+        </Label>
     </HBox>
 
     <TableView fx:id="tablaPulidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
