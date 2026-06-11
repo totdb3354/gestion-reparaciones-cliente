@@ -54,6 +54,8 @@ public class FormularioReparacionController {
     @FXML private javafx.scene.layout.HBox filaIncidencia;
     @FXML private Label lblSeleccionaModelo;
     @FXML private VBox contenedorFilas;
+    @FXML private VBox contenedorOtros;
+    @FXML private javafx.scene.layout.HBox cabeceraColumnas;
     @FXML private Button btnGuardar;
     @FXML private javafx.scene.layout.HBox zonaGuardar;
     @FXML private ComboBox<String> cbFiltroModelo;
@@ -75,6 +77,7 @@ public class FormularioReparacionController {
     private Runnable onGuardado;
 
     private final List<FilaUI> filasUI = new ArrayList<>();
+    private OtrasAccionesUI otrasAcciones;
 
     /**
      * Lista de modelos en orden de tienda Apple.
@@ -251,6 +254,12 @@ public class FormularioReparacionController {
             for (Map.Entry<String, List<Componente>> entry : grupos.entrySet()) {
                 if (entry.getValue().isEmpty())
                     continue;
+                if (entry.getKey().equals("otro")) {
+                    otrasAcciones = new OtrasAccionesUI(entry.getValue(), imgBorrar);
+                    otrasAcciones.setOnCambio(this::actualizarBoton);
+                    contenedorOtros.getChildren().add(otrasAcciones.getRoot());
+                    continue;
+                }
                 FilaUI fila = new FilaUI(entry.getKey(), entry.getValue(), imgBorrar, imgEditar);
                 fila.setOnCambio(this::actualizarBoton);
                 contenedorFilas.getChildren().add(fila.getRoot());
@@ -301,6 +310,7 @@ public class FormularioReparacionController {
             for (FilaUI fila : filasUI) {
                 fila.aplicarFiltroModelo(n);
             }
+            if (otrasAcciones != null) otrasAcciones.setModelo(n);
         });
 
         if (solicitudesCargadas != null && !solicitudesCargadas.isEmpty()) {
@@ -1600,5 +1610,105 @@ public class FormularioReparacionController {
         void setOnCambio(Runnable r) {
             this.onCambio = r;
         }
+    }
+
+    // ─── OtrasAccionesUI ──────────────────────────────────────────────────────
+    /** Sección de "Otras acciones": varias acciones de texto libre (sin pieza/stock).
+     *  Cada acción se guarda como un R* con el componente otroi<modelo> y cantidad 0. */
+    static class OtrasAccionesUI {
+        private final VBox root;
+        private final VBox listaLineas = new VBox(5);
+        private final Label badge = new Label("0");
+        private final List<Componente> otroComponentes;
+        private final Image imgBorrar;
+        private Componente otroSel = null;   // otroi<modelo> del modelo actual
+        private Runnable onCambio;
+
+        OtrasAccionesUI(List<Componente> otroComponentes, Image imgBorrar) {
+            this.otroComponentes = otroComponentes;
+            this.imgBorrar = imgBorrar;
+
+            Label titulo = new Label("OTRAS ACCIONES");
+            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #5B3FA0;");
+            badge.setStyle("-fx-background-color: #5B3FA0; -fx-text-fill: white; -fx-font-size: 10px;" +
+                    "-fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 8 1 8;");
+            Label sub = new Label("no descuentan stock");
+            sub.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #8A7FA8;");
+            HBox header = new HBox(8, titulo, badge, sub);
+            header.setAlignment(Pos.CENTER_LEFT);
+            header.setStyle("-fx-background-color: #EDE7F6; -fx-padding: 7 14 7 14;");
+
+            javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane(listaLineas);
+            scroll.setFitToWidth(true);
+            scroll.setMaxHeight(120);
+            scroll.setStyle("-fx-background-color: white; -fx-border-color: #D9CFEC; -fx-border-radius: 6; -fx-background-radius: 6;");
+            listaLineas.setStyle("-fx-padding: 5;");
+
+            Button btnAdd = new Button("+ Añadir acción");
+            btnAdd.setStyle("-fx-background-color: #5B3FA0; -fx-text-fill: white; -fx-font-size: 11.5px;" +
+                    "-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 6 12 6 12;");
+            btnAdd.setOnAction(e -> agregarLinea(""));
+
+            Label hint = new Label("La descripción es obligatoria: una acción vacía no se guarda.");
+            hint.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #8A7FA8;");
+
+            VBox cuerpo = new VBox(8, scroll, btnAdd, hint);
+            cuerpo.setStyle("-fx-background-color: #F7F4FB; -fx-padding: 8 14 12 14;");
+
+            root = new VBox(header, cuerpo);
+            root.setVisible(false); root.setManaged(false);
+        }
+
+        /** Selecciona el otroi<modelo> según el modelo elegido; muestra la sección si existe. */
+        void setModelo(String modelo) {
+            otroSel = (modelo == null) ? null : otroComponentes.stream()
+                    .filter(c -> extraerModelo(c.getTipo(), "otro").equals(modelo))
+                    .findFirst().orElse(null);
+            boolean disponible = otroSel != null;
+            root.setVisible(disponible); root.setManaged(disponible);
+        }
+
+        private void agregarLinea(String texto) {
+            TextField tf = new TextField(texto);
+            tf.setPromptText("Describe la acción (ej. limpiar cámara)");
+            tf.setStyle("-fx-font-size: 12px;");
+            HBox.setHgrow(tf, Priority.ALWAYS);
+            ImageView iv = new ImageView(imgBorrar);
+            iv.setFitWidth(18); iv.setFitHeight(18); iv.setPreserveRatio(true);
+            Button btnDel = new Button();
+            btnDel.setGraphic(iv);
+            btnDel.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
+            HBox linea = new HBox(8, tf, btnDel);
+            linea.setAlignment(Pos.CENTER_LEFT);
+            btnDel.setOnAction(e -> { listaLineas.getChildren().remove(linea); actualizar(); });
+            tf.textProperty().addListener((o, a, b) -> actualizar());
+            listaLineas.getChildren().add(linea);
+            tf.requestFocus();
+            actualizar();
+        }
+
+        private void actualizar() {
+            badge.setText(String.valueOf(getDescripciones().size()));
+            if (onCambio != null) onCambio.run();
+        }
+
+        /** Descripciones no vacías (trim) de las líneas. */
+        List<String> getDescripciones() {
+            List<String> out = new ArrayList<>();
+            for (javafx.scene.Node n : listaLineas.getChildren()) {
+                if (n instanceof HBox h && !h.getChildren().isEmpty()
+                        && h.getChildren().get(0) instanceof TextField tf) {
+                    String t = tf.getText() == null ? "" : tf.getText().trim();
+                    if (!t.isEmpty()) out.add(t);
+                }
+            }
+            return out;
+        }
+
+        int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
+        boolean hayAccion() { return otroSel != null && !getDescripciones().isEmpty(); }
+        boolean esOtro(int idCom) { return otroComponentes.stream().anyMatch(c -> c.getIdCom() == idCom); }
+        void setOnCambio(Runnable r) { this.onCambio = r; }
+        VBox getRoot() { return root; }
     }
 }
