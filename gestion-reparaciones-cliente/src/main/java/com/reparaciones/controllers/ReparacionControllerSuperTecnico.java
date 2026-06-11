@@ -66,6 +66,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TextField  filtroImei;
+    @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
+    @FXML private javafx.scene.control.ToggleButton toggleDesagrupar;
+    @FXML private javafx.scene.control.Label        lblContadorPlano;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private DatePicker filtroFechaDesde;
@@ -119,7 +122,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
 
     // ── Drill-down ────────────────────────────────────────────────────────────
-    private enum Modo { MAESTRO, DETALLE }
+    private enum Modo { MAESTRO, DETALLE, PLANO }
     private Modo   modoActual  = Modo.MAESTRO;
     private String imeiDetalle = null;
     private HBox   barraNavegacion;
@@ -149,6 +152,21 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.getColumns().forEach(c -> c.setReorderable(false));
         configurarFilas();
         configurarFiltros();
+
+        lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
+        javafx.scene.control.ToggleGroup tgAgrupar = new javafx.scene.control.ToggleGroup();
+        toggleAgrupar.setToggleGroup(tgAgrupar);
+        toggleDesagrupar.setToggleGroup(tgAgrupar);
+        tgAgrupar.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleAgrupar.setSelected(true); return; }  // no permitir deselección
+            if (n == toggleDesagrupar) {                                  // pasar a plano
+                entrarModoPlano();
+            } else {                                                      // volver a agrupado
+                lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
+                resetarModo();
+                aplicarFiltros();
+            }
+        });
 
         pendientesSuperTecnicoController.setOnActualizar(() -> {
             cargarDatos();
@@ -864,6 +882,31 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         boolean filtrarAbiertas = cbIncidenciasAbiertas.isSelected();
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
+        if (modoActual == Modo.PLANO) {
+            java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
+            List<ReparacionResumen> filtradas = datos.stream()
+                .filter(rep -> {
+                    if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
+                    if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
+                    if (desde != null || hasta != null) {
+                        if (rep.getFechaFin() == null) return false;
+                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                        if (desde != null && fechaFin.isBefore(desde)) return false;
+                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                    }
+                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                        boolean mostrar = false;
+                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto())  mostrar = true;
+                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto())  mostrar = true;
+                        if (!mostrar) return false;
+                    }
+                    return true;
+                }).collect(java.util.stream.Collectors.toList());
+            tablaItems.setAll(filtradas);
+            lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            return;
+        }
         if (modoActual == Modo.DETALLE) {
             List<ReparacionResumen> filtradas = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
@@ -1018,6 +1061,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         });
     }
 
+    /** Entra en modo PLANO: todas las reparaciones sin agrupar, columnas estilo detalle,
+     *  filtro de IMEI visible y sin barra de navegación. */
+    private void entrarModoPlano() {
+        modoActual  = Modo.PLANO;
+        imeiDetalle = null;
+        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colObservaciones.setVisible(true); colIncidencia.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colComponente.setText("Componente");
+        filtroImei.setVisible(true); filtroImei.setManaged(true);
+        if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
+        adaptarFiltrosDetalle();
+        lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
+        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
+            aplicarAnchosDetalle();
+            tablaReparaciones.refresh();
+        }));
+        aplicarFiltros();
+    }
+
     // ─── Helpers de filtro ────────────────────────────────────────────────────
 
     private void adaptarFiltrosMaestro() {
@@ -1090,6 +1153,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         cbIncidenciasCerradas.setSelected(false);
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
+        aplicarFiltros();
     }
 
     // ─── Modal pendientes ─────────────────────────────────────────────────────
