@@ -363,7 +363,8 @@ public class FormularioReparacionController {
                     .filter(f -> !f.isModoEdicion()).anyMatch(FilaUI::isActiva);
             habilitado = !filaEditadaInvalida && (cambioEnEdicion || filasNuevas);
         } else {
-            boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva);
+            boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva)
+                    || (otrasAcciones != null && otrasAcciones.hayAccion());
             boolean solicitudCancelada = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
             habilitado = activa || solicitudCancelada;
@@ -455,6 +456,14 @@ public class FormularioReparacionController {
                             fila.getDescripcionSolicitud(),
                             null));
                 }
+            }
+        }
+
+        // Acciones "otro": una FilaReparacion por descripción, cantidad 0 (stock neutro)
+        if (otrasAcciones != null && otrasAcciones.getIdComOtro() != -1) {
+            int otroIdCom = otrasAcciones.getIdComOtro();
+            for (String desc : otrasAcciones.getDescripciones()) {
+                filasActivas.add(new FilaReparacion(otroIdCom, 0, false, desc, "otro", false, null, null));
             }
         }
 
