@@ -650,7 +650,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     return true;
                 }).collect(java.util.stream.Collectors.toList());
             tablaItems.setAll(filtradas);
-            lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            lblContadorPlano.setText((filtradas.size() > 999 ? "999+" : String.valueOf(filtradas.size())) + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
             lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
             return;
         }
@@ -695,7 +695,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         }).collect(Collectors.toList());
         buildTablaItems();
         int nImeis = tablaItems.size();
-        lblContadorPlano.setText(nImeis + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        lblContadorPlano.setText((nImeis > 999 ? "999+" : String.valueOf(nImeis)) + (nImeis == 1 ? " IMEI" : " IMEIs"));
         lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
     }
 
