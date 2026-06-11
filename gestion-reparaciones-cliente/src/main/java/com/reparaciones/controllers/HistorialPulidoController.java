@@ -38,6 +38,7 @@ public class HistorialPulidoController {
     @FXML private DatePicker filtroFechaDesde;
     @FXML private DatePicker filtroFechaHasta;
     @FXML private Label      lblUltimaActualizacion;
+    @FXML private Label      lblContadorPulidos;
 
     private final PulidoDAO  pulidoDAO  = new PulidoDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
@@ -73,6 +74,8 @@ public class HistorialPulidoController {
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
         tablaPulidos.setColumnResizePolicy(param -> true);
+        datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContadorPulidos());
+        actualizarContadorPulidos();
 
         javafx.scene.image.Image imgEditar = new javafx.scene.image.Image(getClass().getResourceAsStream("/images/editar.png"));
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {
@@ -235,6 +238,12 @@ public class HistorialPulidoController {
             if (hasta != null && rep.getFechaFin() != null && rep.getFechaFin().toLocalDate().isAfter(hasta)) return false;
             return true;
         });
+    }
+
+    private void actualizarContadorPulidos() {
+        if (lblContadorPulidos == null || datosFiltrados == null) return;
+        int n = datosFiltrados.size();
+        lblContadorPulidos.setText(n + (n == 1 ? " pulido" : " pulidos"));
     }
 
     @FXML

@@ -20,6 +20,7 @@
         <Label text="Hasta:" style="-fx-font-size: 12px;"/>
         <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
+        <Label fx:id="lblContadorPulidos" style="-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;"/>
     </HBox>
 
     <TableView fx:id="tablaPulidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
