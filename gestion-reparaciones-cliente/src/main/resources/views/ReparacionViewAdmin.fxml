@@ -12,6 +12,7 @@
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <VBox styleClass="vista-container" stylesheets="@../styles/app.css"
@@ -33,7 +34,8 @@
         <VBox fx:id="pnlHistRep" spacing="0" visible="true" managed="true" VBox.vgrow="ALWAYS">
             <HBox alignment="CENTER_LEFT" spacing="12">
                 <VBox.margin><Insets bottom="8"/></VBox.margin>
-                <Label styleClass="vista-titulo" text="Historial de reparaciones" HBox.hgrow="ALWAYS"/>
+                <Label styleClass="vista-titulo" text="Historial de reparaciones"/>
+                <Region HBox.hgrow="ALWAYS" />
                 <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
                 <MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
                 <Label text="Desde:" style="-fx-font-size: 12px;"/>
@@ -42,7 +44,7 @@
                 <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
                 <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
                 <Button onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
-                <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;"/>
+                <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
                 <HBox spacing="0" alignment="CENTER_LEFT">
                     <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
                     <ToggleButton fx:id="toggleDesagrupar" text="Plano" styleClass="toggle-pill-right"/>
