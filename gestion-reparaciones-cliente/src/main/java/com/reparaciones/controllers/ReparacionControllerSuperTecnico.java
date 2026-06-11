@@ -904,10 +904,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     return true;
                 }).collect(java.util.stream.Collectors.toList());
             tablaItems.setAll(filtradas);
-            lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            lblContadorPlano.setText((filtradas.size() > 999 ? "999+" : String.valueOf(filtradas.size())) + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
             return;
         }
         if (modoActual == Modo.DETALLE) {
+            lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
             List<ReparacionResumen> filtradas = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
                 .filter(rep -> {
@@ -945,6 +947,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             return true;
         }).collect(Collectors.toList());
         buildTablaItems();
+        int nImeis = tablaItems.size();
+        lblContadorPlano.setText((nImeis > 999 ? "999+" : String.valueOf(nImeis)) + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
     }
 
     private void buildTablaItems() {
