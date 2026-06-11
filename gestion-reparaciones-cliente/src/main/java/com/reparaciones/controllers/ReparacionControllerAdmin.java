@@ -888,6 +888,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         cbIncidenciasCerradas.setSelected(false);
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
+        aplicarFiltros();
     }
 
     @Override

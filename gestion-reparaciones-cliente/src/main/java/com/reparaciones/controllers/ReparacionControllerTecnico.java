@@ -1096,6 +1096,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
         filtroImei.setStyle("");
+        aplicarFiltros();
     }
 
     @FXML

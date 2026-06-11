@@ -1153,6 +1153,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         cbIncidenciasCerradas.setSelected(false);
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
+        aplicarFiltros();
     }
 
     // ─── Modal pendientes ─────────────────────────────────────────────────────
