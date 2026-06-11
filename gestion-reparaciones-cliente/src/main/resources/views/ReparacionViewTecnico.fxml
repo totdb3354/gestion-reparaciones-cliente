@@ -56,7 +56,6 @@
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <VBox.margin><Insets bottom="8"/></VBox.margin>
                                 <Label styleClass="vista-titulo" text="Mis reparaciones"/>
-                                <Region HBox.hgrow="ALWAYS" />
                                 <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
                                 <Label text="Desde:" style="-fx-font-size: 12px;"/>
                                 <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
@@ -64,6 +63,7 @@
                                 <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
                                 <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
                                 <Button fx:id="btnLimpiarFiltros" onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
+                                <Region HBox.hgrow="ALWAYS" />
                                 <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
                                 <HBox spacing="0" alignment="CENTER_LEFT">
                                     <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
