@@ -403,7 +403,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     @FXML private void mostrarHistorial() {
-        if (modoActual == Modo.DETALLE || modoActual == Modo.PLANO) { volverAGrupos(); return; }
+        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
         cargarDatos();
     }
@@ -411,7 +411,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     public void irAInicio() { mostrarPanel(pnlMisPendientes, btnTabMisPendientes); }
 
     private void mostrarPanel(VBox panel, Button btnActivo) {
-        if (pnlHistorial.isVisible() && panel != pnlHistorial && (modoActual == Modo.DETALLE || modoActual == Modo.PLANO))
+        if (pnlHistorial.isVisible() && panel != pnlHistorial && modoActual == Modo.DETALLE)
             resetarModo();
         pnlHistorial    .setVisible(false); pnlHistorial    .setManaged(false);
         pnlMisPendientes.setVisible(false); pnlMisPendientes.setManaged(false);
@@ -1076,7 +1076,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
      * @param hasta fecha de fin del filtro
      */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta) {
-        if (modoActual == Modo.DETALLE || modoActual == Modo.PLANO) volverAGrupos();
+        if (modoActual == Modo.DETALLE) volverAGrupos();
         mostrarHistorial();
         filtroFechaDesde.setValue(desde);
         filtroFechaHasta.setValue(hasta);
