@@ -54,6 +54,8 @@ public class FormularioReparacionController {
     @FXML private javafx.scene.layout.HBox filaIncidencia;
     @FXML private Label lblSeleccionaModelo;
     @FXML private VBox contenedorFilas;
+    @FXML private VBox contenedorOtros;
+    @FXML private javafx.scene.layout.HBox cabeceraColumnas;
     @FXML private Button btnGuardar;
     @FXML private javafx.scene.layout.HBox zonaGuardar;
     @FXML private ComboBox<String> cbFiltroModelo;
@@ -64,6 +66,8 @@ public class FormularioReparacionController {
     private String        imeiEditar;
     private int           idTecEditar;
     private LocalDateTime updatedAtEdicion;
+    private TextArea taEditarOtro;
+    private int idComOtroEditar = -1;
     private boolean esperandoConfirmacion = false;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
@@ -75,6 +79,7 @@ public class FormularioReparacionController {
     private Runnable onGuardado;
 
     private final List<FilaUI> filasUI = new ArrayList<>();
+    private OtrasAccionesUI otrasAcciones;
 
     /**
      * Lista de modelos en orden de tienda Apple.
@@ -179,13 +184,17 @@ public class FormularioReparacionController {
             this.imeiEditar      = d.imei;
             this.idTecEditar     = d.idTec;
             this.updatedAtEdicion = d.updatedAt;
+            cargarFilas(); // crea otrasAcciones (necesario para detectar si idCom es "otro")
+            if (otrasAcciones != null && otrasAcciones.esOtro(d.idCom)) {
+                iniciarEdicionOtro(d);
+                return;
+            }
 
             lblImei.setText("IMEI: " + d.imei + "  ·  Editando " + idRep);
             btnGuardar.setText("Guardar cambios");
 
             List<Tecnico> tecnicos = new TecnicoDAO().getAllActivos();
 
-            cargarFilas();
             Set<Integer> yaReparados = reparacionDAO.getIdComsYaReparados(d.imei, idRep);
             // Primera pasada: activar solo la fila que tiene el componente editado,
             // para que configurarFiltroModelo pueda detectar el modelo
@@ -208,6 +217,37 @@ public class FormularioReparacionController {
         }
     }
 
+    /** Modo edición de una acción "otro": oculta la maquinaria de componentes y muestra
+     *  un editor de texto para la descripción. */
+    private void iniciarEdicionOtro(ReparacionDAO.DetalleEdicion d) {
+        this.idComOtroEditar = d.idCom;
+        lblImei.setText("IMEI: " + d.imei + "  ·  Editando acción " + idRepEditar);
+        btnGuardar.setText("Guardar cambios");
+
+        contenedorFilas.setVisible(false); contenedorFilas.setManaged(false);
+        if (cabeceraColumnas != null) { cabeceraColumnas.setVisible(false); cabeceraColumnas.setManaged(false); }
+        if (otrasAcciones != null) { otrasAcciones.getRoot().setVisible(false); otrasAcciones.getRoot().setManaged(false); }
+        lblSeleccionaModelo.setVisible(false); lblSeleccionaModelo.setManaged(false);
+        cbFiltroModelo.setVisible(false); cbFiltroModelo.setManaged(false);
+
+        String original = d.observacion != null ? d.observacion : "";
+        taEditarOtro = new TextArea(original);
+        taEditarOtro.setWrapText(true);
+        taEditarOtro.setPrefRowCount(3);
+        taEditarOtro.setStyle("-fx-font-size: 13px;");
+        Label lbl = new Label("Descripción de la acción:");
+        lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        VBox box = new VBox(8, lbl, taEditarOtro);
+        box.setStyle("-fx-padding: 16;");
+        contenedorOtros.getChildren().add(box);
+
+        taEditarOtro.textProperty().addListener((o, a, b) -> {
+            String t = b == null ? "" : b.trim();
+            boolean valido = !t.isEmpty() && !t.equals(original.trim());
+            zonaGuardar.setVisible(valido); zonaGuardar.setManaged(valido);
+        });
+    }
+
     public static void abrirEditar(String idRep, Runnable onGuardado) {
         Platform.runLater(() -> {
             try {
@@ -220,8 +260,8 @@ public class FormularioReparacionController {
                 Stage stage = new Stage();
                 stage.setScene(new javafx.scene.Scene(root));
                 stage.setResizable(true);
-                stage.setMinWidth(900);
-                stage.setMinHeight(520);
+                stage.setMinWidth(960);
+                stage.setMinHeight(700);
 
                 ctrl.initEditar(idRep, onGuardado);
                 stage.setTitle("Editar reparación — " + idRep);
@@ -248,17 +288,40 @@ public class FormularioReparacionController {
             Map<String, List<Componente>> grupos = componenteDAO.getAgrupadosPorTipo();
             Image imgBorrar  = new Image(getClass().getResourceAsStream("/images/borrar.png"));
             Image imgEditar  = new Image(getClass().getResourceAsStream("/images/editar.png"));
+            java.util.List<FilaUI> vidrioMarco = new ArrayList<>();
             for (Map.Entry<String, List<Componente>> entry : grupos.entrySet()) {
                 if (entry.getValue().isEmpty())
                     continue;
+                if (entry.getKey().equals("otro")) {
+                    otrasAcciones = new OtrasAccionesUI(entry.getValue(), imgBorrar);
+                    otrasAcciones.setOnCambio(this::actualizarBoton);
+                    contenedorOtros.getChildren().add(otrasAcciones.getRoot());
+                    continue;
+                }
                 FilaUI fila = new FilaUI(entry.getKey(), entry.getValue(), imgBorrar, imgEditar);
                 fila.setOnCambio(this::actualizarBoton);
-                contenedorFilas.getChildren().add(fila.getRoot());
                 filasUI.add(fila);
+                if (entry.getKey().equals("g") || entry.getKey().equals("mc"))
+                    vidrioMarco.add(fila);   // Glass y Marco van al final, tras un delimitador
+                else
+                    contenedorFilas.getChildren().add(fila.getRoot());
+            }
+            if (!vidrioMarco.isEmpty()) {
+                contenedorFilas.getChildren().add(crearDelimitador());
+                for (FilaUI f : vidrioMarco) contenedorFilas.getChildren().add(f.getRoot());
             }
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    /** Banda separadora (sin texto) entre las filas principales y Glass/Marco. */
+    private javafx.scene.Node crearDelimitador() {
+        javafx.scene.layout.Region r = new javafx.scene.layout.Region();
+        r.setMinHeight(7); r.setPrefHeight(7);
+        r.setStyle("-fx-background-color: #E4E7EC;" +
+                "-fx-border-color: #BCC2CB transparent #BCC2CB transparent; -fx-border-width: 1 0 1 0;");
+        return r;
     }
 
     private void configurarFiltroModelo() {
@@ -301,6 +364,7 @@ public class FormularioReparacionController {
             for (FilaUI fila : filasUI) {
                 fila.aplicarFiltroModelo(n);
             }
+            if (otrasAcciones != null) otrasAcciones.setModelo(n);
         });
 
         if (solicitudesCargadas != null && !solicitudesCargadas.isEmpty()) {
@@ -353,7 +417,8 @@ public class FormularioReparacionController {
                     .filter(f -> !f.isModoEdicion()).anyMatch(FilaUI::isActiva);
             habilitado = !filaEditadaInvalida && (cambioEnEdicion || filasNuevas);
         } else {
-            boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva);
+            boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva)
+                    || (otrasAcciones != null && otrasAcciones.hayAccion());
             boolean solicitudCancelada = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
             habilitado = activa || solicitudCancelada;
@@ -448,6 +513,14 @@ public class FormularioReparacionController {
             }
         }
 
+        // Acciones "otro": una FilaReparacion por descripción, cantidad 0 (stock neutro)
+        if (otrasAcciones != null && otrasAcciones.getIdComOtro() != -1) {
+            int otroIdCom = otrasAcciones.getIdComOtro();
+            for (String desc : otrasAcciones.getDescripciones()) {
+                filasActivas.add(new FilaReparacion(otroIdCom, 0, false, desc, "otro", false, null, null));
+            }
+        }
+
         // Si solo había filas agotadas, cerrar sin crear reparación
         boolean soloAgotadas = filasActivas.isEmpty()
                 && filasUI.stream().anyMatch(FilaUI::esAgotadoNuevo);
@@ -477,6 +550,21 @@ public class FormularioReparacionController {
     }
 
     private void ejecutarGuardarEdicion() {
+        if (taEditarOtro != null) {
+            try {
+                reparacionDAO.editarReparacion(idRepEditar, idComOtroEditar, false,
+                        taEditarOtro.getText().trim(), 0, updatedAtEdicion);
+                Stage stage = (Stage) btnGuardar.getScene().getWindow();
+                stage.close();
+                if (onGuardado != null) onGuardado.run();
+            } catch (StaleDataException ex) {
+                new Alert(Alert.AlertType.WARNING,
+                        "No se pudo guardar: otro usuario modificó esta reparación.").showAndWait();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+            return;
+        }
         try {
             // 1. Editar la fila que está en modo edición (si cambió)
             for (FilaUI fila : filasUI) {
@@ -536,8 +624,8 @@ public class FormularioReparacionController {
                 stage.setTitle("Nueva reparación — IMEI " + imei);
                 stage.setScene(new javafx.scene.Scene(root));
                 stage.setResizable(true);
-                stage.setMinWidth(900);
-                stage.setMinHeight(520);
+                stage.setMinWidth(960);
+                stage.setMinHeight(700);
 
                 ctrl.init(imei, idRepAnterior, idAsignacion, onGuardado);
 
@@ -1600,5 +1688,116 @@ public class FormularioReparacionController {
         void setOnCambio(Runnable r) {
             this.onCambio = r;
         }
+    }
+
+    // ─── OtrasAccionesUI ──────────────────────────────────────────────────────
+    /** Sección de "Otras acciones": varias acciones de texto libre (sin pieza/stock).
+     *  Cada acción se guarda como un R* con el componente otroi<modelo> y cantidad 0. */
+    static class OtrasAccionesUI {
+        private final VBox root;
+        private final VBox listaLineas = new VBox(5);
+        private final Label badge = new Label("0");
+        private final List<Componente> otroComponentes;
+        private final Image imgBorrar;
+        private Componente otroSel = null;   // otroi<modelo> del modelo actual
+        private Runnable onCambio;
+        private Button btnAdd;
+
+        OtrasAccionesUI(List<Componente> otroComponentes, Image imgBorrar) {
+            this.otroComponentes = otroComponentes;
+            this.imgBorrar = imgBorrar;
+
+            Label titulo = new Label("OTRAS ACCIONES");
+            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+            badge.setStyle("-fx-background-color: #2C3B54; -fx-text-fill: white; -fx-font-size: 10px;" +
+                    "-fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 8 1 8;");
+            HBox header = new HBox(8, titulo, badge);
+            header.setAlignment(Pos.CENTER_LEFT);
+            header.setStyle("-fx-padding: 8 14 2 14;");
+
+            javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane(listaLineas);
+            scroll.setFitToWidth(true);
+            scroll.setMaxHeight(150);
+            scroll.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6;");
+            listaLineas.setStyle("-fx-padding: 5;");
+
+            btnAdd = new Button("+ Añadir acción");
+            btnAdd.setStyle("-fx-background-color: #2C3B54; -fx-text-fill: white; -fx-font-size: 11.5px;" +
+                    "-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 6 12 6 12;");
+            btnAdd.setOnAction(e -> agregarLinea(""));
+
+            VBox cuerpo = new VBox(8, scroll, btnAdd);
+            cuerpo.setStyle("-fx-padding: 2 14 12 14;");
+
+            root = new VBox(header, cuerpo);
+            root.setStyle("-fx-background-color: #F6F7F9;" +
+                    "-fx-border-color: transparent transparent transparent #2C3B54; -fx-border-width: 0 0 0 4;");
+            root.setVisible(false); root.setManaged(false);
+        }
+
+        /** Selecciona el otroi<modelo> según el modelo elegido; muestra la sección si existe. */
+        void setModelo(String modelo) {
+            otroSel = (modelo == null) ? null : otroComponentes.stream()
+                    .filter(c -> extraerModelo(c.getTipo(), "otro").equals(modelo))
+                    .findFirst().orElse(null);
+            boolean disponible = otroSel != null;
+            root.setVisible(disponible); root.setManaged(disponible);
+        }
+
+        private void agregarLinea(String texto) {
+            if (hayLineaVacia()) return;   // solo se añade si las anteriores están escritas
+            TextField tf = new TextField(texto);
+            tf.setPromptText("Describe la acción");
+            tf.setStyle("-fx-font-size: 12px; -fx-background-color: white;" +
+                    "-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-background-radius: 4;");
+            HBox.setHgrow(tf, Priority.ALWAYS);
+            ImageView iv = new ImageView(imgBorrar);
+            iv.setFitWidth(18); iv.setFitHeight(18); iv.setPreserveRatio(true);
+            Button btnDel = new Button();
+            btnDel.setGraphic(iv);
+            btnDel.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
+            HBox linea = new HBox(8, tf, btnDel);
+            linea.setAlignment(Pos.CENTER_LEFT);
+            btnDel.setOnAction(e -> { listaLineas.getChildren().remove(linea); actualizar(); });
+            tf.textProperty().addListener((o, a, b) -> actualizar());
+            listaLineas.getChildren().add(linea);
+            tf.requestFocus();
+            actualizar();
+        }
+
+        private void actualizar() {
+            badge.setText(String.valueOf(getDescripciones().size()));
+            btnAdd.setDisable(hayLineaVacia());
+            if (onCambio != null) onCambio.run();
+        }
+
+        private boolean hayLineaVacia() {
+            for (javafx.scene.Node n : listaLineas.getChildren()) {
+                if (n instanceof HBox h && !h.getChildren().isEmpty()
+                        && h.getChildren().get(0) instanceof TextField tf) {
+                    if (tf.getText() == null || tf.getText().trim().isEmpty()) return true;
+                }
+            }
+            return false;
+        }
+
+        /** Descripciones no vacías (trim) de las líneas. */
+        List<String> getDescripciones() {
+            List<String> out = new ArrayList<>();
+            for (javafx.scene.Node n : listaLineas.getChildren()) {
+                if (n instanceof HBox h && !h.getChildren().isEmpty()
+                        && h.getChildren().get(0) instanceof TextField tf) {
+                    String t = tf.getText() == null ? "" : tf.getText().trim();
+                    if (!t.isEmpty()) out.add(t);
+                }
+            }
+            return out;
+        }
+
+        int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
+        boolean hayAccion() { return otroSel != null && !getDescripciones().isEmpty(); }
+        boolean esOtro(int idCom) { return otroComponentes.stream().anyMatch(c -> c.getIdCom() == idCom); }
+        void setOnCambio(Runnable r) { this.onCambio = r; }
+        VBox getRoot() { return root; }
     }
 }

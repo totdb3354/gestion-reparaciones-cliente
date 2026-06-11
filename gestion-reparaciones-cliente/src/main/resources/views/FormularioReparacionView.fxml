@@ -33,7 +33,7 @@
     </HBox>
 
     <!-- Cabecera columnas -->
-    <HBox style="-fx-background-color: #BCC2CB;
+    <HBox fx:id="cabeceraColumnas" style="-fx-background-color: #BCC2CB;
                  -fx-border-color: transparent transparent #A8AEB7 transparent;
                  -fx-border-width: 0 0 1 0;">
         <Label text="Unit (+/-)"    minWidth="70"  style="-fx-font-size:12px; -fx-text-fill:#586376; -fx-padding:6 10 6 10;"/>
@@ -56,8 +56,17 @@
     <!-- Filas de componentes -->
     <VBox fx:id="contenedorFilas"/>
 
-    <!-- Botón guardar — solo visible cuando hay cambios -->
-    <HBox fx:id="zonaGuardar" style="-fx-padding: 12 16 12 16;" spacing="8" alignment="CENTER_RIGHT"
+    <!-- Sección "Otras acciones" (se rellena en el controlador) -->
+    <VBox fx:id="contenedorOtros"/>
+
+    <!-- Espaciador flexible: empuja la barra de guardar al fondo -->
+    <Region VBox.vgrow="ALWAYS"/>
+
+    <!-- Barra guardar (footer) — solo visible cuando hay cambios -->
+    <HBox fx:id="zonaGuardar"
+          style="-fx-padding: 12 16 12 16; -fx-background-color: #ECEEF1;
+                 -fx-border-color: #CFD3DA transparent transparent transparent; -fx-border-width: 1 0 0 0;"
+          spacing="8" alignment="CENTER_RIGHT"
           visible="false" managed="false">
         <Button fx:id="btnGuardar"
                 text="Guardar reparación"
