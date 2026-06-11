@@ -59,8 +59,14 @@
     <!-- Sección "Otras acciones" (se rellena en el controlador) -->
     <VBox fx:id="contenedorOtros"/>
 
-    <!-- Botón guardar — solo visible cuando hay cambios -->
-    <HBox fx:id="zonaGuardar" style="-fx-padding: 12 16 12 16;" spacing="8" alignment="CENTER_RIGHT"
+    <!-- Espaciador flexible: empuja la barra de guardar al fondo -->
+    <Region VBox.vgrow="ALWAYS"/>
+
+    <!-- Barra guardar (footer) — solo visible cuando hay cambios -->
+    <HBox fx:id="zonaGuardar"
+          style="-fx-padding: 12 16 12 16; -fx-background-color: #ECEEF1;
+                 -fx-border-color: #CFD3DA transparent transparent transparent; -fx-border-width: 1 0 0 0;"
+          spacing="8" alignment="CENTER_RIGHT"
           visible="false" managed="false">
         <Button fx:id="btnGuardar"
                 text="Guardar reparación"

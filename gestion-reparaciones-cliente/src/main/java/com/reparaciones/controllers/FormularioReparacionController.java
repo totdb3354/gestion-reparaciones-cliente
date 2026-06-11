@@ -288,6 +288,7 @@ public class FormularioReparacionController {
             Map<String, List<Componente>> grupos = componenteDAO.getAgrupadosPorTipo();
             Image imgBorrar  = new Image(getClass().getResourceAsStream("/images/borrar.png"));
             Image imgEditar  = new Image(getClass().getResourceAsStream("/images/editar.png"));
+            java.util.List<FilaUI> vidrioMarco = new ArrayList<>();
             for (Map.Entry<String, List<Componente>> entry : grupos.entrySet()) {
                 if (entry.getValue().isEmpty())
                     continue;
@@ -299,12 +300,28 @@ public class FormularioReparacionController {
                 }
                 FilaUI fila = new FilaUI(entry.getKey(), entry.getValue(), imgBorrar, imgEditar);
                 fila.setOnCambio(this::actualizarBoton);
-                contenedorFilas.getChildren().add(fila.getRoot());
                 filasUI.add(fila);
+                if (entry.getKey().equals("g") || entry.getKey().equals("mc"))
+                    vidrioMarco.add(fila);   // Glass y Marco van al final, tras un delimitador
+                else
+                    contenedorFilas.getChildren().add(fila.getRoot());
+            }
+            if (!vidrioMarco.isEmpty()) {
+                contenedorFilas.getChildren().add(crearDelimitador());
+                for (FilaUI f : vidrioMarco) contenedorFilas.getChildren().add(f.getRoot());
             }
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    /** Banda separadora (sin texto) entre las filas principales y Glass/Marco. */
+    private javafx.scene.Node crearDelimitador() {
+        javafx.scene.layout.Region r = new javafx.scene.layout.Region();
+        r.setMinHeight(7); r.setPrefHeight(7);
+        r.setStyle("-fx-background-color: #E4E7EC;" +
+                "-fx-border-color: #BCC2CB transparent #BCC2CB transparent; -fx-border-width: 1 0 1 0;");
+        return r;
     }
 
     private void configurarFiltroModelo() {
@@ -1691,17 +1708,17 @@ public class FormularioReparacionController {
             this.imgBorrar = imgBorrar;
 
             Label titulo = new Label("OTRAS ACCIONES");
-            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: white;");
-            badge.setStyle("-fx-background-color: #001232; -fx-text-fill: white; -fx-font-size: 10px;" +
+            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+            badge.setStyle("-fx-background-color: #2C3B54; -fx-text-fill: white; -fx-font-size: 10px;" +
                     "-fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 8 1 8;");
             HBox header = new HBox(8, titulo, badge);
             header.setAlignment(Pos.CENTER_LEFT);
-            header.setStyle("-fx-background-color: #2C3B54; -fx-padding: 7 14 7 14;");
+            header.setStyle("-fx-padding: 8 14 2 14;");
 
             javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane(listaLineas);
             scroll.setFitToWidth(true);
             scroll.setMaxHeight(150);
-            scroll.setStyle("-fx-background-color: white; -fx-border-color: #B3D4F5; -fx-border-radius: 6; -fx-background-radius: 6;");
+            scroll.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6;");
             listaLineas.setStyle("-fx-padding: 5;");
 
             btnAdd = new Button("+ Añadir acción");
@@ -1710,9 +1727,11 @@ public class FormularioReparacionController {
             btnAdd.setOnAction(e -> agregarLinea(""));
 
             VBox cuerpo = new VBox(8, scroll, btnAdd);
-            cuerpo.setStyle("-fx-background-color: #EBF4FF; -fx-padding: 8 14 12 14;");
+            cuerpo.setStyle("-fx-padding: 2 14 12 14;");
 
             root = new VBox(header, cuerpo);
+            root.setStyle("-fx-background-color: #F6F7F9;" +
+                    "-fx-border-color: transparent transparent transparent #2C3B54; -fx-border-width: 0 0 0 4;");
             root.setVisible(false); root.setManaged(false);
         }
 
@@ -1729,7 +1748,8 @@ public class FormularioReparacionController {
             if (hayLineaVacia()) return;   // solo se añade si las anteriores están escritas
             TextField tf = new TextField(texto);
             tf.setPromptText("Describe la acción");
-            tf.setStyle("-fx-font-size: 12px;");
+            tf.setStyle("-fx-font-size: 12px; -fx-background-color: white;" +
+                    "-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-background-radius: 4;");
             HBox.setHgrow(tf, Priority.ALWAYS);
             ImageView iv = new ImageView(imgBorrar);
             iv.setFitWidth(18); iv.setFitHeight(18); iv.setPreserveRatio(true);
