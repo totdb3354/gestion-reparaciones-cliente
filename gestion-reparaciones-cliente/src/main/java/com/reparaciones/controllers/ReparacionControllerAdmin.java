@@ -651,10 +651,12 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                 }).collect(java.util.stream.Collectors.toList());
             tablaItems.setAll(filtradas);
             lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
             return;
         }
 
         if (modoActual == Modo.DETALLE) {
+            lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
             List<ReparacionResumen> filtradas = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
                 .filter(rep -> {
@@ -692,6 +694,9 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             return true;
         }).collect(Collectors.toList());
         buildTablaItems();
+        int nImeis = tablaItems.size();
+        lblContadorPlano.setText(nImeis + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
     }
 
     private void buildTablaItems() {

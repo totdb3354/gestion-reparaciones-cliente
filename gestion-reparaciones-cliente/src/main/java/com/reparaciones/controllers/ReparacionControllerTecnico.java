@@ -1004,10 +1004,12 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 .collect(Collectors.toList());
             tablaItems.setAll(filtradas);
             lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
             return;
         }
 
         if (modoActual == Modo.DETALLE) {
+            lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
             Integer idTec = Sesion.getIdTec();
 
             java.util.function.Predicate<ReparacionResumen> predicado = rep -> {
@@ -1072,6 +1074,9 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 return true;
             }).collect(Collectors.toList());
         buildTablaItems();
+        int nImeis = tablaItems.size();
+        lblContadorPlano.setText(nImeis + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
     }
 
     /**
