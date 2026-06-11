@@ -77,6 +77,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @FXML private Label  lblUltimaActualizacion;
     @FXML private PendientesTecnicoController misPendientesController;
 
+    @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
+    @FXML private javafx.scene.control.ToggleButton toggleDesagrupar;
+    @FXML private javafx.scene.control.Label        lblContadorPlano;
+
     // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
     @FXML private javafx.scene.control.ToggleButton toggleHistRep;
     @FXML private javafx.scene.control.ToggleButton toggleHistPul;
@@ -102,7 +106,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     // ── Drill-down ────────────────────────────────────────────────────────────
-    private enum Modo { MAESTRO, DETALLE }
+    private enum Modo { MAESTRO, DETALLE, PLANO }
     private Modo          modoActual       = Modo.MAESTRO;
     private String        imeiDetalle      = null;
     private HBox          barraNavegacion;
@@ -128,6 +132,21 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         tablaReparaciones.getColumns().forEach(c -> c.setReorderable(false));
         configurarFilas();
         configurarFiltros();
+
+        lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
+        javafx.scene.control.ToggleGroup tgAgrupar = new javafx.scene.control.ToggleGroup();
+        toggleAgrupar.setToggleGroup(tgAgrupar);
+        toggleDesagrupar.setToggleGroup(tgAgrupar);
+        tgAgrupar.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { toggleAgrupar.setSelected(true); return; }
+            if (n == toggleDesagrupar) {
+                entrarModoPlano();
+            } else {
+                lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
+                resetarModo();
+                aplicarFiltros();
+            }
+        });
 
         crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
@@ -312,6 +331,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         imeiDetalle = null;
         if (btnOtrosTecnicos != null) btnOtrosTecnicos.setSelected(false);
         idsAjenas.clear();
+        if (toggleAgrupar != null) toggleAgrupar.setSelected(true);
+        if (lblContadorPlano != null) { lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false); }
         if (barraNavegacion != null) {
             barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
             filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
@@ -326,6 +347,22 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
             colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
         });
+    }
+
+    /** Entra en modo PLANO: todas las reparaciones propias sin agrupar, columnas estilo detalle,
+     *  filtro de IMEI visible y sin barra de navegación. */
+    private void entrarModoPlano() {
+        modoActual  = Modo.PLANO;
+        imeiDetalle = null;
+        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colObservaciones.setVisible(true); colIncidencia.setVisible(true);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colComponente.setText("Componente");
+        filtroImei.setVisible(true); filtroImei.setManaged(true);
+        if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
+        adaptarFiltrosDetalle();
+        lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
+        aplicarFiltros();
     }
 
     // ─── Sidebar ─────────────────────────────────────────────────────────────
@@ -366,7 +403,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     @FXML private void mostrarHistorial() {
-        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
+        if (modoActual == Modo.DETALLE || modoActual == Modo.PLANO) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
         cargarDatos();
     }
@@ -374,7 +411,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     public void irAInicio() { mostrarPanel(pnlMisPendientes, btnTabMisPendientes); }
 
     private void mostrarPanel(VBox panel, Button btnActivo) {
-        if (pnlHistorial.isVisible() && panel != pnlHistorial && modoActual == Modo.DETALLE)
+        if (pnlHistorial.isVisible() && panel != pnlHistorial && (modoActual == Modo.DETALLE || modoActual == Modo.PLANO))
             resetarModo();
         pnlHistorial    .setVisible(false); pnlHistorial    .setManaged(false);
         pnlMisPendientes.setVisible(false); pnlMisPendientes.setManaged(false);
@@ -932,6 +969,37 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
 
+        if (modoActual == Modo.PLANO) {
+            Integer idTec = Sesion.getIdTec();
+            java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
+
+            java.util.function.Predicate<ReparacionResumen> predicado = rep -> {
+                if (idTec == null || rep.getIdTec() != idTec) return false;
+                if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
+                if (desde != null || hasta != null) {
+                    if (rep.getFechaFin() == null) return false;
+                    LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                    if (desde != null && fechaFin.isBefore(desde)) return false;
+                    if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                }
+                if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                    boolean mostrar = false;
+                    if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                    if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
+                    if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
+                    if (!mostrar) return false;
+                }
+                return true;
+            };
+
+            List<ReparacionResumen> filtradas = datos.stream()
+                .filter(predicado)
+                .collect(Collectors.toList());
+            tablaItems.setAll(filtradas);
+            lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+            return;
+        }
+
         if (modoActual == Modo.DETALLE) {
             Integer idTec = Sesion.getIdTec();
 
@@ -1008,7 +1076,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
      * @param hasta fecha de fin del filtro
      */
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta) {
-        if (modoActual == Modo.DETALLE) volverAGrupos();
+        if (modoActual == Modo.DETALLE || modoActual == Modo.PLANO) volverAGrupos();
         mostrarHistorial();
         filtroFechaDesde.setValue(desde);
         filtroFechaHasta.setValue(hasta);

@@ -62,6 +62,11 @@
                                 <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
                                 <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
                                 <Button fx:id="btnLimpiarFiltros" onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
+                                <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;"/>
+                                <HBox spacing="0" alignment="CENTER_LEFT">
+                                    <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
+                                    <ToggleButton fx:id="toggleDesagrupar" text="Plano" styleClass="toggle-pill-right"/>
+                                </HBox>
                             </HBox>
                             <TableView fx:id="tablaReparaciones" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
                                 <columns>
