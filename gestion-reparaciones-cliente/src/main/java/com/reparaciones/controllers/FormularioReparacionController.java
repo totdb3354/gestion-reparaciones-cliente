@@ -260,8 +260,8 @@ public class FormularioReparacionController {
                 Stage stage = new Stage();
                 stage.setScene(new javafx.scene.Scene(root));
                 stage.setResizable(true);
-                stage.setMinWidth(900);
-                stage.setMinHeight(520);
+                stage.setMinWidth(960);
+                stage.setMinHeight(700);
 
                 ctrl.initEditar(idRep, onGuardado);
                 stage.setTitle("Editar reparación — " + idRep);
@@ -607,8 +607,8 @@ public class FormularioReparacionController {
                 stage.setTitle("Nueva reparación — IMEI " + imei);
                 stage.setScene(new javafx.scene.Scene(root));
                 stage.setResizable(true);
-                stage.setMinWidth(900);
-                stage.setMinHeight(520);
+                stage.setMinWidth(960);
+                stage.setMinHeight(700);
 
                 ctrl.init(imei, idRepAnterior, idAsignacion, onGuardado);
 
@@ -1684,37 +1684,33 @@ public class FormularioReparacionController {
         private final Image imgBorrar;
         private Componente otroSel = null;   // otroi<modelo> del modelo actual
         private Runnable onCambio;
+        private Button btnAdd;
 
         OtrasAccionesUI(List<Componente> otroComponentes, Image imgBorrar) {
             this.otroComponentes = otroComponentes;
             this.imgBorrar = imgBorrar;
 
             Label titulo = new Label("OTRAS ACCIONES");
-            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #5B3FA0;");
-            badge.setStyle("-fx-background-color: #5B3FA0; -fx-text-fill: white; -fx-font-size: 10px;" +
+            titulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: white;");
+            badge.setStyle("-fx-background-color: #001232; -fx-text-fill: white; -fx-font-size: 10px;" +
                     "-fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 8 1 8;");
-            Label sub = new Label("no descuentan stock");
-            sub.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #8A7FA8;");
-            HBox header = new HBox(8, titulo, badge, sub);
+            HBox header = new HBox(8, titulo, badge);
             header.setAlignment(Pos.CENTER_LEFT);
-            header.setStyle("-fx-background-color: #EDE7F6; -fx-padding: 7 14 7 14;");
+            header.setStyle("-fx-background-color: #2C3B54; -fx-padding: 7 14 7 14;");
 
             javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane(listaLineas);
             scroll.setFitToWidth(true);
-            scroll.setMaxHeight(120);
-            scroll.setStyle("-fx-background-color: white; -fx-border-color: #D9CFEC; -fx-border-radius: 6; -fx-background-radius: 6;");
+            scroll.setMaxHeight(150);
+            scroll.setStyle("-fx-background-color: white; -fx-border-color: #B3D4F5; -fx-border-radius: 6; -fx-background-radius: 6;");
             listaLineas.setStyle("-fx-padding: 5;");
 
-            Button btnAdd = new Button("+ Añadir acción");
-            btnAdd.setStyle("-fx-background-color: #5B3FA0; -fx-text-fill: white; -fx-font-size: 11.5px;" +
+            btnAdd = new Button("+ Añadir acción");
+            btnAdd.setStyle("-fx-background-color: #2C3B54; -fx-text-fill: white; -fx-font-size: 11.5px;" +
                     "-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 6 12 6 12;");
             btnAdd.setOnAction(e -> agregarLinea(""));
 
-            Label hint = new Label("La descripción es obligatoria: una acción vacía no se guarda.");
-            hint.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #8A7FA8;");
-
-            VBox cuerpo = new VBox(8, scroll, btnAdd, hint);
-            cuerpo.setStyle("-fx-background-color: #F7F4FB; -fx-padding: 8 14 12 14;");
+            VBox cuerpo = new VBox(8, scroll, btnAdd);
+            cuerpo.setStyle("-fx-background-color: #EBF4FF; -fx-padding: 8 14 12 14;");
 
             root = new VBox(header, cuerpo);
             root.setVisible(false); root.setManaged(false);
@@ -1730,8 +1726,9 @@ public class FormularioReparacionController {
         }
 
         private void agregarLinea(String texto) {
+            if (hayLineaVacia()) return;   // solo se añade si las anteriores están escritas
             TextField tf = new TextField(texto);
-            tf.setPromptText("Describe la acción (ej. limpiar cámara)");
+            tf.setPromptText("Describe la acción");
             tf.setStyle("-fx-font-size: 12px;");
             HBox.setHgrow(tf, Priority.ALWAYS);
             ImageView iv = new ImageView(imgBorrar);
@@ -1750,7 +1747,18 @@ public class FormularioReparacionController {
 
         private void actualizar() {
             badge.setText(String.valueOf(getDescripciones().size()));
+            btnAdd.setDisable(hayLineaVacia());
             if (onCambio != null) onCambio.run();
+        }
+
+        private boolean hayLineaVacia() {
+            for (javafx.scene.Node n : listaLineas.getChildren()) {
+                if (n instanceof HBox h && !h.getChildren().isEmpty()
+                        && h.getChildren().get(0) instanceof TextField tf) {
+                    if (tf.getText() == null || tf.getText().trim().isEmpty()) return true;
+                }
+            }
+            return false;
         }
 
         /** Descripciones no vacías (trim) de las líneas. */
