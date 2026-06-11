@@ -757,7 +757,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
-        javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
+        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
+            aplicarAnchosDetalle();
+            tablaReparaciones.refresh();
+        }));
         aplicarFiltros();
     }
 

@@ -301,7 +301,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
-        javafx.application.Platform.runLater(this::aplicarAnchosDetalle);
+        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
+            aplicarAnchosDetalle();
+            tablaReparaciones.refresh();
+        }));
         aplicarFiltros();
     }
 
