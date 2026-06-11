@@ -33,7 +33,7 @@
     </HBox>
 
     <!-- Cabecera columnas -->
-    <HBox style="-fx-background-color: #BCC2CB;
+    <HBox fx:id="cabeceraColumnas" style="-fx-background-color: #BCC2CB;
                  -fx-border-color: transparent transparent #A8AEB7 transparent;
                  -fx-border-width: 0 0 1 0;">
         <Label text="Unit (+/-)"    minWidth="70"  style="-fx-font-size:12px; -fx-text-fill:#586376; -fx-padding:6 10 6 10;"/>
@@ -55,6 +55,9 @@
 
     <!-- Filas de componentes -->
     <VBox fx:id="contenedorFilas"/>
+
+    <!-- Sección "Otras acciones" (se rellena en el controlador) -->
+    <VBox fx:id="contenedorOtros"/>
 
     <!-- Botón guardar — solo visible cuando hay cambios -->
     <HBox fx:id="zonaGuardar" style="-fx-padding: 12 16 12 16;" spacing="8" alignment="CENTER_RIGHT"
