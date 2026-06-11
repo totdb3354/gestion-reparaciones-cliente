@@ -66,6 +66,8 @@ public class FormularioReparacionController {
     private String        imeiEditar;
     private int           idTecEditar;
     private LocalDateTime updatedAtEdicion;
+    private TextArea taEditarOtro;
+    private int idComOtroEditar = -1;
     private boolean esperandoConfirmacion = false;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
@@ -182,13 +184,17 @@ public class FormularioReparacionController {
             this.imeiEditar      = d.imei;
             this.idTecEditar     = d.idTec;
             this.updatedAtEdicion = d.updatedAt;
+            cargarFilas(); // crea otrasAcciones (necesario para detectar si idCom es "otro")
+            if (otrasAcciones != null && otrasAcciones.esOtro(d.idCom)) {
+                iniciarEdicionOtro(d);
+                return;
+            }
 
             lblImei.setText("IMEI: " + d.imei + "  ·  Editando " + idRep);
             btnGuardar.setText("Guardar cambios");
 
             List<Tecnico> tecnicos = new TecnicoDAO().getAllActivos();
 
-            cargarFilas();
             Set<Integer> yaReparados = reparacionDAO.getIdComsYaReparados(d.imei, idRep);
             // Primera pasada: activar solo la fila que tiene el componente editado,
             // para que configurarFiltroModelo pueda detectar el modelo
@@ -209,6 +215,37 @@ public class FormularioReparacionController {
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    /** Modo edición de una acción "otro": oculta la maquinaria de componentes y muestra
+     *  un editor de texto para la descripción. */
+    private void iniciarEdicionOtro(ReparacionDAO.DetalleEdicion d) {
+        this.idComOtroEditar = d.idCom;
+        lblImei.setText("IMEI: " + d.imei + "  ·  Editando acción " + idRepEditar);
+        btnGuardar.setText("Guardar cambios");
+
+        contenedorFilas.setVisible(false); contenedorFilas.setManaged(false);
+        if (cabeceraColumnas != null) { cabeceraColumnas.setVisible(false); cabeceraColumnas.setManaged(false); }
+        if (otrasAcciones != null) { otrasAcciones.getRoot().setVisible(false); otrasAcciones.getRoot().setManaged(false); }
+        lblSeleccionaModelo.setVisible(false); lblSeleccionaModelo.setManaged(false);
+        cbFiltroModelo.setVisible(false); cbFiltroModelo.setManaged(false);
+
+        String original = d.observacion != null ? d.observacion : "";
+        taEditarOtro = new TextArea(original);
+        taEditarOtro.setWrapText(true);
+        taEditarOtro.setPrefRowCount(3);
+        taEditarOtro.setStyle("-fx-font-size: 13px;");
+        Label lbl = new Label("Descripción de la acción:");
+        lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        VBox box = new VBox(8, lbl, taEditarOtro);
+        box.setStyle("-fx-padding: 16;");
+        contenedorOtros.getChildren().add(box);
+
+        taEditarOtro.textProperty().addListener((o, a, b) -> {
+            String t = b == null ? "" : b.trim();
+            boolean valido = !t.isEmpty() && !t.equals(original.trim());
+            zonaGuardar.setVisible(valido); zonaGuardar.setManaged(valido);
+        });
     }
 
     public static void abrirEditar(String idRep, Runnable onGuardado) {
@@ -496,6 +533,21 @@ public class FormularioReparacionController {
     }
 
     private void ejecutarGuardarEdicion() {
+        if (taEditarOtro != null) {
+            try {
+                reparacionDAO.editarReparacion(idRepEditar, idComOtroEditar, false,
+                        taEditarOtro.getText().trim(), 0, updatedAtEdicion);
+                Stage stage = (Stage) btnGuardar.getScene().getWindow();
+                stage.close();
+                if (onGuardado != null) onGuardado.run();
+            } catch (StaleDataException ex) {
+                new Alert(Alert.AlertType.WARNING,
+                        "No se pudo guardar: otro usuario modificó esta reparación.").showAndWait();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+            return;
+        }
         try {
             // 1. Editar la fila que está en modo edición (si cambió)
             for (FilaUI fila : filasUI) {
