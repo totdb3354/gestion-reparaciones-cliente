@@ -1028,13 +1028,21 @@ public class PendientesSuperTecnicoController {
             EntradaAsignacion e = new EntradaAsignacion(imei);
             pila.add(e);
             renderPila[0].run();
-            tfScan.clear();
             cargarEntrada[0].accept(e);
-            javafx.application.Platform.runLater(tfScan::requestFocus);
+            // clear()/requestFocus en runLater: hacerlo síncrono dentro del listener de texto corrompe el caret
+            javafx.application.Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); });
         };
         tfScan.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) { tfScan.setText(n.replaceAll("[^\\d]", "")); return; }
-            if (n.length() > 15) { tfScan.setText(n.substring(0, 15)); return; }
+            if (!n.matches("\\d*")) {
+                String solo = n.replaceAll("[^\\d]", "");
+                javafx.application.Platform.runLater(() -> tfScan.setText(solo));
+                return;
+            }
+            if (n.length() > 15) {
+                String recortado = n.substring(0, 15);
+                javafx.application.Platform.runLater(() -> tfScan.setText(recortado));
+                return;
+            }
             lblScanErr.setText("");
             if (n.length() == 15) intentarAnadir.run();
         });
