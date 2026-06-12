@@ -948,6 +948,7 @@ public class PendientesSuperTecnicoController {
             btnAsignar.setText(e.asignada ? "Guardar cambios" : "Asignar →");
             if (!e.asignada) lanzarLookup[0].run();
             validarForm.run();
+            renderPila[0].run();   // re-pinta la pila para mover el indicador de selección a la fila cargada
         };
 
         Runnable cargarSiguienteRojo = () -> {
