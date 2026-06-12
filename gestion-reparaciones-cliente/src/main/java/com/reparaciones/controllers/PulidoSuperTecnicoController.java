@@ -46,8 +46,6 @@ public class PulidoSuperTecnicoController {
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private Label      lblContador;
-    @FXML private Button     btnConfirmarCambios;
-    @FXML private Button     btnDescartarCambios;
 
     private final PulidoDAO   pulidoDAO   = new PulidoDAO();
     private final TecnicoDAO  tecnicoDAO  = new TecnicoDAO();
@@ -61,9 +59,6 @@ public class PulidoSuperTecnicoController {
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>  tecnicos   = new ArrayList<>();
-    private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion,
-                                   java.time.LocalDateTime updatedAt) {}
-    private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
 
     @FXML
     public void initialize() {
@@ -104,31 +99,19 @@ public class PulidoSuperTecnicoController {
                     if (repMostrado == null) return;
                     ReparacionResumen rep = repMostrado;
                     Tecnico sel = cb.getValue();
-                    if (sel == null) return;
-                    if (sel.getIdTec() != rep.getIdTec()) {
-                        String comentarioActual = cambiosPendientes.containsKey(rep.getIdRep())
-                            ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
-                            : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
-                        cambiosPendientes.put(rep.getIdRep(),
-                            new CambioPendiente(sel.getIdTec(), sel.getNombre(), comentarioActual, rep.getUpdatedAt()));
-                    } else {
-                        CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
-                        if (existing != null) {
-                            String repCom = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-                            String extCom = existing.comentarioAsignacion() != null ? existing.comentarioAsignacion() : "";
-                            if (!extCom.equals(repCom)) {
-                                cambiosPendientes.put(rep.getIdRep(),
-                                    new CambioPendiente(rep.getIdTec(), rep.getNombreTecnico(),
-                                        existing.comentarioAsignacion(), rep.getUpdatedAt()));
-                            } else {
-                                cambiosPendientes.remove(rep.getIdRep());
-                            }
-                        }
+                    if (sel == null || sel.getIdTec() == rep.getIdTec()) return;
+                    // Guardado directo: reasignar el técnico ya en BD.
+                    String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                    try {
+                        pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
+                        cargar();
+                    } catch (StaleDataException ex) {
+                        Alertas.mostrarError("La asignación fue modificada por otro usuario. Se recargan los datos.");
+                        cargar();
+                    } catch (SQLException ex) {
+                        Alertas.mostrarError(ex.getMessage());
+                        cargar();
                     }
-                    actualizarVisibilidadConfirmar();
-                    CambioPendiente cambioActual = cambiosPendientes.get(rep.getIdRep());
-                    boolean mod = cambioActual != null && cambioActual.idTec() != rep.getIdTec();
-                    setStyle(mod ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
                 });
             }
             @Override protected void updateItem(String item, boolean empty) {
@@ -141,14 +124,10 @@ public class PulidoSuperTecnicoController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 repMostrado = rep;
                 cb.getItems().setAll(tecnicos);
-                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-                Tecnico mostrar = cambio != null
-                    ? tecnicos.stream().filter(t -> t.getIdTec() == cambio.idTec()).findFirst().orElse(null)
-                    : tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
+                Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
                 actualizando = false;
-                boolean modificada = cambio != null && cambio.idTec() != rep.getIdTec();
-                setStyle(modificada ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
+                setStyle("");
                 setGraphic(cb);
             }
         });
@@ -163,9 +142,7 @@ public class PulidoSuperTecnicoController {
             d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
         cComentario.setCellValueFactory(d -> {
             ReparacionResumen rep = d.getValue();
-            CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-            String texto = cambio != null ? cambio.comentarioAsignacion()
-                                          : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+            String texto = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
             return new javafx.beans.property.SimpleStringProperty(texto);
         });
         cComentario.setCellFactory(col -> new TableCell<>() {
@@ -175,12 +152,7 @@ public class PulidoSuperTecnicoController {
                     setText(null); setStyle(""); return;
                 }
                 setText(item);
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-                String repCom    = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-                String cambioCom = cambio != null ? (cambio.comentarioAsignacion() != null ? cambio.comentarioAsignacion() : "") : repCom;
-                boolean modificado = cambio != null && !cambioCom.equals(repCom);
-                setStyle(modificado ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
+                setStyle("");
             }
         });
 
@@ -230,9 +202,7 @@ public class PulidoSuperTecnicoController {
                 editarComentario.setOnAction(e -> {
                     if (getItem() == null) return;
                     ReparacionResumen rep = getItem();
-                    String actual = cambiosPendientes.containsKey(rep.getIdRep())
-                        ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
-                        : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+                    String actual = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
@@ -247,6 +217,9 @@ public class PulidoSuperTecnicoController {
                 menu.getItems().add(editarModelo);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
+                    // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
+                    if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
+                        getTableView().getSelectionModel().select(getIndex());
                     double x = e.getX(); double offset = 0;
                     for (TableColumn<?, ?> c : tv.getVisibleLeafColumns()) {
                         offset += c.getWidth();
@@ -285,8 +258,6 @@ public class PulidoSuperTecnicoController {
                     ReparacionResumen rep = getTableView().getItems().get(getIndex());
                     try {
                         pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
-                        cambiosPendientes.remove(rep.getIdRep());
-                        actualizarVisibilidadConfirmar();
                         cargar();
                     } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
                 });
@@ -737,48 +708,9 @@ public class PulidoSuperTecnicoController {
         }
     }
 
-    // ─── Confirmar / Descartar ────────────────────────────────────────────────
-
-    @FXML
-    private void confirmarCambios() {
-        List<String> conflictos = new ArrayList<>();
-        for (Map.Entry<String, CambioPendiente> entry : new ArrayList<>(cambiosPendientes.entrySet())) {
-            String idRep = entry.getKey();
-            CambioPendiente cambio = entry.getValue();
-            ReparacionResumen rep = datos.stream()
-                    .filter(r -> r.getIdRep().equals(idRep)).findFirst().orElse(null);
-            if (rep == null) continue;
-            try {
-                pulidoDAO.actualizarAsignacionPulido(idRep, cambio.idTec(),
-                        cambio.comentarioAsignacion(), cambio.updatedAt());
-                rep.setIdTec(cambio.idTec());
-                rep.setNombreTecnico(cambio.nombreTecnico());
-                rep.setComentarioAsignacion(cambio.comentarioAsignacion());
-                cambiosPendientes.remove(idRep);
-            } catch (StaleDataException e) {
-                conflictos.add("• " + idRep + ": fue modificada por otro usuario.");
-            } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
-        }
-        if (!conflictos.isEmpty()) {
-            new Alert(Alert.AlertType.WARNING,
-                    "Los siguientes cambios no se pudieron guardar:\n\n" + String.join("\n", conflictos) +
-                    "\n\nLos datos se han recargado.").showAndWait();
-        }
-        actualizarVisibilidadConfirmar();
-        cargar();
-    }
-
-    @FXML
+    /** Conservado para el caller externo (cambio de pestaña): ya no hay staging, solo recarga. */
     public void resetearCambios() {
-        cambiosPendientes.clear();
-        actualizarVisibilidadConfirmar();
         cargar();
-    }
-
-    private void actualizarVisibilidadConfirmar() {
-        boolean hay = !cambiosPendientes.isEmpty();
-        if (btnConfirmarCambios != null) { btnConfirmarCambios.setVisible(hay); btnConfirmarCambios.setManaged(hay); }
-        if (btnDescartarCambios != null) { btnDescartarCambios.setVisible(hay); btnDescartarCambios.setManaged(hay); }
     }
 
     private void abrirEditorComentario(ReparacionResumen rep, String textoActual) {
@@ -806,19 +738,17 @@ public class PulidoSuperTecnicoController {
         btnCerrar.setOnAction(e -> ventana.close());
         btnGuardar.setOnAction(e -> {
             String nuevoTexto = ta.getText();
-            CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
-            int idTecActual      = existing != null ? existing.idTec() : rep.getIdTec();
-            String nomTecActual  = existing != null ? existing.nombreTecnico() : rep.getNombreTecnico();
-            String repComentario = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-            if (idTecActual == rep.getIdTec() && nuevoTexto.equals(repComentario)) {
-                cambiosPendientes.remove(rep.getIdRep());
-            } else {
-                cambiosPendientes.put(rep.getIdRep(),
-                    new CambioPendiente(idTecActual, nomTecActual, nuevoTexto, rep.getUpdatedAt()));
+            try {
+                pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
+                ventana.close();
+                cargar();
+            } catch (StaleDataException ex) {
+                Alertas.mostrarError("La asignación fue modificada por otro usuario. Se recargan los datos.");
+                ventana.close();
+                cargar();
+            } catch (SQLException ex) {
+                Alertas.mostrarError(ex.getMessage());
             }
-            actualizarVisibilidadConfirmar();
-            tablaPulidos.refresh();
-            ventana.close();
         });
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
@@ -832,8 +762,7 @@ public class PulidoSuperTecnicoController {
         if (col == cImei)      return rep.getImei();
         if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
         if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
-        if (col == cComentario){ CambioPendiente c = cambiosPendientes.get(rep.getIdRep());
-            return c != null ? c.comentarioAsignacion() : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : ""); }
+        if (col == cComentario) return rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
         return null;
     }
 
