@@ -1435,6 +1435,75 @@ public class FormularioReparacionController {
             return descripcionAgotado;
         }
 
+        // ── Borrador: captura / restauración ──────────────────────────────────
+
+        /** Vuelca los inputs no guardados de esta fila al DTO, o null si la fila está vacía. */
+        com.reparaciones.models.BorradorContenido.Fila capturarEnBorrador() {
+            boolean vacia = cantidad == 0 && !isReutilizado()
+                    && (observacion == null || observacion.isBlank())
+                    && !isSolicitudNueva() && !esAgotadoNuevo();
+            if (vacia) return null;
+            com.reparaciones.models.BorradorContenido.Fila f = new com.reparaciones.models.BorradorContenido.Fila();
+            f.prefijo = prefijo;
+            f.idCom = getIdComSeleccionado();
+            f.cantidad = cantidad;
+            f.reutilizado = isReutilizado();
+            f.observacion = observacion;
+            f.solicitudNueva = isSolicitudNueva();
+            f.descripcionSolicitud = descripcionSolicitud;
+            f.agotadoConfirmado = esAgotadoNuevo();
+            f.descripcionAgotado = descripcionAgotado;
+            return f;
+        }
+
+        /** Restaura un borrador sobre esta fila (solo si no está ya bloqueada por una solicitud de BD). */
+        void aplicarBorrador(com.reparaciones.models.BorradorContenido.Fila f) {
+            if (solicitudActiva) return;   // fila ya gestionada por una solicitud de BD: ignorar borrador
+            if (f.idCom > 0) preseleccionarSku(f.idCom);
+
+            // Estados mutuamente excluyentes: solicitud nueva, agotado confirmado, o normal.
+            if (f.solicitudNueva && !prefijo.equals("otro")) {
+                descripcionSolicitud = f.descripcionSolicitud;
+                solicitudActiva = true;
+                solicitudNuevaEnEstaSesion = true;
+                btnSolicitud.setText("⚠ Pieza pendiente");
+                btnSolicitud.setStyle(STYLE_SOL_ACTIVA);
+                notificar();
+                return;
+            }
+            if (f.agotadoConfirmado && !prefijo.equals("otro")) {
+                Componente sel = cbSku.getValue();
+                int stock = sel != null ? sel.getStock() : 0;
+                descripcionAgotado = f.descripcionAgotado;
+                agotadoConfirmado = true;
+                btnMas.setDisable(true); btnMenos.setDisable(true);
+                chkReutilizado.setDisable(true);
+                cbSku.setDisable(true);
+                btnObservacion.setDisable(true);
+                btnSolicitud.setDisable(true);
+                actualizarLabelConfirmado(stock);
+                lblSubAgotado.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                btnSubAgotado.setVisible(false); btnSubAgotado.setManaged(false);
+                btnEditarDesc.setVisible(true);  btnEditarDesc.setManaged(true);
+                subFilaAgotado.setStyle("-fx-background-color: #E8F5E9; -fx-padding: 4 8 4 70;");
+                subFilaAgotado.setVisible(true);  subFilaAgotado.setManaged(true);
+                notificar();
+                return;
+            }
+            // Normal: cantidad + reutilizado + observación.
+            chkReutilizado.setSelected(f.reutilizado);
+            cantidad = Math.max(0, f.cantidad);
+            actualizarContador();
+            if (f.observacion != null && !f.observacion.isBlank()) {
+                observacion = f.observacion;
+                lblObservacion.setText(observacion);
+                btnObservacion.setVisible(false); btnObservacion.setManaged(false);
+                lblObservacion.setVisible(true);  lblObservacion.setManaged(true);
+                btnBorrarObs.setVisible(true);     btnBorrarObs.setManaged(true);
+            }
+            notificar();
+        }
+
         private void abrirSolicitud() {
             TextArea ta = new TextArea(descripcionSolicitud != null ? descripcionSolicitud : "");
             ta.setPromptText("Describe la pieza que falta (opcional)...");
@@ -1792,6 +1861,14 @@ public class FormularioReparacionController {
                 }
             }
             return out;
+        }
+
+        /** Restaura las descripciones de un borrador como líneas de acción. */
+        void aplicarDescripciones(List<String> descripciones) {
+            if (descripciones == null) return;
+            for (String d : descripciones) {
+                if (d != null && !d.isBlank()) agregarLinea(d.trim());
+            }
         }
 
         int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
