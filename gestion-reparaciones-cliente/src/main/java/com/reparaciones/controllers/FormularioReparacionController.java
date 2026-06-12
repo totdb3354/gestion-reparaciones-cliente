@@ -81,6 +81,13 @@ public class FormularioReparacionController {
     private final List<FilaUI> filasUI = new ArrayList<>();
     private OtrasAccionesUI otrasAcciones;
 
+    // ── Borrador persistente (solo flujo nuevo) ──
+    private final com.reparaciones.dao.BorradorDAO borradorDAO = new com.reparaciones.dao.BorradorDAO();
+    private final com.google.gson.Gson gson = new com.google.gson.Gson();
+    private javafx.animation.PauseTransition autoGuardado;   // debounce
+    private boolean recuperandoBorrador = false;             // evita auto-guardar mientras se aplica el borrador
+    private boolean borradorDescartado = false;              // tras guardar de verdad: no re-crear el borrador
+
     /**
      * Lista de modelos en orden de tienda Apple.
      * Para añadir iPhone 17 en el futuro:
@@ -425,6 +432,52 @@ public class FormularioReparacionController {
         }
         zonaGuardar.setVisible(habilitado);
         zonaGuardar.setManaged(habilitado);
+        programarAutoGuardado();
+    }
+
+    // ── Borrador: orquestación ──────────────────────────────────────────────
+
+    private com.reparaciones.models.BorradorContenido capturarBorrador() {
+        com.reparaciones.models.BorradorContenido b = new com.reparaciones.models.BorradorContenido();
+        b.modelo = cbFiltroModelo.getValue();
+        for (FilaUI fila : filasUI) {
+            com.reparaciones.models.BorradorContenido.Fila f = fila.capturarEnBorrador();
+            if (f != null) b.filas.add(f);
+        }
+        if (otrasAcciones != null) b.otros = new java.util.ArrayList<>(otrasAcciones.getDescripciones());
+        return b;
+    }
+
+    /** Vacío = sin filas ni otras acciones (el modelo solo no cuenta, se auto-rellena). */
+    private boolean borradorVacio(com.reparaciones.models.BorradorContenido b) {
+        return b.filas.isEmpty() && b.otros.isEmpty();
+    }
+
+    private void programarAutoGuardado() {
+        if (idAsignacion == null || recuperandoBorrador || borradorDescartado) return;   // solo flujo nuevo
+        if (autoGuardado == null) {
+            autoGuardado = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(2));
+            autoGuardado.setOnFinished(e -> guardarBorradorAhora());
+        }
+        autoGuardado.playFromStart();   // reinicia el debounce
+    }
+
+    private void guardarBorradorAhora() {
+        if (idAsignacion == null || recuperandoBorrador || borradorDescartado) return;
+        try {
+            com.reparaciones.models.BorradorContenido b = capturarBorrador();
+            if (borradorVacio(b)) borradorDAO.eliminar(idAsignacion);
+            else borradorDAO.guardar(idAsignacion, gson.toJson(b));
+        } catch (Exception ex) {
+            // silencioso: un fallo de auto-guardado no debe molestar al técnico
+        }
+    }
+
+    /** Tras un guardado real: detiene el debounce, borra el borrador y bloquea su re-creación al cerrar. */
+    private void descartarBorradorTrasGuardar() {
+        borradorDescartado = true;
+        if (autoGuardado != null) autoGuardado.stop();
+        try { if (idAsignacion != null) borradorDAO.eliminar(idAsignacion); } catch (Exception ignore) {}
     }
 
     @FXML
@@ -525,6 +578,7 @@ public class FormularioReparacionController {
         boolean soloAgotadas = filasActivas.isEmpty()
                 && filasUI.stream().anyMatch(FilaUI::esAgotadoNuevo);
         if (soloAgotadas) {
+            descartarBorradorTrasGuardar();
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
             if (onGuardado != null)
@@ -535,6 +589,7 @@ public class FormularioReparacionController {
         try {
             reparacionDAO.insertarCompleta(filasActivas, imei,
                     Sesion.getIdTec(), idRepAnterior, idAsignacion);
+            descartarBorradorTrasGuardar();
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
             if (onGuardado != null)
