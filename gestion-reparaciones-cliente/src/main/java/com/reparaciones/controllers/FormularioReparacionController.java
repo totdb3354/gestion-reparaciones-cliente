@@ -178,6 +178,52 @@ public class FormularioReparacionController {
                 }
             } catch (SQLException e) { /* silencioso */ }
         }
+
+        // ── Recuperar borrador (solo flujo nuevo) ──
+        // Se aplica DESPUÉS del estado de BD; solo sobre filas no bloqueadas por solicitud (aplicar válido, ignorar inválido).
+        if (idAsignacion != null && !modoEdicion) {
+            try {
+                String json = borradorDAO.getBorrador(idAsignacion);
+                if (json != null && !json.isBlank()) {
+                    com.reparaciones.models.BorradorContenido b =
+                            gson.fromJson(json, com.reparaciones.models.BorradorContenido.class);
+                    if (b != null && !borradorVacio(b)) {
+                        recuperandoBorrador = true;
+                        try {
+                            if (b.modelo != null && cbFiltroModelo.getItems().contains(b.modelo)
+                                    && !cbFiltroModelo.isDisable()) {
+                                cbFiltroModelo.setValue(b.modelo);
+                            }
+                            for (com.reparaciones.models.BorradorContenido.Fila f : b.filas) {
+                                filasUI.stream()
+                                        .filter(fila -> fila.getPrefijo().equals(f.prefijo))
+                                        .findFirst()
+                                        .ifPresent(fila -> fila.aplicarBorrador(f));
+                            }
+                            if (otrasAcciones != null) otrasAcciones.aplicarDescripciones(b.otros);
+                        } finally {
+                            recuperandoBorrador = false;
+                        }
+                        actualizarBoton();
+                        mostrarIndicadorBorrador();
+                    }
+                }
+            } catch (Exception ex) {
+                // borrador corrupto/no disponible: se ignora, el modal abre normal
+            }
+        }
+    }
+
+    private void mostrarIndicadorBorrador() {
+        Label aviso = new Label("✓ Borrador recuperado");
+        aviso.setStyle("-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0; -fx-font-size: 11px;"
+                + " -fx-font-weight: bold; -fx-padding: 4 16 4 16;");
+        aviso.setMaxWidth(Double.MAX_VALUE);
+        javafx.scene.Parent parent = filaIncidencia.getParent();
+        if (parent instanceof javafx.scene.layout.VBox vb) {
+            int idx = vb.getChildren().indexOf(filaIncidencia);
+            vb.getChildren().add(idx + 1, aviso);
+        }
     }
 
     public void initEditar(String idRep, Runnable onGuardado) {
@@ -685,14 +731,9 @@ public class FormularioReparacionController {
                 ctrl.init(imei, idRepAnterior, idAsignacion, onGuardado);
 
                 stage.setOnCloseRequest(ev -> {
-                    if (!ctrl.hayCambiosSinGuardar()) return;
-                    ev.consume();
-                    com.reparaciones.utils.ConfirmDialog.mostrar(
-                        "Salir sin guardar",
-                        "Tienes cambios sin guardar que se perderán si cierras el formulario.",
-                        "Salir sin guardar",
-                        "Cancelar",
-                        stage::close);
+                    // Con borrador persistente no se pierde nada: flush del borrador y cierre sin preguntar.
+                    if (ctrl.autoGuardado != null) ctrl.autoGuardado.stop();
+                    ctrl.guardarBorradorAhora();
                 });
                 stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                 stage.show();
