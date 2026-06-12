@@ -600,6 +600,7 @@ public class PendientesSuperTecnicoController {
     private HBox crearFilaPila(EntradaAsignacion e, Runnable onClick, Runnable onRemove) {
         Label lblImei = new Label(e.imei);
         lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);   // nunca se recorta el IMEI
 
         Label estado = new Label();
         if (e.tieneModelo()) {
@@ -615,28 +616,40 @@ public class PendientesSuperTecnicoController {
             estado.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-text-fill: #9A6B00;"
                     + " -fx-background-color: #FCE7C3; -fx-background-radius: 6; -fx-padding: 2 8 2 8;");
         }
+        estado.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
 
         HBox pills = new HBox(4);
         pills.setAlignment(Pos.CENTER_LEFT);
+        pills.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         for (Tecnico t : e.tecnicos) {
             Label p = new Label(t.getNombre());
+            p.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
             p.setStyle("-fx-font-size: 9.5px; -fx-text-fill: white; -fx-background-color: #001232;"
                     + " -fx-background-radius: 20; -fx-padding: 1 7 1 7;");
             pills.getChildren().add(p);
         }
 
-        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
-        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+        // El contenido (IMEI + estado + técnicos) crece y se RECORTA limpio (sin "...") si no cabe;
+        // la ✕ va fuera del recorte, pegada a la derecha → siempre visible.
+        HBox contenido = new HBox(8, lblImei, estado, pills);
+        contenido.setAlignment(Pos.CENTER_LEFT);
+        contenido.setMinWidth(0);
+        HBox.setHgrow(contenido, javafx.scene.layout.Priority.ALWAYS);
+        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+        clip.widthProperty().bind(contenido.widthProperty());
+        clip.heightProperty().bind(contenido.heightProperty());
+        contenido.setClip(clip);
 
         Label x = new Label("✕");
         String xBase = "-fx-text-fill: #c2b3b3; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
         String xHover = "-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
         x.setStyle(xBase);
+        x.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         x.setOnMouseEntered(ev -> x.setStyle(xHover));
         x.setOnMouseExited(ev -> x.setStyle(xBase));
         x.setOnMouseClicked(ev -> { ev.consume(); onRemove.run(); });
 
-        HBox fila = new HBox(8, lblImei, estado, pills, spacer, x);
+        HBox fila = new HBox(8, contenido, x);
         fila.setAlignment(Pos.CENTER_LEFT);
         fila.setStyle("-fx-padding: 7 9 7 9; -fx-border-color: transparent transparent #EEF1F5 transparent;"
                 + " -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
@@ -672,23 +685,34 @@ public class PendientesSuperTecnicoController {
         Label lblScanErr = new Label();
         lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
 
-        // ── Secciones de la pila ─────────────────────────────────────────────
+        // ── Secciones de la pila (cada una con su propio scroll) ─────────────
         Label lblRojo = new Label("Pendiente de asignar (0)");
         lblRojo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #C0392B;");
         VBox boxRojo = new VBox(0);
-        boxRojo.setStyle("-fx-background-color: white; -fx-border-color: #EFC4C0; -fx-border-radius: 6; -fx-border-width: 1;");
+        boxRojo.setStyle("-fx-background-color: white;");
+        ScrollPane scrollRojo = new ScrollPane(boxRojo);
+        scrollRojo.setFitToWidth(true);
+        scrollRojo.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollRojo.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollRojo.setMaxHeight(220);
+        scrollRojo.setStyle("-fx-background-color: white; -fx-background: white;"
+                + " -fx-border-color: #EFC4C0; -fx-border-radius: 6; -fx-border-width: 1;");
+
         Label lblVerde = new Label("Asignados (0) · sin guardar");
         lblVerde.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #2E7D32; -fx-padding: 10 0 0 0;");
         VBox boxVerde = new VBox(0);
-        boxVerde.setStyle("-fx-background-color: white; -fx-border-color: #BFE0C2; -fx-border-radius: 6; -fx-border-width: 1;");
-        VBox pilaBox = new VBox(6, lblRojo, boxRojo, lblVerde, boxVerde);
-        ScrollPane scrollPila = new ScrollPane(pilaBox);
-        scrollPila.setFitToWidth(true);
-        scrollPila.setPrefViewportWidth(250);
-        scrollPila.setMinWidth(250);
-        scrollPila.setPrefHeight(330);
-        scrollPila.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-        scrollPila.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        boxVerde.setStyle("-fx-background-color: white;");
+        ScrollPane scrollVerde = new ScrollPane(boxVerde);
+        scrollVerde.setFitToWidth(true);
+        scrollVerde.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollVerde.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollVerde.setMaxHeight(220);
+        scrollVerde.setStyle("-fx-background-color: white; -fx-background: white;"
+                + " -fx-border-color: #BFE0C2; -fx-border-radius: 6; -fx-border-width: 1;");
+
+        VBox pilaBox = new VBox(6, lblRojo, scrollRojo, lblVerde, scrollVerde);
+        pilaBox.setMinWidth(300);
+        pilaBox.setPrefWidth(300);
 
         // ── Maquinaria de modelo (buscador) ──────────────────────────────────
         Label lblModelo = new Label("Modelo de iPhone");
@@ -857,6 +881,8 @@ public class PendientesSuperTecnicoController {
             }
             lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
+            scrollRojo.setPrefHeight(nRojo == 0 ? 34 : Math.min(nRojo, 5) * 39 + 4);
+            scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 39 + 4);
             int sinModelo = (int) pila.stream().filter(e -> !e.asignada && !e.tieneModelo()).count();
             lblProg.setText(nVerde + " configurados · " + nRojo + " pendientes" + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
             btnGuardar.setText("Guardar (" + nVerde + ")");
@@ -1019,17 +1045,17 @@ public class PendientesSuperTecnicoController {
         btnSaltar.setOnAction(ev -> cargarSiguienteRojo.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
-        HBox cols = new HBox(18, scrollPila, formBox);
+        HBox cols = new HBox(18, pilaBox, formBox);
         VBox contenido = new VBox(12, lblTitulo, lblSub, lblScan, tfScan, lblScanErr,
                 new Separator(), cols, barraFinal);
         contenido.setPadding(new Insets(26));
-        contenido.setPrefWidth(680);
+        contenido.setPrefWidth(720);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         ventana.setResizable(true);
-        ventana.setMinWidth(680);
+        ventana.setMinWidth(720);
         ventana.setMinHeight(560);
         ventana.setTitle("Asignar reparaciones");
 
