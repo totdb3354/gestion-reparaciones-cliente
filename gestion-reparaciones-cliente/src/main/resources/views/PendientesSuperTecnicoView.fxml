@@ -45,16 +45,6 @@
         <Label fx:id="lblUltimaActualizacion"
                style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"
                HBox.hgrow="ALWAYS"/>
-        <Button fx:id="btnDescartarCambios"
-                text="Descartar cambios"
-                onAction="#resetearCambios"
-                visible="false" managed="false"
-                styleClass="btn-secondary"/>
-        <Button fx:id="btnConfirmarCambios"
-                text="Confirmar cambios"
-                onAction="#confirmarCambiosTecnico"
-                visible="false" managed="false"
-                styleClass="btn-primary"/>
     </HBox>
 
 </VBox>

@@ -69,8 +69,6 @@ public class PendientesSuperTecnicoController {
     private FilteredList<ReparacionResumen> datosFiltrados;
     private Runnable onActualizar;
 
-    @FXML private Button btnConfirmarCambios;
-    @FXML private Button btnDescartarCambios;
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
 
@@ -81,8 +79,6 @@ public class PendientesSuperTecnicoController {
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>         tecnicos         = new ArrayList<>();
-    private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion, java.time.LocalDateTime updatedAt) {}
-    private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
 
     /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
     private static final class EntradaAsignacion {
@@ -140,30 +136,19 @@ public class PendientesSuperTecnicoController {
                     if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                     ReparacionResumen rep = getTableView().getItems().get(getIndex());
                     Tecnico sel = cb.getValue();
-                    if (sel == null) return;
-                    if (sel.getIdTec() != rep.getIdTec()) {
-                        String comentarioActual = cambiosPendientes.containsKey(rep.getIdRep())
-                            ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
-                            : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
-                        cambiosPendientes.put(rep.getIdRep(),
-                            new CambioPendiente(sel.getIdTec(), sel.getNombre(), comentarioActual, rep.getUpdatedAt()));
-                    } else {
-                        CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
-                        if (existing != null) {
-                            String repComentario  = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-                            String extComentario  = existing.comentarioAsignacion() != null ? existing.comentarioAsignacion() : "";
-                            if (!extComentario.equals(repComentario)) {
-                                cambiosPendientes.put(rep.getIdRep(),
-                                    new CambioPendiente(rep.getIdTec(), rep.getNombreTecnico(), existing.comentarioAsignacion(), rep.getUpdatedAt()));
-                            } else {
-                                cambiosPendientes.remove(rep.getIdRep());
-                            }
-                        }
+                    if (sel == null || sel.getIdTec() == rep.getIdTec()) return;
+                    // Guardado directo: reasignar el técnico ya en BD.
+                    String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
+                    try {
+                        reparacionDAO.actualizarAsignacion(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
+                        cargar();
+                    } catch (com.reparaciones.utils.StaleDataException ex) {
+                        Alertas.mostrarError("La asignación fue modificada por otro usuario. Se recargan los datos.");
+                        cargar();
+                    } catch (SQLException ex) {
+                        Alertas.mostrarError(ex.getMessage());
+                        cargar();
                     }
-                    actualizarVisibilidadConfirmar();
-                    CambioPendiente cambioActual = cambiosPendientes.get(rep.getIdRep());
-                    boolean mod = cambioActual != null && cambioActual.idTec() != rep.getIdTec();
-                    setStyle(mod ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
                 });
             }
             @Override
@@ -178,16 +163,10 @@ public class PendientesSuperTecnicoController {
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 cb.getItems().setAll(tecnicos);
-                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-                Tecnico mostrar = cambio != null
-                    ? tecnicos.stream().filter(t -> t.getIdTec() == cambio.idTec()).findFirst().orElse(null)
-                    : tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
+                Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
                 actualizando = false;
-                boolean modificada = cambio != null && cambio.idTec() != rep.getIdTec();
-                setStyle(modificada
-                        ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";"
-                        : "");
+                setStyle("");
                 setGraphic(cb);
             }
         });
@@ -222,9 +201,7 @@ public class PendientesSuperTecnicoController {
                 d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
         cComentario.setCellValueFactory(d -> {
             ReparacionResumen rep = d.getValue();
-            CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-            String texto = cambio != null ? cambio.comentarioAsignacion()
-                                          : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+            String texto = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
             return new javafx.beans.property.SimpleStringProperty(texto);
         });
         cComentario.setCellFactory(col -> new TableCell<>() {
@@ -235,12 +212,7 @@ public class PendientesSuperTecnicoController {
                     setText(null); setStyle(""); return;
                 }
                 setText(item);
-                ReparacionResumen rep = getTableView().getItems().get(getIndex());
-                CambioPendiente cambio = cambiosPendientes.get(rep.getIdRep());
-                String repComentario    = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-                String cambioComentario = cambio != null ? (cambio.comentarioAsignacion() != null ? cambio.comentarioAsignacion() : "") : repComentario;
-                boolean modificado = cambio != null && !cambioComentario.equals(repComentario);
-                setStyle(modificado ? "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_MODIFICADA_BG + ";" : "");
+                setStyle("");
             }
         });
 
@@ -290,9 +262,7 @@ public class PendientesSuperTecnicoController {
                 editarComentario.setOnAction(e -> {
                     if (getItem() == null) return;
                     ReparacionResumen rep = getItem();
-                    String actual = cambiosPendientes.containsKey(rep.getIdRep())
-                        ? cambiosPendientes.get(rep.getIdRep()).comentarioAsignacion()
-                        : (rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+                    String actual = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     PendientesSuperTecnicoController.this.abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
@@ -314,6 +284,9 @@ public class PendientesSuperTecnicoController {
                 menu.getItems().add(toggleUrgente);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
+                    // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
+                    if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
+                        getTableView().getSelectionModel().select(getIndex());
                     double x = e.getX(); double offset = 0;
                     for (TableColumn<?, ?> c : tv.getVisibleLeafColumns()) {
                         offset += c.getWidth();
@@ -1110,18 +1083,9 @@ public class PendientesSuperTecnicoController {
         ventana.showAndWait();
     }
 
+    /** Conservado para el caller externo (cambio de pestaña): ya no hay staging, solo recarga. */
     public void resetearCambios() {
-        cambiosPendientes.clear();
-        actualizarVisibilidadConfirmar();
         cargar();
-    }
-
-    private void actualizarVisibilidadConfirmar() {
-        boolean hay = !cambiosPendientes.isEmpty();
-        btnConfirmarCambios.setVisible(hay);
-        btnConfirmarCambios.setManaged(hay);
-        btnDescartarCambios.setVisible(hay);
-        btnDescartarCambios.setManaged(hay);
     }
 
     private void actualizarContador() {
@@ -1130,51 +1094,6 @@ public class PendientesSuperTecnicoController {
         lblContador.setText((n > 999 ? "999+" : String.valueOf(n)) + (n == 1 ? " asignación" : " asignaciones"));
     }
 
-    @FXML
-    private void confirmarCambiosTecnico() {
-        List<String> conflictos = new ArrayList<>();
-        for (Map.Entry<String, CambioPendiente> entry : new java.util.ArrayList<>(cambiosPendientes.entrySet())) {
-            String          idRep   = entry.getKey();
-            CambioPendiente cambio  = entry.getValue();
-            ReparacionResumen rep = datos.stream()
-                    .filter(r -> r.getIdRep().equals(idRep)).findFirst().orElse(null);
-            if (rep == null) continue;
-            try {
-                reparacionDAO.actualizarAsignacion(idRep, cambio.idTec(), cambio.comentarioAsignacion(), cambio.updatedAt());
-                rep.setIdTec(cambio.idTec());
-                rep.setNombreTecnico(cambio.nombreTecnico());
-                rep.setComentarioAsignacion(cambio.comentarioAsignacion());
-                cambiosPendientes.remove(idRep);
-            } catch (com.reparaciones.utils.StaleDataException e) {
-                conflictos.add(mensajeConflicto(idRep, cambio.idTec()));
-            } catch (SQLException e) { mostrarError(e); }
-        }
-        if (!conflictos.isEmpty()) {
-            String detalle = String.join("\n", conflictos);
-            new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
-                    "Los siguientes cambios no se pudieron guardar:\n\n" + detalle +
-                    "\n\nLos datos se han recargado.")
-                    .showAndWait();
-            cargar();
-        }
-        actualizarVisibilidadConfirmar();
-        cargar();
-        if (onActualizar != null) onActualizar.run();
-    }
-
-    private String mensajeConflicto(String idRep, int idTecIntentado) {
-        try {
-            java.util.Optional<ReparacionResumen> actual = reparacionDAO.getAsignacionById(idRep);
-            if (actual.isEmpty())
-                return "• " + idRep + ": ya no está pendiente (fue completada por otro usuario).";
-            ReparacionResumen rep = actual.get();
-            if (rep.getIdTec() != idTecIntentado)
-                return "• " + idRep + ": fue reasignada a " + rep.getNombreTecnico() + " por otro usuario.";
-            return "• " + idRep + ": fue modificada por otro usuario.";
-        } catch (SQLException e) {
-            return "• " + idRep + ": fue modificada por otro usuario.";
-        }
-    }
 
     /** @return los ítems actualmente visibles en la tabla (respetando filtros activos) */
     public java.util.List<ReparacionResumen> getItemsVisibles() {
@@ -1215,19 +1134,17 @@ public class PendientesSuperTecnicoController {
         btnCerrar.setOnAction(e -> ventana.close());
         btnGuardar.setOnAction(e -> {
             String nuevoTexto = ta.getText();
-            CambioPendiente existing = cambiosPendientes.get(rep.getIdRep());
-            int idTecActual = existing != null ? existing.idTec() : rep.getIdTec();
-            String nombreTecActual = existing != null ? existing.nombreTecnico() : rep.getNombreTecnico();
-            String repComentario = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
-            if (idTecActual == rep.getIdTec() && nuevoTexto.equals(repComentario)) {
-                cambiosPendientes.remove(rep.getIdRep());
-            } else {
-                cambiosPendientes.put(rep.getIdRep(),
-                    new CambioPendiente(idTecActual, nombreTecActual, nuevoTexto, rep.getUpdatedAt()));
+            try {
+                reparacionDAO.actualizarAsignacion(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
+                ventana.close();
+                cargar();
+            } catch (com.reparaciones.utils.StaleDataException ex) {
+                Alertas.mostrarError("La asignación fue modificada por otro usuario. Se recargan los datos.");
+                ventana.close();
+                cargar();
+            } catch (SQLException ex) {
+                Alertas.mostrarError(ex.getMessage());
             }
-            actualizarVisibilidadConfirmar();
-            tablaPendientes.refresh();
-            ventana.close();
         });
 
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
