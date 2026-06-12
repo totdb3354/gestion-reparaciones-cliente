@@ -92,6 +92,7 @@ public class PendientesSuperTecnicoController {
         boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
         boolean buscando;                        // true mientras el lookup está en vuelo
+        long seq;                                // orden de la última acción (escaneo/asignación): mayor = más reciente = más arriba
 
         EntradaAsignacion(String imei) { this.imei = imei; }
 
@@ -618,20 +619,9 @@ public class PendientesSuperTecnicoController {
         }
         estado.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
 
-        HBox pills = new HBox(4);
-        pills.setAlignment(Pos.CENTER_LEFT);
-        pills.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-        for (Tecnico t : e.tecnicos) {
-            Label p = new Label(t.getNombre());
-            p.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-            p.setStyle("-fx-font-size: 9.5px; -fx-text-fill: white; -fx-background-color: #001232;"
-                    + " -fx-background-radius: 20; -fx-padding: 1 7 1 7;");
-            pills.getChildren().add(p);
-        }
-
-        // El contenido (IMEI + estado + técnicos) crece y se RECORTA limpio (sin "...") si no cabe;
+        // El contenido (IMEI + modelo) crece y se RECORTA limpio (sin "...") si no cabe;
         // la ✕ va fuera del recorte, pegada a la derecha → siempre visible.
-        HBox contenido = new HBox(8, lblImei, estado, pills);
+        HBox contenido = new HBox(8, lblImei, estado);
         contenido.setAlignment(Pos.CENTER_LEFT);
         contenido.setMinWidth(0);
         HBox.setHgrow(contenido, javafx.scene.layout.Priority.ALWAYS);
@@ -664,7 +654,7 @@ public class PendientesSuperTecnicoController {
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
-        String[] defComentario = { "" };
+        long[] seqCounter = { 0 };
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
         try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
@@ -867,17 +857,27 @@ public class PendientesSuperTecnicoController {
         renderPila[0] = () -> {
             boxRojo.getChildren().clear();
             boxVerde.getChildren().clear();
-            int nRojo = 0, nVerde = 0;
-            for (EntradaAsignacion e : pila) {
+            java.util.Comparator<EntradaAsignacion> porSeqDesc = (a, b) -> Long.compare(b.seq, a.seq);
+            List<EntradaAsignacion> rojos  = pila.stream().filter(x -> !x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
+            List<EntradaAsignacion> verdes = pila.stream().filter(x ->  x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
+            int nRojo = rojos.size(), nVerde = verdes.size();
+            for (EntradaAsignacion e : rojos) {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     pila.remove(e);
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
-                HBox fila = crearFilaPila(e, onClick, onRemove);
-                if (e.asignada) { boxVerde.getChildren().add(fila); nVerde++; }
-                else            { boxRojo.getChildren().add(fila);  nRojo++; }
+                boxRojo.getChildren().add(crearFilaPila(e, onClick, onRemove));
+            }
+            for (EntradaAsignacion e : verdes) {
+                Runnable onClick = () -> cargarEntrada[0].accept(e);
+                Runnable onRemove = () -> {
+                    pila.remove(e);
+                    if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
+                    renderPila[0].run();
+                };
+                boxVerde.getChildren().add(crearFilaPila(e, onClick, onRemove));
             }
             lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
@@ -929,7 +929,7 @@ public class PendientesSuperTecnicoController {
             java.util.Set<Integer> ids = base.stream().map(Tecnico::getIdTec).collect(java.util.stream.Collectors.toSet());
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
-            tfComentario.setText((e.asignada || !e.comentario.isEmpty()) ? e.comentario : defComentario[0]);
+            tfComentario.setText(e.comentario);   // el comentario NO se mantiene entre IMEIs (se resetea)
             try {
                 List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
                 for (int i = 0; i < tecnicosModal.size(); i++) {
@@ -948,7 +948,8 @@ public class PendientesSuperTecnicoController {
         };
 
         Runnable cargarSiguienteRojo = () -> {
-            EntradaAsignacion sig = pila.stream().filter(x -> !x.asignada).findFirst().orElse(null);
+            EntradaAsignacion sig = pila.stream().filter(x -> !x.asignada)
+                    .max(java.util.Comparator.comparingLong(x -> x.seq)).orElse(null);
             if (sig != null) cargarEntrada[0].accept(sig);
             else { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
         };
@@ -964,8 +965,8 @@ public class PendientesSuperTecnicoController {
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
             e.asignada = true;
-            defTecnicos.clear(); defTecnicos.addAll(sel);
-            defComentario[0] = e.comentario;
+            e.seq = ++seqCounter[0];               // pasa a lo más reciente (arriba) de la verde
+            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();
@@ -1026,6 +1027,7 @@ public class PendientesSuperTecnicoController {
             if (pila.stream().anyMatch(x -> x.imei.equals(imei))) { lblScanErr.setText("Ese IMEI ya está en la pila."); return; }
             lblScanErr.setText("");
             EntradaAsignacion e = new EntradaAsignacion(imei);
+            e.seq = ++seqCounter[0];
             pila.add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
