@@ -142,6 +142,7 @@ public class PendientesSuperTecnicoController {
                     try {
                         reparacionDAO.actualizarAsignacion(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
                         cargar();
+                        if (onActualizar != null) onActualizar.run();   // refresca el badge del sidebar
                     } catch (com.reparaciones.utils.StaleDataException ex) {
                         Alertas.mostrarError("La asignación fue modificada por otro usuario. Se recargan los datos.");
                         cargar();

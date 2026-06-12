@@ -81,6 +81,13 @@ public class FormularioReparacionController {
     private final List<FilaUI> filasUI = new ArrayList<>();
     private OtrasAccionesUI otrasAcciones;
 
+    // ── Borrador persistente (solo flujo nuevo) ──
+    private final com.reparaciones.dao.BorradorDAO borradorDAO = new com.reparaciones.dao.BorradorDAO();
+    private final com.google.gson.Gson gson = new com.google.gson.Gson();
+    private javafx.animation.PauseTransition autoGuardado;   // debounce
+    private boolean recuperandoBorrador = false;             // evita auto-guardar mientras se aplica el borrador
+    private boolean borradorDescartado = false;              // tras guardar de verdad: no re-crear el borrador
+
     /**
      * Lista de modelos en orden de tienda Apple.
      * Para añadir iPhone 17 en el futuro:
@@ -170,6 +177,52 @@ public class FormularioReparacionController {
                     cbFiltroModelo.setDisable(true);
                 }
             } catch (SQLException e) { /* silencioso */ }
+        }
+
+        // ── Recuperar borrador (solo flujo nuevo) ──
+        // Se aplica DESPUÉS del estado de BD; solo sobre filas no bloqueadas por solicitud (aplicar válido, ignorar inválido).
+        if (idAsignacion != null && !modoEdicion) {
+            try {
+                String json = borradorDAO.getBorrador(idAsignacion);
+                if (json != null && !json.isBlank()) {
+                    com.reparaciones.models.BorradorContenido b =
+                            gson.fromJson(json, com.reparaciones.models.BorradorContenido.class);
+                    if (b != null && !borradorVacio(b)) {
+                        recuperandoBorrador = true;
+                        try {
+                            if (b.modelo != null && cbFiltroModelo.getItems().contains(b.modelo)
+                                    && !cbFiltroModelo.isDisable()) {
+                                cbFiltroModelo.setValue(b.modelo);
+                            }
+                            for (com.reparaciones.models.BorradorContenido.Fila f : b.filas) {
+                                filasUI.stream()
+                                        .filter(fila -> fila.getPrefijo().equals(f.prefijo))
+                                        .findFirst()
+                                        .ifPresent(fila -> fila.aplicarBorrador(f));
+                            }
+                            if (otrasAcciones != null) otrasAcciones.aplicarDescripciones(b.otros);
+                        } finally {
+                            recuperandoBorrador = false;
+                        }
+                        actualizarBoton();
+                        mostrarIndicadorBorrador();
+                    }
+                }
+            } catch (Exception ex) {
+                // borrador corrupto/no disponible: se ignora, el modal abre normal
+            }
+        }
+    }
+
+    private void mostrarIndicadorBorrador() {
+        Label aviso = new Label("✓ Borrador recuperado");
+        aviso.setStyle("-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0; -fx-font-size: 11px;"
+                + " -fx-font-weight: bold; -fx-padding: 4 16 4 16;");
+        aviso.setMaxWidth(Double.MAX_VALUE);
+        javafx.scene.Parent parent = filaIncidencia.getParent();
+        if (parent instanceof javafx.scene.layout.VBox vb) {
+            int idx = vb.getChildren().indexOf(filaIncidencia);
+            vb.getChildren().add(idx + 1, aviso);
         }
     }
 
@@ -425,6 +478,52 @@ public class FormularioReparacionController {
         }
         zonaGuardar.setVisible(habilitado);
         zonaGuardar.setManaged(habilitado);
+        programarAutoGuardado();
+    }
+
+    // ── Borrador: orquestación ──────────────────────────────────────────────
+
+    private com.reparaciones.models.BorradorContenido capturarBorrador() {
+        com.reparaciones.models.BorradorContenido b = new com.reparaciones.models.BorradorContenido();
+        b.modelo = cbFiltroModelo.getValue();
+        for (FilaUI fila : filasUI) {
+            com.reparaciones.models.BorradorContenido.Fila f = fila.capturarEnBorrador();
+            if (f != null) b.filas.add(f);
+        }
+        if (otrasAcciones != null) b.otros = new java.util.ArrayList<>(otrasAcciones.getDescripciones());
+        return b;
+    }
+
+    /** Vacío = sin filas ni otras acciones (el modelo solo no cuenta, se auto-rellena). */
+    private boolean borradorVacio(com.reparaciones.models.BorradorContenido b) {
+        return b.filas.isEmpty() && b.otros.isEmpty();
+    }
+
+    private void programarAutoGuardado() {
+        if (idAsignacion == null || recuperandoBorrador || borradorDescartado) return;   // solo flujo nuevo
+        if (autoGuardado == null) {
+            autoGuardado = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(2));
+            autoGuardado.setOnFinished(e -> guardarBorradorAhora());
+        }
+        autoGuardado.playFromStart();   // reinicia el debounce
+    }
+
+    private void guardarBorradorAhora() {
+        if (idAsignacion == null || recuperandoBorrador || borradorDescartado) return;
+        try {
+            com.reparaciones.models.BorradorContenido b = capturarBorrador();
+            if (borradorVacio(b)) borradorDAO.eliminar(idAsignacion);
+            else borradorDAO.guardar(idAsignacion, gson.toJson(b));
+        } catch (Exception ex) {
+            // silencioso: un fallo de auto-guardado no debe molestar al técnico
+        }
+    }
+
+    /** Tras un guardado real: detiene el debounce, borra el borrador y bloquea su re-creación al cerrar. */
+    private void descartarBorradorTrasGuardar() {
+        borradorDescartado = true;
+        if (autoGuardado != null) autoGuardado.stop();
+        try { if (idAsignacion != null) borradorDAO.eliminar(idAsignacion); } catch (Exception ignore) {}
     }
 
     @FXML
@@ -525,6 +624,7 @@ public class FormularioReparacionController {
         boolean soloAgotadas = filasActivas.isEmpty()
                 && filasUI.stream().anyMatch(FilaUI::esAgotadoNuevo);
         if (soloAgotadas) {
+            descartarBorradorTrasGuardar();
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
             if (onGuardado != null)
@@ -535,6 +635,7 @@ public class FormularioReparacionController {
         try {
             reparacionDAO.insertarCompleta(filasActivas, imei,
                     Sesion.getIdTec(), idRepAnterior, idAsignacion);
+            descartarBorradorTrasGuardar();
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
             if (onGuardado != null)
@@ -630,14 +731,9 @@ public class FormularioReparacionController {
                 ctrl.init(imei, idRepAnterior, idAsignacion, onGuardado);
 
                 stage.setOnCloseRequest(ev -> {
-                    if (!ctrl.hayCambiosSinGuardar()) return;
-                    ev.consume();
-                    com.reparaciones.utils.ConfirmDialog.mostrar(
-                        "Salir sin guardar",
-                        "Tienes cambios sin guardar que se perderán si cierras el formulario.",
-                        "Salir sin guardar",
-                        "Cancelar",
-                        stage::close);
+                    // Con borrador persistente no se pierde nada: flush del borrador y cierre sin preguntar.
+                    if (ctrl.autoGuardado != null) ctrl.autoGuardado.stop();
+                    ctrl.guardarBorradorAhora();
                 });
                 stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                 stage.show();
@@ -1435,6 +1531,75 @@ public class FormularioReparacionController {
             return descripcionAgotado;
         }
 
+        // ── Borrador: captura / restauración ──────────────────────────────────
+
+        /** Vuelca los inputs no guardados de esta fila al DTO, o null si la fila está vacía. */
+        com.reparaciones.models.BorradorContenido.Fila capturarEnBorrador() {
+            boolean vacia = cantidad == 0 && !isReutilizado()
+                    && (observacion == null || observacion.isBlank())
+                    && !isSolicitudNueva() && !esAgotadoNuevo();
+            if (vacia) return null;
+            com.reparaciones.models.BorradorContenido.Fila f = new com.reparaciones.models.BorradorContenido.Fila();
+            f.prefijo = prefijo;
+            f.idCom = getIdComSeleccionado();
+            f.cantidad = cantidad;
+            f.reutilizado = isReutilizado();
+            f.observacion = observacion;
+            f.solicitudNueva = isSolicitudNueva();
+            f.descripcionSolicitud = descripcionSolicitud;
+            f.agotadoConfirmado = esAgotadoNuevo();
+            f.descripcionAgotado = descripcionAgotado;
+            return f;
+        }
+
+        /** Restaura un borrador sobre esta fila (solo si no está ya bloqueada por una solicitud de BD). */
+        void aplicarBorrador(com.reparaciones.models.BorradorContenido.Fila f) {
+            if (solicitudActiva) return;   // fila ya gestionada por una solicitud de BD: ignorar borrador
+            if (f.idCom > 0) preseleccionarSku(f.idCom);
+
+            // Estados mutuamente excluyentes: solicitud nueva, agotado confirmado, o normal.
+            if (f.solicitudNueva && !prefijo.equals("otro")) {
+                descripcionSolicitud = f.descripcionSolicitud;
+                solicitudActiva = true;
+                solicitudNuevaEnEstaSesion = true;
+                btnSolicitud.setText("⚠ Pieza pendiente");
+                btnSolicitud.setStyle(STYLE_SOL_ACTIVA);
+                notificar();
+                return;
+            }
+            if (f.agotadoConfirmado && !prefijo.equals("otro")) {
+                Componente sel = cbSku.getValue();
+                int stock = sel != null ? sel.getStock() : 0;
+                descripcionAgotado = f.descripcionAgotado;
+                agotadoConfirmado = true;
+                btnMas.setDisable(true); btnMenos.setDisable(true);
+                chkReutilizado.setDisable(true);
+                cbSku.setDisable(true);
+                btnObservacion.setDisable(true);
+                btnSolicitud.setDisable(true);
+                actualizarLabelConfirmado(stock);
+                lblSubAgotado.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-font-weight: bold;");
+                btnSubAgotado.setVisible(false); btnSubAgotado.setManaged(false);
+                btnEditarDesc.setVisible(true);  btnEditarDesc.setManaged(true);
+                subFilaAgotado.setStyle("-fx-background-color: #E8F5E9; -fx-padding: 4 8 4 70;");
+                subFilaAgotado.setVisible(true);  subFilaAgotado.setManaged(true);
+                notificar();
+                return;
+            }
+            // Normal: cantidad + reutilizado + observación.
+            chkReutilizado.setSelected(f.reutilizado);
+            cantidad = Math.max(0, f.cantidad);
+            actualizarContador();
+            if (f.observacion != null && !f.observacion.isBlank()) {
+                observacion = f.observacion;
+                lblObservacion.setText(observacion);
+                btnObservacion.setVisible(false); btnObservacion.setManaged(false);
+                lblObservacion.setVisible(true);  lblObservacion.setManaged(true);
+                btnBorrarObs.setVisible(true);     btnBorrarObs.setManaged(true);
+            }
+            notificar();
+        }
+
         private void abrirSolicitud() {
             TextArea ta = new TextArea(descripcionSolicitud != null ? descripcionSolicitud : "");
             ta.setPromptText("Describe la pieza que falta (opcional)...");
@@ -1792,6 +1957,14 @@ public class FormularioReparacionController {
                 }
             }
             return out;
+        }
+
+        /** Restaura las descripciones de un borrador como líneas de acción. */
+        void aplicarDescripciones(List<String> descripciones) {
+            if (descripciones == null) return;
+            for (String d : descripciones) {
+                if (d != null && !d.isBlank()) agregarLinea(d.trim());
+            }
         }
 
         int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
