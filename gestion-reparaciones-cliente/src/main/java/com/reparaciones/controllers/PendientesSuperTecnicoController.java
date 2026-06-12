@@ -598,7 +598,7 @@ public class PendientesSuperTecnicoController {
     }
 
     /** Construye una fila de la pila para {@code e}. onClick = cargar en el formulario; onRemove = quitar de la pila. */
-    private HBox crearFilaPila(EntradaAsignacion e, Runnable onClick, Runnable onRemove) {
+    private HBox crearFilaPila(EntradaAsignacion e, boolean seleccionada, Runnable onClick, Runnable onRemove) {
         Label lblImei = new Label(e.imei);
         lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
         lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);   // nunca se recorta el IMEI
@@ -641,8 +641,13 @@ public class PendientesSuperTecnicoController {
 
         HBox fila = new HBox(8, contenido, x);
         fila.setAlignment(Pos.CENTER_LEFT);
-        fila.setStyle("-fx-padding: 7 9 7 9; -fx-border-color: transparent transparent #EEF1F5 transparent;"
-                + " -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+        if (seleccionada) {
+            fila.setStyle("-fx-padding: 7 9 7 5; -fx-background-color: #EAF1FF;"
+                    + " -fx-border-color: transparent transparent #EEF1F5 #2C3B54; -fx-border-width: 0 0 1 4; -fx-cursor: hand;");
+        } else {
+            fila.setStyle("-fx-padding: 7 9 7 9; -fx-border-color: transparent transparent #EEF1F5 transparent;"
+                    + " -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+        }
         fila.setOnMouseClicked(ev -> onClick.run());
         return fila;
     }
@@ -799,9 +804,7 @@ public class PendientesSuperTecnicoController {
         btnAsignar.getStyleClass().add("btn-primary");
         btnAsignar.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnAsignar, javafx.scene.layout.Priority.ALWAYS);
-        Button btnSaltar = new Button("Saltar");
-        btnSaltar.getStyleClass().add("btn-secondary");
-        HBox accionesForm = new HBox(10, btnSaltar, btnAsignar);
+        HBox accionesForm = new HBox(10, btnAsignar);
 
         VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblComentario, tfComentario, accionesForm);
@@ -815,7 +818,7 @@ public class PendientesSuperTecnicoController {
         javafx.scene.layout.Region spacerBarra = new javafx.scene.layout.Region();
         HBox.setHgrow(spacerBarra, javafx.scene.layout.Priority.ALWAYS);
         Button btnGuardar = new Button("Guardar (0)");
-        btnGuardar.setStyle("-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 14px;"
+        btnGuardar.setStyle("-fx-background-color: #2C3B54; -fx-text-fill: white; -fx-font-size: 14px;"
                 + " -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 11 22 11 22;");
         btnGuardar.setDisable(true);
         HBox barraFinal = new HBox(12, lblProg, spacerBarra, btnGuardar);
@@ -868,7 +871,7 @@ public class PendientesSuperTecnicoController {
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
-                boxRojo.getChildren().add(crearFilaPila(e, onClick, onRemove));
+                boxRojo.getChildren().add(crearFilaPila(e, e == actual[0], onClick, onRemove));
             }
             for (EntradaAsignacion e : verdes) {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
@@ -877,7 +880,7 @@ public class PendientesSuperTecnicoController {
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
-                boxVerde.getChildren().add(crearFilaPila(e, onClick, onRemove));
+                boxVerde.getChildren().add(crearFilaPila(e, e == actual[0], onClick, onRemove));
             }
             lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
@@ -965,7 +968,7 @@ public class PendientesSuperTecnicoController {
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
             e.asignada = true;
-            e.seq = ++seqCounter[0];               // pasa a lo más reciente (arriba) de la verde
+            // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
             defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
@@ -1052,7 +1055,6 @@ public class PendientesSuperTecnicoController {
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
         btnAsignar.setOnAction(ev -> asignarActual.run());
-        btnSaltar.setOnAction(ev -> cargarSiguienteRojo.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
