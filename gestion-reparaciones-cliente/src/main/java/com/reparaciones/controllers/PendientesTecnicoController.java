@@ -36,6 +36,7 @@ public class PendientesTecnicoController {
     @FXML private MenuButton filtroSolicitud;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
+    @FXML private Label      lblContador;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
@@ -90,6 +91,8 @@ public class PendientesTecnicoController {
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPendientes.setItems(datosFiltrados);
+        datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
+        actualizarContador();
         tablaPendientes.setColumnResizePolicy(param -> true);
 
         tablaPendientes.setRowFactory(tv -> new TableRow<>() {
@@ -326,6 +329,12 @@ public class PendientesTecnicoController {
             if (filtrarAsig && esAsig) mostrar = true;
             return mostrar;
         });
+    }
+
+    private void actualizarContador() {
+        if (lblContador == null || datosFiltrados == null) return;
+        int n = datosFiltrados.size();
+        lblContador.setText((n > 999 ? "999+" : String.valueOf(n)) + (n == 1 ? " pendiente" : " pendientes"));
     }
 
     @FXML
