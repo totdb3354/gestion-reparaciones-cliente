@@ -28,6 +28,7 @@ public class PulidoTecnicoController {
     @FXML private TextField filtroImei;
     @FXML private Button    btnCompletarSeleccionados;
     @FXML private Label     lblUltimaActualizacion;
+    @FXML private Label     lblContador;
 
     private final PulidoDAO pulidoDAO = new PulidoDAO();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
@@ -75,6 +76,8 @@ public class PulidoTecnicoController {
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
+        datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
+        actualizarContador();
         tablaPulidos.setColumnResizePolicy(param -> true);
 
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {
@@ -135,6 +138,12 @@ public class PulidoTecnicoController {
         if (datosFiltrados == null) return;
         java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
         datosFiltrados.setPredicate(rep -> imeisFiltro.isEmpty() || imeisFiltro.contains(rep.getImei()));
+    }
+
+    private void actualizarContador() {
+        if (lblContador == null || datosFiltrados == null) return;
+        int n = datosFiltrados.size();
+        lblContador.setText((n > 999 ? "999+" : String.valueOf(n)) + (n == 1 ? " pendiente" : " pendientes"));
     }
 
     @FXML private void limpiarFiltros() {

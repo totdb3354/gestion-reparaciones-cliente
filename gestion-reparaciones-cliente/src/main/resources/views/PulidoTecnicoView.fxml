@@ -11,7 +11,7 @@
       stylesheets="@../styles/app.css">
 
     <HBox spacing="12" alignment="CENTER_LEFT">
-        <Label text="Mis pulidos pendientes" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+        <Label text="Mis pulidos pendientes" styleClass="vista-titulo"/>
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
         <Button fx:id="btnSeleccionarTodo"
@@ -23,6 +23,10 @@
                 onAction="#completarSeleccionados"
                 disable="true"
                 styleClass="btn-primary"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="lblContador" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;">
+            <HBox.margin><Insets right="150"/></HBox.margin>
+        </Label>
     </HBox>
 
     <TableView fx:id="tablaPulidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">

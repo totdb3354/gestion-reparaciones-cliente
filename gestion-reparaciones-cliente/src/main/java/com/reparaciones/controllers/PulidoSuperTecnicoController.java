@@ -45,6 +45,7 @@ public class PulidoSuperTecnicoController {
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
+    @FXML private Label      lblContador;
     @FXML private Button     btnConfirmarCambios;
     @FXML private Button     btnDescartarCambios;
 
@@ -185,6 +186,8 @@ public class PulidoSuperTecnicoController {
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
+        datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
+        actualizarContador();
         tablaPulidos.setColumnResizePolicy(param -> true);
 
         Image imgEditar = new Image(getClass().getResourceAsStream("/images/editar.png"));
@@ -363,6 +366,12 @@ public class PulidoSuperTecnicoController {
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
             return true;
         });
+    }
+
+    private void actualizarContador() {
+        if (lblContador == null || datosFiltrados == null) return;
+        int n = datosFiltrados.size();
+        lblContador.setText((n > 999 ? "999+" : String.valueOf(n)) + (n == 1 ? " asignación" : " asignaciones"));
     }
 
     @FXML
