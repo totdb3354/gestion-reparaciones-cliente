@@ -83,6 +83,21 @@ public class PendientesSuperTecnicoController {
     private record CambioPendiente(int idTec, String nombreTecnico, String comentarioAsignacion, java.time.LocalDateTime updatedAt) {}
     private final Map<String, CambioPendiente> cambiosPendientes = new HashMap<>();
 
+    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
+    private static final class EntradaAsignacion {
+        final String imei;
+        String modeloCode;                       // código interno del modelo, o null si falta
+        final List<Tecnico> tecnicos = new ArrayList<>();
+        String comentario = "";
+        boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
+        boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
+        boolean buscando;                        // true mientras el lookup está en vuelo
+
+        EntradaAsignacion(String imei) { this.imei = imei; }
+
+        boolean tieneModelo() { return modeloCode != null && !modeloCode.isEmpty(); }
+    }
+
     @FXML
     public void initialize() {
         tablaPendientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
@@ -581,32 +596,106 @@ public class PendientesSuperTecnicoController {
         }
     }
 
+    /** Construye una fila de la pila para {@code e}. onClick = cargar en el formulario; onRemove = quitar de la pila. */
+    private HBox crearFilaPila(EntradaAsignacion e, Runnable onClick, Runnable onRemove) {
+        Label lblImei = new Label(e.imei);
+        lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+
+        Label estado = new Label();
+        if (e.tieneModelo()) {
+            estado.setText(FormularioReparacionController.traducirModelo(e.modeloCode));
+            estado.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-text-fill: #1B5E20;"
+                    + " -fx-background-color: #E3F1E4; -fx-background-radius: 6; -fx-padding: 2 8 2 8;");
+        } else if (e.buscando) {
+            estado.setText("Buscando…");
+            estado.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-text-fill: #586376;"
+                    + " -fx-background-color: #EEF1F5; -fx-background-radius: 6; -fx-padding: 2 8 2 8;");
+        } else {
+            estado.setText("⚠ falta modelo");
+            estado.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-text-fill: #9A6B00;"
+                    + " -fx-background-color: #FCE7C3; -fx-background-radius: 6; -fx-padding: 2 8 2 8;");
+        }
+
+        HBox pills = new HBox(4);
+        pills.setAlignment(Pos.CENTER_LEFT);
+        for (Tecnico t : e.tecnicos) {
+            Label p = new Label(t.getNombre());
+            p.setStyle("-fx-font-size: 9.5px; -fx-text-fill: white; -fx-background-color: #001232;"
+                    + " -fx-background-radius: 20; -fx-padding: 1 7 1 7;");
+            pills.getChildren().add(p);
+        }
+
+        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+
+        Label x = new Label("✕");
+        String xBase = "-fx-text-fill: #c2b3b3; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
+        String xHover = "-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
+        x.setStyle(xBase);
+        x.setOnMouseEntered(ev -> x.setStyle(xHover));
+        x.setOnMouseExited(ev -> x.setStyle(xBase));
+        x.setOnMouseClicked(ev -> { ev.consume(); onRemove.run(); });
+
+        HBox fila = new HBox(8, lblImei, estado, pills, spacer, x);
+        fila.setAlignment(Pos.CENTER_LEFT);
+        fila.setStyle("-fx-padding: 7 9 7 9; -fx-border-color: transparent transparent #EEF1F5 transparent;"
+                + " -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+        fila.setOnMouseClicked(ev -> onClick.run());
+        return fila;
+    }
+
     @FXML
     private void abrirFormularioAsignacion() {
-        // ── IMEI ──────────────────────────────────────────────────────────────
-        Label lblTitulo = new Label("Asignar reparación");
+        // ── Estado del lote ──────────────────────────────────────────────────
+        List<EntradaAsignacion> pila = new ArrayList<>();
+        EntradaAsignacion[] actual = { null };
+        boolean[] editandoVerde = { false };
+        List<Tecnico> defTecnicos = new ArrayList<>();
+        String[] defComentario = { "" };
+
+        List<Tecnico> tecnicosModal = new ArrayList<>();
+        try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
+        catch (SQLException ex) { mostrarError(ex); }
+
+        // ── Cabecera + escaneo ───────────────────────────────────────────────
+        Label lblTitulo = new Label("Asignar reparaciones");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label lblSub = new Label("Escanea IMEIs y configúralos. Técnicos y comentario se mantienen entre IMEIs. Se guardan todos al final.");
+        lblSub.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
 
-        Label lblImei = new Label("IMEI del teléfono");
-        lblImei.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        Label lblScan = new Label("Escanear IMEI → pendiente de asignar");
+        lblScan.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextField tfScan = new TextField();
+        tfScan.setPromptText("Escanea o escribe el IMEI (15 dígitos)...");
+        tfScan.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
+                + " -fx-background-radius: 4; -fx-padding: 11; -fx-text-fill: #2C3B54; -fx-font-size: 14px;");
+        Label lblScanErr = new Label();
+        lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
 
-        TextField tfImei = new TextField();
-        tfImei.setPromptText("15 dígitos");
-        tfImei.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
-                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        // ── Secciones de la pila ─────────────────────────────────────────────
+        Label lblRojo = new Label("Pendiente de asignar (0)");
+        lblRojo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #C0392B;");
+        VBox boxRojo = new VBox(0);
+        boxRojo.setStyle("-fx-background-color: white; -fx-border-color: #EFC4C0; -fx-border-radius: 6; -fx-border-width: 1;");
+        Label lblVerde = new Label("Asignados (0) · sin guardar");
+        lblVerde.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #2E7D32; -fx-padding: 10 0 0 0;");
+        VBox boxVerde = new VBox(0);
+        boxVerde.setStyle("-fx-background-color: white; -fx-border-color: #BFE0C2; -fx-border-radius: 6; -fx-border-width: 1;");
+        VBox pilaBox = new VBox(6, lblRojo, boxRojo, lblVerde, boxVerde);
+        ScrollPane scrollPila = new ScrollPane(pilaBox);
+        scrollPila.setFitToWidth(true);
+        scrollPila.setPrefViewportWidth(250);
+        scrollPila.setMinWidth(250);
+        scrollPila.setPrefHeight(330);
+        scrollPila.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scrollPila.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
-        Label lblImeiErr = new Label();
-        lblImeiErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + ";");
-
-        // ── Modelo de iPhone ──────────────────────────────────────────────────
+        // ── Maquinaria de modelo (buscador) ──────────────────────────────────
         Label lblModelo = new Label("Modelo de iPhone");
         lblModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-
         javafx.collections.ObservableList<String> todosModelos =
                 FXCollections.observableArrayList(FormularioReparacionController.MODELOS_ORDENADOS);
         FilteredList<String> modelosFiltrados = new FilteredList<>(todosModelos, s -> true);
-
         TextField tfModelo = new TextField();
         tfModelo.setPromptText("Escribe modelo...");
         tfModelo.setMaxWidth(Double.MAX_VALUE);
@@ -615,7 +704,6 @@ public class PendientesSuperTecnicoController {
                 "-fx-border-color: transparent; -fx-border-radius: 24; -fx-border-width: 0;" +
                 "-fx-text-fill: #FAFAFA; -fx-font-size: 12px; -fx-font-weight: bold;" +
                 "-fx-padding: 4 12 4 12;");
-
         ListView<String> listaModelos = new ListView<>(modelosFiltrados);
         listaModelos.setStyle(
                 "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
@@ -642,21 +730,15 @@ public class PendientesSuperTecnicoController {
                             "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); }
             }
         });
-
         javafx.stage.Popup popupModelo = new javafx.stage.Popup();
         popupModelo.setAutoHide(true);
         popupModelo.getContent().add(listaModelos);
+        String[] modeloSel = { null };
+        boolean[] actualizandoModelo = { false };
 
-        String[] modeloSel = {null};
-        String[] ultimoImeiConsultado = {null};
-        boolean[] actualizandoModelo = {false};
-
-        // ── Lista de técnicos (checkboxes en ScrollPane) ─────────────────────
+        // ── Técnicos ─────────────────────────────────────────────────────────
         Label lblTecnicos = new Label("Técnicos a asignar");
         lblTecnicos.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-
-        // Píldora con el nº de técnicos que ya tienen este IMEI asignado (filas deshabilitadas).
-        // Se actualiza en validar(); oculta cuando N = 0 o el IMEI aún no es válido.
         Label pillAsignados = new Label();
         pillAsignados.setStyle(
                 "-fx-background-color: #FCE7C3; -fx-text-fill: #9A6B00;" +
@@ -666,88 +748,78 @@ public class PendientesSuperTecnicoController {
         pillAsignados.setManaged(false);
         HBox headerTecnicos = new HBox(8, lblTecnicos, pillAsignados);
         headerTecnicos.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-        List<Tecnico> tecnicosModal = new ArrayList<>();
         List<CheckBox> checkboxes = new ArrayList<>();
         VBox cbContainer = new VBox(6);
         cbContainer.setStyle("-fx-background-color: white; -fx-padding: 8;");
-
-        try {
-            tecnicosModal.addAll(tecnicoDAO.getAllActivos());
-            for (Tecnico t : tecnicosModal) {
-                CheckBox cb = new CheckBox(t.getNombre());
-                cb.setStyle("-fx-font-size: 12px;");
-                checkboxes.add(cb);
-                cbContainer.getChildren().add(cb);
-            }
-        } catch (SQLException ex) {
-            mostrarError(ex);
+        for (Tecnico t : tecnicosModal) {
+            CheckBox cb = new CheckBox(t.getNombre());
+            cb.setStyle("-fx-font-size: 12px;");
+            checkboxes.add(cb);
+            cbContainer.getChildren().add(cb);
         }
-
         ScrollPane scrollTecnicos = new ScrollPane(cbContainer);
         scrollTecnicos.setFitToWidth(true);
         scrollTecnicos.setMaxHeight(150);
         scrollTecnicos.setPrefHeight(Math.min(150, tecnicosModal.size() * 30 + 16));
         scrollTecnicos.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                 "-fx-border-radius: 4; -fx-background-radius: 4;");
+        Label lblNotaPersist = new Label("↳ Se mantienen del IMEI anterior; cámbialos solo si hace falta.");
+        lblNotaPersist.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #586376; -fx-font-style: italic;");
 
-        // ── Botones ───────────────────────────────────────────────────────────
-        Button btnConfirmar = new Button("Asignar reparación");
-        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
-        btnConfirmar.setDisable(true);
-        btnConfirmar.getStyleClass().add("btn-primary");
+        // ── Comentario + cabecera del IMEI en curso ──────────────────────────
+        Label lblComentario = new Label("Comentario (opcional)");
+        lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextArea tfComentario = new TextArea();
+        tfComentario.setWrapText(true);
+        tfComentario.setPrefRowCount(2);
+        tfComentario.setPromptText("Instrucciones para el técnico...");
+        tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-radius: 4; -fx-background-radius: 4;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        Label lblImeiCursoCap = new Label("IMEI en curso");
+        lblImeiCursoCap.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        Label lblImeiCurso = new Label("—");
+        lblImeiCurso.setStyle("-fx-font-family: monospace; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
-        Button btnCancelar = new Button("Cancelar");
-        btnCancelar.setMaxWidth(Double.MAX_VALUE);
-        btnCancelar.getStyleClass().add("btn-secondary");
+        Button btnAsignar = new Button("Asignar →");
+        btnAsignar.getStyleClass().add("btn-primary");
+        btnAsignar.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(btnAsignar, javafx.scene.layout.Priority.ALWAYS);
+        Button btnSaltar = new Button("Saltar");
+        btnSaltar.getStyleClass().add("btn-secondary");
+        HBox accionesForm = new HBox(10, btnSaltar, btnAsignar);
 
-        HBox botones = new HBox(10, btnCancelar, btnConfirmar);
-        botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+        VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
+                headerTecnicos, scrollTecnicos, lblNotaPersist, lblComentario, tfComentario, accionesForm);
+        formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
+        HBox.setHgrow(formBox, javafx.scene.layout.Priority.ALWAYS);
+        formBox.setDisable(true);
 
-        // ── Validación ────────────────────────────────────────────────────────
-        Runnable validar = () -> {
-            String imeiStr = tfImei.getText().trim();
-            boolean imeiOk = imeiStr.length() == 15;
+        // ── Barra final ──────────────────────────────────────────────────────
+        Label lblProg = new Label("");
+        lblProg.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        javafx.scene.layout.Region spacerBarra = new javafx.scene.layout.Region();
+        HBox.setHgrow(spacerBarra, javafx.scene.layout.Priority.ALWAYS);
+        Button btnGuardar = new Button("Guardar (0)");
+        btnGuardar.setStyle("-fx-background-color: #2E7D32; -fx-text-fill: white; -fx-font-size: 14px;"
+                + " -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 11 22 11 22;");
+        btnGuardar.setDisable(true);
+        HBox barraFinal = new HBox(12, lblProg, spacerBarra, btnGuardar);
+        barraFinal.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        barraFinal.setStyle("-fx-padding: 14 0 0 0; -fx-border-color: #C2C8D0 transparent transparent transparent; -fx-border-width: 1 0 0 0;");
 
-            if (imeiOk) {
-                try {
-                    List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(imeiStr);
-                    for (int i = 0; i < tecnicosModal.size(); i++) {
-                        boolean ocupado = ocupados.contains(tecnicosModal.get(i).getIdTec());
-                        checkboxes.get(i).setDisable(ocupado);
-                        if (ocupado) checkboxes.get(i).setSelected(false);
-                    }
-                    lblImeiErr.setText(ocupados.size() == tecnicosModal.size()
-                            ? "Todos los técnicos ya tienen asignación activa para este IMEI." : "");
-                } catch (SQLException ex) {
-                    // silencioso: se llama en cada tecla del campo IMEI
-                }
-                tfImei.setStyle("-fx-background-color: white; -fx-border-color: #8AC7AF;" +
-                        "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                        "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-            } else {
-                checkboxes.forEach(cb -> cb.setDisable(false));
-                tfImei.setStyle(imeiStr.isEmpty()
-                        ? "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
-                                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;"
-                        : "-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
-                                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8;" +
-                                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-                lblImeiErr.setText(!imeiStr.isEmpty() ? "El IMEI debe tener exactamente 15 dígitos" : "");
-            }
+        // ── Helpers de orquestación ──────────────────────────────────────────
+        Runnable[] renderPila = new Runnable[1];
+        @SuppressWarnings("unchecked")
+        java.util.function.Consumer<EntradaAsignacion>[] cargarEntrada = new java.util.function.Consumer[1];
+        Runnable[] lanzarLookup = new Runnable[1];
 
-            long nAsignados = checkboxes.stream().filter(CheckBox::isDisabled).count();
-            pillAsignados.setText(nAsignados + (nAsignados == 1 ? " asignado" : " asignados"));
-            pillAsignados.setVisible(nAsignados >= 1);
-            pillAsignados.setManaged(nAsignados >= 1);
-
-            boolean algunoSeleccionado = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
+        Runnable validarForm = () -> {
             boolean modeloOk = modeloSel[0] != null;
-            btnConfirmar.setDisable(!(imeiOk && algunoSeleccionado && modeloOk));
+            boolean algunoSel = checkboxes.stream().anyMatch(cb -> cb.isSelected() && !cb.isDisabled());
+            btnAsignar.setDisable(!(modeloOk && algunoSel));
         };
 
-        // ── Helpers popup modelo ──────────────────────────────────────────────
         Runnable mostrarPopupModelo = () -> {
             if (modelosFiltrados.isEmpty() || tfModelo.getScene() == null) { popupModelo.hide(); return; }
             listaModelos.setPrefHeight(Math.min(modelosFiltrados.size(), 6) * 28 + 4);
@@ -758,73 +830,133 @@ public class PendientesSuperTecnicoController {
         };
         java.util.function.Consumer<String> confirmarModelo = code -> {
             modeloSel[0] = code;
+            if (actual[0] != null) actual[0].modeloCode = code;
             actualizandoModelo[0] = true;
             tfModelo.setText(FormularioReparacionController.traducirModelo(code));
             modelosFiltrados.setPredicate(s -> true);
             actualizandoModelo[0] = false;
             popupModelo.hide();
-            validar.run();
+            if (renderPila[0] != null) renderPila[0].run();
+            validarForm.run();
         };
 
-        // ── Listeners ─────────────────────────────────────────────────────────
-        tfImei.textProperty().addListener((obs, o, n) -> {
-            if (!n.matches("\\d*")) tfImei.setText(n.replaceAll("[^\\d]", ""));
-            if (tfImei.getText().length() > 15) tfImei.setText(tfImei.getText().substring(0, 15));
-            validar.run();
-            String imeiActual = tfImei.getText();
-            if (imeiActual.length() < 15) {
-                if (modeloSel[0] != null) {
-                    actualizandoModelo[0] = true;
-                    tfModelo.clear();
-                    actualizandoModelo[0] = false;
-                    modeloSel[0] = null;
-                    validar.run();
-                }
-                ultimoImeiConsultado[0] = null;
-                tfModelo.setPromptText("— Selecciona modelo —");
-            } else if (!imeiActual.equals(ultimoImeiConsultado[0])) {
-                ultimoImeiConsultado[0] = imeiActual;
-                if (modeloSel[0] != null) {
-                    actualizandoModelo[0] = true;
-                    tfModelo.clear();
-                    actualizandoModelo[0] = false;
-                    modeloSel[0] = null;
-                    validar.run();
-                }
-                tfModelo.setPromptText("Buscando...");
-                Thread t = new Thread(() -> {
-                    try {
-                        String modelo = telefonoDAO.getModelo(imeiActual);
-                        javafx.application.Platform.runLater(() -> {
-                            if (!tfImei.getText().equals(imeiActual)) return;
-                            if (modelo != null && !modelo.isEmpty() && modeloSel[0] == null) {
-                                confirmarModelo.accept(modelo);
-                            } else if (modeloSel[0] == null) {
-                                tfModelo.setPromptText("No encontrado — selecciona manualmente");
-                            }
-                        });
-                    } catch (Exception ex) {
-                        javafx.application.Platform.runLater(() -> {
-                            if (tfImei.getText().equals(imeiActual) && modeloSel[0] == null)
-                                tfModelo.setPromptText("Error al consultar — selecciona manualmente");
-                        });
-                    }
-                });
-                t.setDaemon(true);
-                t.start();
+        renderPila[0] = () -> {
+            boxRojo.getChildren().clear();
+            boxVerde.getChildren().clear();
+            int nRojo = 0, nVerde = 0;
+            for (EntradaAsignacion e : pila) {
+                Runnable onClick = () -> cargarEntrada[0].accept(e);
+                Runnable onRemove = () -> {
+                    pila.remove(e);
+                    if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
+                    renderPila[0].run();
+                };
+                HBox fila = crearFilaPila(e, onClick, onRemove);
+                if (e.asignada) { boxVerde.getChildren().add(fila); nVerde++; }
+                else            { boxRojo.getChildren().add(fila);  nRojo++; }
             }
-        });
-        checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validar.run()));
+            lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
+            lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
+            int sinModelo = (int) pila.stream().filter(e -> !e.asignada && !e.tieneModelo()).count();
+            lblProg.setText(nVerde + " configurados · " + nRojo + " pendientes" + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
+            btnGuardar.setText("Guardar (" + nVerde + ")");
+            btnGuardar.setDisable(nRojo != 0 || nVerde == 0);
+        };
 
+        lanzarLookup[0] = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null || e.tieneModelo() || e.modeloBuscado) return;
+            e.modeloBuscado = true;
+            e.buscando = true;
+            tfModelo.setPromptText("Buscando...");
+            renderPila[0].run();
+            Thread t = new Thread(() -> {
+                String modelo = null;
+                try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {}
+                String res = modelo;
+                javafx.application.Platform.runLater(() -> {
+                    e.buscando = false;
+                    if (res != null && !res.isEmpty()) {
+                        e.modeloCode = res;
+                        if (actual[0] == e) confirmarModelo.accept(res);
+                    } else if (actual[0] == e) {
+                        tfModelo.setPromptText("No encontrado — selecciona manualmente");
+                    }
+                    renderPila[0].run();
+                });
+            });
+            t.setDaemon(true);
+            t.start();
+        };
+
+        cargarEntrada[0] = (EntradaAsignacion e) -> {
+            actual[0] = e;
+            editandoVerde[0] = e.asignada;
+            formBox.setDisable(false);
+            lblImeiCurso.setText(e.imei);
+            actualizandoModelo[0] = true;
+            modeloSel[0] = e.modeloCode;
+            tfModelo.setText(e.tieneModelo() ? FormularioReparacionController.traducirModelo(e.modeloCode) : "");
+            modelosFiltrados.setPredicate(s -> true);
+            actualizandoModelo[0] = false;
+            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos;
+            java.util.Set<Integer> ids = base.stream().map(Tecnico::getIdTec).collect(java.util.stream.Collectors.toSet());
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
+            tfComentario.setText((e.asignada || !e.comentario.isEmpty()) ? e.comentario : defComentario[0]);
+            try {
+                List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
+                for (int i = 0; i < tecnicosModal.size(); i++) {
+                    boolean ocup = ocupados.contains(tecnicosModal.get(i).getIdTec());
+                    checkboxes.get(i).setDisable(ocup);
+                    if (ocup) checkboxes.get(i).setSelected(false);
+                }
+                long n = checkboxes.stream().filter(CheckBox::isDisabled).count();
+                pillAsignados.setText(n + (n == 1 ? " asignado" : " asignados"));
+                pillAsignados.setVisible(n >= 1);
+                pillAsignados.setManaged(n >= 1);
+            } catch (SQLException ex) { /* silencioso */ }
+            btnAsignar.setText(e.asignada ? "Guardar cambios" : "Asignar →");
+            if (!e.asignada) lanzarLookup[0].run();
+            validarForm.run();
+        };
+
+        Runnable cargarSiguienteRojo = () -> {
+            EntradaAsignacion sig = pila.stream().filter(x -> !x.asignada).findFirst().orElse(null);
+            if (sig != null) cargarEntrada[0].accept(sig);
+            else { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
+        };
+
+        Runnable asignarActual = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null || modeloSel[0] == null) return;
+            List<Tecnico> sel = new ArrayList<>();
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                if (checkboxes.get(i).isSelected() && !checkboxes.get(i).isDisabled()) sel.add(tecnicosModal.get(i));
+            if (sel.isEmpty()) return;
+            e.modeloCode = modeloSel[0];
+            e.tecnicos.clear(); e.tecnicos.addAll(sel);
+            e.comentario = tfComentario.getText().trim();
+            e.asignada = true;
+            defTecnicos.clear(); defTecnicos.addAll(sel);
+            defComentario[0] = e.comentario;
+            renderPila[0].run();
+            if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
+            else cargarSiguienteRojo.run();
+        };
+
+        // ── Listeners modelo ─────────────────────────────────────────────────
         tfModelo.textProperty().addListener((obs, oldText, newText) -> {
             if (actualizandoModelo[0]) return;
             if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(newText)) return;
             modeloSel[0] = null;
+            if (actual[0] != null) actual[0].modeloCode = null;
             String lower = newText == null ? "" : newText.trim().toLowerCase();
             modelosFiltrados.setPredicate(c -> lower.isEmpty()
                     || FormularioReparacionController.traducirModelo(c).toLowerCase().contains(lower));
             mostrarPopupModelo.run();
-            validar.run();
+            if (renderPila[0] != null) renderPila[0].run();
+            validarForm.run();
         });
         tfModelo.setOnAction(e -> {
             if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0));
@@ -861,71 +993,78 @@ public class PendientesSuperTecnicoController {
             }
         });
 
-        // ── Comentario ────────────────────────────────────────────────────────
-        Label lblComentario = new Label("Comentario (opcional)");
-        lblComentario.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        // ── Escaneo (añadir a la pila con dedup) ─────────────────────────────
+        Runnable intentarAnadir = () -> {
+            String imei = tfScan.getText().trim();
+            if (imei.length() != 15) return;
+            if (pila.stream().anyMatch(x -> x.imei.equals(imei))) { lblScanErr.setText("Ese IMEI ya está en la pila."); return; }
+            lblScanErr.setText("");
+            EntradaAsignacion e = new EntradaAsignacion(imei);
+            pila.add(e);
+            renderPila[0].run();
+            tfScan.clear();
+            cargarEntrada[0].accept(e);
+            javafx.application.Platform.runLater(tfScan::requestFocus);
+        };
+        tfScan.textProperty().addListener((obs, o, n) -> {
+            if (!n.matches("\\d*")) { tfScan.setText(n.replaceAll("[^\\d]", "")); return; }
+            if (n.length() > 15) { tfScan.setText(n.substring(0, 15)); return; }
+            lblScanErr.setText("");
+            if (n.length() == 15) intentarAnadir.run();
+        });
+        tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
-        TextArea tfComentario = new TextArea();
-        tfComentario.setWrapText(true);
-        tfComentario.setPrefRowCount(3);
-        tfComentario.setPromptText("Instrucciones para el técnico...");
-        tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
-                "-fx-border-radius: 4; -fx-background-radius: 4;" +
-                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
+        btnAsignar.setOnAction(ev -> asignarActual.run());
+        btnSaltar.setOnAction(ev -> cargarSiguienteRojo.run());
 
-        // ── Confirmar ─────────────────────────────────────────────────────────
-        VBox contenido = new VBox(12, lblTitulo, lblImei, tfImei, lblImeiErr, lblModelo, tfModelo, headerTecnicos, scrollTecnicos, lblComentario, tfComentario, botones);
-        contenido.setPadding(new Insets(28));
-        contenido.setPrefWidth(440);
+        // ── Layout + ventana ─────────────────────────────────────────────────
+        HBox cols = new HBox(18, scrollPila, formBox);
+        VBox contenido = new VBox(12, lblTitulo, lblSub, lblScan, tfScan, lblScanErr,
+                new Separator(), cols, barraFinal);
+        contenido.setPadding(new Insets(26));
+        contenido.setPrefWidth(680);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
 
         javafx.stage.Stage ventana = new javafx.stage.Stage();
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-        ventana.setResizable(false);
-        ventana.setTitle("Asignar reparación");
+        ventana.setResizable(true);
+        ventana.setMinWidth(680);
+        ventana.setMinHeight(560);
+        ventana.setTitle("Asignar reparaciones");
 
-        btnCancelar.setText("Cerrar");
-        btnCancelar.setOnAction(ev -> ventana.close());
-
-        btnConfirmar.setOnAction(ev -> {
-            String imei  = tfImei.getText().trim();
-            String model = modeloSel[0];
+        btnGuardar.setOnAction(ev -> {
+            List<String> conflictos = new ArrayList<>();
             try {
-                String comentario = tfComentario.getText().trim();
-                telefonoDAO.insertar(imei, model);
-                for (int i = 0; i < checkboxes.size(); i++) {
-                    if (checkboxes.get(i).isSelected())
-                        reparacionDAO.insertarAsignacion(imei, tecnicosModal.get(i).getIdTec(),
-                                comentario.isEmpty() ? null : comentario);
+                for (EntradaAsignacion e : pila) {
+                    if (!e.asignada) continue;
+                    List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
+                    telefonoDAO.insertar(e.imei, e.modeloCode);
+                    for (Tecnico t : e.tecnicos) {
+                        if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
+                        reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
+                                e.comentario.isEmpty() ? null : e.comentario);
+                    }
                 }
-                cargar();
-                // Feedback visual y reset del formulario
-                btnConfirmar.setText("✓ Asignado");
-                btnConfirmar.setDisable(true);
-                new javafx.animation.Timeline(
-                    new javafx.animation.KeyFrame(javafx.util.Duration.millis(1200), e2 -> {
-                        btnConfirmar.setText("Asignar reparación");
-                    })
-                ).play();
-                tfImei.clear();
-                actualizandoModelo[0] = true;
-                tfModelo.clear();
-                modeloSel[0] = null;
-                modelosFiltrados.setPredicate(s -> true);
-                actualizandoModelo[0] = false;
-                checkboxes.forEach(cb -> { cb.setSelected(false); cb.setDisable(false); });
-                tfComentario.clear();
-                validar.run();
-                javafx.application.Platform.runLater(tfImei::requestFocus);
-            } catch (SQLException ex) {
-                mostrarError(ex);
-            }
+            } catch (SQLException ex) { mostrarError(ex); return; }
+            ventana.close();
+            cargar();
+            if (!conflictos.isEmpty())
+                new Alert(Alert.AlertType.WARNING, "Algunas asignaciones no se crearon:\n\n" + String.join("\n", conflictos)).showAndWait();
+        });
+
+        ventana.setOnCloseRequest(ev -> {
+            if (pila.isEmpty()) return;
+            ev.consume();
+            ConfirmDialog.mostrar("Descartar", "Se descartarán los " + pila.size() + " IMEIs de la pila.",
+                    "Descartar", ventana::close);
         });
 
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
-        javafx.application.Platform.runLater(tfImei::requestFocus);
+        renderPila[0].run();
+        javafx.application.Platform.runLater(tfScan::requestFocus);
         ventana.showAndWait();
     }
 
