@@ -196,9 +196,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void navegarAPedidosDeComponente(Componente comp) {
         mostrarTabPedidos();
-        // Activar solo pendiente + parcial (los que forman "en camino")
+        // Activar pendiente + en camino + parcial (el pipeline activo del componente)
         cbsEstado.forEach(cb -> cb.setSelected(
-                cb.getText().equals("en camino") || cb.getText().equals("parcial")));
+                cb.getText().equals("pendiente") || cb.getText().equals("en camino") || cb.getText().equals("parcial")));
         // Rellenar buscador con el nombre del componente
         txtBuscadorPedidos.setText(comp.getTipo());
         // Seleccionar y hacer scroll al primer pedido activo del componente
@@ -521,10 +521,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void cargarChartSku(Componente c) {
-        int pendiente = 0;
+        int enCamino = 0;
         if (com.reparaciones.Sesion.esAdminOSuperTecnico()) {
             try {
-                pendiente = compraDAO.getCantidadPendientePorComponente(c.getIdCom());
+                enCamino = compraDAO.getCantidadEnCaminoPorComponente(c.getIdCom());
             } catch (SQLException e) {
                 mostrarError(e);
                 return;
@@ -536,9 +536,9 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
         javafx.scene.chart.XYChart.Series<String, Number> serie = new javafx.scene.chart.XYChart.Series<>();
         serie.getData().add(new javafx.scene.chart.XYChart.Data<>("Stock", c.getStock()));
-        serie.getData().add(new javafx.scene.chart.XYChart.Data<>("Pedido", pendiente));
+        serie.getData().add(new javafx.scene.chart.XYChart.Data<>("Pedido", enCamino));
 
-        int maxVal = Math.max(c.getStock(), pendiente);
+        int maxVal = Math.max(c.getStock(), enCamino);
         chartSkuY.setAutoRanging(false);
         chartSkuY.setLowerBound(0);
         chartSkuY.setUpperBound(maxVal == 0 ? 1 : maxVal);
@@ -844,6 +844,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 String sep = com.reparaciones.utils.Colores.FILA_SEP;
                 String barraIzq = "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " ";
                 setStyle(switch (item.getEstado()) {
+                    case pendiente -> barraIzq + "#C8961E;";   // ámbar: anotado, sin pedir
                     case en_camino -> item.isEsUrgente()
                             ? barraIzq + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";"
                             : "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " transparent;";
@@ -878,6 +879,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 boolean cancelado = p.getEstado() != Estado.en_camino && p.getEstado() != Estado.parcial;
                 String bg, txt;
                 switch (p.getEstado()) {
+                    case pendiente -> { bg = "#FFF3D6"; txt = "#B26A00"; }
                     case en_camino -> { bg = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BG  : "#E8EAF0";
                                         txt = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD : "#586376"; }
                     case recibido  -> { bg = com.reparaciones.utils.Colores.FILA_RECIBIDO_BG;  txt = com.reparaciones.utils.Colores.FILA_RECIBIDO_BRD; }
@@ -916,7 +918,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 return coincideEstado && coincideProveedor && coincideTexto && coincideDesde && coincideHasta;
             });
         };
-        for (String estado : new String[]{"en camino", "parcial", "recibido", "cancelado"}) {
+        for (String estado : new String[]{"pendiente", "en camino", "parcial", "recibido", "cancelado"}) {
             CheckBox cb = new CheckBox(estado);
             cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
             cb.selectedProperty().addListener((obs, o, n) -> aplicarFiltroPedidos.run());
@@ -947,6 +949,15 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         ctx.getItems().clear();
         if (sel == null) return;
         switch (sel.getEstado()) {
+            case pendiente -> {
+                MenuItem confirmar = new MenuItem("Confirmar pedido");
+                MenuItem editar    = new MenuItem("Editar");
+                MenuItem borrar    = new MenuItem("Borrar");
+                confirmar.setOnAction(e -> confirmarPedido());
+                editar   .setOnAction(e -> editarPedido());
+                borrar   .setOnAction(e -> borrarPedido());
+                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), editar, borrar);
+            }
             case en_camino -> {
                 MenuItem confirmar = new MenuItem("Confirmar recibido");
                 MenuItem parcial   = new MenuItem("Recepción parcial");
@@ -1112,6 +1123,34 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 () -> {
                     try {
                         compraDAO.cancelar(sel);
+                        cargarPedidos();
+                    } catch (com.reparaciones.utils.StaleDataException e) {
+                        mostrarConflicto(); cargarPedidos();
+                    } catch (SQLException e) { mostrarError(e); }
+                });
+    }
+
+    @FXML private void confirmarPedido() {
+        CompraComponente sel = tablaPedidos.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            compraDAO.confirmar(sel);
+            cargarPedidos();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarPedidos();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    @FXML private void borrarPedido() {
+        CompraComponente sel = tablaPedidos.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        ConfirmDialog.mostrar(
+                "Borrar pedido",
+                "¿Borrar el pedido pendiente #" + sel.getIdCompra() + " de " + sel.getTipoComponente() + "?",
+                "Borrar",
+                () -> {
+                    try {
+                        compraDAO.borrar(sel);
                         cargarPedidos();
                     } catch (com.reparaciones.utils.StaleDataException e) {
                         mostrarConflicto(); cargarPedidos();

@@ -30,24 +30,24 @@ public class CompraComponenteDAO {
     }
 
     /**
-     * Devuelve los pedidos en estado {@code pendiente}.
+     * Devuelve los pedidos en estado {@code en_camino}.
      *
-     * @return lista de pedidos pendientes (urgentes primero, luego por fecha ascendente)
+     * @return lista de pedidos en camino (urgentes primero, luego por fecha ascendente)
      * @throws SQLException si falla la llamada al servidor
      */
-    public List<CompraComponente> getPendientes() throws SQLException {
-        return ApiClient.getList("/api/compras/pendientes", CompraComponente.class);
+    public List<CompraComponente> getEnCamino() throws SQLException {
+        return ApiClient.getList("/api/compras/en-camino", CompraComponente.class);
     }
 
     /**
-     * Suma las unidades pendientes de recibir para un componente concreto.
+     * Suma las unidades en camino (estados {@code en_camino}/{@code parcial}) de un componente.
      *
      * @param idCom ID del componente
-     * @return total de unidades en estado {@code pendiente} para este componente
+     * @return total de unidades en camino para este componente
      * @throws SQLException si falla la llamada al servidor
      */
-    public int getCantidadPendientePorComponente(int idCom) throws SQLException {
-        return ApiClient.getInt("/api/compras/cantidad-pendiente/" + idCom);
+    public int getCantidadEnCaminoPorComponente(int idCom) throws SQLException {
+        return ApiClient.getInt("/api/compras/cantidad-en-camino/" + idCom);
     }
 
     /**
@@ -155,7 +155,7 @@ public class CompraComponenteDAO {
     }
 
     /**
-     * Cancela un pedido en estado {@code pendiente}.
+     * Cancela un pedido en estado {@code en_camino}.
      *
      * @param pedido pedido a cancelar
      * @throws SQLException       si falla la llamada al servidor
@@ -167,7 +167,30 @@ public class CompraComponenteDAO {
     }
 
     /**
-     * Revierte un pedido {@code recibido} a {@code pendiente} y descuenta el stock añadido.
+     * Confirma un pedido {@code pendiente}: pasa a {@code en_camino}.
+     *
+     * @param pedido pedido pendiente a confirmar
+     * @throws SQLException       si falla la llamada al servidor
+     * @throws StaleDataException si otro usuario modificó el pedido antes que este
+     */
+    public void confirmar(CompraComponente pedido) throws SQLException, StaleDataException {
+        ApiClient.patch("/api/compras/" + pedido.getIdCompra() + "/confirmar",
+                Map.of("updatedAt", pedido.getUpdatedAt()));
+    }
+
+    /**
+     * Borra un pedido en estado {@code pendiente}.
+     *
+     * @param pedido pedido pendiente a borrar
+     * @throws SQLException       si falla la llamada al servidor
+     * @throws StaleDataException si el pedido ya no está pendiente
+     */
+    public void borrar(CompraComponente pedido) throws SQLException, StaleDataException {
+        ApiClient.delete("/api/compras/" + pedido.getIdCompra());
+    }
+
+    /**
+     * Revierte un pedido {@code recibido} a {@code en_camino} y descuenta el stock añadido.
      * El servidor rechaza la operación si el stock actual es insuficiente.
      *
      * @param pedido pedido a revertir
