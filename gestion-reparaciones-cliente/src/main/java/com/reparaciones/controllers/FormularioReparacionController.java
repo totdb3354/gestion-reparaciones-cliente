@@ -201,10 +201,11 @@ public class FormularioReparacionController {
                                         .findFirst()
                                         .ifPresent(fila -> fila.aplicarBorrador(f));
                             }
-                            // TODO task 7: otrasAcciones.aplicarAcciones(b.otros)
+                            if (otrasAcciones != null) otrasAcciones.aplicarAcciones(b.otros);
                         } finally {
                             recuperandoBorrador = false;
                         }
+                        verificarFilasGuardadasBorradas(b);
                         actualizarBoton();
                         mostrarIndicadorBorrador();
                     }
@@ -349,11 +350,13 @@ public class FormularioReparacionController {
                 if (entry.getKey().equals("otro")) {
                     otrasAcciones = new OtrasAccionesUI(entry.getValue(), imgBorrar);
                     otrasAcciones.setOnCambio(this::actualizarBoton);
+                    otrasAcciones.setGuardador(this::guardarAccionOtroIndividual);
                     contenedorOtros.getChildren().add(otrasAcciones.getRoot());
                     continue;
                 }
                 FilaUI fila = new FilaUI(entry.getKey(), entry.getValue(), imgBorrar, imgEditar);
                 fila.setOnCambio(this::actualizarBoton);
+                fila.setOnGuardarFila(() -> guardarFilaIndividual(fila));
                 filasUI.add(fila);
                 if (entry.getKey().equals("g") || entry.getKey().equals("mc"))
                     vidrioMarco.add(fila);   // Glass y Marco van al final, tras un delimitador
@@ -471,7 +474,7 @@ public class FormularioReparacionController {
                     .filter(f -> !f.isModoEdicion()).anyMatch(FilaUI::isActiva);
             habilitado = !filaEditadaInvalida && (cambioEnEdicion || filasNuevas);
         } else {
-            boolean activa = filasUI.stream().anyMatch(FilaUI::isActiva)
+            boolean activa = filasUI.stream().anyMatch(f -> !f.isGuardada() && f.isActiva())
                     || (otrasAcciones != null && otrasAcciones.hayAccion());
             boolean solicitudCancelada = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
@@ -491,7 +494,7 @@ public class FormularioReparacionController {
             com.reparaciones.models.BorradorContenido.Fila f = fila.capturarEnBorrador();
             if (f != null) b.filas.add(f);
         }
-        if (otrasAcciones != null) b.otros = new java.util.ArrayList<>(); // TODO task 6/7: otrasAcciones.capturarAcciones()
+        if (otrasAcciones != null) b.otros = otrasAcciones.capturarAcciones();
         return b;
     }
 
@@ -520,6 +523,81 @@ public class FormularioReparacionController {
         }
     }
 
+    private void verificarFilasGuardadasBorradas(com.reparaciones.models.BorradorContenido b) {
+        boolean hayGuardadas = b.filas.stream().anyMatch(f -> f.guardada)
+                || b.otros.stream().anyMatch(o -> o.guardada);
+        if (!hayGuardadas) return;
+        try {
+            Set<String> idsExistentes = reparacionDAO.getByImei(imei).stream()
+                    .map(com.reparaciones.models.Reparacion::getIdRep)
+                    .collect(Collectors.toSet());
+            boolean cambio = false;
+            for (FilaUI fila : filasUI) {
+                if (fila.isGuardada() && !idsExistentes.contains(fila.getIdRepGenerado())) {
+                    fila.desbloquearTrasEliminacion();
+                    cambio = true;
+                }
+            }
+            if (otrasAcciones != null && otrasAcciones.desbloquearEliminadas(idsExistentes)) {
+                cambio = true;
+            }
+            if (cambio) guardarBorradorAhora();
+        } catch (SQLException ex) {
+            // verificación fallida: las filas se mantienen bloqueadas, se reintenta al reabrir
+        }
+    }
+
+    private void guardarFilaIndividual(FilaUI fila) {
+        fila.setGuardandoEnCurso(true);
+        List<FilaReparacion> payload = new ArrayList<>();
+        boolean esSolicitudNueva = fila.isSolicitud() && fila.isSolicitudNueva();
+        boolean tieneUso = fila.getCantidad() > 0 || fila.isReutilizado();
+        if (esSolicitudNueva && tieneUso) {
+            payload.add(new FilaReparacion(fila.getIdComSeleccionado(), fila.getCantidad(),
+                    fila.isReutilizado(), fila.getObservacion(), fila.getPrefijo(), false, null, null));
+            payload.add(new FilaReparacion(fila.getIdComSeleccionado(), 1, false, null,
+                    fila.getPrefijo(), true, fila.getDescripcionSolicitud(), null));
+        } else {
+            payload.add(new FilaReparacion(fila.getIdComSeleccionado(), fila.getCantidad(),
+                    fila.isReutilizado(), fila.getObservacion(), fila.getPrefijo(),
+                    esSolicitudNueva, fila.getDescripcionSolicitud(), null));
+        }
+        try {
+            String idRep = reparacionDAO.guardarFilaIndividual(
+                    payload, imei, Sesion.getIdTec(), idRepAnterior, idAsignacion);
+            String fecha = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"));
+            fila.aplicarGuardada(idRep, fecha);
+            guardarBorradorAhora();
+            actualizarBoton();
+        } catch (StaleDataException ex) {
+            fila.setGuardandoEnCurso(false);
+            new Alert(Alert.AlertType.WARNING,
+                    "No se pudo guardar la fila: " + ex.getMessage()).showAndWait();
+        } catch (SQLException ex) {
+            fila.setGuardandoEnCurso(false);
+            Alertas.mostrarError("No se pudo guardar la fila: " + ex.getMessage());
+        }
+    }
+
+    private String guardarAccionOtroIndividual(String descripcion) {
+        if (otrasAcciones == null || otrasAcciones.getIdComOtro() == -1) return null;
+        try {
+            FilaReparacion fila = new FilaReparacion(
+                    otrasAcciones.getIdComOtro(), 0, false, descripcion, "otro", false, null, null);
+            String idRep = reparacionDAO.guardarFilaIndividual(
+                    List.of(fila), imei, Sesion.getIdTec(), idRepAnterior, idAsignacion);
+            guardarBorradorAhora();
+            return idRep;
+        } catch (StaleDataException ex) {
+            new Alert(Alert.AlertType.WARNING,
+                    "No se pudo guardar la acción: " + ex.getMessage()).showAndWait();
+            return null;
+        } catch (SQLException ex) {
+            Alertas.mostrarError("No se pudo guardar la acción: " + ex.getMessage());
+            return null;
+        }
+    }
     /** Tras un guardado real: detiene el debounce, borra el borrador y bloquea su re-creación al cerrar. */
     private void descartarBorradorTrasGuardar() {
         borradorDescartado = true;
