@@ -405,6 +405,29 @@ public class ReparacionDAO {
     }
 
     /**
+     * Finaliza una fila individual de reparación dentro de una asignación.
+     *
+     * @param filas         lista con la(s) fila(s) a finalizar
+     * @param imei          IMEI del dispositivo
+     * @param idTec         ID del técnico que finaliza
+     * @param idRepAnterior ID de la reparación anterior si es reincidencia, o {@code null}
+     * @param idAsignacion  ID de la asignación origen ({@code A*})
+     * @return ID de la reparación creada con formato {@code R[yyyyMMdd]_N}, o {@code null} si falla
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public String guardarFilaIndividual(List<FilaReparacion> filas, String imei, int idTec,
+            String idRepAnterior, String idAsignacion) throws SQLException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("filas",         filas);
+        body.put("imei",          imei);
+        body.put("idTec",         idTec);
+        body.put("idRepAnterior", idRepAnterior);
+        JsonObject resp = ApiClient.post(
+                "/api/reparaciones/" + idAsignacion + "/filas", body, JsonObject.class);
+        return resp != null ? resp.get("value").getAsString() : null;
+    }
+
+    /**
      * Cancela la incidencia activa (no resuelta) de un IMEI.
      *
      * @param imei IMEI del dispositivo
