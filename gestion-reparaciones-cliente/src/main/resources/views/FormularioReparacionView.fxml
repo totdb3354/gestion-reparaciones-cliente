@@ -69,7 +69,7 @@
           spacing="8" alignment="CENTER_RIGHT"
           visible="false" managed="false">
         <Button fx:id="btnGuardar"
-                text="Guardar reparación"
+                text="Terminar asignación"
                 onAction="#guardar"
                 styleClass="btn-primary"/>
     </HBox>

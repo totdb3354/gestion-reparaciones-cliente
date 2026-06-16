@@ -617,7 +617,7 @@ public class FormularioReparacionController {
     private void activarConfirmacion() {
         esperandoConfirmacion = true;
         btnGuardar.setDisable(false);
-        btnGuardar.setText("✓  Confirmar guardar");
+        btnGuardar.setText("✓  Confirmar terminar");
     }
 
     private void ejecutarGuardar() {
@@ -941,6 +941,7 @@ public class FormularioReparacionController {
         private String  idRepGenerado = null;
         private String  fechaGuardado = null;
         private boolean recibidoPendienteUso = false;
+        private boolean esperandoConfGuardar = false;
         private Runnable onGuardarFila = null;
 
         // ── Agotado ───────────────────────────────────────────────────────────
@@ -1966,6 +1967,16 @@ public class FormularioReparacionController {
             this.onCambio = r;
         }
 
+        private void manejarClicGuardarFila() {
+            if (!esperandoConfGuardar) {
+                esperandoConfGuardar = true;
+                btnSolicitud.setText("✓ Confirmar");
+            } else {
+                esperandoConfGuardar = false;
+                if (onGuardarFila != null) onGuardarFila.run();
+            }
+        }
+
         void setOnGuardarFila(Runnable r) { this.onGuardarFila = r; }
         boolean isGuardada() { return guardada; }
         String getIdRepGenerado() { return idRepGenerado; }
@@ -2027,13 +2038,15 @@ public class FormularioReparacionController {
             boolean activa = isActiva() && !esAgotadoNuevo();
             if (activa) {
                 recibidoPendienteUso = false;
+                esperandoConfGuardar = false;
                 btnSolicitud.setText("✓ Guardar fila");
                 btnSolicitud.setStyle(STYLE_BTN_GUARDAR_FILA);
                 btnSolicitud.setDisable(false);
-                btnSolicitud.setOnAction(e -> { if (onGuardarFila != null) onGuardarFila.run(); });
+                btnSolicitud.setOnAction(e -> manejarClicGuardarFila());
                 btnSolicitud.setVisible(true);
                 btnSolicitud.setManaged(true);
             } else if (!recibidoPendienteUso) {
+                esperandoConfGuardar = false;
                 btnSolicitud.setVisible(false);
                 btnSolicitud.setManaged(false);
             }
@@ -2128,7 +2141,13 @@ public class FormularioReparacionController {
                 actualizar();
             });
             la.tf.textProperty().addListener((o, a, b) -> {
-                if (!la.guardada) la.btnGuardar.setDisable(b == null || b.trim().isEmpty());
+                if (!la.guardada) {
+                    la.btnGuardar.setDisable(b == null || b.trim().isEmpty());
+                    if (la.esperandoConf) {
+                        la.esperandoConf = false;
+                        la.btnGuardar.setText("✓ Guardar");
+                    }
+                }
                 actualizar();
             });
             la.btnGuardar.setOnAction(e -> guardarLinea(la));
@@ -2143,6 +2162,12 @@ public class FormularioReparacionController {
             if (guardador == null) return;
             String texto = la.tf.getText() == null ? "" : la.tf.getText().trim();
             if (texto.isEmpty()) return;
+            if (!la.esperandoConf) {
+                la.esperandoConf = true;
+                la.btnGuardar.setText("✓ Confirmar");
+                return;
+            }
+            la.esperandoConf = false;
             la.btnGuardar.setDisable(true);
             String idRep = guardador.apply(texto);
             if (idRep == null) {
@@ -2267,6 +2292,7 @@ public class FormularioReparacionController {
             Button btnGuardar;
             Label lblGuardada;
             boolean guardada = false;
+            boolean esperandoConf = false;
             String idRepGenerado;
             String fechaGuardado;
         }
