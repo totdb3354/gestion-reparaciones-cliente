@@ -1634,6 +1634,8 @@ public class FormularioReparacionController {
                 com.reparaciones.models.BorradorContenido.Fila f = new com.reparaciones.models.BorradorContenido.Fila();
                 f.prefijo = prefijo;
                 f.idCom = getIdComSeleccionado();
+                f.cantidad = cantidad;
+                f.reutilizado = isReutilizado();
                 f.guardada = true;
                 f.idRepGenerado = idRepGenerado;
                 f.fechaGuardado = fechaGuardado;
@@ -1661,6 +1663,8 @@ public class FormularioReparacionController {
             if (solicitudActiva) return;   // fila ya gestionada por una solicitud de BD: ignorar borrador
             if (f.guardada) {
                 if (f.idCom > 0) preseleccionarSku(f.idCom);
+                if (f.cantidad > 0) { cantidad = f.cantidad; actualizarContador(); }
+                if (f.reutilizado) chkReutilizado.setSelected(true);
                 aplicarGuardada(f.idRepGenerado != null ? f.idRepGenerado : "?",
                                 f.fechaGuardado != null ? f.fechaGuardado : "");
                 return;
