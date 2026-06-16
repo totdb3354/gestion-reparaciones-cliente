@@ -243,7 +243,7 @@ public class HistorialPulidoController {
     private void actualizarContadorPulidos() {
         if (lblContadorPulidos == null || datosFiltrados == null) return;
         int n = datosFiltrados.size();
-        lblContadorPulidos.setText((n > 999 ? "999+" : String.valueOf(n)) + (n == 1 ? " pulido" : " pulidos"));
+        lblContadorPulidos.setText(n + (n == 1 ? " pulido" : " pulidos"));
     }
 
     @FXML
