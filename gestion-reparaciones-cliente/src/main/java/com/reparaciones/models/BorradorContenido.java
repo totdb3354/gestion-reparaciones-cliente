@@ -8,7 +8,7 @@ public class BorradorContenido {
 
     public String modelo;                 // valor de cbFiltroModelo, o null
     public List<Fila> filas = new ArrayList<>();
-    public List<String> otros = new ArrayList<>();   // descripciones de "Otras acciones"
+    public List<OtraAccion> otros = new ArrayList<>();
 
     /** Inputs no guardados de una fila de componente. */
     public static class Fila {
@@ -21,5 +21,16 @@ public class BorradorContenido {
         public String descripcionSolicitud;
         public boolean agotadoConfirmado; // agotado confirmado en sesión, sin guardar
         public String descripcionAgotado;
+        // Guardado individual:
+        public boolean guardada;
+        public String  idRepGenerado;
+        public String  fechaGuardado;
+    }
+
+    public static class OtraAccion {
+        public String descripcion;
+        public boolean guardada;
+        public String  idRepGenerado;
+        public String  fechaGuardado;
     }
 }

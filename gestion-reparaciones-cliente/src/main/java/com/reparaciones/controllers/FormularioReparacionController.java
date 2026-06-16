@@ -200,7 +200,7 @@ public class FormularioReparacionController {
                                         .findFirst()
                                         .ifPresent(fila -> fila.aplicarBorrador(f));
                             }
-                            if (otrasAcciones != null) otrasAcciones.aplicarDescripciones(b.otros);
+                            // TODO task 7: otrasAcciones.aplicarAcciones(b.otros)
                         } finally {
                             recuperandoBorrador = false;
                         }
@@ -490,7 +490,7 @@ public class FormularioReparacionController {
             com.reparaciones.models.BorradorContenido.Fila f = fila.capturarEnBorrador();
             if (f != null) b.filas.add(f);
         }
-        if (otrasAcciones != null) b.otros = new java.util.ArrayList<>(otrasAcciones.getDescripciones());
+        if (otrasAcciones != null) b.otros = new java.util.ArrayList<>(); // TODO task 6/7: otrasAcciones.capturarAcciones()
         return b;
     }
 
