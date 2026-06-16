@@ -9,6 +9,7 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -52,5 +53,22 @@ public class LogController {
     @FXML
     private void cerrar() {
         ((Stage) tablaLogs.getScene().getWindow()).close();
+    }
+
+    static boolean coincideFiltro(LogActividad log, String texto, LocalDate desde, LocalDate hasta) {
+        boolean coincideTexto = texto == null || texto.isBlank()
+                || contiene(log.getNombreUsuario(), texto)
+                || contiene(log.getAccion(), texto)
+                || contiene(log.getDetalle(), texto);
+
+        LocalDate fecha = log.getFecha() != null ? log.getFecha().toLocalDate() : null;
+        boolean coincideDesde = desde == null || fecha == null || !fecha.isBefore(desde);
+        boolean coincideHasta = hasta == null || fecha == null || !fecha.isAfter(hasta);
+
+        return coincideTexto && coincideDesde && coincideHasta;
+    }
+
+    private static boolean contiene(String campo, String texto) {
+        return campo != null && campo.toLowerCase().contains(texto.toLowerCase().trim());
     }
 }
