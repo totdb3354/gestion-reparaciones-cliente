@@ -31,6 +31,16 @@
     <center>
         <VBox spacing="10" style="-fx-background-color: #EFEFEF;">
             <padding><Insets top="8" right="48" bottom="0" left="48"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <TextField fx:id="txtBuscadorLogs" promptText="Buscar..."
+                           styleClass="buscador" prefWidth="220"/>
+                <Label text="Desde:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
+                <DatePicker fx:id="dpLogsDesde" prefWidth="130"/>
+                <Label text="Hasta:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
+                <DatePicker fx:id="dpLogsHasta" prefWidth="130"/>
+                <Button fx:id="btnLimpiarFiltrosLogs" text="Limpiar filtros"
+                        styleClass="btn-secondary" onAction="#limpiarFiltrosLogs"/>
+            </HBox>
             <TableView fx:id="tablaLogs" VBox.vgrow="ALWAYS" styleClass="tabla-reparaciones"
                        stylesheets="@../styles/app.css">
                 <columns>

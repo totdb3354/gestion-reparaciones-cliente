@@ -12,6 +12,15 @@ public class LogActividad {
 
     public LogActividad() {}
 
+    public LogActividad(int idLog, LocalDateTime fecha, String nombreUsuario,
+                         String accion, String detalle) {
+        this.idLog = idLog;
+        this.fecha = fecha;
+        this.nombreUsuario = nombreUsuario;
+        this.accion = accion;
+        this.detalle = detalle;
+    }
+
     public int           getIdLog()         { return idLog; }
     public LocalDateTime getFecha()         { return fecha; }
     public String        getNombreUsuario() { return nombreUsuario; }
