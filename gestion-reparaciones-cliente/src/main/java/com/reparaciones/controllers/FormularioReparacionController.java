@@ -854,6 +854,13 @@ public class FormularioReparacionController {
         private String descripcionSolicitud = null;
         private Runnable onCambio;
 
+        // ── Guardado individual ──────────────────────────────────────────────
+        private boolean guardada = false;
+        private String  idRepGenerado = null;
+        private String  fechaGuardado = null;
+        private boolean recibidoPendienteUso = false;
+        private Runnable onGuardarFila = null;
+
         // ── Agotado ───────────────────────────────────────────────────────────
         private HBox subFilaAgotado;
         private Label lblSubAgotado;
@@ -1113,6 +1120,7 @@ public class FormularioReparacionController {
         // ── Filtro global de modelo ───────────────────────────────────────────
 
         void aplicarFiltroModelo(String modelo) {
+            if (guardada) return;
             agotadoConfirmado = false;
             descripcionAgotado = null;
             subFilaAgotado.setVisible(false);
@@ -1133,6 +1141,7 @@ public class FormularioReparacionController {
             solicitudFueCancelada = false;
             solicitudNuevaEnEstaSesion = false;
             descripcionSolicitud = null;
+            recibidoPendienteUso = false;
             btnSolicitud.setText("⚠ Solicitud pieza");
             btnSolicitud.setStyle(STYLE_SOL_INACTIVA);
             btnSolicitud.setDisable(false);
@@ -1290,6 +1299,7 @@ public class FormularioReparacionController {
         }
 
         private void notificar() {
+            actualizarBotonGuardarFila();
             if (onCambio != null)
                 onCambio.run();
         }
@@ -1378,6 +1388,8 @@ public class FormularioReparacionController {
                 solicitudNuevaEnEstaSesion = false;
                 descripcionSolicitud = null;
                 btnSolicitud.setDisable(true);
+                btnSolicitud.setVisible(false);
+                btnSolicitud.setManaged(false);
                 actualizarLabelConfirmado(stock);
                 lblSubAgotado.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-font-weight: bold;");
                 btnSubAgotado.setVisible(false); btnSubAgotado.setManaged(false);
@@ -1535,6 +1547,15 @@ public class FormularioReparacionController {
 
         /** Vuelca los inputs no guardados de esta fila al DTO, o null si la fila está vacía. */
         com.reparaciones.models.BorradorContenido.Fila capturarEnBorrador() {
+            if (guardada) {
+                com.reparaciones.models.BorradorContenido.Fila f = new com.reparaciones.models.BorradorContenido.Fila();
+                f.prefijo = prefijo;
+                f.idCom = getIdComSeleccionado();
+                f.guardada = true;
+                f.idRepGenerado = idRepGenerado;
+                f.fechaGuardado = fechaGuardado;
+                return f;
+            }
             boolean vacia = cantidad == 0 && !isReutilizado()
                     && (observacion == null || observacion.isBlank())
                     && !isSolicitudNueva() && !esAgotadoNuevo();
@@ -1555,6 +1576,12 @@ public class FormularioReparacionController {
         /** Restaura un borrador sobre esta fila (solo si no está ya bloqueada por una solicitud de BD). */
         void aplicarBorrador(com.reparaciones.models.BorradorContenido.Fila f) {
             if (solicitudActiva) return;   // fila ya gestionada por una solicitud de BD: ignorar borrador
+            if (f.guardada) {
+                if (f.idCom > 0) preseleccionarSku(f.idCom);
+                aplicarGuardada(f.idRepGenerado != null ? f.idRepGenerado : "?",
+                                f.fechaGuardado != null ? f.fechaGuardado : "");
+                return;
+            }
             if (f.idCom > 0) preseleccionarSku(f.idCom);
 
             // Estados mutuamente excluyentes: solicitud nueva, agotado confirmado, o normal.
@@ -1577,6 +1604,8 @@ public class FormularioReparacionController {
                 cbSku.setDisable(true);
                 btnObservacion.setDisable(true);
                 btnSolicitud.setDisable(true);
+                btnSolicitud.setVisible(false);
+                btnSolicitud.setManaged(false);
                 actualizarLabelConfirmado(stock);
                 lblSubAgotado.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-font-weight: bold;");
                 btnSubAgotado.setVisible(false); btnSubAgotado.setManaged(false);
@@ -1698,6 +1727,7 @@ public class FormularioReparacionController {
                         // Pieza llegó al stock — fila desbloqueada, badge verde informativo
                         solicitudActiva = false;
                         descripcionSolicitud = null;
+                        recibidoPendienteUso = true;
                         btnSolicitud.setText("✓ Recibido");
                         btnSolicitud.setStyle(STYLE_SOL_RECIBIDA);
                         btnSolicitud.setDisable(true);
@@ -1852,6 +1882,79 @@ public class FormularioReparacionController {
 
         void setOnCambio(Runnable r) {
             this.onCambio = r;
+        }
+
+        void setOnGuardarFila(Runnable r) { this.onGuardarFila = r; }
+        boolean isGuardada() { return guardada; }
+        String getIdRepGenerado() { return idRepGenerado; }
+
+        void setGuardandoEnCurso(boolean enCurso) {
+            btnSolicitud.setDisable(enCurso);
+        }
+
+        /** Bloquea la fila permanentemente con el badge "✓ Guardada [fecha]". */
+        void aplicarGuardada(String idRep, String fecha) {
+            guardada = true;
+            idRepGenerado = idRep;
+            fechaGuardado = fecha;
+            recibidoPendienteUso = false;
+            cbSku.setDisable(true);
+            btnMas.setDisable(true);
+            btnMenos.setDisable(true);
+            chkReutilizado.setDisable(true);
+            btnObservacion.setDisable(true);
+            btnSolicitud.setText("✓ Guardada " + fecha);
+            btnSolicitud.setStyle(STYLE_SOL_RECIBIDA);
+            btnSolicitud.setDisable(true);
+            btnSolicitud.setOnAction(null);
+            btnSolicitud.setVisible(true);
+            btnSolicitud.setManaged(true);
+            root.setStyle("-fx-background-color: #F1F8F1; " +
+                    "-fx-border-color: transparent transparent #C5E1C5 transparent;" +
+                    "-fx-border-width: 0 0 1 0;");
+        }
+
+        /** Restaura la fila a estado editable cuando la R* guardada fue borrada por SUPERTECNICO. */
+        void desbloquearTrasEliminacion() {
+            guardada = false;
+            idRepGenerado = null;
+            fechaGuardado = null;
+            cantidad = 0;
+            chkReutilizado.setSelected(false);
+            observacion = null;
+            lblObservacion.setText("");
+            btnObservacion.setVisible(true);  btnObservacion.setManaged(true);
+            lblObservacion.setVisible(false); lblObservacion.setManaged(false);
+            btnBorrarObs.setVisible(false);   btnBorrarObs.setManaged(false);
+            cbSku.setDisable(false);
+            Componente sel = cbSku.getValue();
+            btnMas.setDisable(!prefijo.equals("otro") && (sel == null || sel.getStock() <= 0));
+            chkReutilizado.setDisable(false);
+            btnObservacion.setDisable(false);
+            btnSolicitud.setOnAction(e -> abrirSolicitud());
+            btnSolicitud.setVisible(false); btnSolicitud.setManaged(false);
+            root.setStyle("-fx-background-color: #F3F3F3; " +
+                    "-fx-border-color: transparent transparent #E0E0E0 transparent;" +
+                    "-fx-border-width: 0 0 1 0;");
+            actualizarContador();
+            notificar();
+        }
+
+        void actualizarBotonGuardarFila() {
+            if (guardada || modoEdicion || solicitudActiva) return;
+            boolean activa = isActiva() && !esAgotadoNuevo();
+            if (activa) {
+                recibidoPendienteUso = false;
+                btnSolicitud.setText("✓ Guardar fila");
+                btnSolicitud.setStyle(STYLE_SOL_RECIBIDA);
+                btnSolicitud.setDisable(false);
+                btnSolicitud.setOnAction(e -> { if (onGuardarFila != null) onGuardarFila.run(); });
+                btnSolicitud.setVisible(true);
+                btnSolicitud.setManaged(true);
+            } else if (!recibidoPendienteUso) {
+                btnSolicitud.setVisible(false);
+                btnSolicitud.setManaged(false);
+            }
         }
     }
 
