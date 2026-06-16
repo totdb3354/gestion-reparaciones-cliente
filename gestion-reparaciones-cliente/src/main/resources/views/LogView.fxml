@@ -34,6 +34,8 @@
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <TextField fx:id="txtBuscadorLogs" promptText="Buscar..."
                            styleClass="buscador" prefWidth="220"/>
+                <TextField fx:id="txtFiltroTecnico" promptText="Técnico..."
+                           prefWidth="150"/>
                 <Label text="Desde:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
                 <DatePicker fx:id="dpLogsDesde" prefWidth="130"/>
                 <Label text="Hasta:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
