@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -615,7 +616,7 @@ public class FormularioReparacionController {
         // Acciones "otro": una FilaReparacion por descripción, cantidad 0 (stock neutro)
         if (otrasAcciones != null && otrasAcciones.getIdComOtro() != -1) {
             int otroIdCom = otrasAcciones.getIdComOtro();
-            for (String desc : otrasAcciones.getDescripciones()) {
+            for (String desc : otrasAcciones.getDescripcionesPendientes()) {
                 filasActivas.add(new FilaReparacion(otroIdCom, 0, false, desc, "otro", false, null, null));
             }
         }
@@ -1959,7 +1960,7 @@ public class FormularioReparacionController {
     }
 
     // ─── OtrasAccionesUI ──────────────────────────────────────────────────────
-    /** Sección de "Otras acciones": varias acciones de texto libre (sin pieza/stock).
+    /** Sección de "Otras acciones": lista de acciones de texto libre con guardado individual.
      *  Cada acción se guarda como un R* con el componente otroi<modelo> y cantidad 0. */
     static class OtrasAccionesUI {
         private final VBox root;
@@ -1967,9 +1968,11 @@ public class FormularioReparacionController {
         private final Label badge = new Label("0");
         private final List<Componente> otroComponentes;
         private final Image imgBorrar;
-        private Componente otroSel = null;   // otroi<modelo> del modelo actual
+        private Componente otroSel = null;
         private Runnable onCambio;
         private Button btnAdd;
+        private final List<LineaAccion> lineas = new ArrayList<>();
+        private Function<String, String> guardador;
 
         OtrasAccionesUI(List<Componente> otroComponentes, Image imgBorrar) {
             this.otroComponentes = otroComponentes;
@@ -2003,6 +2006,9 @@ public class FormularioReparacionController {
             root.setVisible(false); root.setManaged(false);
         }
 
+        /** Registra el callback del controlador que persiste una acción y devuelve su idRep. */
+        void setGuardador(Function<String, String> g) { this.guardador = g; }
+
         /** Selecciona el otroi<modelo> según el modelo elegido; muestra la sección si existe. */
         void setModelo(String modelo) {
             otroSel = (modelo == null) ? null : otroComponentes.stream()
@@ -2013,67 +2019,175 @@ public class FormularioReparacionController {
         }
 
         private void agregarLinea(String texto) {
-            if (hayLineaVacia()) return;   // solo se añade si las anteriores están escritas
-            TextField tf = new TextField(texto);
-            tf.setPromptText("Describe la acción");
-            tf.setStyle("-fx-font-size: 12px; -fx-background-color: white;" +
+            if (hayLineaVacia()) return;
+            LineaAccion la = new LineaAccion();
+            la.tf = new TextField(texto);
+            la.tf.setPromptText("Describe la acción");
+            la.tf.setStyle("-fx-font-size: 12px; -fx-background-color: white;" +
                     "-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-background-radius: 4;");
-            HBox.setHgrow(tf, Priority.ALWAYS);
+            HBox.setHgrow(la.tf, Priority.ALWAYS);
+
             ImageView iv = new ImageView(imgBorrar);
             iv.setFitWidth(18); iv.setFitHeight(18); iv.setPreserveRatio(true);
-            Button btnDel = new Button();
-            btnDel.setGraphic(iv);
-            btnDel.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
-            HBox linea = new HBox(8, tf, btnDel);
-            linea.setAlignment(Pos.CENTER_LEFT);
-            btnDel.setOnAction(e -> { listaLineas.getChildren().remove(linea); actualizar(); });
-            tf.textProperty().addListener((o, a, b) -> actualizar());
-            listaLineas.getChildren().add(linea);
-            tf.requestFocus();
+            la.btnDel = new Button();
+            la.btnDel.setGraphic(iv);
+            la.btnDel.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
+
+            la.btnGuardar = new Button("✓ Guardar");
+            la.btnGuardar.setStyle("-fx-background-color: #2E7D32; -fx-text-fill: white;" +
+                    "-fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10 4 10;");
+            la.btnGuardar.setDisable(texto.trim().isEmpty());
+
+            la.row = new HBox(8, la.tf, la.btnGuardar, la.btnDel);
+            la.row.setAlignment(Pos.CENTER_LEFT);
+
+            la.btnDel.setOnAction(e -> {
+                listaLineas.getChildren().remove(la.row);
+                lineas.remove(la);
+                actualizar();
+            });
+            la.tf.textProperty().addListener((o, a, b) -> {
+                if (!la.guardada) la.btnGuardar.setDisable(b == null || b.trim().isEmpty());
+                actualizar();
+            });
+            la.btnGuardar.setOnAction(e -> guardarLinea(la));
+
+            lineas.add(la);
+            listaLineas.getChildren().add(la.row);
+            la.tf.requestFocus();
             actualizar();
         }
 
+        private void guardarLinea(LineaAccion la) {
+            if (guardador == null) return;
+            String texto = la.tf.getText() == null ? "" : la.tf.getText().trim();
+            if (texto.isEmpty()) return;
+            la.btnGuardar.setDisable(true);
+            String idRep = guardador.apply(texto);
+            if (idRep == null) {
+                la.btnGuardar.setDisable(false);
+                return;
+            }
+            la.guardada = true;
+            la.idRepGenerado = idRep;
+            la.fechaGuardado = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"));
+            bloquearLinea(la);
+            actualizar();
+        }
+
+        private void bloquearLinea(LineaAccion la) {
+            la.tf.setDisable(true);
+            la.btnGuardar.setVisible(false); la.btnGuardar.setManaged(false);
+            la.btnDel.setVisible(false); la.btnDel.setManaged(false);
+            Label lbl = new Label("✓ Guardada " + la.fechaGuardado);
+            lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-font-weight: bold;" +
+                    "-fx-padding: 0 4 0 4;");
+            la.lblGuardada = lbl;
+            la.row.getChildren().add(lbl);
+        }
+
+        private void desbloquearLinea(LineaAccion la) {
+            la.guardada = false;
+            la.idRepGenerado = null;
+            la.fechaGuardado = null;
+            la.tf.setDisable(false);
+            if (la.lblGuardada != null) {
+                la.row.getChildren().remove(la.lblGuardada);
+                la.lblGuardada = null;
+            }
+            la.btnGuardar.setVisible(true); la.btnGuardar.setManaged(true);
+            la.btnGuardar.setDisable(la.tf.getText() == null || la.tf.getText().trim().isEmpty());
+            la.btnDel.setVisible(true); la.btnDel.setManaged(true);
+        }
+
         private void actualizar() {
-            badge.setText(String.valueOf(getDescripciones().size()));
+            long total = lineas.stream()
+                    .filter(l -> l.guardada || (l.tf.getText() != null && !l.tf.getText().trim().isEmpty()))
+                    .count();
+            badge.setText(String.valueOf(total));
             btnAdd.setDisable(hayLineaVacia());
             if (onCambio != null) onCambio.run();
         }
 
         private boolean hayLineaVacia() {
-            for (javafx.scene.Node n : listaLineas.getChildren()) {
-                if (n instanceof HBox h && !h.getChildren().isEmpty()
-                        && h.getChildren().get(0) instanceof TextField tf) {
-                    if (tf.getText() == null || tf.getText().trim().isEmpty()) return true;
-                }
-            }
-            return false;
+            return lineas.stream().anyMatch(l -> !l.guardada
+                    && (l.tf.getText() == null || l.tf.getText().trim().isEmpty()));
         }
 
-        /** Descripciones no vacías (trim) de las líneas. */
-        List<String> getDescripciones() {
+        /** Descripciones pendientes (no guardadas individualmente) para el guardado final. */
+        List<String> getDescripcionesPendientes() {
             List<String> out = new ArrayList<>();
-            for (javafx.scene.Node n : listaLineas.getChildren()) {
-                if (n instanceof HBox h && !h.getChildren().isEmpty()
-                        && h.getChildren().get(0) instanceof TextField tf) {
-                    String t = tf.getText() == null ? "" : tf.getText().trim();
-                    if (!t.isEmpty()) out.add(t);
-                }
+            for (LineaAccion l : lineas) {
+                if (l.guardada) continue;
+                String t = l.tf.getText() == null ? "" : l.tf.getText().trim();
+                if (!t.isEmpty()) out.add(t);
             }
             return out;
         }
 
-        /** Restaura las descripciones de un borrador como líneas de acción. */
-        void aplicarDescripciones(List<String> descripciones) {
-            if (descripciones == null) return;
-            for (String d : descripciones) {
-                if (d != null && !d.isBlank()) agregarLinea(d.trim());
+        /** Vuelca el estado completo de cada línea (guardada o pendiente) al borrador. */
+        List<com.reparaciones.models.BorradorContenido.OtraAccion> capturarAcciones() {
+            List<com.reparaciones.models.BorradorContenido.OtraAccion> out = new ArrayList<>();
+            for (LineaAccion l : lineas) {
+                String t = l.tf.getText() == null ? "" : l.tf.getText().trim();
+                if (t.isEmpty() && !l.guardada) continue;
+                com.reparaciones.models.BorradorContenido.OtraAccion a =
+                        new com.reparaciones.models.BorradorContenido.OtraAccion();
+                a.descripcion = t;
+                a.guardada = l.guardada;
+                a.idRepGenerado = l.idRepGenerado;
+                a.fechaGuardado = l.fechaGuardado;
+                out.add(a);
             }
+            return out;
+        }
+
+        /** Restaura las acciones de un borrador: guardadas bloqueadas, pendientes editables. */
+        void aplicarAcciones(List<com.reparaciones.models.BorradorContenido.OtraAccion> acciones) {
+            if (acciones == null) return;
+            for (com.reparaciones.models.BorradorContenido.OtraAccion a : acciones) {
+                if (a == null || a.descripcion == null || a.descripcion.isBlank()) continue;
+                agregarLinea(a.descripcion.trim());
+                if (a.guardada) {
+                    LineaAccion la = lineas.get(lineas.size() - 1);
+                    la.guardada = true;
+                    la.idRepGenerado = a.idRepGenerado;
+                    la.fechaGuardado = a.fechaGuardado != null ? a.fechaGuardado : "";
+                    bloquearLinea(la);
+                }
+            }
+            actualizar();
+        }
+
+        /** @return true si alguna línea guardada fue desbloqueada al no existir en BD */
+        boolean desbloquearEliminadas(Set<String> idsExistentes) {
+            boolean cambio = false;
+            for (LineaAccion l : lineas) {
+                if (l.guardada && !idsExistentes.contains(l.idRepGenerado)) {
+                    desbloquearLinea(l);
+                    cambio = true;
+                }
+            }
+            if (cambio) actualizar();
+            return cambio;
         }
 
         int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
-        boolean hayAccion() { return otroSel != null && !getDescripciones().isEmpty(); }
+        boolean hayAccion() { return otroSel != null && !getDescripcionesPendientes().isEmpty(); }
         boolean esOtro(int idCom) { return otroComponentes.stream().anyMatch(c -> c.getIdCom() == idCom); }
         void setOnCambio(Runnable r) { this.onCambio = r; }
         VBox getRoot() { return root; }
+
+        private static class LineaAccion {
+            TextField tf;
+            HBox row;
+            Button btnDel;
+            Button btnGuardar;
+            Label lblGuardada;
+            boolean guardada = false;
+            String idRepGenerado;
+            String fechaGuardado;
+        }
     }
 }
