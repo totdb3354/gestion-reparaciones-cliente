@@ -919,6 +919,9 @@ public class FormularioReparacionController {
         private static final String STYLE_SOL_RECIBIDA =
                 "-fx-background-color: #E8F5E9; -fx-text-fill: #2E7D32;" +
                 "-fx-font-size: 11px; -fx-background-radius: 0; -fx-padding: 4 10 4 10;";
+        private static final String STYLE_BTN_GUARDAR_FILA =
+                "-fx-background-color: #001232; -fx-text-fill: white; -fx-font-weight: bold;" +
+                "-fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10 4 10;";
         private static final String STYLE_SOL_EN_CAMINO =
                 "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;" +
                 "-fx-font-size: 11px; -fx-background-radius: 0; -fx-padding: 4 10 4 10;";
@@ -2025,7 +2028,7 @@ public class FormularioReparacionController {
             if (activa) {
                 recibidoPendienteUso = false;
                 btnSolicitud.setText("✓ Guardar fila");
-                btnSolicitud.setStyle(STYLE_SOL_RECIBIDA);
+                btnSolicitud.setStyle(STYLE_BTN_GUARDAR_FILA);
                 btnSolicitud.setDisable(false);
                 btnSolicitud.setOnAction(e -> { if (onGuardarFila != null) onGuardarFila.run(); });
                 btnSolicitud.setVisible(true);
@@ -2112,7 +2115,7 @@ public class FormularioReparacionController {
             la.btnDel.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
 
             la.btnGuardar = new Button("✓ Guardar");
-            la.btnGuardar.setStyle("-fx-background-color: #2E7D32; -fx-text-fill: white;" +
+            la.btnGuardar.setStyle("-fx-background-color: #001232; -fx-text-fill: white; -fx-font-weight: bold;" +
                     "-fx-font-size: 11px; -fx-cursor: hand; -fx-background-radius: 4; -fx-padding: 4 10 4 10;");
             la.btnGuardar.setDisable(texto.trim().isEmpty());
 
