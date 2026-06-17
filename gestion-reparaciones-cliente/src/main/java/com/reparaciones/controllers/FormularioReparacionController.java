@@ -7,6 +7,7 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.FilaReparacion;
+import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 
 import javafx.application.Platform;
@@ -53,6 +54,8 @@ public class FormularioReparacionController {
     @FXML private Label lblImei;
     @FXML private Label lblIncidencia;
     @FXML private javafx.scene.layout.HBox filaIncidencia;
+    @FXML private javafx.scene.layout.HBox filaConflictoTecnico;
+    @FXML private Label lblConflictoTecnico;
     @FXML private Label lblSeleccionaModelo;
     @FXML private VBox contenedorFilas;
     @FXML private VBox contenedorOtros;
@@ -122,6 +125,26 @@ public class FormularioReparacionController {
         }
 
         lblImei.setText("IMEI: " + imei);
+
+        // Aviso si el mismo IMEI está asignado activamente a otro técnico
+        try {
+            List<ReparacionResumen> otras = reparacionDAO.getAsignacionesPorImei(imei)
+                    .stream()
+                    .filter(a -> !a.getIdRep().equals(idAsignacion))
+                    .collect(Collectors.toList());
+            if (!otras.isEmpty()) {
+                String nombres = otras.stream()
+                        .map(ReparacionResumen::getNombreTecnico)
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+                lblConflictoTecnico.setText("⚠ Este IMEI también está asignado a: " + nombres);
+                filaConflictoTecnico.setVisible(true);
+                filaConflictoTecnico.setManaged(true);
+            }
+        } catch (SQLException e) {
+            // no crítico: el modal sigue funcionando aunque falle esta consulta
+        }
+
         if (this.idRepAnterior != null) {
             lblIncidencia.setText("⚠ Resuelve incidencia: " + this.idRepAnterior);
             filaIncidencia.setVisible(true);
