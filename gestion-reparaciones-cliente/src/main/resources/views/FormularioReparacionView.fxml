@@ -23,6 +23,15 @@
                   style="-fx-font-size: 11px;"/>
     </HBox>
 
+    <!-- Aviso: mismo IMEI asignado a otro técnico -->
+    <HBox alignment="CENTER_LEFT"
+          style="-fx-padding: 5 16 5 16; -fx-background-color: #FFF3E0;"
+          visible="false" managed="false" fx:id="filaConflictoTecnico">
+        <Label fx:id="lblConflictoTecnico"
+               style="-fx-text-fill: #E65100; -fx-font-size: 12px; -fx-font-weight: bold;"
+               wrapText="true" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+    </HBox>
+
     <!-- Fila de incidencia pendiente -->
     <HBox alignment="CENTER_LEFT"
           style="-fx-padding: 5 16 5 16;"

@@ -126,6 +126,17 @@ public class ReparacionDAO {
     }
 
     /**
+     * Devuelve las asignaciones activas para un IMEI concreto.
+     *
+     * @param imei IMEI del dispositivo
+     * @return lista de asignaciones activas para ese IMEI
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public List<ReparacionResumen> getAsignacionesPorImei(String imei) throws SQLException {
+        return ApiClient.getList("/api/reparaciones/asignaciones/imei/" + imei, ReparacionResumen.class);
+    }
+
+    /**
      * Devuelve las solicitudes de componente pendientes de una asignación.
      *
      * @param idAsignacion ID de la asignación ({@code A*})
