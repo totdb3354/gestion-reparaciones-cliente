@@ -478,7 +478,9 @@ public class FormularioReparacionController {
                     || (otrasAcciones != null && otrasAcciones.hayAccion());
             boolean solicitudCancelada = tieneSolicitudesIniciales
                     && filasUI.stream().anyMatch(FilaUI::isSolicitudCancelada);
-            habilitado = activa || solicitudCancelada;
+            boolean hayGuardadas = filasUI.stream().anyMatch(FilaUI::isGuardada)
+                    || (otrasAcciones != null && otrasAcciones.hayAccionGuardada());
+            habilitado = activa || solicitudCancelada || hayGuardadas;
         }
         zonaGuardar.setVisible(habilitado);
         zonaGuardar.setManaged(habilitado);
@@ -2286,6 +2288,7 @@ public class FormularioReparacionController {
 
         int getIdComOtro() { return otroSel != null ? otroSel.getIdCom() : -1; }
         boolean hayAccion() { return otroSel != null && !getDescripcionesPendientes().isEmpty(); }
+        boolean hayAccionGuardada() { return lineas.stream().anyMatch(l -> l.guardada); }
         boolean esOtro(int idCom) { return otroComponentes.stream().anyMatch(c -> c.getIdCom() == idCom); }
         void setOnCambio(Runnable r) { this.onCambio = r; }
         VBox getRoot() { return root; }
