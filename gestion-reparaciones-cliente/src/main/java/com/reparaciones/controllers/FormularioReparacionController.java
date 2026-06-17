@@ -653,6 +653,7 @@ public class FormularioReparacionController {
         // 2. Filas normales → insertarCompleta
         List<FilaReparacion> filasActivas = new ArrayList<>();
         for (FilaUI fila : filasUI) {
+            if (fila.isGuardada()) continue;
             if (fila.esAgotadoNuevo()) continue;
             if (fila.isActiva()) {
                 boolean esSolicitudNueva = fila.isSolicitud() && fila.isSolicitudNueva();
