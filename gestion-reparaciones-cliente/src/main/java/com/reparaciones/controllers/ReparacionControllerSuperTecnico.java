@@ -65,6 +65,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
+    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
     @FXML private javafx.scene.control.ToggleButton toggleDesagrupar;
@@ -230,6 +231,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -572,6 +574,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         configurarColEstado();
         configurarColIncidencia();
+        configurarColRevision();
     }
 
     private void configurarColEstado() {
@@ -656,6 +659,92 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     }
                 } else {
                     setStyle(""); setGraphic(null);
+                }
+            }
+        });
+    }
+
+    private void configurarColRevision() {
+        colRevision.setCellFactory(col -> new TableCell<>() {
+            private final ToggleButton toggle = new ToggleButton();
+            {
+                toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                                "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
+                setAlignment(javafx.geometry.Pos.CENTER);
+
+                toggle.setOnAction(e -> {
+                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
+                    Object row = getTableView().getItems().get(getIndex());
+                    if (!(row instanceof GrupoImei grupo)) return;
+
+                    boolean nuevoValor = toggle.isSelected();
+                    boolean estadoAnterior = !nuevoValor;
+
+                    new Thread(() -> {
+                        try {
+                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor);
+                            javafx.application.Platform.runLater(this::actualizarVista);
+                        } catch (com.reparaciones.utils.StaleDataException ex) {
+                            javafx.application.Platform.runLater(() -> {
+                                toggle.setSelected(estadoAnterior);
+                                aplicarEstiloToggle(estadoAnterior);
+                                new javafx.scene.control.Alert(
+                                        javafx.scene.control.Alert.AlertType.WARNING,
+                                        "Este IMEI tiene asignaciones activas. No se puede marcar como revisado.")
+                                        .showAndWait();
+                                actualizarVista();
+                            });
+                        } catch (java.sql.SQLException ex) {
+                            javafx.application.Platform.runLater(() -> {
+                                toggle.setSelected(estadoAnterior);
+                                aplicarEstiloToggle(estadoAnterior);
+                                new javafx.scene.control.Alert(
+                                        javafx.scene.control.Alert.AlertType.ERROR,
+                                        "Error al guardar: " + ex.getMessage())
+                                        .showAndWait();
+                            });
+                        }
+                    }).start();
+                });
+            }
+
+            private void aplicarEstiloToggle(boolean on) {
+                if (on) {
+                    toggle.setText("OK");
+                    toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                                    "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; " +
+                                    "-fx-background-color: #2E7D32; -fx-text-fill: white;");
+                } else {
+                    toggle.setText("—");
+                    toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                                    "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; " +
+                                    "-fx-background-color: #9E9E9E; -fx-text-fill: white;");
+                }
+            }
+
+            private void actualizarVista() {
+                cargarDatos();
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) {
+                    boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
+                    toggle.setSelected(efectivo);
+                    aplicarEstiloToggle(efectivo);
+                    toggle.setDisable(grupo.isTieneAsignaciones());
+                    if (grupo.isTieneAsignaciones()) {
+                        toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") +
+                                        " -fx-opacity: 0.5;");
+                    }
+                    setGraphic(toggle);
+                } else {
+                    setGraphic(null);
                 }
             }
         });
@@ -1019,6 +1108,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colRevision.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
@@ -1060,6 +1150,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -1077,6 +1168,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colRevision.setVisible(false);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
         if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
