@@ -676,6 +676,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                     Object row = getTableView().getItems().get(getIndex());
                     if (!(row instanceof GrupoImei grupo)) return;
+                    if (grupo.isTieneAsignaciones()) { toggle.setSelected(false); return; }
 
                     boolean nuevoValor = toggle.isSelected();
                     boolean estadoAnterior = !nuevoValor;
@@ -737,7 +738,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
                     toggle.setSelected(efectivo);
                     aplicarEstiloToggle(efectivo);
-                    toggle.setDisable(grupo.isTieneAsignaciones());
                     if (grupo.isTieneAsignaciones()) {
                         toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") +
                                         " -fx-opacity: 0.5;");
