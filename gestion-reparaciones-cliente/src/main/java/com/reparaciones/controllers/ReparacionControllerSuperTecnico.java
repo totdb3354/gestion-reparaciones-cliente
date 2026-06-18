@@ -135,7 +135,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>  tecnicosLista  = new ArrayList<>();
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final java.util.concurrent.ScheduledExecutorService poller =
             java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
@@ -1185,6 +1185,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     private void adaptarFiltrosMaestro() {
         filtroTecnico.setVisible(false); filtroTecnico.setManaged(false);
+        idsTecFiltro.clear();
+        actualizarTextoFiltroTecnico();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
         cbIncidenciasAbiertas.setText("Incidencia");
         cbIncidenciasCerradas.setSelected(false);
         if (itemCerradas != null) itemCerradas.setVisible(false);
