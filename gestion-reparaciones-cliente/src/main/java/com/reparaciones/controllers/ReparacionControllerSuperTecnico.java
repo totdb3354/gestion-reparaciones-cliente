@@ -1185,6 +1185,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     private void adaptarFiltrosMaestro() {
         filtroTecnico.setVisible(false); filtroTecnico.setManaged(false);
+        idsTecFiltro.clear();
+        actualizarTextoFiltroTecnico();
+        if (filtroTecHandle != null) filtroTecHandle.refresh();
         cbIncidenciasAbiertas.setText("Incidencia");
         cbIncidenciasCerradas.setSelected(false);
         if (itemCerradas != null) itemCerradas.setVisible(false);
