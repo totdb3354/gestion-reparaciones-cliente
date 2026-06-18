@@ -39,6 +39,8 @@ public class ReparacionResumen {
     private String        comentarioAsignacion;
     private String        observacionTelefono;
     private boolean       urgente;
+    private boolean       revisionLogistica;
+    private boolean       tieneAsignaciones;
 
     /**
      * Constructor completo — llamado desde {@code ReparacionDAO.getResumenes()}.
@@ -163,4 +165,8 @@ public class ReparacionResumen {
     public void    setObservacionTelefono(String o)  { this.observacionTelefono = o; }
     public boolean isUrgente()                       { return urgente; }
     public void    setUrgente(boolean urgente)       { this.urgente = urgente; }
+    public boolean isRevisionLogistica()             { return revisionLogistica; }
+    public void    setRevisionLogistica(boolean v)   { this.revisionLogistica = v; }
+    public boolean isTieneAsignaciones()             { return tieneAsignaciones; }
+    public void    setTieneAsignaciones(boolean v)   { this.tieneAsignaciones = v; }
 }

@@ -84,4 +84,9 @@ public class TelefonoDAO {
         ApiClient.patch("/api/telefonos/" + imei + "/observacion",
                 Map.of("observacion", observacion != null ? observacion : ""));
     }
+
+    public void actualizarRevisionLogistica(String imei, boolean revisado) throws SQLException {
+        ApiClient.put("/api/telefonos/" + imei + "/revision-logistica",
+                Map.of("revisado", revisado));
+    }
 }
