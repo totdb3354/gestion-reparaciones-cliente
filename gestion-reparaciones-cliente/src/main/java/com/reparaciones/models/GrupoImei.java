@@ -17,6 +17,8 @@ public class GrupoImei {
     private final LocalDateTime fechaMasReciente;
     private final List<ReparacionResumen> reparaciones;
     private final long countIncAbiertas;
+    private final boolean revisionLogistica;
+    private final boolean tieneAsignaciones;
 
     public GrupoImei(String imei, List<ReparacionResumen> reparaciones) {
         this.imei = imei;
@@ -49,6 +51,10 @@ public class GrupoImei {
         this.countIncAbiertas = reparaciones.stream()
                 .filter(r -> r.isEsIncidencia() && !r.isEsResuelto())
                 .count();
+
+        ReparacionResumen primero = reparaciones.isEmpty() ? null : reparaciones.get(0);
+        this.revisionLogistica = primero != null && primero.isRevisionLogistica();
+        this.tieneAsignaciones = primero != null && primero.isTieneAsignaciones();
     }
 
     public String getImei()                    { return imei; }
@@ -58,4 +64,6 @@ public class GrupoImei {
     public LocalDateTime getFechaMasReciente() { return fechaMasReciente; }
     public List<ReparacionResumen> getReparaciones() { return reparaciones; }
     public long getCountIncAbiertas()          { return countIncAbiertas; }
+    public boolean isRevisionLogistica()       { return revisionLogistica; }
+    public boolean isTieneAsignaciones()       { return tieneAsignaciones; }
 }
