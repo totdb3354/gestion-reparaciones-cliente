@@ -106,7 +106,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>  tecnicosLista  = new ArrayList<>();
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     @FXML
     public void initialize() {
