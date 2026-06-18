@@ -63,6 +63,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
+    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
@@ -156,6 +157,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -386,6 +388,43 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         configurarColEstado();
         configurarColIncidencia();
+        configurarColRevision();
+    }
+
+    private void configurarColRevision() {
+        colRevision.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            {
+                badge.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                               "-fx-font-size: 11px; -fx-font-weight: bold;");
+                setAlignment(javafx.geometry.Pos.CENTER);
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) {
+                    boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
+                    if (efectivo) {
+                        badge.setText("OK");
+                        badge.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                                       "-fx-font-size: 11px; -fx-font-weight: bold; " +
+                                       "-fx-background-color: #2E7D32; -fx-text-fill: white;");
+                    } else {
+                        badge.setText("—");
+                        badge.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
+                                       "-fx-font-size: 11px; -fx-font-weight: bold; " +
+                                       "-fx-background-color: #9E9E9E; -fx-text-fill: white;");
+                    }
+                    setGraphic(badge);
+                } else {
+                    setGraphic(null);
+                }
+            }
+        });
     }
 
     private void configurarColEstado() {
@@ -760,6 +799,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colRevision.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
@@ -800,6 +840,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdRep.setVisible(false); colReparador.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -817,6 +858,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         colIdRep.setVisible(true); colReparador.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colRevision.setVisible(false);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
         if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
@@ -907,7 +949,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         if (modoActual == Modo.MAESTRO) {
             List<String> cabeceras = List.of(
                     "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
-                    "Nº reparaciones", "Inc. abiertas", "Observación");
+                    "Nº reparaciones", "Inc. abiertas", "Observación", "Revisión logística");
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
                 if (!(o instanceof GrupoImei g)) continue;
@@ -922,7 +964,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                         g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
                         String.valueOf(g.getReparaciones().size()),
                         String.valueOf(g.getCountIncAbiertas()),
-                        g.getObservacion() != null ? g.getObservacion() : ""
+                        g.getObservacion() != null ? g.getObservacion() : "",
+                        (g.isRevisionLogistica() && !g.isTieneAsignaciones()) ? "Sí" : "No"
                 ));
             }
             com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
