@@ -275,10 +275,7 @@ public class PendientesSuperTecnicoController {
                     boolean nuevoEstado = !rep.isUrgente();
                     try {
                         reparacionDAO.actualizarUrgente(rep.getIdRep(), nuevoEstado);
-                        rep.setUrgente(nuevoEstado);
-                        java.util.List<ReparacionResumen> reordenados = new java.util.ArrayList<>(datos);
-                        reordenados.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
-                        datos.setAll(reordenados);
+                        cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.setOnShowing(e -> {
