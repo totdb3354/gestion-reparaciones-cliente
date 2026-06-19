@@ -276,6 +276,7 @@ public class PendientesSuperTecnicoController {
                     try {
                         reparacionDAO.actualizarUrgente(rep.getIdRep(), nuevoEstado);
                         rep.setUrgente(nuevoEstado);
+                        datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
                         tablaPendientes.refresh();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
