@@ -568,6 +568,7 @@ public class PendientesSuperTecnicoController {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
             datos.setAll(reparacionDAO.getAsignaciones());
+            datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
