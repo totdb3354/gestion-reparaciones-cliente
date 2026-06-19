@@ -5,6 +5,7 @@ import com.reparaciones.dao.UsuarioDAO;
 import com.reparaciones.models.LogActividad;
 import com.reparaciones.models.Usuario;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -40,7 +41,7 @@ public class LogController {
     public void initialize() {
         colFecha.setCellValueFactory(c ->
                 new javafx.beans.property.SimpleStringProperty(
-                        c.getValue().getFecha() != null ? c.getValue().getFecha().format(FMT) : ""));
+                        FechaUtils.formatear(c.getValue().getFecha(), FMT)));
         colUsuario.setCellValueFactory(c ->
                 new javafx.beans.property.SimpleStringProperty(c.getValue().getNombreUsuario()));
         colAccion.setCellValueFactory(c ->
@@ -160,7 +161,7 @@ public class LogController {
         boolean coincideTecnico = tecnico == null || tecnico.isBlank()
                 || tecnico.equalsIgnoreCase(log.getNombreUsuario());
 
-        LocalDate fecha = log.getFecha() != null ? log.getFecha().toLocalDate() : null;
+        LocalDate fecha = FechaUtils.toLocalDate(log.getFecha());
         boolean coincideDesde = desde == null || fecha == null || !fecha.isBefore(desde);
         boolean coincideHasta = hasta == null || fecha == null || !fecha.isAfter(hasta);
 

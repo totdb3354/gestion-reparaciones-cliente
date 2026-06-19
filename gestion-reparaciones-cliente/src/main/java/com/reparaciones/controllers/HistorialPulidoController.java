@@ -6,6 +6,7 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.MultiSelectComboBox;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -65,9 +66,9 @@ public class HistorialPulidoController {
         cTecnico.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(d.getValue().getNombreTecnico()));
         cFechaIni.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-            d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+            FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cFechaFin.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-            d.getValue().getFechaFin() != null ? d.getValue().getFechaFin().format(FMT) : ""));
+            FechaUtils.formatear(d.getValue().getFechaFin(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
 
@@ -234,8 +235,8 @@ public class HistorialPulidoController {
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
-            if (desde != null && rep.getFechaFin() != null && rep.getFechaFin().toLocalDate().isBefore(desde)) return false;
-            if (hasta != null && rep.getFechaFin() != null && rep.getFechaFin().toLocalDate().isAfter(hasta)) return false;
+            if (desde != null && rep.getFechaFin() != null && FechaUtils.toLocalDate(rep.getFechaFin()).isBefore(desde)) return false;
+            if (hasta != null && rep.getFechaFin() != null && FechaUtils.toLocalDate(rep.getFechaFin()).isAfter(hasta)) return false;
             return true;
         });
     }
@@ -357,8 +358,8 @@ public class HistorialPulidoController {
         if (col == cImei)      return rep.getImei();
         if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
         if (col == cTecnico)   return rep.getNombreTecnico();
-        if (col == cFechaIni)  return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
-        if (col == cFechaFin)  return rep.getFechaFin() != null ? rep.getFechaFin().format(FMT) : "";
+        if (col == cFechaIni)  return FechaUtils.formatear(rep.getFechaAsig(), FMT);
+        if (col == cFechaFin)  return FechaUtils.formatear(rep.getFechaFin(), FMT);
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }

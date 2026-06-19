@@ -8,6 +8,7 @@ import com.reparaciones.models.Componente;
 import com.reparaciones.models.SolicitudResumen;
 import com.reparaciones.models.SolicitudStock;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -455,7 +456,7 @@ public class MainController {
         HBox compRow = new HBox(6, lblComp, lblTag);
         compRow.setAlignment(Pos.CENTER_LEFT);
         Label lblInfo = new Label(s.getNombreTecnico() + "  ·  " +
-                s.getFechaSolicitud().format(fmt) + "  ·  " + s.getIdRep());
+                FechaUtils.formatear(s.getFechaSolicitud(), fmt) + "  ·  " + s.getIdRep());
         lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #9AA0AA;");
         VBox textos = new VBox(3, compRow, lblInfo);
         if (s.getDescripcion() != null && !s.getDescripcion().isEmpty()) {
@@ -571,7 +572,7 @@ public class MainController {
 
         Label lblComp = new Label(s.getTipoComponente());
         lblComp.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #2C3B54;");
-        Label lblInfo = new Label(s.getNombreUsuario() + "  ·  " + s.getFecha().format(fmt));
+        Label lblInfo = new Label(s.getNombreUsuario() + "  ·  " + FechaUtils.formatear(s.getFecha(), fmt));
         lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #9AA0AA;");
         VBox textos = new VBox(3, lblComp, lblInfo);
         if (s.getDescripcion() != null && !s.getDescripcion().isEmpty()) {
@@ -612,7 +613,7 @@ public class MainController {
 
         Label lblComp = new Label(s.getTipoComponente());
         lblComp.setStyle("-fx-font-size: 13px; -fx-text-fill: #9AA0AA;");
-        Label lblInfo = new Label(s.getNombreUsuario() + "  ·  " + s.getFecha().format(fmt));
+        Label lblInfo = new Label(s.getNombreUsuario() + "  ·  " + FechaUtils.formatear(s.getFecha(), fmt));
         lblInfo.setStyle("-fx-font-size: 11px; -fx-text-fill: #B0B5BF;");
         VBox textos = new VBox(3, lblComp, lblInfo);
         HBox.setHgrow(textos, Priority.ALWAYS);
