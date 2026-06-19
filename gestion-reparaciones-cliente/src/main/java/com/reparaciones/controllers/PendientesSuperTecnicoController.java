@@ -2,6 +2,7 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
@@ -199,7 +200,7 @@ public class PendientesSuperTecnicoController {
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-                d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+                FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> {
             ReparacionResumen rep = d.getValue();
             String texto = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
@@ -1159,7 +1160,7 @@ public class PendientesSuperTecnicoController {
         if (col == cId)        return rep.getIdRep();
         if (col == cImei)      return rep.getImei();
         if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-        if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cFecha)     return FechaUtils.formatear(rep.getFechaAsig(), FMT);
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }

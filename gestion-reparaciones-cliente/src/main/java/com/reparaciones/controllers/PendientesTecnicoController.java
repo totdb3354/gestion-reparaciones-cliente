@@ -4,6 +4,7 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -85,7 +86,7 @@ public class PendientesTecnicoController {
         });
         cFecha.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(
-                d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+                FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
 
@@ -385,7 +386,7 @@ public class PendientesTecnicoController {
         if (col == cId)        return rep.getIdRep();
         if (col == cImei)      return rep.getImei();
         if (col == cModelo)    { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-        if (col == cFecha)     return rep.getFechaAsig() != null ? rep.getFechaAsig().format(FMT) : "";
+        if (col == cFecha)     return FechaUtils.formatear(rep.getFechaAsig(), FMT);
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
     }

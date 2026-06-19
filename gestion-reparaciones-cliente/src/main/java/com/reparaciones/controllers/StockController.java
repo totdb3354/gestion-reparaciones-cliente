@@ -9,6 +9,7 @@ import com.reparaciones.models.Componente;
 import com.reparaciones.models.Proveedor;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.utils.FechaUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -771,7 +772,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             return new javafx.beans.property.SimpleObjectProperty<>(texto);
         });
         cpFecha.setCellValueFactory(c ->
-                sp(c.getValue().getFechaPedido().format(FMT)));
+                sp(FechaUtils.formatear(c.getValue().getFechaPedido(), FMT)));
         cpPrecio.setCellFactory(col -> new TableCell<>() {
             private final Label lbl   = new Label();
             private final Label alert = new Label("!");
@@ -912,7 +913,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                 boolean coincideProveedor = selProv.isEmpty() || selProv.contains(p.getNombreProveedor());
                 boolean coincideTexto     = texto == null || texto.isBlank() ||
                         p.getTipoComponente().toLowerCase().contains(texto.toLowerCase().trim());
-                java.time.LocalDate fecha = p.getFechaPedido() != null ? p.getFechaPedido().toLocalDate() : null;
+                java.time.LocalDate fecha = FechaUtils.toLocalDate(p.getFechaPedido());
                 boolean coincideDesde = desde == null || fecha == null || !fecha.isBefore(desde);
                 boolean coincideHasta = hasta == null || fecha == null || !fecha.isAfter(hasta);
                 return coincideEstado && coincideProveedor && coincideTexto && coincideDesde && coincideHasta;
@@ -1491,7 +1492,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
                     String.valueOf(c.getStockMinimo()),
                     estadoComponente(c),
                     String.valueOf(c.getEnCamino()),
-                    c.getFechaRegistro() != null ? c.getFechaRegistro().format(fmt) : ""
+                    FechaUtils.formatear(c.getFechaRegistro(), fmt)
             ));
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "stock_actual", cabeceras, filas);
@@ -1503,7 +1504,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (CompraComponente p : tablaPedidos.getItems()) {
             filas.add(List.of(
-                    p.getFechaPedido() != null ? p.getFechaPedido().format(fmt) : "",
+                    FechaUtils.formatear(p.getFechaPedido(), fmt),
                     p.getTipoComponente() != null ? p.getTipoComponente() : "",
                     String.valueOf(p.getCantidad()),
                     p.isEsUrgente() ? "Sí" : "No",

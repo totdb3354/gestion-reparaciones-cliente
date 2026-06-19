@@ -6,6 +6,7 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.models.GrupoImei;
 import com.reparaciones.models.ReparacionResumen;
 import javafx.beans.property.SimpleStringProperty;
@@ -453,11 +454,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 if (row instanceof GrupoImei grupo) {
-                    lblInicio.setText(grupo.getFechaMasAntigua()  != null ? grupo.getFechaMasAntigua().format(FORMATO_FECHA)  : "—");
-                    lblFin.setText("→ " + (grupo.getFechaMasReciente() != null ? grupo.getFechaMasReciente().format(FORMATO_FECHA) : "—"));
+                    lblInicio.setText(grupo.getFechaMasAntigua()  != null ? FechaUtils.formatear(grupo.getFechaMasAntigua(), FORMATO_FECHA)  : "—");
+                    lblFin.setText("→ " + (grupo.getFechaMasReciente() != null ? FechaUtils.formatear(grupo.getFechaMasReciente(), FORMATO_FECHA) : "—"));
                 } else if (row instanceof ReparacionResumen rep) {
-                    lblInicio.setText(rep.getFechaAsig() != null ? rep.getFechaAsig().format(FORMATO_FECHA) : "—");
-                    lblFin.setText("→ " + (rep.getFechaFin() != null ? rep.getFechaFin().format(FORMATO_FECHA) : "—"));
+                    lblInicio.setText(rep.getFechaAsig() != null ? FechaUtils.formatear(rep.getFechaAsig(), FORMATO_FECHA) : "—");
+                    lblFin.setText("→ " + (rep.getFechaFin() != null ? FechaUtils.formatear(rep.getFechaFin(), FORMATO_FECHA) : "—"));
                 } else { setGraphic(null); return; }
                 actualizarColores(getTableRow() != null && getTableRow().isSelected());
                 setGraphic(box);
@@ -873,8 +874,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         if (row instanceof GrupoImei g) {
             if (col == colImei)       return g.getImei();
             if (col == colModelo)     { String m = g.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? g.getFechaMasAntigua().format(FORMATO_FECHA) : "—")
-                                            + " → " + (g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(FORMATO_FECHA) : "—");
+            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? FechaUtils.formatear(g.getFechaMasAntigua(), FORMATO_FECHA) : "—")
+                                            + " → " + (g.getFechaMasReciente() != null ? FechaUtils.formatear(g.getFechaMasReciente(), FORMATO_FECHA) : "—");
             if (col == colComponente) return g.getReparaciones().size() + " reparaciones";
             if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? "Incidencia" : "Normal";
             return null;
@@ -884,7 +885,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         if (col == colImei)          return rep.getImei();
         if (col == colModelo)        { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
         if (col == colReparador)     return rep.getNombreTecnico();
-        if (col == colFecha)         return rep.getFechaFin() != null ? rep.getFechaFin().format(FORMATO_FECHA) : "";
+        if (col == colFecha)         return FechaUtils.formatear(rep.getFechaFin(), FORMATO_FECHA);
         if (col == colComponente)    return rep.getTipoComponente();
         if (col == colObservaciones) return rep.getObservaciones();
         if (col == colIncidencia)    return rep.getIncidencia();
@@ -979,7 +980,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
                     if (desde != null || hasta != null) {
                         if (rep.getFechaFin() == null) return false;
-                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                        LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
                         if (desde != null && fechaFin.isBefore(desde)) return false;
                         if (hasta != null && fechaFin.isAfter(hasta))  return false;
                     }
@@ -1005,7 +1006,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
                     if (desde != null || hasta != null) {
                         if (rep.getFechaFin() == null) return false;
-                        LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                        LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
                         if (desde != null && fechaFin.isBefore(desde)) return false;
                         if (hasta != null && fechaFin.isAfter(hasta))  return false;
                     }
@@ -1029,7 +1030,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (desde != null || hasta != null) {
                 if (rep.getFechaFin() == null) return false;
-                LocalDate fechaFin = rep.getFechaFin().toLocalDate();
+                LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
                 if (desde != null && fechaFin.isBefore(desde)) return false;
                 if (hasta != null && fechaFin.isAfter(hasta))  return false;
             }
@@ -1502,8 +1503,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                         com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
                         (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
                         tecnico,
-                        g.getFechaMasAntigua()  != null ? g.getFechaMasAntigua().format(fmt)  : "",
-                        g.getFechaMasReciente() != null ? g.getFechaMasReciente().format(fmt) : "",
+                        FechaUtils.formatear(g.getFechaMasAntigua(), fmt),
+                        FechaUtils.formatear(g.getFechaMasReciente(), fmt),
                         String.valueOf(g.getReparaciones().size()),
                         String.valueOf(g.getCountIncAbiertas()),
                         g.getObservacion() != null ? g.getObservacion() : "",
@@ -1532,8 +1533,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.getIdRep());
         fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
         fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
-        fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
-        fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "");
+        fila.add(FechaUtils.formatear(r.getFechaAsig(), fmt));
+        fila.add(FechaUtils.formatear(r.getFechaFin(), fmt));
         fila.add(r.getTipoComponente() != null ? r.getTipoComponente() : "");
         fila.add(r.isEsReutilizado() ? "Sí" : "No");
         fila.add(r.getObservaciones()  != null ? r.getObservaciones()  : "");
@@ -1556,7 +1557,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             String m = r.getModelo();
             fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
             if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
-            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
+            fila.add(FechaUtils.formatear(r.getFechaAsig(), fmt));
             fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
             filas.add(fila);
         }
@@ -1576,8 +1577,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             String m = r.getModelo();
             fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
             if (conTecnico) fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
-            fila.add(r.getFechaAsig() != null ? r.getFechaAsig().format(fmt) : "");
-            fila.add(r.getFechaFin()  != null ? r.getFechaFin().format(fmt)  : "");
+            fila.add(FechaUtils.formatear(r.getFechaAsig(), fmt));
+            fila.add(FechaUtils.formatear(r.getFechaFin(), fmt));
             fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
             filas.add(fila);
         }

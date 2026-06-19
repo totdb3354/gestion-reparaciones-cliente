@@ -4,6 +4,7 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.PulidoDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.FechaUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -70,7 +71,7 @@ public class PulidoTecnicoController {
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
-            d.getValue().getFechaAsig() != null ? d.getValue().getFechaAsig().format(FMT) : ""));
+            FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
 
