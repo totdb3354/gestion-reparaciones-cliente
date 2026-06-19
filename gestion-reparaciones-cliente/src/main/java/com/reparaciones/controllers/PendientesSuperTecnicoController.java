@@ -275,8 +275,7 @@ public class PendientesSuperTecnicoController {
                     boolean nuevoEstado = !rep.isUrgente();
                     try {
                         reparacionDAO.actualizarUrgente(rep.getIdRep(), nuevoEstado);
-                        rep.setUrgente(nuevoEstado);
-                        tablaPendientes.refresh();
+                        cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.setOnShowing(e -> {
@@ -568,6 +567,7 @@ public class PendientesSuperTecnicoController {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
             datos.setAll(reparacionDAO.getAsignaciones());
+            datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {

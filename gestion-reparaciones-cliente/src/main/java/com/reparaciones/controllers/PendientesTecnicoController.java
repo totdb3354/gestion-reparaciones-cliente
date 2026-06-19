@@ -357,6 +357,7 @@ public class PendientesTecnicoController {
             Integer idTec = Sesion.getIdTec();
             if (idTec == null) return;
             datos.setAll(reparacionDAO.getAsignacionesPorTecnico(idTec));
+            datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
