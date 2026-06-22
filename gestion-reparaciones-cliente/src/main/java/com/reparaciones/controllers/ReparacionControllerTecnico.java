@@ -13,8 +13,6 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.Button;
@@ -115,7 +113,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private Label         lblNavImei;
     private Label         lblNavModelo;
     private Label         lblNavCount;
-    private ToggleButton  btnOtrosTecnicos;
     private final Set<String> idsAjenas    = new HashSet<>();
 
     private final java.util.concurrent.ScheduledExecutorService poller =
@@ -234,20 +231,9 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         lblNavModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
         lblNavCount .setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
 
-        Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
-        ImageView ivToggle = new ImageView(imgHistorial);
-        ivToggle.setFitWidth(22); ivToggle.setFitHeight(22); ivToggle.setPreserveRatio(true);
-        btnOtrosTecnicos = new ToggleButton("", ivToggle);
-        btnOtrosTecnicos.getStyleClass().add("btn-secondary");
-        btnOtrosTecnicos.setTooltip(new Tooltip("Mostrar reparaciones de otros técnicos"));
-        btnOtrosTecnicos.selectedProperty().addListener((obs, o, sel) -> aplicarFiltros());
-
-        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
-        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
-
         barraNavegacion = new HBox(12, btnVolver,
                 new Separator(javafx.geometry.Orientation.VERTICAL),
-                lblNavImei, lblNavModelo, lblNavCount, spacer, btnOtrosTecnicos);
+                lblNavImei, lblNavModelo, lblNavCount);
         barraNavegacion.setAlignment(Pos.CENTER_LEFT);
         barraNavegacion.setPadding(new Insets(6, 0, 6, 0));
         barraNavegacion.setVisible(false);
@@ -334,7 +320,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private void resetarModo() {
         modoActual  = Modo.MAESTRO;
         imeiDetalle = null;
-        if (btnOtrosTecnicos != null) btnOtrosTecnicos.setSelected(false);
         idsAjenas.clear();
         if (toggleAgrupar != null) toggleAgrupar.setSelected(true);
         if (lblContadorPlano != null) { lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false); }
@@ -1047,17 +1032,17 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             idsAjenas.clear();
             List<ReparacionResumen> resultado = new ArrayList<>(propias);
 
-            if (btnOtrosTecnicos != null && btnOtrosTecnicos.isSelected()) {
-                List<ReparacionResumen> ajenas = datos.stream()
-                    .filter(r -> r.getImei().equals(imeiDetalle))
-                    .filter(r -> idTec == null || r.getIdTec() != idTec)
-                    .filter(predicado)
-                    .collect(Collectors.toList());
-                ajenas.forEach(r -> idsAjenas.add(r.getIdRep()));
-                resultado.addAll(ajenas);
-                int nA = idsAjenas.size();
+            List<ReparacionResumen> ajenas = datos.stream()
+                .filter(r -> r.getImei().equals(imeiDetalle))
+                .filter(r -> idTec == null || r.getIdTec() != idTec)
+                .filter(predicado)
+                .collect(Collectors.toList());
+            ajenas.forEach(r -> idsAjenas.add(r.getIdRep()));
+            resultado.addAll(ajenas);
+            int nA = idsAjenas.size();
+            if (nA > 0) {
                 lblNavCount.setText("  •  " + propias.size() + " propia" + (propias.size() != 1 ? "s" : "")
-                    + (nA > 0 ? " + " + nA + " de otros" : ""));
+                    + " + " + nA + " de otros");
             } else {
                 lblNavCount.setText("  •  " + propias.size() + " reparaciones");
             }
