@@ -39,6 +39,8 @@
                                       -fx-border-radius: 8; -fx-background-radius: 8;
                                       -fx-padding: 10 12 10 12; -fx-font-size: 13px;
                                       -fx-text-fill: #2C3B54; -fx-prompt-text-fill: #A0A8B4;"/>
+                    <Label fx:id="lblErrorTecnico" managed="false" visible="false" wrapText="true"
+                           style="-fx-text-fill: #B03040; -fx-font-size: 10px;"/>
                 </VBox>
                 <VBox spacing="5" HBox.hgrow="ALWAYS">
                     <Label text="Nombre de usuario"
@@ -49,6 +51,8 @@
                                       -fx-border-radius: 8; -fx-background-radius: 8;
                                       -fx-padding: 10 12 10 12; -fx-font-size: 13px;
                                       -fx-text-fill: #2C3B54; -fx-prompt-text-fill: #A0A8B4;"/>
+                    <Label fx:id="lblErrorUsuario" managed="false" visible="false" wrapText="true"
+                           style="-fx-text-fill: #B03040; -fx-font-size: 10px;"/>
                 </VBox>
                 <VBox spacing="5" HBox.hgrow="ALWAYS">
                     <Label text="Contraseña"
