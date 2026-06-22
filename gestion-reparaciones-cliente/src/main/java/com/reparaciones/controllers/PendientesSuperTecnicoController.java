@@ -58,6 +58,8 @@ public class PendientesSuperTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
+    @FXML private javafx.scene.control.Button btnAsignar;
+    private boolean soloLectura = false;
     @FXML private TextField  filtroImei;
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private MenuButton filtroSolicitud;
@@ -160,11 +162,19 @@ public class PendientesSuperTecnicoController {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null);
+                    setText(null);
                     setStyle("");
                     return;
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                if (soloLectura) {
+                    setText(rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+                    setGraphic(null);
+                    actualizando = false;
+                    setStyle("");
+                    return;
+                }
                 cb.getItems().setAll(tecnicos);
                 Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
@@ -282,6 +292,9 @@ public class PendientesSuperTecnicoController {
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.setOnShowing(e -> {
+                    // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
+                    editarComentario.setVisible(!soloLectura);
+                    toggleUrgente.setVisible(!soloLectura);
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
@@ -419,6 +432,16 @@ public class PendientesSuperTecnicoController {
         tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
+    }
+
+    /** Activa el modo solo lectura (admin): oculta acciones de escritura. Default false (supertécnico no afectado). */
+    public void setSoloLectura(boolean soloLectura) {
+        this.soloLectura = soloLectura;
+        if (soloLectura) {
+            cAccion.setVisible(false);
+            if (btnAsignar != null) { btnAsignar.setVisible(false); btnAsignar.setManaged(false); }
+            tablaPendientes.refresh();
+        }
     }
 
     // ─── Filtros ──────────────────────────────────────────────────────────────

@@ -37,6 +37,8 @@ public class PulidoSuperTecnicoController {
 
     @FXML private TableView<ReparacionResumen>           tablaPulidos;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
+    @FXML private javafx.scene.control.Button btnAsignar;
+    private boolean soloLectura = false;
     @FXML private TableColumn<ReparacionResumen, String> cId;
     @FXML private TableColumn<ReparacionResumen, String> cTecnico;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
@@ -119,10 +121,17 @@ public class PulidoSuperTecnicoController {
                 if (cb.isShowing()) return;
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    repMostrado = null; setGraphic(null); setStyle(""); return;
+                    repMostrado = null; setGraphic(null); setText(null); setStyle(""); return;
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                if (soloLectura) {
+                    setText(rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+                    setGraphic(null);
+                    actualizando = false;
+                    setStyle("");
+                    return;
+                }
                 repMostrado = rep;
                 cb.getItems().setAll(tecnicos);
                 Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
@@ -216,6 +225,11 @@ public class PulidoSuperTecnicoController {
                     abrirSelectorModelo(getItem());
                 });
                 menu.getItems().add(editarModelo);
+                menu.setOnShowing(e -> {
+                    // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
+                    editarComentario.setVisible(!soloLectura);
+                    editarModelo.setVisible(!soloLectura);
+                });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
@@ -277,6 +291,16 @@ public class PulidoSuperTecnicoController {
             lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
             lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
+    }
+
+    /** Activa el modo solo lectura (admin): oculta acciones de escritura. Default false (supertécnico no afectado). */
+    public void setSoloLectura(boolean soloLectura) {
+        this.soloLectura = soloLectura;
+        if (soloLectura) {
+            cAccion.setVisible(false);
+            if (btnAsignar != null) { btnAsignar.setVisible(false); btnAsignar.setManaged(false); }
+            tablaPulidos.refresh();
         }
     }
 

@@ -82,6 +82,17 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private VBox pnlHistPul;
     @FXML private HistorialPulidoController historialPulidoController;
 
+    @FXML private javafx.scene.control.Button btnTabAsignaciones;
+    @FXML private javafx.scene.control.Button btnTabHistorial;
+    @FXML private VBox pnlHistorial;
+    @FXML private VBox pnlAsignaciones;
+    @FXML private javafx.scene.control.ToggleButton togglePendRep;
+    @FXML private javafx.scene.control.ToggleButton togglePendPul;
+    @FXML private VBox pnlPendRep;
+    @FXML private VBox pnlPendPul;
+    @FXML private PendientesSuperTecnicoController pendientesSuperTecnicoController;
+    @FXML private PulidoSuperTecnicoController     pulidoSuperTecnicoController;
+
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
     private CheckBox cbNormales;
@@ -175,6 +186,44 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
+
+        // Modo solo lectura para el admin en los paneles de asignaciones
+        pendientesSuperTecnicoController.setSoloLectura(true);
+        pulidoSuperTecnicoController.setSoloLectura(true);
+
+        // Toggle Reparaciones/Pulidos dentro de Asignaciones
+        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
+        togglePendRep.setToggleGroup(tgPend);
+        togglePendPul.setToggleGroup(tgPend);
+        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { togglePendRep.setSelected(true); return; }
+            boolean rep = (n == togglePendRep);
+            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
+            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
+            if (rep) pendientesSuperTecnicoController.cargar();
+            else     pulidoSuperTecnicoController.cargar();
+        });
+    }
+
+    @FXML
+    private void mostrarHistorial() {
+        // Estando ya en el historial dentro del detalle de un IMEI, volver a pulsar
+        // "Historial" devuelve a la vista agrupada (igual que para el supertécnico).
+        if (pnlHistorial.isVisible() && modoActual == Modo.DETALLE) { volverAGrupos(); return; }
+        pnlHistorial.setVisible(true);   pnlHistorial.setManaged(true);
+        pnlAsignaciones.setVisible(false); pnlAsignaciones.setManaged(false);
+        btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn-active");
+        btnTabAsignaciones.getStyleClass().setAll("stock-sidebar-btn");
+    }
+
+    @FXML
+    private void mostrarAsignaciones() {
+        pnlAsignaciones.setVisible(true);  pnlAsignaciones.setManaged(true);
+        pnlHistorial.setVisible(false);    pnlHistorial.setManaged(false);
+        btnTabAsignaciones.getStyleClass().setAll("stock-sidebar-btn-active");
+        btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn");
+        if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
+        else                            pendientesSuperTecnicoController.cargar();
     }
 
     @Override
