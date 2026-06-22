@@ -29,9 +29,11 @@ public class CsvExporter {
      */
     public static boolean exportar(Stage owner, String nombreBase,
                                    List<String> cabeceras, List<List<String>> filas) {
+        String marca = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm"));
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Guardar CSV");
-        chooser.setInitialFileName(nombreBase + ".csv");
+        chooser.setInitialFileName(nombreBase + "_" + marca + ".csv");
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Archivo CSV (*.csv)", "*.csv"));
 
