@@ -162,6 +162,7 @@ public class PendientesSuperTecnicoController {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null);
+                    setText(null);
                     setStyle("");
                     return;
                 }

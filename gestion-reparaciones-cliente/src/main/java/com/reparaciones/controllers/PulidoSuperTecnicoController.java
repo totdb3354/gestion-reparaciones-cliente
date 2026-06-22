@@ -121,7 +121,7 @@ public class PulidoSuperTecnicoController {
                 if (cb.isShowing()) return;
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    repMostrado = null; setGraphic(null); setStyle(""); return;
+                    repMostrado = null; setGraphic(null); setText(null); setStyle(""); return;
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
