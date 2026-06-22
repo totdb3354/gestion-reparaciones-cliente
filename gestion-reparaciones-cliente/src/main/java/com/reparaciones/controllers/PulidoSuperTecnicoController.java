@@ -37,6 +37,8 @@ public class PulidoSuperTecnicoController {
 
     @FXML private TableView<ReparacionResumen>           tablaPulidos;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
+    @FXML private javafx.scene.control.Button btnAsignar;
+    private boolean soloLectura = false;
     @FXML private TableColumn<ReparacionResumen, String> cId;
     @FXML private TableColumn<ReparacionResumen, String> cTecnico;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
@@ -123,6 +125,13 @@ public class PulidoSuperTecnicoController {
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                if (soloLectura) {
+                    setText(rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+                    setGraphic(null);
+                    actualizando = false;
+                    setStyle("");
+                    return;
+                }
                 repMostrado = rep;
                 cb.getItems().setAll(tecnicos);
                 Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
@@ -218,6 +227,7 @@ public class PulidoSuperTecnicoController {
                 menu.getItems().add(editarModelo);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
+                    if (soloLectura) { e.consume(); return; }
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
                     if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
                         getTableView().getSelectionModel().select(getIndex());
@@ -277,6 +287,16 @@ public class PulidoSuperTecnicoController {
             lblUltimaActualizacion.setOnMouseClicked(e -> cargar());
             lblUltimaActualizacion.setOnMouseEntered(e -> lblUltimaActualizacion.setUnderline(true));
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
+        }
+    }
+
+    /** Activa el modo solo lectura (admin): oculta acciones de escritura. Default false (supertécnico no afectado). */
+    public void setSoloLectura(boolean soloLectura) {
+        this.soloLectura = soloLectura;
+        if (soloLectura) {
+            cAccion.setVisible(false);
+            if (btnAsignar != null) { btnAsignar.setVisible(false); btnAsignar.setManaged(false); }
+            tablaPulidos.refresh();
         }
     }
 
