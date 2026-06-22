@@ -207,6 +207,9 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @FXML
     private void mostrarHistorial() {
+        // Estando ya en el historial dentro del detalle de un IMEI, volver a pulsar
+        // "Historial" devuelve a la vista agrupada (igual que para el supertécnico).
+        if (pnlHistorial.isVisible() && modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         pnlHistorial.setVisible(true);   pnlHistorial.setManaged(true);
         pnlAsignaciones.setVisible(false); pnlAsignaciones.setManaged(false);
         btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn-active");
