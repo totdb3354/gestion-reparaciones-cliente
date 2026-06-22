@@ -198,4 +198,86 @@ public class ConfirmDialog {
         ventana.setScene(scene);
         ventana.showAndWait();
     }
+
+    /**
+     * Diálogo de confirmación que requiere un motivo de texto (obligatorio).
+     * El botón de acción queda deshabilitado hasta que se escribe texto.
+     */
+    public static void mostrarConMotivo(String titulo, String descripcion,
+                                        String textoAccion, java.util.function.Consumer<String> onConfirm) {
+        Stage ventana = new Stage();
+        ventana.initModality(Modality.APPLICATION_MODAL);
+        ventana.initStyle(StageStyle.UNDECORATED);
+        ventana.setResizable(false);
+
+        Label lblTitulo = new Label(titulo);
+        lblTitulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + Colores.TEXTO_ERROR + ";");
+        lblTitulo.setWrapText(true);
+
+        Label lblX = new Label("✕");
+        lblX.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-cursor: hand; -fx-text-fill: " + Colores.AZUL_GRIS + ";");
+        lblX.setOnMouseClicked(e -> ventana.close());
+
+        HBox spacer = new HBox();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox barraTop = new HBox(lblTitulo, spacer, lblX);
+        barraTop.setAlignment(Pos.CENTER_LEFT);
+        barraTop.setPadding(new Insets(0, 0, 8, 0));
+
+        Label lblDesc = new Label(descripcion);
+        lblDesc.setStyle("-fx-font-size: 13px; -fx-text-fill: " + Colores.AZUL_MEDIO + ";");
+        lblDesc.setWrapText(true);
+        lblDesc.setMaxWidth(352);
+
+        TextArea txtMotivo = new TextArea();
+        txtMotivo.setPromptText("Escribe el motivo del borrado...");
+        txtMotivo.setWrapText(true);
+        txtMotivo.setPrefRowCount(3);
+        txtMotivo.setMaxWidth(Double.MAX_VALUE);
+        txtMotivo.setStyle("-fx-font-size: 13px; -fx-background-color: white;" +
+                "-fx-border-color: #C2C8D0; -fx-border-width: 1;");
+
+        Button btnAccion = new Button(textoAccion);
+        btnAccion.setMaxWidth(Double.MAX_VALUE);
+        btnAccion.setDisable(true);
+        btnAccion.setStyle(
+                "-fx-background-color: " + Colores.ROJO_ACCION + "; -fx-text-fill: " + Colores.CREMA + ";" +
+                "-fx-background-radius: 4; -fx-font-size: 12px;" +
+                "-fx-padding: 10; -fx-cursor: hand;");
+
+        txtMotivo.textProperty().addListener((obs, o, n) ->
+                btnAccion.setDisable(n == null || n.isBlank()));
+
+        btnAccion.setOnAction(e -> {
+            ventana.close();
+            onConfirm.accept(txtMotivo.getText().trim());
+        });
+
+        Button btnCancelar = new Button("Cancelar");
+        btnCancelar.setMaxWidth(Double.MAX_VALUE);
+        btnCancelar.setStyle(
+                "-fx-background-color: " + Colores.CREMA + "; -fx-text-fill: " + Colores.AZUL_GRIS + ";" +
+                "-fx-border-color: " + Colores.AZUL_GRIS + "; -fx-border-radius: 4;" +
+                "-fx-background-radius: 4; -fx-font-size: 12px;" +
+                "-fx-padding: 10; -fx-cursor: hand;");
+        btnCancelar.setOnAction(e -> ventana.close());
+
+        VBox contenido = new VBox(10, barraTop, lblDesc, txtMotivo, btnAccion, btnCancelar);
+        contenido.setPadding(new Insets(24));
+        contenido.setPrefWidth(400);
+        contenido.setStyle(ESTILO_CONTENEDOR);
+
+        final double[] drag = new double[2];
+        contenido.setOnMousePressed(e  -> { drag[0] = e.getSceneX(); drag[1] = e.getSceneY(); });
+        contenido.setOnMouseDragged(e  -> {
+            ventana.setX(e.getScreenX() - drag[0]);
+            ventana.setY(e.getScreenY() - drag[1]);
+        });
+
+        Scene scene = new Scene(contenido);
+        scene.setFill(Color.web(Colores.CREMA));
+        ventana.setScene(scene);
+        ventana.setOnCloseRequest(e -> {});
+        ventana.showAndWait();
+    }
 }
