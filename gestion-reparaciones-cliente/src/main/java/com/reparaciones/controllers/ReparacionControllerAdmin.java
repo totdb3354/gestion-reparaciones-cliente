@@ -57,6 +57,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private TableColumn<Object, String> colImei;
     @FXML private TableColumn<Object, String> colModelo;
     @FXML private TableColumn<Object, String> colReparador;
+    @FXML private TableColumn<Object, String> colAsignadoPor;
     @FXML private TableColumn<Object, String> colFecha;
     @FXML private TableColumn<Object, String> colComponente;
     @FXML private TableColumn<Object, String> colObservaciones;
@@ -155,7 +156,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
-        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colRevision.setVisible(true);
@@ -268,6 +269,13 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             if (o instanceof ReparacionResumen rep)
                 return new javafx.beans.property.SimpleStringProperty(
                     rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+            return new javafx.beans.property.SimpleStringProperty("");
+        });
+        colAsignadoPor.setCellValueFactory(d -> {
+            Object o = d.getValue();
+            if (o instanceof ReparacionResumen rep)
+                return new javafx.beans.property.SimpleStringProperty(
+                    rep.getNombreTecnicoAsigna() != null ? rep.getNombreTecnicoAsigna() : "—");
             return new javafx.beans.property.SimpleStringProperty("");
         });
         colReparador.setCellFactory(col -> new TableCell<>() {
@@ -797,7 +805,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         filtroImei     .setVisible(false); filtroImei     .setManaged(false);
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
-        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colRevision.setVisible(false);
@@ -838,7 +846,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
             filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
         }
-        colIdRep.setVisible(false); colReparador.setVisible(false);
+        colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
         colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
         colRevision.setVisible(true);
@@ -856,7 +864,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     private void entrarModoPlano() {
         modoActual  = Modo.PLANO;
         imeiDetalle = null;
-        colIdRep.setVisible(true); colReparador.setVisible(true);
+        colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
         colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
         colRevision.setVisible(false);
