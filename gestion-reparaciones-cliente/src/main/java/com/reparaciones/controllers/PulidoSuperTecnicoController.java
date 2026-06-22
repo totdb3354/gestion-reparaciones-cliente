@@ -225,12 +225,13 @@ public class PulidoSuperTecnicoController {
                     abrirSelectorModelo(getItem());
                 });
                 menu.getItems().add(editarModelo);
-                setContextMenu(menu);
-                addEventFilter(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, ev -> {
-                    if (soloLectura) ev.consume();   // admin: sin menú contextual de escritura
+                menu.setOnShowing(e -> {
+                    // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
+                    editarComentario.setVisible(!soloLectura);
+                    editarModelo.setVisible(!soloLectura);
                 });
+                setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
-                    if (soloLectura) { e.consume(); return; }
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
                     if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
                         getTableView().getSelectionModel().select(getIndex());

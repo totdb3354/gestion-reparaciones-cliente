@@ -292,16 +292,15 @@ public class PendientesSuperTecnicoController {
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.setOnShowing(e -> {
+                    // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
+                    editarComentario.setVisible(!soloLectura);
+                    toggleUrgente.setVisible(!soloLectura);
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
                 menu.getItems().add(toggleUrgente);
                 setContextMenu(menu);
-                addEventFilter(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, ev -> {
-                    if (soloLectura) ev.consume();   // admin: sin menú contextual de escritura
-                });
                 setOnContextMenuRequested(e -> {
-                    if (soloLectura) { e.consume(); return; }
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
                     if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
                         getTableView().getSelectionModel().select(getIndex());
