@@ -246,11 +246,8 @@ public class RegisterController {
             limpiarFormulario();
             cargarUsuarios();
         } catch (SQLException e) {
-            if (e.getErrorCode() == 1062) {
-                mostrarError("Ese nombre de usuario ya existe.");
-            } else {
-                mostrarError("Error al registrar. Inténtalo de nuevo.");
-            }
+            String msg = e.getMessage();
+            mostrarError(msg != null && !msg.isBlank() ? msg : "Error al registrar. Inténtalo de nuevo.");
         }
     }
 
