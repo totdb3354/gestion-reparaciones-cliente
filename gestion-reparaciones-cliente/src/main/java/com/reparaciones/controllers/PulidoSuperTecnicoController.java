@@ -226,6 +226,9 @@ public class PulidoSuperTecnicoController {
                 });
                 menu.getItems().add(editarModelo);
                 setContextMenu(menu);
+                addEventFilter(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, ev -> {
+                    if (soloLectura) ev.consume();   // admin: sin menú contextual de escritura
+                });
                 setOnContextMenuRequested(e -> {
                     if (soloLectura) { e.consume(); return; }
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
