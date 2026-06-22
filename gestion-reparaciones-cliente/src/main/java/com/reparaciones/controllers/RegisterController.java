@@ -31,6 +31,8 @@ public class RegisterController {
     @FXML private PasswordField campoConfirmar;
     @FXML private ComboBox<String> comboRol;
     @FXML private Label         lblError;
+    @FXML private Label         lblErrorTecnico;
+    @FXML private Label         lblErrorUsuario;
     @FXML private Button        btnRegistrar;
 
     @FXML private TableView<Usuario>           tablaUsuarios;
@@ -52,6 +54,37 @@ public class RegisterController {
         comboRol.setValue("TECNICO");
         configurarTabla();
         cargarUsuarios();
+
+        campoNombreTecnico.textProperty().addListener((obs, o, n) -> validarNombresEnVivo());
+        campoNombreUsuario.textProperty().addListener((obs, o, n) -> validarNombresEnVivo());
+    }
+
+    /**
+     * Validación en vivo de nombres duplicados (case-insensitive + trim) contra la lista
+     * cargada. Muestra el mensaje encima del campo y deshabilita Registrar si hay duplicado.
+     * La validación del servidor permanece como red de seguridad al enviar.
+     */
+    private void validarNombresEnVivo() {
+        String tecnico = campoNombreTecnico.getText() != null ? campoNombreTecnico.getText().trim() : "";
+        String usuario = campoNombreUsuario.getText() != null ? campoNombreUsuario.getText().trim() : "";
+
+        boolean tecnicoDup = !tecnico.isEmpty() && datos.stream()
+                .anyMatch(u -> u.getNombreTecnico() != null
+                        && u.getNombreTecnico().trim().equalsIgnoreCase(tecnico));
+        boolean usuarioDup = !usuario.isEmpty() && datos.stream()
+                .anyMatch(u -> u.getNombreUsuario() != null
+                        && u.getNombreUsuario().trim().equalsIgnoreCase(usuario));
+
+        mostrarErrorCampo(lblErrorTecnico, tecnicoDup, "Ya existe un técnico con ese nombre.");
+        mostrarErrorCampo(lblErrorUsuario, usuarioDup, "Ese nombre de usuario ya existe.");
+
+        btnRegistrar.setDisable(tecnicoDup || usuarioDup);
+    }
+
+    private void mostrarErrorCampo(Label lbl, boolean mostrar, String mensaje) {
+        lbl.setText(mostrar ? mensaje : "");
+        lbl.setVisible(mostrar);
+        lbl.setManaged(mostrar);
     }
 
     /**

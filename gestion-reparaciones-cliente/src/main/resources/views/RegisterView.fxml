@@ -33,6 +33,8 @@
                 <VBox spacing="5" HBox.hgrow="ALWAYS">
                     <Label text="Nombre del técnico"
                            style="-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblErrorTecnico" managed="false" visible="false" wrapText="true"
+                           style="-fx-font-size: 10px; -fx-text-fill: #C0392B; -fx-font-weight: bold;"/>
                     <TextField fx:id="campoNombreTecnico"
                                promptText="Nombre visible en reparaciones"
                                style="-fx-background-color: white; -fx-border-color: #D4D8DE;
@@ -43,6 +45,8 @@
                 <VBox spacing="5" HBox.hgrow="ALWAYS">
                     <Label text="Nombre de usuario"
                            style="-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;"/>
+                    <Label fx:id="lblErrorUsuario" managed="false" visible="false" wrapText="true"
+                           style="-fx-font-size: 10px; -fx-text-fill: #C0392B; -fx-font-weight: bold;"/>
                     <TextField fx:id="campoNombreUsuario"
                                promptText="Credencial de login"
                                style="-fx-background-color: white; -fx-border-color: #D4D8DE;
