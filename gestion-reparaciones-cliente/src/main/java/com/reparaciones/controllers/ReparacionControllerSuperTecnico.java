@@ -1426,13 +1426,13 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 alerta.showAndWait();
                 return;
             }
-            ConfirmDialog.mostrar(
+            ConfirmDialog.mostrarConMotivo(
                     "Borrar reparación",
-                    "Se borrará " + rep.getIdRep() + ". Los componentes usados volverán a stock y, si resolvía una incidencia, esta quedará activa de nuevo.",
+                    "Se borrará " + rep.getIdRep() + ". Los componentes usados volverán a stock y, si resolvía una incidencia, esta quedará activa de nuevo. Escribe el motivo.",
                     "Borrar reparación",
-                    () -> {
+                    motivo -> {
                         try {
-                            reparacionDAO.eliminar(rep.getIdRep());
+                            reparacionDAO.eliminar(rep.getIdRep(), motivo);
                             cargarDatos();
                         } catch (SQLException e) {
                             mostrarError(e);
