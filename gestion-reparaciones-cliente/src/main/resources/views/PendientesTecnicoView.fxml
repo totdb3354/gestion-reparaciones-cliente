@@ -31,6 +31,7 @@
             <TableColumn fx:id="cAsignadoPor" text="Asignado por"    prefWidth="120"/>
             <TableColumn fx:id="cEstado"     text="Estado"           prefWidth="100"/>
             <TableColumn fx:id="cAccion" text=""                  prefWidth="150"/>
+            <TableColumn fx:id="cBorrar" text=""                  prefWidth="45"/>
         </columns>
         <placeholder><Label text="No tienes asignaciones pendientes"/></placeholder>
     </TableView>
