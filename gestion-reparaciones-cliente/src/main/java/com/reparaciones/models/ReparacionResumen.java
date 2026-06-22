@@ -38,6 +38,7 @@ public class ReparacionResumen {
     private String        modelo;
     private String        comentarioAsignacion;
     private String        observacionTelefono;
+    private String        nombreTecnicoAsigna;
     private boolean       urgente;
     private boolean       revisionLogistica;
     private boolean       tieneAsignaciones;
@@ -147,6 +148,8 @@ public class ReparacionResumen {
     public void setDescripcionSolicitud(String descripcionSolicitud) { this.descripcionSolicitud = descripcionSolicitud; }
     public void setIdTec(int idTec)                                 { this.idTec = idTec; }
     public void setNombreTecnico(String nombreTecnico)              { this.nombreTecnico = nombreTecnico; }
+    public String getNombreTecnicoAsigna()                          { return nombreTecnicoAsigna; }
+    public void setNombreTecnicoAsigna(String nombreTecnicoAsigna)  { this.nombreTecnicoAsigna = nombreTecnicoAsigna; }
     public void setEstadoSolicitud(String estadoSolicitud)          { this.estadoSolicitud = estadoSolicitud; }
     public void setTipoSolicitud(String tipoSolicitud)              { this.tipoSolicitud = tipoSolicitud; }
     public void setStockSolicitud(int stockSolicitud)               { this.stockSolicitud = stockSolicitud; }

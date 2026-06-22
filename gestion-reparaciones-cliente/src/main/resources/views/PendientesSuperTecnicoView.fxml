@@ -35,6 +35,7 @@
             <TableColumn fx:id="cModelo"  text="Modelo"           prefWidth="120"/>
             <TableColumn fx:id="cFecha"      text="Fecha asignación" prefWidth="130"/>
             <TableColumn fx:id="cComentario" text="Comentario"       prefWidth="160"/>
+            <TableColumn fx:id="cAsignadoPor" text="Asignado por"    prefWidth="120"/>
             <TableColumn fx:id="cEstado"     text="Estado"           prefWidth="100"/>
             <TableColumn fx:id="cAccion"  text=""                 prefWidth="45"/>
         </columns>

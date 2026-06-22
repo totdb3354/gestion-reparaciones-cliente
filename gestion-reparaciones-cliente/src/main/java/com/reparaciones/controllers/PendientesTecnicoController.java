@@ -33,6 +33,7 @@ public class PendientesTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
+    @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
     @FXML private MenuButton filtroSolicitud;
     @FXML private TextField  filtroImei;
@@ -89,6 +90,8 @@ public class PendientesTecnicoController {
                 FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+        cAsignadoPor.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+                d.getValue().getNombreTecnicoAsigna() != null ? d.getValue().getNombreTecnicoAsigna() : "—"));
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPendientes.setItems(datosFiltrados);
