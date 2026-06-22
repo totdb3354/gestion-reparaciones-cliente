@@ -230,7 +230,7 @@ public class LogController {
         ((Stage) tablaLogs.getScene().getWindow()).close();
     }
 
-    private static boolean coincideTexto(LogActividad log, String texto) {
+    static boolean coincideTexto(LogActividad log, String texto) {
         if (texto == null || texto.isBlank()) return true;
         String t = texto.toLowerCase().trim();
         return contiene(log.getNombreUsuario(), t)
