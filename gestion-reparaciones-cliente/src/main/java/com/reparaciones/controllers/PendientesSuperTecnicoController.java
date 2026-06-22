@@ -58,6 +58,8 @@ public class PendientesSuperTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
+    @FXML private javafx.scene.control.Button btnAsignar;
+    private boolean soloLectura = false;
     @FXML private TextField  filtroImei;
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private MenuButton filtroSolicitud;
@@ -165,6 +167,13 @@ public class PendientesSuperTecnicoController {
                 }
                 actualizando = true;
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                if (soloLectura) {
+                    setText(rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
+                    setGraphic(null);
+                    actualizando = false;
+                    setStyle("");
+                    return;
+                }
                 cb.getItems().setAll(tecnicos);
                 Tecnico mostrar = tecnicos.stream().filter(t -> t.getIdTec() == rep.getIdTec()).findFirst().orElse(null);
                 cb.setValue(mostrar);
@@ -288,6 +297,7 @@ public class PendientesSuperTecnicoController {
                 menu.getItems().add(toggleUrgente);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
+                    if (soloLectura) { e.consume(); return; }
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
                     if (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
                         getTableView().getSelectionModel().select(getIndex());
@@ -419,6 +429,16 @@ public class PendientesSuperTecnicoController {
         tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
         cargar();
+    }
+
+    /** Activa el modo solo lectura (admin): oculta acciones de escritura. Default false (supertécnico no afectado). */
+    public void setSoloLectura(boolean soloLectura) {
+        this.soloLectura = soloLectura;
+        if (soloLectura) {
+            cAccion.setVisible(false);
+            if (btnAsignar != null) { btnAsignar.setVisible(false); btnAsignar.setManaged(false); }
+            tablaPendientes.refresh();
+        }
     }
 
     // ─── Filtros ──────────────────────────────────────────────────────────────
