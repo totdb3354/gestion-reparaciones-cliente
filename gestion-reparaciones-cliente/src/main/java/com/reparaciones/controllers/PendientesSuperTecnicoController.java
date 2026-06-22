@@ -393,17 +393,25 @@ public class PendientesSuperTecnicoController {
                             (rep.isEsIncidencia()
                                     ? " y la incidencia se marcará como no activa en la tabla principal."
                                     : ".");
-                    ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(), desc,
-                            "Borrar asignación", () -> {
-                                try {
-                                    if (rep.isEsIncidencia())
+                    if (rep.isEsIncidencia()) {
+                        ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(), desc,
+                                "Borrar asignación", () -> {
+                                    try {
                                         reparacionDAO.borrarIncidenciaPorImei(rep.getImei());
-                                    else
-                                        reparacionDAO.eliminarAsignacion(rep.getIdRep());
-                                    cargar();
-                                    if (onActualizar != null) onActualizar.run();
-                                } catch (SQLException ex) { mostrarError(ex); }
-                            });
+                                        cargar();
+                                        if (onActualizar != null) onActualizar.run();
+                                    } catch (SQLException ex) { mostrarError(ex); }
+                                });
+                    } else {
+                        ConfirmDialog.mostrarConMotivo("Borrar asignación " + rep.getIdRep(), desc,
+                                "Borrar asignación", motivo -> {
+                                    try {
+                                        reparacionDAO.eliminarAsignacion(rep.getIdRep(), motivo);
+                                        cargar();
+                                        if (onActualizar != null) onActualizar.run();
+                                    } catch (SQLException ex) { mostrarError(ex); }
+                                });
+                    }
                 });
             }
             @Override
