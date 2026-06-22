@@ -134,6 +134,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private Label  lblNavCount;
 
     private final Set<Integer>   idsTecFiltro  = new HashSet<>();
+    private final Set<String>    idsAjenas     = new HashSet<>();
     private final StringProperty etiquetaTec   = new SimpleStringProperty("Técnico");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>  tecnicosLista  = new ArrayList<>();
@@ -874,6 +875,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             protected void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
                 aplicarEstilo(item, empty);
+                setOpacity(item instanceof ReparacionResumen rep && idsAjenas.contains(rep.getIdRep()) ? 0.45 : 1.0);
             }
         });
     }
@@ -980,6 +982,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         boolean filtrarAbiertas = cbIncidenciasAbiertas.isSelected();
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
+        idsAjenas.clear();
         if (modoActual == Modo.PLANO) {
             java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
             List<ReparacionResumen> filtradas = datos.stream()
@@ -1008,10 +1011,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
         if (modoActual == Modo.DETALLE) {
             lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
-            List<ReparacionResumen> filtradas = datos.stream()
+            List<ReparacionResumen> todas = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
                 .filter(rep -> {
-                    if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
                     if (desde != null || hasta != null) {
                         if (rep.getFechaFin() == null) return false;
                         LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
@@ -1027,8 +1029,23 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     }
                     return true;
                 }).collect(Collectors.toList());
-            tablaItems.setAll(filtradas);
-            lblNavCount.setText("  •  " + filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
+
+            if (idsTecFiltro.isEmpty()) {
+                tablaItems.setAll(todas);
+                lblNavCount.setText("  •  " + todas.size() + " reparaci" + (todas.size() == 1 ? "ón" : "ones"));
+            } else {
+                List<ReparacionResumen> delFiltro = todas.stream()
+                    .filter(r -> idsTecFiltro.contains(r.getIdTec())).collect(Collectors.toList());
+                List<ReparacionResumen> otras = todas.stream()
+                    .filter(r -> !idsTecFiltro.contains(r.getIdTec())).collect(Collectors.toList());
+                otras.forEach(r -> idsAjenas.add(r.getIdRep()));
+                List<ReparacionResumen> resultado = new ArrayList<>(delFiltro);
+                resultado.addAll(otras);
+                tablaItems.setAll(resultado);
+                int nO = otras.size();
+                lblNavCount.setText("  •  " + delFiltro.size() + " de filtrados"
+                    + (nO > 0 ? " + " + nO + " de otros" : ""));
+            }
             return;
         }
 
@@ -1061,6 +1078,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaItems.clear();
         for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
             GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
+            if (!idsTecFiltro.isEmpty()
+                    && e.getValue().stream().noneMatch(r -> idsTecFiltro.contains(r.getIdTec())))
+                continue;
             if (filtrarInc || filtrarNormal) {
                 boolean tieneInc = grupo.getCountIncAbiertas() > 0;
                 boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
@@ -1193,8 +1213,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     // ─── Helpers de filtro ────────────────────────────────────────────────────
 
     private void adaptarFiltrosMaestro() {
-        filtroTecnico.setVisible(false); filtroTecnico.setManaged(false);
-        idsTecFiltro.clear();
+        filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
         actualizarTextoFiltroTecnico();
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         cbIncidenciasAbiertas.setText("Incidencia");
