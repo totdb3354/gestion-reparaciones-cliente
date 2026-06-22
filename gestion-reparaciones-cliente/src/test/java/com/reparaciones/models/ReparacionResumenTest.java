@@ -48,4 +48,12 @@ class ReparacionResumenTest {
                 false, false, null, null, 1, 0, null, LocalDateTime.now());
         assertNull(r.getTipoComponente());
     }
+
+    @Test
+    void nombreTecnicoAsigna_getterYSetter() {
+        ReparacionResumen r = reparacion(null);
+        assertNull(r.getNombreTecnicoAsigna());
+        r.setNombreTecnicoAsigna("Diego");
+        assertEquals("Diego", r.getNombreTecnicoAsigna());
+    }
 }
