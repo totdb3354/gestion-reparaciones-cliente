@@ -4,7 +4,10 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -234,8 +237,11 @@ public class PendientesTecnicoController {
             }
         });
 
+        Image imgBorrar = new Image(getClass().getResourceAsStream("/images/borrar.png"));
         cAccion.setCellFactory(col -> new TableCell<>() {
             private final Button btn = new Button("Añadir reparación");
+            private final ImageView ivBorrar = new ImageView(imgBorrar);
+            private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(8);
             {
                 btn.getStyleClass().add("btn-primary");
                 btn.setOnAction(e -> {
@@ -247,10 +253,37 @@ public class PendientesTecnicoController {
                     FormularioReparacionController.abrir(
                             asig.getImei(), null, asig.getIdRep(), alCerrar);
                 });
+
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                box.getChildren().add(btn);
+
+                if (Sesion.esSuperTecnico()) {
+                    ivBorrar.setFitWidth(25); ivBorrar.setFitHeight(25); ivBorrar.setPreserveRatio(true);
+                    ivBorrar.setStyle("-fx-cursor: hand;");
+                    ivBorrar.setOnMouseClicked(e -> {
+                        ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                        String desc = "El técnico dejará de verla en su lista de pendientes" +
+                                (rep.isEsIncidencia()
+                                        ? " y la incidencia se marcará como no activa en la tabla principal."
+                                        : ".");
+                        ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(), desc,
+                                "Borrar asignación", () -> {
+                                    try {
+                                        if (rep.isEsIncidencia())
+                                            reparacionDAO.borrarIncidenciaPorImei(rep.getImei());
+                                        else
+                                            reparacionDAO.eliminarAsignacion(rep.getIdRep());
+                                        cargar();
+                                        if (onCerrar != null) onCerrar.run();
+                                    } catch (SQLException ex) { mostrarError(ex); }
+                                });
+                    });
+                    box.getChildren().add(ivBorrar);
+                }
             }
             @Override protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : btn);
+                setGraphic(empty ? null : box);
             }
         });
 
