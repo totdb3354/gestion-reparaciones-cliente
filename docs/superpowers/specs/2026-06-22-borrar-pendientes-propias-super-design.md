@@ -17,10 +17,11 @@ En la vista de "Pendientes" propias, el **supertécnico** podrá borrar una asig
 
 ## Cambio
 
-Único archivo: `PendientesTecnicoController`.
+Archivos: `PendientesTecnicoController` + `PendientesTecnicoView.fxml`.
 
-En el `cellFactory` de `cAccion`, además del botón "Añadir reparación":
-- Si `Sesion.esSuperTecnico()`, añadir un `ImageView` con `/images/borrar.png` (25×25, cursor hand) en el mismo `HBox` de la celda, a la derecha del botón.
+La papelera va en una **columna dedicada aparte** (`cBorrar`), no en la misma celda que "Añadir reparación" — igual que en el panel de Asignaciones, donde la papelera es su propia columna.
+- FXML: añadir `<TableColumn fx:id="cBorrar" text="" prefWidth="45"/>` tras `cAccion`.
+- Controller: declarar `cBorrar`. Si `Sesion.esSuperTecnico()`, su `cellFactory` muestra un `ImageView` con `/images/borrar.png` (25×25, cursor hand) centrado; si no es supertécnico, ocultar la columna (`cBorrar.setVisible(false)`).
 - Handler del icono, replicando el de Asignaciones:
   - `desc = "El técnico dejará de verla en su lista de pendientes" + (esIncidencia ? " y la incidencia se marcará como no activa en la tabla principal." : ".")`
   - `ConfirmDialog.mostrar("Borrar asignación " + idRep, desc, "Borrar asignación", () -> { ... })`.

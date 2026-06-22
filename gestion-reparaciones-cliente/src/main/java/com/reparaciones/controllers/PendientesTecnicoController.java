@@ -38,6 +38,7 @@ public class PendientesTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>   cAccion;
+    @FXML private TableColumn<ReparacionResumen, Void>   cBorrar;
     @FXML private MenuButton filtroSolicitud;
     @FXML private TextField  filtroImei;
     @FXML private Label      lblUltimaActualizacion;
@@ -237,11 +238,8 @@ public class PendientesTecnicoController {
             }
         });
 
-        Image imgBorrar = new Image(getClass().getResourceAsStream("/images/borrar.png"));
         cAccion.setCellFactory(col -> new TableCell<>() {
             private final Button btn = new Button("Añadir reparación");
-            private final ImageView ivBorrar = new ImageView(imgBorrar);
-            private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(8);
             {
                 btn.getStyleClass().add("btn-primary");
                 btn.setOnAction(e -> {
@@ -253,13 +251,22 @@ public class PendientesTecnicoController {
                     FormularioReparacionController.abrir(
                             asig.getImei(), null, asig.getIdRep(), alCerrar);
                 });
+            }
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
 
-                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-                box.getChildren().add(btn);
-
-                if (Sesion.esSuperTecnico()) {
+        Image imgBorrar = new Image(getClass().getResourceAsStream("/images/borrar.png"));
+        if (Sesion.esSuperTecnico()) {
+            cBorrar.setCellFactory(col -> new TableCell<>() {
+                private final ImageView ivBorrar = new ImageView(imgBorrar);
+                private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(ivBorrar);
+                {
                     ivBorrar.setFitWidth(25); ivBorrar.setFitHeight(25); ivBorrar.setPreserveRatio(true);
                     ivBorrar.setStyle("-fx-cursor: hand;");
+                    box.setAlignment(javafx.geometry.Pos.CENTER);
                     ivBorrar.setOnMouseClicked(e -> {
                         ReparacionResumen rep = getTableView().getItems().get(getIndex());
                         String desc = "El técnico dejará de verla en su lista de pendientes" +
@@ -278,14 +285,15 @@ public class PendientesTecnicoController {
                                     } catch (SQLException ex) { mostrarError(ex); }
                                 });
                     });
-                    box.getChildren().add(ivBorrar);
                 }
-            }
-            @Override protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : box);
-            }
-        });
+                @Override protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setGraphic(empty ? null : box);
+                }
+            });
+        } else {
+            cBorrar.setVisible(false);
+        }
 
         tablaPendientes.getColumns().forEach(c -> c.setReorderable(false));
         configurarFiltros();
