@@ -449,8 +449,9 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
      * @param idAsig ID de la asignación a eliminar
      * @throws SQLException si falla la llamada al servidor
      */
-    public void eliminarAsignacion(String idAsig) throws SQLException {
-        ApiClient.delete("/api/reparaciones/asignaciones/" + idAsig);
+    public void eliminarAsignacion(String idAsig, String motivo) throws SQLException {
+        ApiClient.deleteWithBody("/api/reparaciones/asignaciones/" + idAsig,
+                java.util.Map.of("motivo", motivo));
     }
 
     /**
@@ -459,7 +460,8 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
      * @param idRep ID de la reparación a eliminar
      * @throws SQLException si falla la llamada al servidor
      */
-    public void eliminar(String idRep) throws SQLException {
-        ApiClient.delete("/api/reparaciones/" + idRep);
+    public void eliminar(String idRep, String motivo) throws SQLException {
+        ApiClient.deleteWithBody("/api/reparaciones/" + idRep,
+                java.util.Map.of("motivo", motivo));
     }
 }

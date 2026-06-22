@@ -254,6 +254,16 @@ public class ApiClient {
         handleErrors(response);
     }
 
+    public static void deleteWithBody(String path, Object body) throws SQLException {
+        HttpRequest.BodyPublisher publisher = body != null
+                ? HttpRequest.BodyPublishers.ofString(GSON.toJson(body))
+                : HttpRequest.BodyPublishers.noBody();
+        HttpResponse<String> response = send(builder(path)
+                .method("DELETE", publisher)
+                .build());
+        handleErrors(response);
+    }
+
     // ── Internals ─────────────────────────────────────────────────────────────
 
     private static HttpRequest.Builder builder(String path) {

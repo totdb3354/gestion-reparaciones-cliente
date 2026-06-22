@@ -9,6 +9,7 @@ public class LogActividad {
     private String nombreUsuario;
     private String accion;
     private String detalle;
+    private String motivo;
 
     public LogActividad() {}
 
@@ -26,4 +27,5 @@ public class LogActividad {
     public String        getNombreUsuario() { return nombreUsuario; }
     public String        getAccion()        { return accion; }
     public String        getDetalle()       { return detalle; }
+    public String        getMotivo()        { return motivo; }
 }
