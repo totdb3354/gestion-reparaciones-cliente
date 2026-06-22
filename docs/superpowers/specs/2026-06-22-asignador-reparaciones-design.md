@@ -59,11 +59,11 @@ Los métodos del DAO que insertan/actualizan reciben el `idTecAsigna` como pará
 ### Modelo (`ReparacionResumen`, cliente)
 - Nuevo campo `String nombreTecnicoAsigna` con getter (lo rellena Gson desde el JSON del servidor).
 
-### UI — nueva columna "Asignado por"
-Muestra `nombreTecnicoAsigna`; si es null muestra `—`.
+### UI — nueva columna dedicada "Asignado por"
+Columna de texto que muestra `nombreTecnicoAsigna`; si es null muestra `—`. Se descarta incrustar el dato en otra celda (tipo badge "reutilizado") porque el asignador es un nombre, no un flag booleano.
 
-- **Pendientes:** `PendientesTecnicoController`, `PendientesSuperTecnicoController` (+ sus FXML).
-- **Historial:** `ReparacionControllerTecnico`, `ReparacionControllerSuperTecnico`, `ReparacionControllerAdmin` (+ sus FXML).
+- **Pendientes:** `PendientesTecnicoController`, `PendientesSuperTecnicoController` (+ sus FXML). Las listas de pendientes solo tienen filas individuales, así que la columna siempre aplica.
+- **Historial:** `ReparacionControllerTecnico`, `ReparacionControllerSuperTecnico`, `ReparacionControllerAdmin` (+ sus FXML). El historial tiene modo **plano** (fila por reparación) y **agrupado por IMEI** (modo maestro, varias reparaciones por fila). La columna "Asignado por" se muestra **solo en modo plano** — en agrupado el dato sería ambiguo (varias reparaciones con posible asignador distinto), así que ahí queda vacío/oculto.
 
 ## Testing
 
