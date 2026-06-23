@@ -303,7 +303,10 @@ public class PendientesSuperTecnicoController {
                     ReparacionResumen rep = getItem();
                     try {
                         java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
-                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, null);
+                        Integer idActual = activos.stream()
+                                .filter(c -> c.getNombre().equals(rep.getCliente()))
+                                .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
+                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
                         if (sel.isEmpty()) return;
                         Integer idCli = (sel.get() == -1) ? null : sel.get();
                         int n;

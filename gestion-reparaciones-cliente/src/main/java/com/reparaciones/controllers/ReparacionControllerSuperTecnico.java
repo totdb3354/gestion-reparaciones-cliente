@@ -830,7 +830,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     if (!(getItem() instanceof com.reparaciones.models.GrupoImei grupo)) return;
                     try {
                         java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
-                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, null);
+                        Integer idActual = activos.stream()
+                                .filter(c -> c.getNombre().equals(grupo.getCliente()))
+                                .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
+                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
                         if (sel.isEmpty()) return;
                         Integer idCli = (sel.get() == -1) ? null : sel.get();
                         telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
