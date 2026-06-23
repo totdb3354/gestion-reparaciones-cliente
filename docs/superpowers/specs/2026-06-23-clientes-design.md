@@ -31,7 +31,7 @@ quiere:
 | Obligatoriedad | Opcional al asignar |
 | Urgente al asociar cliente | Sí por defecto al asignar, editable después |
 | Columna en tablas | Columna propia "Cliente" en Asignaciones y en Historial **agrupado** (no en la vista plana) |
-| Edición posterior | Sí, por IMEI, desde Asignaciones (con confirmación) y desde Historial agrupado (directo, sin confirmación); sin multi-selección en v1 |
+| Edición posterior | Sí, por IMEI, desde Asignaciones y desde Historial agrupado (aplica directo, sin confirmación); ítem con icono de lápiz; sin multi-selección en v1 |
 | Permisos | Escritura de cliente (catálogo, asignación, cambio por IMEI) y edición de observación: **SUPERTECNICO únicamente**. ADMIN y demás roles: solo lectura |
 | Auditoría | Log de actividad para todas las escrituras nuevas |
 | Concurrencia | Bloqueo optimista completo (`UPDATED_AT` + `StaleDataException`/409) en `Cliente` y `Telefono` |
@@ -259,18 +259,17 @@ unidad significativa:
 ### Edición posterior del cliente
 
 - Se edita **siempre a nivel de IMEI** (no por reparación individual), mediante
-  menú contextual **"Editar cliente"** (mismo patrón que "Editar comentario"):
+  menú contextual **"Editar cliente"** (con icono de lápiz, como "Editar
+  comentario"):
   - En la pestaña de **Asignaciones** (cubre IMEIs que solo tienen pendientes y
     aún no aparecen en el historial).
   - En la **vista agrupada del Historial** (modo MAESTRO).
-- El menú abre el mismo selector con buscador (clientes activos + opción
-  "Sin cliente") y llama a `telefonoDAO.actualizarCliente(imei, idCli, updatedAt)`.
-- **Confirmación solo en la vista plana de Asignaciones:** ahí una fila es una
-  asignación, así que antes de aplicar se muestra un diálogo
-  *"Se cambiará el cliente de las N asignaciones del IMEI XXXX"* para que el
-  efecto por-IMEI sea explícito (no engañoso). En la **vista agrupada** una fila
-  ya **es** el IMEI, por lo que el cambio **se aplica directamente, sin
-  confirmación** (sería redundante).
+- El menú abre el selector con buscador (clientes activos + opción "— Sin
+  cliente —"), que **abre con el cliente actual del IMEI preseleccionado y
+  resaltado** y muestra "Seleccionado: X"; al confirmar llama a
+  `telefonoDAO.actualizarCliente(imei, idCli, updatedAt)`.
+- **Sin diálogo de confirmación** en ninguna de las dos vistas: se aplica
+  directamente (se descartó por ruido).
 - Es un único `UPDATE` atómico sobre `Telefono`: no hay estados parciales ni
   inconsistencia posible entre asignaciones del mismo IMEI.
 - Sin multi-selección en v1 (editar un IMEI ya cambia todas sus asignaciones a
