@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+<VBox xmlns:fx="http://javafx.com/fxml" spacing="12"
+      fx:controller="com.reparaciones.controllers.ClientesController"
+      stylesheets="@../styles/app.css">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Label text="Clientes" styleClass="vista-titulo"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="filtroNombre" promptText="Buscar cliente..." styleClass="buscador"/>
+        <Button fx:id="btnNuevo" text="+ Nuevo" styleClass="btn-primary" onAction="#nuevoCliente"/>
+    </HBox>
+    <TableView fx:id="tablaClientes" VBox.vgrow="ALWAYS" styleClass="tabla-reparaciones">
+        <columns>
+            <TableColumn fx:id="cNombre" text="Nombre" prefWidth="300"/>
+            <TableColumn fx:id="cEstado" text="Estado" prefWidth="120"/>
+            <TableColumn fx:id="cAcciones" text="" prefWidth="160"/>
+        </columns>
+        <placeholder><Label text="Sin clientes"/></placeholder>
+    </TableView>
+</VBox>
