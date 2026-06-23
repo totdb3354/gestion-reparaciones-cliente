@@ -118,7 +118,7 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
   - `PATCH /api/clientes/{id}/activo` → `{activo, updatedAt}` → log
     `ALTA_CLIENTE`/`BAJA_CLIENTE`
   - `GET /api/clientes/{id}/tiene-telefonos` → boolean
-  - Escritura restringida con `@PreAuthorize` a SUPERTECNICO y ADMIN. Los
+  - Escritura restringida con `@PreAuthorize` a **SUPERTECNICO únicamente**. Los
     handlers de escritura reciben `@AuthenticationPrincipal` para el log y
     devuelven `409 CONFLICT` ante `StaleDataException`.
 - **`dao/TelefonoDAO.java`**:
@@ -134,13 +134,16 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
   - `actualizarRevisionLogistica` — mismo retrofit de `UPDATED_AT` por
     coherencia (toca `Telefono`).
 - **`controller/TelefonoController.java`**:
-  - Ampliar el `record` de POST para aceptar `idCli` opcional. Al asignar con
-    cliente, log `ASIGNAR_CLIENTE` (`IMEI: x, CLIENTE: y`).
+  - Ampliar el `record` de POST para aceptar `idCli` opcional. El POST no lleva
+    `@PreAuthorize` (también crea teléfonos sin cliente), pero **gatea la
+    asignación de cliente**: si llega `idCli` no nulo y el rol no es
+    SUPERTECNICO, responde `403 FORBIDDEN`. Al asignar con cliente, log
+    `ASIGNAR_CLIENTE` (`IMEI: x, ID_CLI: y`).
   - `PATCH /api/telefonos/{imei}/cliente` con `{idCli, updatedAt}` (null =
-    quitar), restringido a SUPERTECNICO y ADMIN → log `CAMBIAR_CLIENTE`.
-  - `actualizarObservacion`: cambiar `@PreAuthorize` de `hasRole('SUPERTECNICO')`
-    a **SUPERTECNICO y ADMIN**; aceptar `updatedAt`; añadir log
-    `EDITAR_OBSERVACION` (hoy no se registra).
+    quitar), restringido a **SUPERTECNICO** → log `CAMBIAR_CLIENTE`.
+  - `actualizarObservacion`: se mantiene en **SUPERTECNICO** (`hasRole`); se le
+    añade `updatedAt` (bloqueo optimista) y log `EDITAR_OBSERVACION` (hoy no se
+    registra).
   - Todos los endpoints de escritura devuelven `409 CONFLICT` ante
     `StaleDataException`.
 - **`dao/ReparacionDAO.java` — alta de asignación con urgencia:**
