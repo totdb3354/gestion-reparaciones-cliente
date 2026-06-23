@@ -43,6 +43,9 @@ public class ReparacionResumen {
     private boolean       revisionLogistica;
     private boolean       tieneAsignaciones;
     private LocalDateTime telefonoUpdatedAt;
+    private String        cliente;
+
+    public ReparacionResumen() {}
 
     /**
      * Constructor completo — llamado desde {@code ReparacionDAO.getResumenes()}.
@@ -175,4 +178,6 @@ public class ReparacionResumen {
     public void    setTieneAsignaciones(boolean v)   { this.tieneAsignaciones = v; }
     public LocalDateTime getTelefonoUpdatedAt()                      { return telefonoUpdatedAt; }
     public void          setTelefonoUpdatedAt(LocalDateTime v)       { this.telefonoUpdatedAt = v; }
+    public String        getCliente()                                { return cliente; }
+    public void          setCliente(String cliente)                  { this.cliente = cliente; }
 }

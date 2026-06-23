@@ -64,4 +64,11 @@ class ReparacionResumenTest {
         r.setTelefonoUpdatedAt(t);
         assertEquals(t, r.getTelefonoUpdatedAt());
     }
+
+    @Test
+    void cliente_setYGet() {
+        ReparacionResumen r = new ReparacionResumen();
+        r.setCliente("WEB");
+        assertEquals("WEB", r.getCliente());
+    }
 }
