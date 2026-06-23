@@ -4,6 +4,7 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.ClienteDAO;
 import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.StaleDataException;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -106,6 +107,20 @@ public class ClientesController {
 
     private void toggleActivo(Cliente c) {
         boolean nuevo = !c.isActivo();
+        try {
+            if (!nuevo && clienteDAO.tieneTelefonos(c.getIdCli())) {
+                ConfirmDialog.mostrar(
+                        "Desactivar cliente",
+                        "El cliente tiene teléfonos asociados. Se desactivará pero seguirá visible en históricos.",
+                        "Desactivar",
+                        () -> aplicarSetActivo(c, nuevo));
+            } else {
+                aplicarSetActivo(c, nuevo);
+            }
+        } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+    }
+
+    private void aplicarSetActivo(Cliente c, boolean nuevo) {
         try {
             clienteDAO.setActivo(c.getIdCli(), nuevo, c.getUpdatedAt());
             cargar();
