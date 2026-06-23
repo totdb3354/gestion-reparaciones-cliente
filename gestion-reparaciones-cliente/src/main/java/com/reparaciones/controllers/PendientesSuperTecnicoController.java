@@ -805,13 +805,14 @@ public class PendientesSuperTecnicoController {
                 FXCollections.observableArrayList(clientesModal);
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
         TextField tfCliente = new TextField();
-        tfCliente.setPromptText("Cliente (opcional)");
+        tfCliente.setPromptText("Escribe cliente...");
         tfCliente.setMaxWidth(Double.MAX_VALUE);
         tfCliente.setStyle(
-                "-fx-background-color: white; -fx-background-radius: 4;" +
-                "-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-border-width: 1;" +
-                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;" +
-                "-fx-padding: 8 12 8 12;");
+                "-fx-background-color: #001232; -fx-background-radius: 24;" +
+                "-fx-border-color: transparent; -fx-border-radius: 24; -fx-border-width: 0;" +
+                "-fx-text-fill: #FAFAFA; -fx-prompt-text-fill: rgba(255,255,255,0.45);" +
+                "-fx-font-size: 12px; -fx-font-weight: bold;" +
+                "-fx-padding: 4 12 4 12;");
         ListView<Cliente> listaClientes = new ListView<>(clientesFiltrados);
         listaClientes.setStyle(
                 "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
