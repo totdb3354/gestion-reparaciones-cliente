@@ -1055,8 +1055,11 @@ public class PendientesSuperTecnicoController {
             renderPila[0].run();
             Thread t = new Thread(() -> {
                 String modelo = null;
+                Integer idCli = null;
                 try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {}
+                try { idCli = telefonoDAO.getClienteId(e.imei); } catch (Exception ignore) {}
                 String res = modelo;
+                Integer idCliRes = idCli;
                 javafx.application.Platform.runLater(() -> {
                     e.buscando = false;
                     if (res != null && !res.isEmpty()) {
@@ -1064,6 +1067,21 @@ public class PendientesSuperTecnicoController {
                         if (actual[0] == e) confirmarModelo.accept(res);
                     } else if (actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
+                    }
+                    // Precargar el cliente que el IMEI ya tuviera en BD (prevalece sobre el arrastre)
+                    if (idCliRes != null && e.cliente == null) {
+                        Cliente existente = todosClientes.stream()
+                                .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
+                        if (existente != null) {
+                            e.cliente = existente;
+                            if (actual[0] == e) {
+                                clienteSel[0] = existente;
+                                actualizandoCliente[0] = true;
+                                tfCliente.setText(existente.getNombre());
+                                clientesFiltrados.setPredicate(c -> true);
+                                actualizandoCliente[0] = false;
+                            }
+                        }
                     }
                     renderPila[0].run();
                 });

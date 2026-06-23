@@ -85,6 +85,12 @@ public class TelefonoDAO {
         return (val == null || val.equals("null")) ? null : val;
     }
 
+    /** @return id del cliente asociado al IMEI, o {@code null} si no tiene. */
+    public Integer getClienteId(String imei) throws SQLException {
+        String val = ApiClient.getString("/api/telefonos/" + imei + "/cliente");
+        return (val == null || val.isBlank() || val.equals("null")) ? null : Integer.valueOf(val);
+    }
+
     /**
      * Elimina el teléfono con el IMEI dado.
      * <p>Solo llamar cuando no quedan reparaciones asociadas a este IMEI.</p>
