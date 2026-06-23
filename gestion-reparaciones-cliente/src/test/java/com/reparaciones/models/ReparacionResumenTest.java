@@ -56,4 +56,12 @@ class ReparacionResumenTest {
         r.setNombreTecnicoAsigna("Diego");
         assertEquals("Diego", r.getNombreTecnicoAsigna());
     }
+
+    @Test
+    void telefonoUpdatedAt_setYGet() {
+        ReparacionResumen r = reparacion(null);
+        java.time.LocalDateTime t = java.time.LocalDateTime.of(2026, 6, 23, 10, 0);
+        r.setTelefonoUpdatedAt(t);
+        assertEquals(t, r.getTelefonoUpdatedAt());
+    }
 }

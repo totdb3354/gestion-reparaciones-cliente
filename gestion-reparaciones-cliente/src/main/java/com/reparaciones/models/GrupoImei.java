@@ -19,6 +19,7 @@ public class GrupoImei {
     private final long countIncAbiertas;
     private final boolean revisionLogistica;
     private final boolean tieneAsignaciones;
+    private final LocalDateTime telefonoUpdatedAt;
 
     public GrupoImei(String imei, List<ReparacionResumen> reparaciones) {
         this.imei = imei;
@@ -53,8 +54,9 @@ public class GrupoImei {
                 .count();
 
         ReparacionResumen primero = reparaciones.isEmpty() ? null : reparaciones.get(0);
-        this.revisionLogistica = primero != null && primero.isRevisionLogistica();
-        this.tieneAsignaciones = primero != null && primero.isTieneAsignaciones();
+        this.revisionLogistica  = primero != null && primero.isRevisionLogistica();
+        this.tieneAsignaciones  = primero != null && primero.isTieneAsignaciones();
+        this.telefonoUpdatedAt  = primero != null ? primero.getTelefonoUpdatedAt() : null;
     }
 
     public String getImei()                    { return imei; }
@@ -64,6 +66,7 @@ public class GrupoImei {
     public LocalDateTime getFechaMasReciente() { return fechaMasReciente; }
     public List<ReparacionResumen> getReparaciones() { return reparaciones; }
     public long getCountIncAbiertas()          { return countIncAbiertas; }
-    public boolean isRevisionLogistica()       { return revisionLogistica; }
-    public boolean isTieneAsignaciones()       { return tieneAsignaciones; }
+    public boolean isRevisionLogistica()                    { return revisionLogistica; }
+    public boolean isTieneAsignaciones()                    { return tieneAsignaciones; }
+    public LocalDateTime getTelefonoUpdatedAt()             { return telefonoUpdatedAt; }
 }
