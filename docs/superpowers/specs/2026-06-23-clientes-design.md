@@ -347,5 +347,23 @@ Alcance ("optimista completo"):
 
 - Datos de contacto del cliente (teléfono, email): el cliente es solo un nombre.
 - Crear clientes al vuelo desde el modal de asignación.
-- Filtrar las tablas por cliente (puede añadirse después si hace falta).
 - Vincular el cliente a la reparación en vez de al teléfono.
+
+### Follow-up ERP: ver/consultar los teléfonos de un cliente
+
+Pendiente para una **iteración futura del módulo de clientes** (hacerlo bien
+pensado de cara al ERP). Hay dos enfoques que ya se valoraron:
+
+1. **Filtro de cliente en la vista agrupada del Historial** (rápido): añadir un
+   `MultiSelectComboBox` "Cliente" a la barra de filtros existente (como el de
+   técnico). Cubre "filtrar reparaciones por cliente", pero solo muestra IMEIs
+   con reparaciones **hechas** (no los que solo tienen pendientes).
+2. **Vista dedicada en el apartado Clientes** (sólido/escalable): seleccionar un
+   cliente → ver **sus teléfonos** consultando `Telefono` por `ID_CLI`
+   (independiente de pendiente/reparado). Requiere endpoint
+   (`GET /api/clientes/{id}/telefonos` o `GET /api/telefonos?cliente=`) + vista.
+   Es la dirección natural hacia una **ficha de cliente** (historial por
+   cliente, contacto, etc.).
+
+Decisión actual: **diferido**; cuando se aborde, hacerlo como parte del módulo
+de clientes (enfoque 2), no como parche.
