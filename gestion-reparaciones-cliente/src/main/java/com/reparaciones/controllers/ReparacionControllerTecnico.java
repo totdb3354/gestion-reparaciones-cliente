@@ -828,11 +828,17 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             private void aplicarEstilo(Object item, boolean empty) {
                 if (empty || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
                 if (item instanceof GrupoImei g) {
-                    String brd = g.getCountIncAbiertas() > 0 ? com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
-                    setStyle("-fx-background-color: #EEF0F5;" +
-                             "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
-                             "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + brd + ";" +
-                             "-fx-cursor: hand;");
+                    if (isSelected()) {
+                        setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
+                                "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
+                                "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
+                    } else {
+                        String brd = g.getCountIncAbiertas() > 0 ? com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
+                        setStyle("-fx-background-color: #EEF0F5;" +
+                                 "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;" +
+                                 "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + brd + ";" +
+                                 "-fx-cursor: hand;");
+                    }
                     return;
                 }
                 if (!(item instanceof ReparacionResumen rep)) return;
