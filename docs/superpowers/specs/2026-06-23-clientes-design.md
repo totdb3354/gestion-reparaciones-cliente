@@ -25,7 +25,7 @@ quiere:
 | Datos del cliente | Solo nombre (+ id, + activo), calcado de `Tecnico` |
 | Vínculo cliente–reparación | FK `ID_CLI` en `Telefono` (el cliente es del dispositivo) |
 | Gestión del catálogo | Pantalla CRUD propia (como Técnicos/Proveedores) |
-| Entrada en el modal | Cliente **por IMEI** en el formulario por-entrada (se arrastra del IMEI anterior, editable por entrada y desde la pila), elegido del catálogo |
+| Entrada en el modal | Cliente **por IMEI** en el formulario por-entrada (NO se arrastra entre IMEIs —a diferencia de los técnicos—; cada IMEI parte vacío salvo la precarga del cliente que ya tuviera en BD; editable por entrada y desde la pila), elegido del catálogo |
 | Crear cliente al vuelo en el modal | No; solo se elige de la lista |
 | Selector de cliente | Combo con buscador (patrón del buscador de modelo/SKU) |
 | Obligatoriedad | Opcional al asignar |
@@ -217,9 +217,11 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
 
 - Añadir un **selector de cliente con buscador** ("Cliente (opcional)") en el
   **formulario por-IMEI** del modal (junto a modelo/técnicos/comentario), no en
-  la cabecera: el cliente es **por entrada** (`EntradaAsignacion.cliente`). Se
-  **arrastra** del IMEI anterior (como los técnicos) pero es editable por IMEI, y
-  se carga al clicar una entrada de la pila. Reutiliza el patrón/estilo del
+  la cabecera: el cliente es **por entrada** (`EntradaAsignacion.cliente`).
+  **NO se arrastra** del IMEI anterior (a diferencia de los técnicos): cada IMEI
+  parte vacío y, si ya tenía cliente en BD, se **precarga** (`GET
+  /api/telefonos/{imei}/cliente`). Es editable por IMEI y se carga al clicar una
+  entrada de la pila. Reutiliza el patrón/estilo del
   **selector de componentes (SKU) del modal de pedidos** (`TextField` píldora
   oscura + `Popup` + `ListView` filtrado por texto). No es un `ComboBox` plano.
 - En el guardado final (`btnGuardar`), por cada entrada se pasa su propio
