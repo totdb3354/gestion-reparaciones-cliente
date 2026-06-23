@@ -32,7 +32,7 @@ quiere:
 | Urgente al asociar cliente | Sí por defecto al asignar, editable después |
 | Columna en tablas | Columna propia "Cliente" en Asignaciones y en Historial **agrupado** (no en la vista plana) |
 | Edición posterior | Sí, por IMEI, desde Asignaciones y desde Historial agrupado (con confirmación); sin multi-selección en v1 |
-| Permisos | Gestión y asignación de cliente: SUPERTECNICO y ADMIN. Edición de la observación del teléfono: pasa a SUPERTECNICO **y ADMIN** |
+| Permisos | Escritura de cliente (catálogo, asignación, cambio por IMEI) y edición de observación: **SUPERTECNICO únicamente**. ADMIN y demás roles: solo lectura |
 | Auditoría | Log de actividad para todas las escrituras nuevas |
 | Concurrencia | Bloqueo optimista completo (`UPDATED_AT` + `StaleDataException`/409) en `Cliente` y `Telefono` |
 
@@ -198,13 +198,12 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
   - El botón es **visible para todos los roles** (SUPERTECNICO, ADMIN y
     TECNICO).
 - **Acceso por rol a la vista:**
-  - **TECNICO: solo lectura.** Ve el listado de clientes pero **no** se le
-    muestran las acciones de alta/editar/activar-desactivar (modo
-    `soloLectura`).
-  - **SUPERTECNICO y ADMIN: CRUD completo.**
+  - **SUPERTECNICO: acceso completo** (alta, edición, activar/desactivar).
+  - **ADMIN y TECNICO: solo lectura.** Ven el listado de clientes pero no se
+    les muestran las acciones de escritura (modo `soloLectura`).
   - En el servidor, los GET de `/api/clientes` son accesibles a todos los roles
-    autenticados; la escritura (POST/PUT/PATCH) sigue restringida a SUPERTECNICO
-    y ADMIN vía `@PreAuthorize`.
+    autenticados; la escritura (POST/PUT/PATCH) está restringida a
+    **SUPERTECNICO** vía `@PreAuthorize("hasRole('SUPERTECNICO')")`.
 - **Nota de escalabilidad (ERP):** se prevé que el área de clientes crezca
   (fichas con contacto, historial por cliente, filtros, etc.). El diseño actual
   es deliberadamente mínimo (solo nombre); el módulo de navbar y la entidad se
@@ -327,14 +326,11 @@ Alcance ("optimista completo"):
   no en la asignación. Solo se limpiaría si se borran *todas* las asignaciones
   del IMEI y el teléfono queda huérfano (se elimina). Por eso la corrección de un
   cliente equivocado se hace con "Editar cliente", no borrando asignaciones.
-- **Permisos:** la escritura (catálogo, asignación y edición de cliente) queda
-  restringida a SUPERTECNICO y ADMIN mediante `@PreAuthorize`. Aunque ADMIN suele
-  ir más limitado que SUPERTECNICO (modo `soloLectura` en varias pantallas), para
-  esta mejora **ADMIN puede lo mismo que SUPERTECNICO**: gestionar el catálogo y
-  editar el cliente desde Asignaciones y desde la vista agrupada. En concreto, la
-  acción "Editar cliente" debe habilitarse para ADMIN **aunque** la pantalla esté
-  en modo solo-lectura para el resto de acciones. Los demás roles (p. ej.
-  TECNICO) ven el cliente en solo lectura.
+- **Permisos:** toda escritura de cliente (catálogo, asignación, cambio por IMEI)
+  y edición de observación es **SUPERTECNICO únicamente**. ADMIN y TECNICO ven el
+  catálogo y las columnas de cliente en todas las vistas, pero no pueden editar:
+  la pantalla de gestión queda en modo solo-lectura y las acciones "Editar
+  cliente" / "Editar observación" no se les muestran.
 - **IMEI presente en ambas vistas:** un IMEI a medias (con reparaciones hechas
   —aparece en Historial— y otras pendientes —aparece en Asignaciones—) comparte
   el mismo y único cliente. Editarlo desde cualquiera de las dos vistas lo cambia
