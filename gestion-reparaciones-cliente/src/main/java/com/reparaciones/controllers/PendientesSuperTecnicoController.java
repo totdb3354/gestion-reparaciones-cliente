@@ -56,6 +56,7 @@ public class PendientesSuperTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String> cTecnico;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
+    @FXML private TableColumn<ReparacionResumen, String> cCliente;
     @FXML private TableColumn<ReparacionResumen, String> cFecha;
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
     @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
@@ -212,6 +213,7 @@ public class PendientesSuperTecnicoController {
             return new javafx.beans.property.SimpleStringProperty(
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
+        cCliente.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getCliente() != null ? d.getValue().getCliente() : ""));
         cFecha.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
                 FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> {
