@@ -233,11 +233,9 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
   momento de la creación**; queda editable luego con el menú contextual
   "Marcar/Quitar urgente" ya existente. Editar el cliente de un teléfono más
   tarde **no** re-marca urgente.
-- **Recordatorio para clientes genéricos:** si alguna entrada del lote lleva
-  cliente `WEB` u `OTRO`, al guardar se muestra un aviso suave (no bloqueante)
-  recordando añadir el detalle en la observación del teléfono desde la vista
-  agrupada. No se fuerza
-  ni se rellena automáticamente la observación.
+- **Clientes genéricos (WEB/OTRO):** el detalle se anota manualmente en la
+  observación del teléfono (vista agrupada). No hay aviso/recordatorio
+  automático al guardar (se descartó por ruido).
 
 ### Dónde se muestra la columna "Cliente"
 
