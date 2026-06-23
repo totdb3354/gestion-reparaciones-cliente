@@ -119,6 +119,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
     private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
+    private final com.reparaciones.dao.ClienteDAO clienteDAO = new com.reparaciones.dao.ClienteDAO();
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -792,6 +793,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
                 MenuItem editarObs   = new MenuItem("Editar observación");
+                MenuItem editarCli   = new MenuItem("Editar cliente");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -824,13 +826,40 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
                 editarObs  .setOnAction(e -> { if (getItem() instanceof com.reparaciones.models.GrupoImei grupo) ReparacionControllerSuperTecnico.this.abrirDialogoObservacionTelefono(grupo); });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs);
+                editarCli  .setOnAction(e -> {
+                    if (!(getItem() instanceof com.reparaciones.models.GrupoImei grupo)) return;
+                    try {
+                        java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
+                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, null);
+                        if (sel.isEmpty()) return;
+                        Integer idCli = (sel.get() == -1) ? null : sel.get();
+                        int n;
+                        try {
+                            n = reparacionDAO.getAsignacionesPorImei(grupo.getImei()).size();
+                        } catch (java.sql.SQLException ex2) { mostrarError(ex2); return; }
+                        com.reparaciones.utils.ConfirmDialog.mostrar(
+                            "Editar cliente",
+                            "Se cambiará el cliente de las " + n + " asignaciones del IMEI " + grupo.getImei() + ".",
+                            "Cambiar",
+                            () -> {
+                                try {
+                                    telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
+                                    cargarDatos();
+                                } catch (com.reparaciones.utils.StaleDataException ex2) {
+                                    Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                                    cargarDatos();
+                                } catch (java.sql.SQLException ex2) { mostrarError(ex2); }
+                            });
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof com.reparaciones.models.GrupoImei;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
                         editarObs.setVisible(esGrupo);
+                        editarCli.setVisible(esGrupo && modoActual == Modo.MAESTRO);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -839,6 +868,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
                     editarObs   .setVisible(false);
+                    editarCli   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {

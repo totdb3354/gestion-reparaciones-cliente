@@ -70,6 +70,7 @@ public class PendientesSuperTecnicoController {
     private final ReparacionDAO  reparacionDAO = new ReparacionDAO();
     private final TecnicoDAO     tecnicoDAO    = new TecnicoDAO();
     private final TelefonoDAO    telefonoDAO   = new TelefonoDAO();
+    private final ClienteDAO     clienteDAO    = new ClienteDAO();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -295,14 +296,44 @@ public class PendientesSuperTecnicoController {
                         cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
+                MenuItem editarCliente = new MenuItem("Editar cliente");
+                editarCliente.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    try {
+                        java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
+                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, null);
+                        if (sel.isEmpty()) return;
+                        Integer idCli = (sel.get() == -1) ? null : sel.get();
+                        int n;
+                        try {
+                            n = reparacionDAO.getAsignacionesPorImei(rep.getImei()).size();
+                        } catch (java.sql.SQLException ex2) { mostrarError(ex2); return; }
+                        com.reparaciones.utils.ConfirmDialog.mostrar(
+                            "Editar cliente",
+                            "Se cambiará el cliente de las " + n + " asignaciones del IMEI " + rep.getImei() + ".",
+                            "Cambiar",
+                            () -> {
+                                try {
+                                    telefonoDAO.actualizarCliente(rep.getImei(), idCli, rep.getTelefonoUpdatedAt());
+                                    cargar();
+                                } catch (com.reparaciones.utils.StaleDataException ex2) {
+                                    Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                                    cargar();
+                                } catch (java.sql.SQLException ex2) { mostrarError(ex2); }
+                            });
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
                 menu.setOnShowing(e -> {
                     // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
                     editarComentario.setVisible(!soloLectura);
                     toggleUrgente.setVisible(!soloLectura);
+                    editarCliente.setVisible(!soloLectura);
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
                 menu.getItems().add(toggleUrgente);
+                menu.getItems().add(editarCliente);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
