@@ -67,6 +67,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
+    @FXML private TableColumn<Object, String> colCliente;
     @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
@@ -118,6 +119,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
     private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
+    private final com.reparaciones.dao.ClienteDAO clienteDAO = new com.reparaciones.dao.ClienteDAO();
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -233,7 +235,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
         colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
@@ -541,6 +543,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             }
         });
 
+        colCliente.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String cli = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
+            else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
+            return new javafx.beans.property.SimpleStringProperty(cli != null ? cli : "");
+        });
+        colCliente.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String cli = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
+                else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
+                setGraphic(labelExpandible("Cliente", cli));
+            }
+        });
+
         colIdAnterior.setCellFactory(col -> new TableCell<>() {
             private final Label lblLink = new Label();
             {
@@ -693,7 +715,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
                     new Thread(() -> {
                         try {
-                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor);
+                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor, grupo.getTelefonoUpdatedAt());
                             javafx.application.Platform.runLater(this::actualizarVista);
                         } catch (com.reparaciones.utils.StaleDataException ex) {
                             javafx.application.Platform.runLater(() -> {
@@ -701,7 +723,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                                 aplicarEstiloToggle(estadoAnterior);
                                 new javafx.scene.control.Alert(
                                         javafx.scene.control.Alert.AlertType.WARNING,
-                                        "Este IMEI tiene asignaciones activas. No se puede marcar como revisado.")
+                                        "El teléfono fue modificado por otro usuario. Se recargan los datos.")
                                         .showAndWait();
                                 actualizarVista();
                             });
@@ -771,6 +793,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
                 MenuItem editarObs   = new MenuItem("Editar observación");
+                MenuItem editarCli   = new MenuItem("Editar cliente");
+                Image imgEditarCtx = new Image(getClass().getResourceAsStream("/images/editar.png"));
+                ImageView ivEditarCli = new ImageView(imgEditarCtx);
+                ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
+                editarCli.setGraphic(ivEditarCli);
+                ImageView ivEditarObs = new ImageView(imgEditarCtx);
+                ivEditarObs.setFitWidth(14); ivEditarObs.setFitHeight(14); ivEditarObs.setPreserveRatio(true);
+                editarObs.setGraphic(ivEditarObs);
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -803,13 +833,31 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
                 editarObs  .setOnAction(e -> { if (getItem() instanceof com.reparaciones.models.GrupoImei grupo) ReparacionControllerSuperTecnico.this.abrirDialogoObservacionTelefono(grupo); });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs);
+                editarCli  .setOnAction(e -> {
+                    if (!(getItem() instanceof com.reparaciones.models.GrupoImei grupo)) return;
+                    try {
+                        java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
+                        Integer idActual = activos.stream()
+                                .filter(c -> c.getNombre().equals(grupo.getCliente()))
+                                .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
+                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
+                        if (sel.isEmpty()) return;
+                        Integer idCli = (sel.get() == -1) ? null : sel.get();
+                        telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
+                        cargarDatos();
+                    } catch (com.reparaciones.utils.StaleDataException ex) {
+                        Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                        cargarDatos();
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof com.reparaciones.models.GrupoImei;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
                         editarObs.setVisible(esGrupo);
+                        editarCli.setVisible(esGrupo && modoActual == Modo.MAESTRO);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -818,6 +866,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
                     editarObs   .setVisible(false);
+                    editarCli   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
@@ -1136,7 +1185,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
@@ -1178,7 +1227,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
         colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
@@ -1196,7 +1245,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         imeiDetalle = null;
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
@@ -1415,7 +1464,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         btnConfirmar.setOnAction(e -> {
             try {
-                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim());
+                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim(), grupo.getTelefonoUpdatedAt());
+                dialog.close();
+                cargarDatos();
+            } catch (com.reparaciones.utils.StaleDataException ex) {
+                Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
                 dialog.close();
                 cargarDatos();
             } catch (SQLException ex) {

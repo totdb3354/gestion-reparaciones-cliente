@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import com.reparaciones.utils.MultiSelectComboBox?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.reparaciones.controllers.ClientesController"
+            styleClass="vista-container"
+            stylesheets="@../styles/app.css">
+
+    <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+    <left>
+        <VBox styleClass="stock-sidebar" spacing="0">
+            <Button text="Clientes" maxWidth="Infinity"
+                    styleClass="stock-sidebar-btn-active"/>
+        </VBox>
+    </left>
+
+    <!-- ── Contenido ────────────────────────────────────────────────────────── -->
+    <center>
+        <StackPane>
+            <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+            <VBox fx:id="pnlClientes" spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Clientes" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <MultiSelectComboBox fx:id="menuFiltroClientes" prefWidth="160"/>
+                    <Button fx:id="btnNuevo" text="Nuevo cliente" styleClass="btn-primary"
+                            onAction="#nuevoCliente"/>
+                </HBox>
+
+                <TableView fx:id="tablaClientes" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="cNombre" text="Nombre" prefWidth="260"/>
+                        <TableColumn fx:id="cEstado" text="Estado" prefWidth="100"/>
+                    </columns>
+                    <placeholder><Label text="Sin clientes"/></placeholder>
+                </TableView>
+            </VBox>
+        </StackPane>
+    </center>
+</BorderPane>

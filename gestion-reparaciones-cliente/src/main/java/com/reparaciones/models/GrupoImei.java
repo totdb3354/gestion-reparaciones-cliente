@@ -13,12 +13,14 @@ public class GrupoImei {
     private final String imei;
     private final String modelo;
     private final String observacion;
+    private final String cliente;
     private final LocalDateTime fechaMasAntigua;
     private final LocalDateTime fechaMasReciente;
     private final List<ReparacionResumen> reparaciones;
     private final long countIncAbiertas;
     private final boolean revisionLogistica;
     private final boolean tieneAsignaciones;
+    private final LocalDateTime telefonoUpdatedAt;
 
     public GrupoImei(String imei, List<ReparacionResumen> reparaciones) {
         this.imei = imei;
@@ -33,6 +35,12 @@ public class GrupoImei {
         this.observacion = reparaciones.stream()
                 .map(ReparacionResumen::getObservacionTelefono)
                 .filter(o -> o != null && !o.isEmpty())
+                .findFirst()
+                .orElse(null);
+
+        this.cliente = reparaciones.stream()
+                .map(ReparacionResumen::getCliente)
+                .filter(c -> c != null && !c.isEmpty())
                 .findFirst()
                 .orElse(null);
 
@@ -53,17 +61,20 @@ public class GrupoImei {
                 .count();
 
         ReparacionResumen primero = reparaciones.isEmpty() ? null : reparaciones.get(0);
-        this.revisionLogistica = primero != null && primero.isRevisionLogistica();
-        this.tieneAsignaciones = primero != null && primero.isTieneAsignaciones();
+        this.revisionLogistica  = primero != null && primero.isRevisionLogistica();
+        this.tieneAsignaciones  = primero != null && primero.isTieneAsignaciones();
+        this.telefonoUpdatedAt  = primero != null ? primero.getTelefonoUpdatedAt() : null;
     }
 
     public String getImei()                    { return imei; }
     public String getModelo()                  { return modelo; }
     public String getObservacion()             { return observacion; }
+    public String getCliente()                 { return cliente; }
     public LocalDateTime getFechaMasAntigua()  { return fechaMasAntigua; }
     public LocalDateTime getFechaMasReciente() { return fechaMasReciente; }
     public List<ReparacionResumen> getReparaciones() { return reparaciones; }
     public long getCountIncAbiertas()          { return countIncAbiertas; }
-    public boolean isRevisionLogistica()       { return revisionLogistica; }
-    public boolean isTieneAsignaciones()       { return tieneAsignaciones; }
+    public boolean isRevisionLogistica()                    { return revisionLogistica; }
+    public boolean isTieneAsignaciones()                    { return tieneAsignaciones; }
+    public LocalDateTime getTelefonoUpdatedAt()             { return telefonoUpdatedAt; }
 }

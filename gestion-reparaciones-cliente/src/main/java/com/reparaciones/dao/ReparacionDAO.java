@@ -285,16 +285,32 @@ public class ReparacionDAO {
     /**
      * Crea una nueva asignación pendiente y devuelve su ID.
      *
-     * @param imei  IMEI del dispositivo
-     * @param idTec ID del técnico asignado
+     * @param imei       IMEI del dispositivo
+     * @param idTec      ID del técnico asignado
+     * @param comentario comentario opcional de la asignación
      * @return ID de la asignación con formato {@code A[yyyyMMdd]_N}
      * @throws SQLException si falla la llamada al servidor
      */
     public String insertarAsignacion(String imei, int idTec, String comentario) throws SQLException {
+        return insertarAsignacion(imei, idTec, comentario, false);
+    }
+
+    /**
+     * Crea una nueva asignación pendiente con flag de urgencia y devuelve su ID.
+     *
+     * @param imei       IMEI del dispositivo
+     * @param idTec      ID del técnico asignado
+     * @param comentario comentario opcional de la asignación
+     * @param urgente    {@code true} si la reparación debe marcarse como urgente
+     * @return ID de la asignación con formato {@code A[yyyyMMdd]_N}
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public String insertarAsignacion(String imei, int idTec, String comentario, boolean urgente) throws SQLException {
         Map<String, Object> body = new HashMap<>();
         body.put("imei", imei);
         body.put("idTec", idTec);
         if (comentario != null && !comentario.isBlank()) body.put("comentario", comentario);
+        body.put("urgente", urgente);
         JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones", body, JsonObject.class);
         return resp != null ? resp.get("value").getAsString() : null;
     }
