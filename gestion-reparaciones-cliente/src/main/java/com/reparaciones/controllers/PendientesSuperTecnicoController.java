@@ -1256,7 +1256,6 @@ public class PendientesSuperTecnicoController {
 
         btnGuardar.setOnAction(ev -> {
             List<String> conflictos = new ArrayList<>();
-            boolean hayGenerico = false;
             try {
                 for (EntradaAsignacion e : pila) {
                     if (!e.asignada) continue;
@@ -1264,10 +1263,6 @@ public class PendientesSuperTecnicoController {
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
                     boolean urgente = idCli != null;
-                    if (e.cliente != null) {
-                        String nom = e.cliente.getNombre();
-                        if (nom.equalsIgnoreCase("WEB") || nom.equalsIgnoreCase("OTRO")) hayGenerico = true;
-                    }
                     for (Tecnico t : e.tecnicos) {
                         if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
                         reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
@@ -1277,13 +1272,6 @@ public class PendientesSuperTecnicoController {
             } catch (SQLException ex) { mostrarError(ex); return; }
             ventana.close();
             cargar();
-            if (hayGenerico) {
-                Alert aviso = new Alert(Alert.AlertType.INFORMATION,
-                        "Hay teléfonos con cliente WEB/OTRO. Recuerda añadir el detalle en la observación del teléfono (vista agrupada).");
-                aviso.setTitle("Recordatorio");
-                aviso.setHeaderText("Cliente genérico asignado");
-                aviso.show();
-            }
             if (!conflictos.isEmpty())
                 new Alert(Alert.AlertType.WARNING, "Algunas asignaciones no se crearon:\n\n" + String.join("\n", conflictos)).showAndWait();
         });
