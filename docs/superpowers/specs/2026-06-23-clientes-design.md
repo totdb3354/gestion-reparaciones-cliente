@@ -31,7 +31,7 @@ quiere:
 | Obligatoriedad | Opcional al asignar |
 | Urgente al asociar cliente | Sí por defecto al asignar, editable después |
 | Columna en tablas | Columna propia "Cliente" en Asignaciones y en Historial **agrupado** (no en la vista plana) |
-| Edición posterior | Sí, por IMEI, desde Asignaciones y desde Historial agrupado (con confirmación); sin multi-selección en v1 |
+| Edición posterior | Sí, por IMEI, desde Asignaciones (con confirmación) y desde Historial agrupado (directo, sin confirmación); sin multi-selección en v1 |
 | Permisos | Escritura de cliente (catálogo, asignación, cambio por IMEI) y edición de observación: **SUPERTECNICO únicamente**. ADMIN y demás roles: solo lectura |
 | Auditoría | Log de actividad para todas las escrituras nuevas |
 | Concurrencia | Bloqueo optimista completo (`UPDATED_AT` + `StaleDataException`/409) en `Cliente` y `Telefono` |
@@ -265,11 +265,12 @@ unidad significativa:
   - En la **vista agrupada del Historial** (modo MAESTRO).
 - El menú abre el mismo selector con buscador (clientes activos + opción
   "Sin cliente") y llama a `telefonoDAO.actualizarCliente(imei, idCli, updatedAt)`.
-- **Confirmación obligatoria:** antes de aplicar, un diálogo avisa de que el
-  cambio afecta a todas las asignaciones del IMEI, indicando cuántas:
-  *"Se cambiará el cliente de las N asignaciones del IMEI XXXX"*. Así el efecto
-  por-IMEI es explícito (no engañoso) incluso al editar desde una fila de la
-  vista plana de Asignaciones.
+- **Confirmación solo en la vista plana de Asignaciones:** ahí una fila es una
+  asignación, así que antes de aplicar se muestra un diálogo
+  *"Se cambiará el cliente de las N asignaciones del IMEI XXXX"* para que el
+  efecto por-IMEI sea explícito (no engañoso). En la **vista agrupada** una fila
+  ya **es** el IMEI, por lo que el cambio **se aplica directamente, sin
+  confirmación** (sería redundante).
 - Es un único `UPDATE` atómico sobre `Telefono`: no hay estados parciales ni
   inconsistencia posible entre asignaciones del mismo IMEI.
 - Sin multi-selección en v1 (editar un IMEI ya cambia todas sus asignaciones a
