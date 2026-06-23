@@ -95,6 +95,7 @@
                                     <TableColumn fx:id="colIncidencia" minWidth="200" maxWidth="360" text="Incidencia"/>
                                     <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
                                     <TableColumn fx:id="colObservacionTelefono" minWidth="150" maxWidth="300" text="Observación"/>
+                                    <TableColumn fx:id="colCliente" minWidth="150" maxWidth="300" text="Cliente"/>
                                     <TableColumn fx:id="colRevision" minWidth="90" prefWidth="100" maxWidth="120" text="Revisión"/>
                                 </columns>
                             </TableView>

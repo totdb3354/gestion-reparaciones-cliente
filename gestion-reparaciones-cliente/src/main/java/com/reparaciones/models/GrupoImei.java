@@ -13,6 +13,7 @@ public class GrupoImei {
     private final String imei;
     private final String modelo;
     private final String observacion;
+    private final String cliente;
     private final LocalDateTime fechaMasAntigua;
     private final LocalDateTime fechaMasReciente;
     private final List<ReparacionResumen> reparaciones;
@@ -34,6 +35,12 @@ public class GrupoImei {
         this.observacion = reparaciones.stream()
                 .map(ReparacionResumen::getObservacionTelefono)
                 .filter(o -> o != null && !o.isEmpty())
+                .findFirst()
+                .orElse(null);
+
+        this.cliente = reparaciones.stream()
+                .map(ReparacionResumen::getCliente)
+                .filter(c -> c != null && !c.isEmpty())
                 .findFirst()
                 .orElse(null);
 
@@ -62,6 +69,7 @@ public class GrupoImei {
     public String getImei()                    { return imei; }
     public String getModelo()                  { return modelo; }
     public String getObservacion()             { return observacion; }
+    public String getCliente()                 { return cliente; }
     public LocalDateTime getFechaMasAntigua()  { return fechaMasAntigua; }
     public LocalDateTime getFechaMasReciente() { return fechaMasReciente; }
     public List<ReparacionResumen> getReparaciones() { return reparaciones; }

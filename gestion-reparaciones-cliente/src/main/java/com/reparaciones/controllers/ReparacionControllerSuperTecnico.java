@@ -67,6 +67,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
+    @FXML private TableColumn<Object, String> colCliente;
     @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
@@ -233,7 +234,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
         colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
@@ -538,6 +539,26 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
                 else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
                 setGraphic(labelExpandible("Observación", obs));
+            }
+        });
+
+        colCliente.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            String cli = null;
+            if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
+            else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
+            return new javafx.beans.property.SimpleStringProperty(cli != null ? cli : "");
+        });
+        colCliente.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                String cli = null;
+                if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
+                else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
+                setGraphic(labelExpandible("Cliente", cli));
             }
         });
 
@@ -1136,7 +1157,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
@@ -1178,7 +1199,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         }
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
         colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
@@ -1196,7 +1217,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         imeiDetalle = null;
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
