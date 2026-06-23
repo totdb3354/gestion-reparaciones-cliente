@@ -38,4 +38,8 @@ public class ClienteDAO {
         ApiClient.patch("/api/clientes/" + idCli + "/activo",
                 Map.of("activo", activo, "updatedAt", updatedAt));
     }
+
+    public void borrar(int idCli) throws SQLException {
+        ApiClient.delete("/api/clientes/" + idCli);
+    }
 }

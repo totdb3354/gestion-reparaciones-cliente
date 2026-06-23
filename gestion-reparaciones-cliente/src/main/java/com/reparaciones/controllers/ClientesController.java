@@ -4,6 +4,7 @@ import com.reparaciones.Sesion;
 import com.reparaciones.dao.ClienteDAO;
 import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.MultiSelectComboBox;
 import com.reparaciones.utils.StaleDataException;
 import javafx.beans.property.SimpleStringProperty;
@@ -114,6 +115,13 @@ public class ClientesController {
                 MenuItem itemEditar = new MenuItem("Editar");
                 itemEditar.setOnAction(e -> editar(sel));
                 ctx.getItems().addAll(itemToggle, itemEditar);
+                try {
+                    if (!clienteDAO.tieneTelefonos(sel.getIdCli())) {
+                        MenuItem itemBorrar = new MenuItem("Borrar");
+                        itemBorrar.setOnAction(e -> borrar(sel));
+                        ctx.getItems().add(itemBorrar);
+                    }
+                } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
             });
         }
         tablaClientes.getColumns().forEach(c -> c.setReorderable(false));
@@ -192,5 +200,16 @@ public class ClientesController {
             Alertas.mostrarError("El cliente fue modificado por otro usuario. Se recargan los datos.");
             cargar();
         } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+    }
+
+    private void borrar(Cliente c) {
+        ConfirmDialog.mostrar(
+            "Borrar cliente",
+            "¿Seguro que quieres borrar el cliente \"" + c.getNombre() + "\"? Esta acción no se puede deshacer.",
+            "Borrar",
+            () -> {
+                try { clienteDAO.borrar(c.getIdCli()); cargar(); }
+                catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); cargar(); }
+            });
     }
 }
