@@ -833,23 +833,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                         java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, null);
                         if (sel.isEmpty()) return;
                         Integer idCli = (sel.get() == -1) ? null : sel.get();
-                        int n;
-                        try {
-                            n = reparacionDAO.getAsignacionesPorImei(grupo.getImei()).size();
-                        } catch (java.sql.SQLException ex2) { mostrarError(ex2); return; }
-                        com.reparaciones.utils.ConfirmDialog.mostrar(
-                            "Editar cliente",
-                            "Se cambiará el cliente de las " + n + " asignaciones del IMEI " + grupo.getImei() + ".",
-                            "Cambiar",
-                            () -> {
-                                try {
-                                    telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
-                                    cargarDatos();
-                                } catch (com.reparaciones.utils.StaleDataException ex2) {
-                                    Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
-                                    cargarDatos();
-                                } catch (java.sql.SQLException ex2) { mostrarError(ex2); }
-                            });
+                        telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
+                        cargarDatos();
+                    } catch (com.reparaciones.utils.StaleDataException ex) {
+                        Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                        cargarDatos();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
