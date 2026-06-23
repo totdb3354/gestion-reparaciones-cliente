@@ -25,7 +25,7 @@ quiere:
 | Datos del cliente | Solo nombre (+ id, + activo), calcado de `Tecnico` |
 | Vínculo cliente–reparación | FK `ID_CLI` en `Telefono` (el cliente es del dispositivo) |
 | Gestión del catálogo | Pantalla CRUD propia (como Técnicos/Proveedores) |
-| Entrada en el modal | Un único cliente para todo el lote, elegido del catálogo |
+| Entrada en el modal | Cliente **por IMEI** en el formulario por-entrada (se arrastra del IMEI anterior, editable por entrada y desde la pila), elegido del catálogo |
 | Crear cliente al vuelo en el modal | No; solo se elige de la lista |
 | Selector de cliente | Combo con buscador (patrón del buscador de modelo/SKU) |
 | Obligatoriedad | Opcional al asignar |
@@ -215,23 +215,26 @@ que ya existe, ya se muestra en la vista agrupada y ya es editable
 
 ### Modal de asignación (`PendientesSuperTecnicoController.abrirFormularioAsignacion`)
 
-- Añadir un **selector de cliente con buscador** ("Cliente (opcional)") en la
-  cabecera del modal, poblado con `clienteDAO.getActivos()`, que aplica a todo
-  el lote. Reutiliza el patrón del buscador de modelo de iPhone ya presente en
-  este modal (`TextField` + `Popup` + `ListView` filtrado por texto), el mismo
-  estilo que el selector de SKU al pedir pieza. No es un `ComboBox` plano.
-- En el guardado final (`btnGuardar`), pasar el `idCli` seleccionado:
-  `telefonoDAO.insertar(e.imei, e.modeloCode, idCliSeleccionado)`. Si no se
-  eligió cliente → `null` → no se toca el cliente previo de cada IMEI.
-- **Urgente automático:** si hay cliente seleccionado para el lote, las
-  asignaciones se crean con `URGENTE=true`
+- Añadir un **selector de cliente con buscador** ("Cliente (opcional)") en el
+  **formulario por-IMEI** del modal (junto a modelo/técnicos/comentario), no en
+  la cabecera: el cliente es **por entrada** (`EntradaAsignacion.cliente`). Se
+  **arrastra** del IMEI anterior (como los técnicos) pero es editable por IMEI, y
+  se carga al clicar una entrada de la pila. Reutiliza el patrón/estilo del
+  **selector de componentes (SKU) del modal de pedidos** (`TextField` píldora
+  oscura + `Popup` + `ListView` filtrado por texto). No es un `ComboBox` plano.
+- En el guardado final (`btnGuardar`), por cada entrada se pasa su propio
+  `idCli`: `telefonoDAO.insertar(e.imei, e.modeloCode, e.cliente?idCli:null)`. Si
+  la entrada no tiene cliente → `null` → no se toca el cliente previo del IMEI.
+- **Urgente automático:** cada asignación cuyo IMEI lleve cliente se crea con
+  `URGENTE=true`
   (`insertarAsignacion(imei, idTec, comentario, true)`). Aplica **solo en el
   momento de la creación**; queda editable luego con el menú contextual
   "Marcar/Quitar urgente" ya existente. Editar el cliente de un teléfono más
   tarde **no** re-marca urgente.
-- **Recordatorio para clientes genéricos:** si el cliente elegido para el lote
-  es `WEB` u `OTRO`, mostrar un aviso suave (no bloqueante) recordando añadir el
-  detalle en la observación del teléfono desde la vista agrupada. No se fuerza
+- **Recordatorio para clientes genéricos:** si alguna entrada del lote lleva
+  cliente `WEB` u `OTRO`, al guardar se muestra un aviso suave (no bloqueante)
+  recordando añadir el detalle en la observación del teléfono desde la vista
+  agrupada. No se fuerza
   ni se rellena automáticamente la observación.
 
 ### Dónde se muestra la columna "Cliente"
