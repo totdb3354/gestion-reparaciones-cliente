@@ -693,7 +693,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
                     new Thread(() -> {
                         try {
-                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor);
+                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor, grupo.getTelefonoUpdatedAt());
                             javafx.application.Platform.runLater(this::actualizarVista);
                         } catch (com.reparaciones.utils.StaleDataException ex) {
                             javafx.application.Platform.runLater(() -> {
@@ -701,7 +701,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                                 aplicarEstiloToggle(estadoAnterior);
                                 new javafx.scene.control.Alert(
                                         javafx.scene.control.Alert.AlertType.WARNING,
-                                        "Este IMEI tiene asignaciones activas. No se puede marcar como revisado.")
+                                        "El teléfono fue modificado por otro usuario. Se recargan los datos.")
                                         .showAndWait();
                                 actualizarVista();
                             });
@@ -1415,7 +1415,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         btnConfirmar.setOnAction(e -> {
             try {
-                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim());
+                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim(), grupo.getTelefonoUpdatedAt());
+                dialog.close();
+                cargarDatos();
+            } catch (com.reparaciones.utils.StaleDataException ex) {
+                Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
                 dialog.close();
                 cargarDatos();
             } catch (SQLException ex) {

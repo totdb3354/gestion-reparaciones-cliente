@@ -80,13 +80,14 @@ public class TelefonoDAO {
         ApiClient.delete("/api/telefonos/" + imei);
     }
 
-    public void actualizarObservacion(String imei, String observacion) throws SQLException {
+    public void actualizarObservacion(String imei, String observacion, java.time.LocalDateTime updatedAt) throws SQLException {
         ApiClient.patch("/api/telefonos/" + imei + "/observacion",
-                Map.of("observacion", observacion != null ? observacion : ""));
+                Map.of("observacion", observacion != null ? observacion : "",
+                       "updatedAt", updatedAt));
     }
 
-    public void actualizarRevisionLogistica(String imei, boolean revisado) throws SQLException {
+    public void actualizarRevisionLogistica(String imei, boolean revisado, java.time.LocalDateTime updatedAt) throws SQLException {
         ApiClient.put("/api/telefonos/" + imei + "/revision-logistica",
-                Map.of("revisado", revisado));
+                Map.of("revisado", revisado, "updatedAt", updatedAt));
     }
 }
