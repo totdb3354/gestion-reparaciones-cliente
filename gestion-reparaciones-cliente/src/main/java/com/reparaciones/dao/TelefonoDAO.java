@@ -59,6 +59,22 @@ public class TelefonoDAO {
     }
 
     /**
+     * Inserta o actualiza el teléfono con modelo e idCli dados.
+     *
+     * @param imei   IMEI del dispositivo
+     * @param modelo modelo del teléfono (puede ser null)
+     * @param idCli  ID del cliente asociado (puede ser null)
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public void insertar(String imei, String modelo, Integer idCli) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("imei", imei);
+        body.put("modelo", modelo != null ? modelo : "");
+        body.put("idCli", idCli); // puede ser null
+        ApiClient.post("/api/telefonos", body);
+    }
+
+    /**
      * Devuelve el modelo almacenado para el IMEI dado, o null si no hay.
      *
      * @param imei IMEI del dispositivo
@@ -89,5 +105,22 @@ public class TelefonoDAO {
     public void actualizarRevisionLogistica(String imei, boolean revisado, java.time.LocalDateTime updatedAt) throws SQLException {
         ApiClient.put("/api/telefonos/" + imei + "/revision-logistica",
                 Map.of("revisado", revisado, "updatedAt", updatedAt));
+    }
+
+    /**
+     * Actualiza el cliente asociado al teléfono con el IMEI dado.
+     *
+     * @param imei      IMEI del dispositivo
+     * @param idCli     ID del cliente (puede ser null para desvincular)
+     * @param updatedAt timestamp de última actualización
+     * @throws SQLException si falla la llamada al servidor
+     * @throws com.reparaciones.utils.StaleDataException si los datos en el servidor son más recientes
+     */
+    public void actualizarCliente(String imei, Integer idCli, java.time.LocalDateTime updatedAt)
+            throws SQLException, com.reparaciones.utils.StaleDataException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("idCli", idCli); // null = quitar
+        body.put("updatedAt", updatedAt);
+        ApiClient.patch("/api/telefonos/" + imei + "/cliente", body);
     }
 }
