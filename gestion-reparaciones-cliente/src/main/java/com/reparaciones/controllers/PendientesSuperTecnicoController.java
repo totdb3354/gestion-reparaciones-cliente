@@ -846,7 +846,7 @@ public class PendientesSuperTecnicoController {
 
         Runnable mostrarPopupCliente = () -> {
             if (clientesFiltrados.isEmpty() || tfCliente.getScene() == null) { popupCliente.hide(); return; }
-            listaClientes.setPrefHeight(Math.min(clientesFiltrados.size(), 6) * 28 + 4);
+            listaClientes.setPrefHeight(Math.min(clientesFiltrados.size(), 6) * 30 + 4);
             if (!popupCliente.isShowing()) {
                 javafx.geometry.Bounds b = tfCliente.localToScreen(tfCliente.getBoundsInLocal());
                 if (b != null) popupCliente.show(tfCliente, b.getMinX(), b.getMaxY() + 1);

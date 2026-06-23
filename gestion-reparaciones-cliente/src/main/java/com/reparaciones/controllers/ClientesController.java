@@ -28,7 +28,7 @@ public class ClientesController {
     private final ClienteDAO clienteDAO = new ClienteDAO();
     private final ObservableList<Cliente> datos = FXCollections.observableArrayList();
     private FilteredList<Cliente> filtrados;
-    private final boolean soloLectura = !(Sesion.esSuperTecnico() || Sesion.esAdmin());
+    private final boolean soloLectura = !Sesion.esSuperTecnico();
 
     @FXML
     public void initialize() {
