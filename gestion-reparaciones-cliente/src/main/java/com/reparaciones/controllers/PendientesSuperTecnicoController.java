@@ -702,7 +702,6 @@ public class PendientesSuperTecnicoController {
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
-        Cliente[] defCliente = { null };   // cliente que se arrastra del IMEI anterior (editable por IMEI)
         long[] seqCounter = { 0 };
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
@@ -1108,11 +1107,11 @@ public class PendientesSuperTecnicoController {
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
             tfComentario.setText(e.comentario);   // el comentario NO se mantiene entre IMEIs (se resetea)
-            // Cliente: por IMEI, pero se arrastra el del IMEI anterior si esta entrada aún no tiene uno
-            Cliente baseCli = (e.asignada || e.cliente != null) ? e.cliente : defCliente[0];
-            clienteSel[0] = baseCli;
+            // Cliente: por IMEI, NO se arrastra (a diferencia de los técnicos). Parte de lo que
+            // tenga la entrada; si es nueva, vacío (y la precarga de BD lo rellenará si el IMEI ya tenía uno).
+            clienteSel[0] = e.cliente;
             actualizandoCliente[0] = true;
-            tfCliente.setText(baseCli != null ? baseCli.getNombre() : "");
+            tfCliente.setText(e.cliente != null ? e.cliente.getNombre() : "");
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
             try {
@@ -1153,8 +1152,7 @@ public class PendientesSuperTecnicoController {
             e.cliente = clienteSel[0];
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
-            defTecnicos.clear(); defTecnicos.addAll(sel);   // los técnicos se mantienen entre IMEIs
-            defCliente[0] = clienteSel[0];                  // el cliente también se arrastra al siguiente IMEI
+            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();
