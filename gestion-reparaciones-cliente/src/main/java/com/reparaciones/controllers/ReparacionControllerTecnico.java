@@ -64,6 +64,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TableColumn<Object, String> colCliente;
+    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private DatePicker filtroFechaDesde;
     @FXML private DatePicker filtroFechaHasta;
@@ -152,7 +153,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         tablaReparaciones.setItems(tablaItems);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true); colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -287,7 +288,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false); colRevision.setVisible(false);
         colComponente.setText("Componente");
         adaptarFiltrosDetalle();
         javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
@@ -330,7 +331,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         }
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
+        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true); colRevision.setVisible(true);
         colComponente.setText("Reparaciones");
         adaptarFiltrosMaestro();
         javafx.application.Platform.runLater(() -> {
@@ -347,7 +348,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         imeiDetalle = null;
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
+        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false); colRevision.setVisible(false);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
         if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
@@ -636,6 +637,27 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
                 else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
                 setGraphic(labelExpandible("Cliente", cli));
+            }
+        });
+        // Revisión logística: solo lectura para el técnico (badge OK/—, sin acción)
+        colRevision.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            { setAlignment(javafx.geometry.Pos.CENTER); }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof GrupoImei grupo) {
+                    boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
+                    badge.setText(efectivo ? "OK" : "—");
+                    badge.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px;" +
+                            " -fx-font-weight: bold; -fx-text-fill: white;" +
+                            (efectivo ? " -fx-background-color: #2E7D32;" : " -fx-background-color: #9E9E9E;"));
+                    setGraphic(badge);
+                } else {
+                    setGraphic(null);
+                }
             }
         });
 
