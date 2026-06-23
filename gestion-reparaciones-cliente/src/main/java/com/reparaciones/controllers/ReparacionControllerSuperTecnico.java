@@ -794,6 +794,13 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
                 MenuItem editarObs   = new MenuItem("Editar observación");
                 MenuItem editarCli   = new MenuItem("Editar cliente");
+                Image imgEditarCtx = new Image(getClass().getResourceAsStream("/images/editar.png"));
+                ImageView ivEditarCli = new ImageView(imgEditarCtx);
+                ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
+                editarCli.setGraphic(ivEditarCli);
+                ImageView ivEditarObs = new ImageView(imgEditarCtx);
+                ivEditarObs.setFitWidth(14); ivEditarObs.setFitHeight(14); ivEditarObs.setPreserveRatio(true);
+                editarObs.setGraphic(ivEditarObs);
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();

@@ -298,6 +298,9 @@ public class PendientesSuperTecnicoController {
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 MenuItem editarCliente = new MenuItem("Editar cliente");
+                ImageView ivEditarCli = new ImageView(imgEditar);
+                ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
+                editarCliente.setGraphic(ivEditarCli);
                 editarCliente.setOnAction(e -> {
                     if (getItem() == null) return;
                     ReparacionResumen rep = getItem();
@@ -309,23 +312,11 @@ public class PendientesSuperTecnicoController {
                         java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
                         if (sel.isEmpty()) return;
                         Integer idCli = (sel.get() == -1) ? null : sel.get();
-                        int n;
-                        try {
-                            n = reparacionDAO.getAsignacionesPorImei(rep.getImei()).size();
-                        } catch (java.sql.SQLException ex2) { mostrarError(ex2); return; }
-                        com.reparaciones.utils.ConfirmDialog.mostrar(
-                            "Editar cliente",
-                            "Se cambiará el cliente de las " + n + " asignaciones del IMEI " + rep.getImei() + ".",
-                            "Cambiar",
-                            () -> {
-                                try {
-                                    telefonoDAO.actualizarCliente(rep.getImei(), idCli, rep.getTelefonoUpdatedAt());
-                                    cargar();
-                                } catch (com.reparaciones.utils.StaleDataException ex2) {
-                                    Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
-                                    cargar();
-                                } catch (java.sql.SQLException ex2) { mostrarError(ex2); }
-                            });
+                        telefonoDAO.actualizarCliente(rep.getImei(), idCli, rep.getTelefonoUpdatedAt());
+                        cargar();
+                    } catch (com.reparaciones.utils.StaleDataException ex) {
+                        Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                        cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
                 menu.setOnShowing(e -> {
