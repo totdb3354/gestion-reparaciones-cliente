@@ -104,28 +104,34 @@ public class SelectorClienteDialog {
         listaView.setFixedCellSize(32);
         listaView.setPrefHeight(Math.min(filtradas.size(), 8) * 32 + 4);
         listaView.setMaxHeight(260);
+        final String EST_SEL = "-fx-background-color: #001232; -fx-background-radius: 4;" +
+                "-fx-background-insets: 2 4 2 4; -fx-text-fill: white;" +
+                "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 4 12 4 12;";
+        final String EST_HOVER = "-fx-background-color: #EAF1FF; -fx-background-radius: 4;" +
+                "-fx-background-insets: 2 4 2 4; -fx-text-fill: #001232;" +
+                "-fx-font-size: 12px; -fx-padding: 4 12 4 12;";
+        final String EST_ACTUAL = "-fx-background-color: #EAF1FF; -fx-text-fill: #001232;" +
+                "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 4 12 4 12;";
+        final String EST_NORMAL = "-fx-background-color: white; -fx-text-fill: #001232;" +
+                "-fx-font-size: 12px; -fx-padding: 4 12 4 12;";
         listaView.setCellFactory(lv -> new ListCell<>() {
             {
-                setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)
-                    setStyle("-fx-background-color: #001232; -fx-background-radius: 4;" +
-                            "-fx-background-insets: 2 4 2 4;" +
-                            "-fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 4 12 4 12;"); });
-                setOnMouseExited(e -> { if (!isEmpty() && getItem() != null)
-                    setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
-                            "-fx-font-size: 12px; -fx-padding: 4 12 4 12;"); });
+                selectedProperty().addListener((o, ov, nv) -> aplicarEstilo());
+                hoverProperty().addListener((o, ov, nv) -> aplicarEstilo());
+            }
+            private void aplicarEstilo() {
+                if (isEmpty() || getItem() == null) { setStyle(""); return; }
+                boolean esActual = idCliActual != null && getItem().id() == idCliActual;
+                if (isSelected())   setStyle(EST_SEL);
+                else if (isHover()) setStyle(EST_HOVER);
+                else if (esActual)  setStyle(EST_ACTUAL);
+                else                setStyle(EST_NORMAL);
             }
             @Override
             protected void updateItem(Opcion op, boolean empty) {
                 super.updateItem(op, empty);
-                if (empty || op == null) { setText(null); setStyle(""); return; }
-                setText(op.nombre());
-                boolean esActual = idCliActual != null && op.id() == idCliActual;
-                String base = esActual
-                        ? "-fx-background-color: #EAF1FF; -fx-text-fill: #001232;" +
-                          "-fx-font-size: 12px; -fx-padding: 4 12 4 12; -fx-font-weight: bold;"
-                        : "-fx-background-color: white; -fx-text-fill: #001232;" +
-                          "-fx-font-size: 12px; -fx-padding: 4 12 4 12;";
-                setStyle(base);
+                setText(empty || op == null ? null : op.nombre());
+                aplicarEstilo();
             }
         });
 
@@ -165,9 +171,15 @@ public class SelectorClienteDialog {
                 "-fx-background-radius: 4; -fx-font-size: 12px;" +
                 "-fx-padding: 10; -fx-cursor: hand;");
 
-        // Habilitar "Seleccionar" cuando hay selección
-        listaView.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) ->
-                btnSeleccionar.setDisable(sel == null));
+        // Etiqueta que refleja lo seleccionado (claridad: qué se va a aplicar)
+        Label lblSel = new Label("Nada seleccionado");
+        lblSel.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Colores.AZUL_GRIS + "; -fx-padding: 2 0 0 2;");
+
+        // Habilitar "Seleccionar" y actualizar la etiqueta cuando hay selección
+        listaView.getSelectionModel().selectedItemProperty().addListener((obs, o, sel) -> {
+            btnSeleccionar.setDisable(sel == null);
+            lblSel.setText(sel == null ? "Nada seleccionado" : "Seleccionado: " + sel.nombre());
+        });
 
         // Confirmar con doble click en la lista
         listaView.setOnMouseClicked(e -> {
@@ -205,7 +217,7 @@ public class SelectorClienteDialog {
         btnCancelar.setOnAction(e -> ventana.close());
 
         // ── Layout ────────────────────────────────────────────────────────────
-        VBox contenido = new VBox(10, barraTop, tfBuscar, listaView, btnSeleccionar, btnCancelar);
+        VBox contenido = new VBox(10, barraTop, tfBuscar, listaView, lblSel, btnSeleccionar, btnCancelar);
         contenido.setPadding(new Insets(24));
         contenido.setPrefWidth(380);
         contenido.setStyle(ESTILO_CONTENEDOR);
