@@ -36,6 +36,9 @@
                 <Button fx:id="btnEstadisticas" text="Estadísticas"
                         styleClass="nav-btn"
                         onAction="#mostrarEstadisticas"/>
+                <Button fx:id="btnClientes" text="Clientes"
+                        styleClass="nav-btn"
+                        onAction="#mostrarClientes"/>
             </HBox>
             <!-- Espaciador -->
             <HBox HBox.hgrow="ALWAYS"/>

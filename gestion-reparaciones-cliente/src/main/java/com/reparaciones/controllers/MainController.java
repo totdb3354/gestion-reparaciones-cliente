@@ -71,6 +71,7 @@ public class MainController {
     @FXML private Button    btnReparaciones;
     @FXML private Button    btnStock;
     @FXML private Button    btnEstadisticas;
+    @FXML private Button    btnClientes;
     @FXML private Button    btnUsuario;
     @FXML private Label     lblUsuario;
     @FXML private StackPane  campanaPane;
@@ -745,14 +746,14 @@ public class MainController {
         if (Sesion.esSuperTecnico())  vista = "/views/ReparacionViewSuperTecnico.fxml";
         else if (Sesion.esAdmin())    vista = "/views/ReparacionViewAdmin.fxml";
         else                          vista = "/views/ReparacionViewTecnico.fxml";
-        mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas);
+        mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas, btnClientes);
     }
 
     /** Navega a la vista de stock. */
     @FXML
     private void mostrarStock() {
         accionVistaActual = this::mostrarStock;
-        mostrarVista("/views/StockView.fxml", btnStock, btnReparaciones, btnEstadisticas);
+        mostrarVista("/views/StockView.fxml", btnStock, btnReparaciones, btnEstadisticas, btnClientes);
     }
 
     /** Navega a la vista de stock y abre directamente la sección de pedidos. */
@@ -767,7 +768,14 @@ public class MainController {
     @FXML
     private void mostrarEstadisticas() {
         accionVistaActual = this::mostrarEstadisticas;
-        mostrarVista("/views/EstadisticasView.fxml", btnEstadisticas, btnReparaciones, btnStock);
+        mostrarVista("/views/EstadisticasView.fxml", btnEstadisticas, btnReparaciones, btnStock, btnClientes);
+    }
+
+    /** Navega a la vista de clientes. */
+    @FXML
+    private void mostrarClientes() {
+        accionVistaActual = this::mostrarClientes;
+        mostrarVista("/views/ClientesView.fxml", btnClientes, btnReparaciones, btnStock, btnEstadisticas);
     }
 
     /**
@@ -904,6 +912,7 @@ public class MainController {
         btnReparaciones.setDisable(true);
         btnStock.setDisable(true);
         btnEstadisticas.setDisable(true);
+        btnClientes.setDisable(true);
 
         try {
             Object[] cached = vistaCache.get(ruta);
@@ -958,6 +967,7 @@ public class MainController {
             btnReparaciones.setDisable(false);
             btnStock.setDisable(false);
             btnEstadisticas.setDisable(false);
+            btnClientes.setDisable(false);
         }
     }
 
