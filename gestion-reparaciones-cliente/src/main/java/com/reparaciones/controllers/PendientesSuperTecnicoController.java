@@ -1,6 +1,8 @@
 package com.reparaciones.controllers;
 
+import com.reparaciones.dao.ClienteDAO;
 import com.reparaciones.dao.ReparacionDAO;
+import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.ConfirmDialog;
@@ -669,6 +671,10 @@ public class PendientesSuperTecnicoController {
         try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
         catch (SQLException ex) { mostrarError(ex); }
 
+        List<Cliente> clientesModal = new ArrayList<>();
+        try { clientesModal.addAll(new ClienteDAO().getActivos()); }
+        catch (SQLException ex) { mostrarError(ex); }
+
         // ── Cabecera + escaneo ───────────────────────────────────────────────
         Label lblTitulo = new Label("Asignar reparaciones");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
@@ -758,6 +764,113 @@ public class PendientesSuperTecnicoController {
         popupModelo.getContent().add(listaModelos);
         String[] modeloSel = { null };
         boolean[] actualizandoModelo = { false };
+
+        // ── Maquinaria de cliente (buscador) ─────────────────────────────────
+        Label lblCliente = new Label("Cliente (lote completo)");
+        lblCliente.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        javafx.collections.ObservableList<Cliente> todosClientes =
+                FXCollections.observableArrayList(clientesModal);
+        FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
+        TextField tfCliente = new TextField();
+        tfCliente.setPromptText("Cliente (opcional)");
+        tfCliente.setMaxWidth(Double.MAX_VALUE);
+        tfCliente.setStyle(
+                "-fx-background-color: white; -fx-background-radius: 4;" +
+                "-fx-border-color: #C2C8D0; -fx-border-radius: 4; -fx-border-width: 1;" +
+                "-fx-text-fill: #2C3B54; -fx-font-size: 13px;" +
+                "-fx-padding: 8 12 8 12;");
+        ListView<Cliente> listaClientes = new ListView<>(clientesFiltrados);
+        listaClientes.setStyle(
+                "-fx-background-color: white; -fx-border-color: #C2C8D0;" +
+                "-fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);");
+        listaClientes.setFixedCellSize(30);
+        listaClientes.setPrefWidth(344);
+        listaClientes.setCellFactory(lv -> new ListCell<>() {
+            {
+                setOnMouseEntered(e -> { if (!isEmpty() && getItem() != null)
+                    setStyle("-fx-background-color: #001232; -fx-background-radius: 8;" +
+                            "-fx-background-insets: 2 6 2 6;" +
+                            "-fx-text-fill: white; -fx-font-size: 12px;" +
+                            "-fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
+                setOnMouseExited(e -> { if (!isEmpty() && getItem() != null)
+                    setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
+                            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); });
+            }
+            @Override protected void updateItem(Cliente cli, boolean empty) {
+                super.updateItem(cli, empty);
+                if (empty || cli == null) { setText(null); setStyle(""); }
+                else { setText(cli.getNombre());
+                    setStyle("-fx-background-color: white; -fx-text-fill: #001232;" +
+                            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-padding: 6 12 6 12;"); }
+            }
+        });
+        javafx.stage.Popup popupCliente = new javafx.stage.Popup();
+        popupCliente.setAutoHide(true);
+        popupCliente.getContent().add(listaClientes);
+        Cliente[] clienteSel = { null };
+        boolean[] actualizandoCliente = { false };
+
+        Runnable mostrarPopupCliente = () -> {
+            if (clientesFiltrados.isEmpty() || tfCliente.getScene() == null) { popupCliente.hide(); return; }
+            listaClientes.setPrefHeight(Math.min(clientesFiltrados.size(), 6) * 28 + 4);
+            if (!popupCliente.isShowing()) {
+                javafx.geometry.Bounds b = tfCliente.localToScreen(tfCliente.getBoundsInLocal());
+                if (b != null) popupCliente.show(tfCliente, b.getMinX(), b.getMaxY() + 1);
+            }
+        };
+        java.util.function.Consumer<Cliente> confirmarCliente = cli -> {
+            clienteSel[0] = cli;
+            actualizandoCliente[0] = true;
+            tfCliente.setText(cli.getNombre());
+            clientesFiltrados.setPredicate(c -> true);
+            actualizandoCliente[0] = false;
+            popupCliente.hide();
+        };
+
+        tfCliente.textProperty().addListener((obs, oldText, newText) -> {
+            if (actualizandoCliente[0]) return;
+            if (clienteSel[0] != null && clienteSel[0].getNombre().equals(newText)) return;
+            clienteSel[0] = null;
+            String lower = newText == null ? "" : newText.trim().toLowerCase();
+            clientesFiltrados.setPredicate(c -> lower.isEmpty()
+                    || c.getNombre().toLowerCase().contains(lower));
+            mostrarPopupCliente.run();
+        });
+        tfCliente.setOnAction(e -> {
+            if (!clientesFiltrados.isEmpty()) confirmarCliente.accept(clientesFiltrados.get(0));
+        });
+        tfCliente.focusedProperty().addListener((obs, o, focused) -> {
+            if (!focused) javafx.application.Platform.runLater(() -> {
+                popupCliente.hide();
+                String texto = tfCliente.getText() == null ? "" : tfCliente.getText().trim();
+                if (clienteSel[0] != null && clienteSel[0].getNombre().equals(texto)) {
+                    clientesFiltrados.setPredicate(c -> true);
+                    return;
+                }
+                Cliente exacto = todosClientes.stream()
+                        .filter(c -> c.getNombre().equalsIgnoreCase(texto))
+                        .findFirst().orElse(null);
+                if (exacto != null) {
+                    confirmarCliente.accept(exacto);
+                } else {
+                    actualizandoCliente[0] = true;
+                    tfCliente.setText(clienteSel[0] != null ? clienteSel[0].getNombre() : "");
+                    clientesFiltrados.setPredicate(c -> true);
+                    actualizandoCliente[0] = false;
+                }
+            });
+        });
+        listaClientes.setOnMouseClicked(e -> {
+            Cliente sel = listaClientes.getSelectionModel().getSelectedItem();
+            if (sel != null) confirmarCliente.accept(sel);
+        });
+        listaClientes.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                Cliente sel = listaClientes.getSelectionModel().getSelectedItem();
+                if (sel != null) confirmarCliente.accept(sel);
+            }
+        });
 
         // ── Técnicos ─────────────────────────────────────────────────────────
         Label lblTecnicos = new Label("Técnicos a asignar");
@@ -1064,6 +1177,7 @@ public class PendientesSuperTecnicoController {
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
         VBox contenido = new VBox(12, lblTitulo, lblSub, lblScan, tfScan, lblScanErr,
+                lblCliente, tfCliente,
                 new Separator(), cols, barraFinal);
         contenido.setPadding(new Insets(26));
         contenido.setPrefWidth(720);
@@ -1082,16 +1196,28 @@ public class PendientesSuperTecnicoController {
                 for (EntradaAsignacion e : pila) {
                     if (!e.asignada) continue;
                     List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
-                    telefonoDAO.insertar(e.imei, e.modeloCode);
+                    Integer idCli = clienteSel[0] != null ? clienteSel[0].getIdCli() : null;
+                    telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
+                    boolean urgente = idCli != null;
                     for (Tecnico t : e.tecnicos) {
                         if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
                         reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
-                                e.comentario.isEmpty() ? null : e.comentario);
+                                e.comentario.isEmpty() ? null : e.comentario, urgente);
                     }
                 }
             } catch (SQLException ex) { mostrarError(ex); return; }
             ventana.close();
             cargar();
+            if (clienteSel[0] != null) {
+                String nomCli = clienteSel[0].getNombre();
+                if (nomCli.equalsIgnoreCase("WEB") || nomCli.equalsIgnoreCase("OTRO")) {
+                    Alert aviso = new Alert(Alert.AlertType.INFORMATION,
+                            "Recuerda añadir el detalle del cliente en la observación del teléfono (vista agrupada).");
+                    aviso.setTitle("Recordatorio");
+                    aviso.setHeaderText("Cliente «" + nomCli + "» asignado");
+                    aviso.show();
+                }
+            }
             if (!conflictos.isEmpty())
                 new Alert(Alert.AlertType.WARNING, "Algunas asignaciones no se crearon:\n\n" + String.join("\n", conflictos)).showAndWait();
         });
