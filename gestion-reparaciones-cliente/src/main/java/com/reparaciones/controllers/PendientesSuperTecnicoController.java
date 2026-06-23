@@ -93,6 +93,7 @@ public class PendientesSuperTecnicoController {
         final String imei;
         String modeloCode;                       // código interno del modelo, o null si falta
         final List<Tecnico> tecnicos = new ArrayList<>();
+        Cliente cliente;                         // cliente del IMEI (por entrada), o null
         String comentario = "";
         boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
@@ -698,6 +699,7 @@ public class PendientesSuperTecnicoController {
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
+        Cliente[] defCliente = { null };   // cliente que se arrastra del IMEI anterior (editable por IMEI)
         long[] seqCounter = { 0 };
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
@@ -799,7 +801,7 @@ public class PendientesSuperTecnicoController {
         boolean[] actualizandoModelo = { false };
 
         // ── Maquinaria de cliente (buscador) ─────────────────────────────────
-        Label lblCliente = new Label("Cliente (lote completo)");
+        Label lblCliente = new Label("Cliente (opcional)");
         lblCliente.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         javafx.collections.ObservableList<Cliente> todosClientes =
                 FXCollections.observableArrayList(clientesModal);
@@ -958,7 +960,8 @@ public class PendientesSuperTecnicoController {
         HBox accionesForm = new HBox(10, btnAsignar);
 
         VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
-                headerTecnicos, scrollTecnicos, lblNotaPersist, lblComentario, tfComentario, accionesForm);
+                headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
+                lblComentario, tfComentario, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
         HBox.setHgrow(formBox, javafx.scene.layout.Priority.ALWAYS);
         formBox.setDisable(true);
@@ -1084,6 +1087,13 @@ public class PendientesSuperTecnicoController {
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
             tfComentario.setText(e.comentario);   // el comentario NO se mantiene entre IMEIs (se resetea)
+            // Cliente: por IMEI, pero se arrastra el del IMEI anterior si esta entrada aún no tiene uno
+            Cliente baseCli = (e.asignada || e.cliente != null) ? e.cliente : defCliente[0];
+            clienteSel[0] = baseCli;
+            actualizandoCliente[0] = true;
+            tfCliente.setText(baseCli != null ? baseCli.getNombre() : "");
+            clientesFiltrados.setPredicate(c -> true);
+            actualizandoCliente[0] = false;
             try {
                 List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
                 for (int i = 0; i < tecnicosModal.size(); i++) {
@@ -1119,9 +1129,11 @@ public class PendientesSuperTecnicoController {
             e.modeloCode = modeloSel[0];
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
+            e.cliente = clienteSel[0];
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
-            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
+            defTecnicos.clear(); defTecnicos.addAll(sel);   // los técnicos se mantienen entre IMEIs
+            defCliente[0] = clienteSel[0];                  // el cliente también se arrastra al siguiente IMEI
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();
@@ -1211,7 +1223,6 @@ public class PendientesSuperTecnicoController {
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
         VBox contenido = new VBox(12, lblTitulo, lblSub, lblScan, tfScan, lblScanErr,
-                lblCliente, tfCliente,
                 new Separator(), cols, barraFinal);
         contenido.setPadding(new Insets(26));
         contenido.setPrefWidth(720);
@@ -1226,13 +1237,18 @@ public class PendientesSuperTecnicoController {
 
         btnGuardar.setOnAction(ev -> {
             List<String> conflictos = new ArrayList<>();
+            boolean hayGenerico = false;
             try {
                 for (EntradaAsignacion e : pila) {
                     if (!e.asignada) continue;
                     List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
-                    Integer idCli = clienteSel[0] != null ? clienteSel[0].getIdCli() : null;
+                    Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
                     boolean urgente = idCli != null;
+                    if (e.cliente != null) {
+                        String nom = e.cliente.getNombre();
+                        if (nom.equalsIgnoreCase("WEB") || nom.equalsIgnoreCase("OTRO")) hayGenerico = true;
+                    }
                     for (Tecnico t : e.tecnicos) {
                         if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
                         reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
@@ -1242,15 +1258,12 @@ public class PendientesSuperTecnicoController {
             } catch (SQLException ex) { mostrarError(ex); return; }
             ventana.close();
             cargar();
-            if (clienteSel[0] != null) {
-                String nomCli = clienteSel[0].getNombre();
-                if (nomCli.equalsIgnoreCase("WEB") || nomCli.equalsIgnoreCase("OTRO")) {
-                    Alert aviso = new Alert(Alert.AlertType.INFORMATION,
-                            "Recuerda añadir el detalle del cliente en la observación del teléfono (vista agrupada).");
-                    aviso.setTitle("Recordatorio");
-                    aviso.setHeaderText("Cliente «" + nomCli + "» asignado");
-                    aviso.show();
-                }
+            if (hayGenerico) {
+                Alert aviso = new Alert(Alert.AlertType.INFORMATION,
+                        "Hay teléfonos con cliente WEB/OTRO. Recuerda añadir el detalle en la observación del teléfono (vista agrupada).");
+                aviso.setTitle("Recordatorio");
+                aviso.setHeaderText("Cliente genérico asignado");
+                aviso.show();
             }
             if (!conflictos.isEmpty())
                 new Alert(Alert.AlertType.WARNING, "Algunas asignaciones no se crearon:\n\n" + String.join("\n", conflictos)).showAndWait();
