@@ -69,6 +69,7 @@
                                 <VBox.margin><Insets bottom="8"/></VBox.margin>
                                 <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
                                 <MultiSelectComboBox fx:id="filtroCliente" prefWidth="150" visible="true" managed="true"/>
+                                <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroPieza" prefWidth="140" visible="false" managed="false"/>
                                 <Label text="Desde:" style="-fx-font-size: 12px;"/>
                                 <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
                                 <Label text="Hasta:" style="-fx-font-size: 12px;"/>

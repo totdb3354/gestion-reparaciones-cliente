@@ -148,6 +148,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final javafx.beans.property.StringProperty etiquetaCli = new javafx.beans.property.SimpleStringProperty("Cliente");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<String> filtroPieza;
+    private final java.util.Set<String> piezasFiltro = new java.util.HashSet<>();
+    private final javafx.beans.property.StringProperty etiquetaPieza = new javafx.beans.property.SimpleStringProperty("Pieza");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroPiezaHandle;
+
     private final java.util.concurrent.ScheduledExecutorService poller =
             java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "poller-reparaciones-supertecnico");
@@ -962,6 +967,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         try {
             datos.setAll(reparacionDAO.getReparacionesResumen());
             poblarFiltroCliente();
+            poblarFiltroPieza();
             aplicarFiltros();
             lblUltimaActualizacion.setText("Actualizado " +
                     java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")));
@@ -1040,6 +1046,16 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                                 else         clientesFiltro.remove(cli);
                                 actualizarTextoFiltroCliente(); aplicarFiltros(); },
             etiquetaCli);
+
+        filtroPiezaHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroPieza,
+            new java.util.ArrayList<>(),
+            java.util.function.Function.identity(),
+            pieza -> piezasFiltro.contains(pieza),
+            (pieza, checked) -> { if (checked) piezasFiltro.add(pieza);
+                                  else         piezasFiltro.remove(pieza);
+                                  actualizarTextoFiltroPieza(); aplicarFiltros(); },
+            etiquetaPieza);
     }
 
     private void poblarFiltroCliente() {
@@ -1064,6 +1080,29 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         if (sel == 0)      etiquetaCli.set("Cliente");
         else if (sel == 1) etiquetaCli.set(clientesFiltro.iterator().next());
         else               etiquetaCli.set(sel + " clientes");
+    }
+
+    private void poblarFiltroPieza() {
+        java.util.List<String> piezas = datos.stream()
+            .map(r -> com.reparaciones.utils.Piezas.categoria(r.getTipoComponente()))
+            .filter(c -> !c.isEmpty())
+            .distinct().sorted()
+            .collect(java.util.stream.Collectors.toList());
+        filtroPiezaHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroPieza, piezas,
+            java.util.function.Function.identity(),
+            pieza -> piezasFiltro.contains(pieza),
+            (pieza, checked) -> { if (checked) piezasFiltro.add(pieza);
+                                  else         piezasFiltro.remove(pieza);
+                                  actualizarTextoFiltroPieza(); aplicarFiltros(); },
+            etiquetaPieza);
+    }
+
+    private void actualizarTextoFiltroPieza() {
+        long sel = piezasFiltro.size();
+        if (sel == 0)      etiquetaPieza.set("Pieza");
+        else if (sel == 1) etiquetaPieza.set(piezasFiltro.iterator().next());
+        else               etiquetaPieza.set(sel + " piezas");
     }
 
     private void aplicarFiltros() {
@@ -1091,6 +1130,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                         if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto())  mostrar = true;
                         if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto())  mostrar = true;
                         if (!mostrar) return false;
+                    }
+                    if (!piezasFiltro.isEmpty()) {
+                        String cat = com.reparaciones.utils.Piezas.categoria(rep.getTipoComponente());
+                        if (!piezasFiltro.contains(cat)) return false;
                     }
                     return true;
                 }).collect(java.util.stream.Collectors.toList());
@@ -1312,6 +1355,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private void adaptarFiltrosMaestro() {
         filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
         filtroCliente.setVisible(true); filtroCliente.setManaged(true);
+        filtroPieza.setVisible(false); filtroPieza.setManaged(false);
         actualizarTextoFiltroTecnico();
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         cbIncidenciasAbiertas.setText("Incidencia");
@@ -1324,6 +1368,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private void adaptarFiltrosDetalle() {
         filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
         filtroCliente.setVisible(false); filtroCliente.setManaged(false);
+        filtroPieza.setVisible(modoActual == Modo.PLANO); filtroPieza.setManaged(modoActual == Modo.PLANO);
         cbIncidenciasAbiertas.setText("Abiertas");
         if (itemCerradas != null) itemCerradas.setVisible(true);
         cbNormales.setText("Sin incidencia");
@@ -1380,6 +1425,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         clientesFiltro.clear();
         if (filtroCliHandle != null) filtroCliHandle.refresh();
         etiquetaCli.set("Cliente");
+        piezasFiltro.clear();
+        if (filtroPiezaHandle != null) filtroPiezaHandle.refresh();
+        etiquetaPieza.set("Pieza");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
