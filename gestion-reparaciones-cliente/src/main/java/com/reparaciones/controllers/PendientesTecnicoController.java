@@ -105,6 +105,7 @@ public class PendientesTecnicoController {
         datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
         actualizarContador();
         tablaPendientes.setColumnResizePolicy(param -> true);
+        tablaPendientes.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros/prioridad, no el clic en la cabecera
 
         tablaPendientes.setRowFactory(tv -> new TableRow<>() {
             {
@@ -404,7 +405,12 @@ public class PendientesTecnicoController {
             Integer idTec = Sesion.getIdTec();
             if (idTec == null) return;
             datos.setAll(reparacionDAO.getAsignacionesPorTecnico(idTec));
-            datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
+            // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
+            datos.sort(java.util.Comparator.comparingInt((ReparacionResumen r) -> {
+                if (r.isUrgente()) return 0;
+                if (r.getCliente() != null && !r.getCliente().isEmpty()) return 1;
+                return 2;
+            }));
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {

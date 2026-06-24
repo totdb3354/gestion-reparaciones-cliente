@@ -75,6 +75,7 @@ public class HistorialPulidoController {
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
         tablaPulidos.setColumnResizePolicy(param -> true);
+        tablaPulidos.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros, no el clic en la cabecera
         datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContadorPulidos());
         actualizarContadorPulidos();
 

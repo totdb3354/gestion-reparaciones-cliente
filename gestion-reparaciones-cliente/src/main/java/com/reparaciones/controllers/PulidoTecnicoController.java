@@ -80,6 +80,7 @@ public class PulidoTecnicoController {
         datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
         actualizarContador();
         tablaPulidos.setColumnResizePolicy(param -> true);
+        tablaPulidos.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros, no el clic en la cabecera
 
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {
             {

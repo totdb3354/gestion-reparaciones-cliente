@@ -11,6 +11,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Region?>
@@ -51,21 +52,26 @@
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <VBox.margin><Insets bottom="8"/></VBox.margin>
                                 <Label styleClass="vista-titulo" text="Historial de reparaciones"/>
+                                <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
+                                <Region HBox.hgrow="ALWAYS" />
+                                <HBox spacing="0" alignment="CENTER_LEFT">
+                                    <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
+                                    <ToggleButton fx:id="toggleDesagrupar" text="Plano" styleClass="toggle-pill-right"/>
+                                </HBox>
+                            </HBox>
+                            <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
+                                <VBox.margin><Insets bottom="8"/></VBox.margin>
                                 <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
                                 <MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
+                                <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroCliente" prefWidth="150" visible="true" managed="true"/>
+                                <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroPieza" prefWidth="140" visible="false" managed="false"/>
                                 <Label text="Desde:" style="-fx-font-size: 12px;"/>
                                 <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
                                 <Label text="Hasta:" style="-fx-font-size: 12px;"/>
                                 <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
                                 <MenuButton fx:id="filtroIncidencias" text="Incidencias" prefWidth="130"/>
                                 <Button onAction="#limpiarFiltros" styleClass="btn-secondary" text="Limpiar filtros"/>
-                                <Region HBox.hgrow="ALWAYS" />
-                                <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
-                                <HBox spacing="0" alignment="CENTER_LEFT">
-                                    <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
-                                    <ToggleButton fx:id="toggleDesagrupar" text="Plano" styleClass="toggle-pill-right"/>
-                                </HBox>
-                            </HBox>
+                            </FlowPane>
                             <TableView fx:id="tablaReparaciones" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
                                 <columns>
                                     <TableColumn fx:id="colIdRep"          minWidth="110" text="Id Reparación"/>

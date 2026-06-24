@@ -108,6 +108,7 @@ public class PendientesSuperTecnicoController {
     @FXML
     public void initialize() {
         tablaPendientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaPendientes.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros/prioridad, no el clic en la cabecera
 
 
         cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
@@ -623,7 +624,12 @@ public class PendientesSuperTecnicoController {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
             datos.setAll(reparacionDAO.getAsignaciones());
-            datos.sort(java.util.Comparator.comparing(ReparacionResumen::isUrgente).reversed());
+            // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
+            datos.sort(java.util.Comparator.comparingInt((ReparacionResumen r) -> {
+                if (r.isUrgente()) return 0;
+                if (r.getCliente() != null && !r.getCliente().isEmpty()) return 1;
+                return 2;
+            }));
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
@@ -1253,7 +1259,7 @@ public class PendientesSuperTecnicoController {
                     List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
-                    boolean urgente = idCli != null;
+                    boolean urgente = false;   // el urgente ya no se automatiza al asignar (lo hace el job por vencimiento)
                     for (Tecnico t : e.tecnicos) {
                         if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
                         reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
