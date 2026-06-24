@@ -94,9 +94,9 @@ public class FormularioReparacionController {
 
     /**
      * Lista de modelos en orden de tienda Apple.
-     * Para añadir iPhone 17 en el futuro:
-     * agregar "17", "17plus", "17pro", "17promax" al final
-     * No hace falta tocar nada más — traducirModelo lo traduce automáticamente.
+     * Para añadir una serie futura (ej. iPhone 18): agregar sus códigos al final.
+     * Los numéricos (18, 18pro, 18promax...) los traduce traducirModelo automáticamente.
+     * OJO: un modelo SIN número (como "air") necesita además su propio caso en traducirModelo.
      */
     static final List<String> MODELOS_ORDENADOS = List.of(
             "6s", "6splus", "7", "7plus", "8", "8plus", "se2020",
@@ -106,8 +106,8 @@ public class FormularioReparacionController {
             "13", "13mini", "13pro", "13promax",
             "14", "14plus", "14pro", "14promax",
             "15", "15plus", "15pro", "15promax",
-            "16", "16e", "16plus", "16pro", "16promax"
-    // Ejemplo futuro: "17", "17plus", "17pro", "17promax"
+            "16", "16e", "16plus", "16pro", "16promax",
+            "17", "air", "17pro", "17promax"
     );
 
     public void init(String imei, String idRepAnterior, String idAsignacion, Runnable onGuardado) {
@@ -902,6 +902,7 @@ public class FormularioReparacionController {
             // Casos especiales con letra sin número claro
             case "6s" -> "iPhone 6S";
             case "6splus" -> "iPhone 6S Plus";
+            case "air" -> "iPhone Air";
             default -> {
                 String num = modelo.replaceAll("[^0-9]", "");
                 String variante = modelo.replaceAll("[0-9]", "");
