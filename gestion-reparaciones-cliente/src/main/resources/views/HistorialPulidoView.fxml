@@ -13,6 +13,7 @@
 
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Historial de pulidos" styleClass="vista-titulo"/>
+        <Label fx:id="lblContadorPulidos" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
         <Label text="Desde:" style="-fx-font-size: 12px;"/>
@@ -21,9 +22,6 @@
         <DatePicker fx:id="filtroFechaHasta" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="lblContadorPulidos" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;">
-            <HBox.margin><Insets right="150"/></HBox.margin>
-        </Label>
     </HBox>
 
     <TableView fx:id="tablaPulidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
