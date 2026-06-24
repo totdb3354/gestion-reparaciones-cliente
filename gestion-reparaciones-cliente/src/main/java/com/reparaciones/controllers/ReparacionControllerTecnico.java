@@ -66,6 +66,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @FXML private TableColumn<Object, String> colCliente;
     @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<String> filtroCliente;
     @FXML private DatePicker filtroFechaDesde;
     @FXML private DatePicker filtroFechaHasta;
     @FXML private MenuButton filtroIncidencias;
@@ -116,6 +117,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private Label         lblNavModelo;
     private Label         lblNavCount;
     private final Set<String> idsAjenas    = new HashSet<>();
+
+    private final java.util.Set<String> clientesFiltro = new java.util.HashSet<>();
+    private static final String SIN_CLIENTE = "(Sin cliente)";
+    private final javafx.beans.property.StringProperty etiquetaCli = new javafx.beans.property.SimpleStringProperty("Cliente");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
     private final java.util.concurrent.ScheduledExecutorService poller =
             java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
@@ -893,6 +899,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void adaptarFiltrosMaestro() {
+        filtroCliente.setVisible(true); filtroCliente.setManaged(true);
         cbIncidenciasAbiertas.setText("Incidencia");
         cbIncidenciasCerradas.setSelected(false);
         if (itemCerradas != null) itemCerradas.setVisible(false);
@@ -901,6 +908,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void adaptarFiltrosDetalle() {
+        filtroCliente.setVisible(false); filtroCliente.setManaged(false);
         cbIncidenciasAbiertas.setText("Abiertas");
         if (itemCerradas != null) itemCerradas.setVisible(true);
         cbNormales.setText("Sin incidencia");
@@ -944,6 +952,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     private void cargarDatos() {
         try {
             datos.setAll(reparacionDAO.getReparacionesResumen());
+            poblarFiltroCliente();
             aplicarFiltros();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null)
@@ -1008,6 +1017,38 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             new CustomMenuItem(cbIncidenciasAbiertas, false),
             itemCerradas,
             new CustomMenuItem(cbNormales, false));
+
+        filtroCliHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroCliente,
+            new java.util.ArrayList<>(),
+            java.util.function.Function.identity(),
+            cli -> clientesFiltro.contains(cli),
+            (cli, checked) -> { if (checked) clientesFiltro.add(cli);
+                                else         clientesFiltro.remove(cli);
+                                actualizarTextoFiltroCliente(); aplicarFiltros(); },
+            etiquetaCli);
+    }
+
+    private void poblarFiltroCliente() {
+        java.util.List<String> clientes = datos.stream()
+            .map(r -> { String c = r.getCliente(); return (c == null || c.isEmpty()) ? SIN_CLIENTE : c; })
+            .distinct().sorted()
+            .collect(java.util.stream.Collectors.toList());
+        filtroCliHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroCliente, clientes,
+            java.util.function.Function.identity(),
+            cli -> clientesFiltro.contains(cli),
+            (cli, checked) -> { if (checked) clientesFiltro.add(cli);
+                                else         clientesFiltro.remove(cli);
+                                actualizarTextoFiltroCliente(); aplicarFiltros(); },
+            etiquetaCli);
+    }
+
+    private void actualizarTextoFiltroCliente() {
+        long sel = clientesFiltro.size();
+        if (sel == 0)      etiquetaCli.set("Cliente");
+        else if (sel == 1) etiquetaCli.set(clientesFiltro.iterator().next());
+        else               etiquetaCli.set(sel + " clientes");
     }
 
     private void aplicarFiltros() {
@@ -1113,6 +1154,13 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                     if (desde != null && fechaFin.isBefore(desde)) return false;
                     if (hasta != null && fechaFin.isAfter(hasta))  return false;
                 }
+                if (!clientesFiltro.isEmpty()) {
+                    String cli = rep.getCliente();
+                    boolean sin = (cli == null || cli.isEmpty());
+                    boolean coincide = (sin && clientesFiltro.contains(SIN_CLIENTE))
+                                    || (!sin && clientesFiltro.contains(cli));
+                    if (!coincide) return false;
+                }
                 return true;
             }).collect(Collectors.toList());
         buildTablaItems();
@@ -1139,13 +1187,16 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();
+        filtroImei.setStyle("");
+        clientesFiltro.clear();
+        if (filtroCliHandle != null) filtroCliHandle.refresh();
+        etiquetaCli.set("Cliente");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
         cbIncidenciasCerradas.setSelected(false);
         cbNormales.setSelected(false);
         filtroIncidencias.setText("Incidencias");
-        filtroImei.setStyle("");
         aplicarFiltros();
     }
 
