@@ -407,6 +407,7 @@ public class FormularioReparacionController {
     private void configurarFiltroModelo() {
         Set<String> modelosEnBD = filasUI.stream()
                 .flatMap(f -> f.getSkus().stream()
+                        .filter(Componente::isActivo)     // solo modelos con alguna pieza activa
                         .map(c -> extraerModelo(c.getTipo(), f.getPrefijo())))
                 .filter(m -> !m.isEmpty())
                 .collect(Collectors.toSet());
@@ -1264,10 +1265,21 @@ public class FormularioReparacionController {
             btnBorrarObs.setManaged(false);
 
             if (modelo == null) {
-                cbSku.getItems().setAll(skus);
-                Componente def = skus.stream()
+                List<Componente> activos = skus.stream().filter(Componente::isActivo).collect(Collectors.toList());
+                cbSku.getItems().setAll(activos);
+                if (activos.isEmpty()) {
+                    cbSku.setValue(null);
+                    cbSku.setDisable(true);
+                    btnMas.setDisable(true);
+                    btnMenos.setDisable(true);
+                    chkReutilizado.setDisable(true);
+                    btnObservacion.setDisable(true);
+                    root.setOpacity(0.4);
+                    return;
+                }
+                Componente def = activos.stream()
                         .filter(c -> c.getStock() > 0)
-                        .findFirst().orElse(skus.get(0));
+                        .findFirst().orElse(activos.get(0));
                 cbSku.setValue(def);
                 cbSku.setDisable(false);
                 btnMas.setDisable(!prefijo.equals("otro") && def.getStock() <= 0);
@@ -1280,6 +1292,7 @@ public class FormularioReparacionController {
 
             List<Componente> filtrados = skus.stream()
                     .filter(c -> extraerModelo(c.getTipo(), prefijo).equals(modelo))
+                    .filter(Componente::isActivo)
                     .collect(Collectors.toList());
 
             if (filtrados.isEmpty()) {
