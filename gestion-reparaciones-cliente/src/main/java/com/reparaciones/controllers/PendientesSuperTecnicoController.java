@@ -1253,7 +1253,7 @@ public class PendientesSuperTecnicoController {
                     List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
-                    boolean urgente = idCli != null;
+                    boolean urgente = false;   // el urgente ya no se automatiza al asignar (lo hace el job por vencimiento)
                     for (Tecnico t : e.tecnicos) {
                         if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
                         reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
