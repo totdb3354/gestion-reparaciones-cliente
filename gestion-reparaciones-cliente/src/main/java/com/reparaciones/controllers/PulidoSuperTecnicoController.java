@@ -171,6 +171,7 @@ public class PulidoSuperTecnicoController {
         datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
         actualizarContador();
         tablaPulidos.setColumnResizePolicy(param -> true);
+        tablaPulidos.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros, no el clic en la cabecera
 
         Image imgEditar = new Image(getClass().getResourceAsStream("/images/editar.png"));
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {

@@ -105,6 +105,7 @@ public class PendientesTecnicoController {
         datosFiltrados.addListener((javafx.collections.ListChangeListener<ReparacionResumen>) c -> actualizarContador());
         actualizarContador();
         tablaPendientes.setColumnResizePolicy(param -> true);
+        tablaPendientes.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros/prioridad, no el clic en la cabecera
 
         tablaPendientes.setRowFactory(tv -> new TableRow<>() {
             {

@@ -108,6 +108,7 @@ public class PendientesSuperTecnicoController {
     @FXML
     public void initialize() {
         tablaPendientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        tablaPendientes.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros/prioridad, no el clic en la cabecera
 
 
         cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));

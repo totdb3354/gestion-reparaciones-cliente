@@ -164,6 +164,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     public void initialize() {
         tablaReparaciones.setColumnResizePolicy(param -> true);
         tablaReparaciones.setFixedCellSize(44);
+        tablaReparaciones.getColumns().forEach(c -> c.setSortable(false));   // el orden lo llevan los filtros, no el clic en la cabecera
 
         configurarColumnas();
         tablaReparaciones.getColumns().forEach(c -> c.setReorderable(false));
