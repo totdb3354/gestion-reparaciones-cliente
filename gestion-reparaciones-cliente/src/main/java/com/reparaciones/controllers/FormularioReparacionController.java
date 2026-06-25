@@ -263,6 +263,7 @@ public class FormularioReparacionController {
             this.idTecEditar     = d.idTec;
             this.updatedAtEdicion = d.updatedAt;
             cargarFilas(); // crea otrasAcciones (necesario para detectar si idCom es "otro")
+            for (FilaUI f : filasUI) f.setFormularioEnEdicion(true);   // edición: ninguna fila muestra "Guardar fila"
             if (otrasAcciones != null && otrasAcciones.esOtro(d.idCom)) {
                 iniciarEdicionOtro(d);
                 return;
@@ -982,6 +983,7 @@ public class FormularioReparacionController {
 
         // ── Edición ───────────────────────────────────────────────────────────
         private boolean modoEdicion = false;
+        private boolean formularioEnEdicion = false;   // el formulario edita una reparación: ninguna fila muestra "Guardar fila"
         private int idComOriginal = -1;
         private int cantidadOriginal = 0;
         private boolean esReutilizadoOriginal = false;
@@ -1225,6 +1227,7 @@ public class FormularioReparacionController {
                 lblObservacion.setManaged(false);
                 btnBorrarObs.setVisible(false);
                 btnBorrarObs.setManaged(false);
+                notificar();   // borrar el comentario también es un cambio: recalcular botones
             });
         }
 
@@ -1365,6 +1368,7 @@ public class FormularioReparacionController {
                     lblObservacion.setManaged(true);
                     btnBorrarObs.setVisible(true);
                     btnBorrarObs.setManaged(true);
+                    notificar();   // recalcular botones: en edición, un cambio de solo-comentario debe mostrar "Guardar cambios"
                 }
                 dialog.close();
             });
@@ -1964,29 +1968,9 @@ public class FormularioReparacionController {
             btnSolicitud.setVisible(false);
             btnSolicitud.setManaged(false);
             idTecFila = idTecDefault;
-            cbTecnicoFila = new ComboBox<>();
-            cbTecnicoFila.getItems().setAll(tecnicos);
-            cbTecnicoFila.setPrefWidth(150);
-            cbTecnicoFila.setVisibleRowCount(8);
-            cbTecnicoFila.setStyle("-fx-font-size: 11px;");
-            cbTecnicoFila.setCellFactory(lv -> new ListCell<>() {
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, empty);
-                    setText(empty || t == null ? null : t.getNombre());
-                }
-            });
-            cbTecnicoFila.setButtonCell(new ListCell<>() {
-                @Override protected void updateItem(Tecnico t, boolean empty) {
-                    super.updateItem(t, empty);
-                    setText(empty || t == null ? null : t.getNombre());
-                }
-            });
-            tecnicos.stream().filter(t -> t.getIdTec() == idTecDefault)
-                    .findFirst().ifPresent(cbTecnicoFila::setValue);
-            cbTecnicoFila.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) idTecFila = n.getIdTec();
-            });
-            mainRow.getChildren().add(cbTecnicoFila);
+            // Combo de técnico OCULTO por ahora. Editar el técnico de la reparación
+            // existente queda como mejora futura (requiere cambio en servidor).
+            // Los componentes nuevos añadidos en edición usan el técnico original (idTecDefault).
         }
 
         int getTecnicoId() { return idTecFila; }
@@ -2022,6 +2006,7 @@ public class FormularioReparacionController {
         }
 
         void setOnGuardarFila(Runnable r) { this.onGuardarFila = r; }
+        void setFormularioEnEdicion(boolean b) { this.formularioEnEdicion = b; }
         boolean isGuardada() { return guardada; }
         String getIdRepGenerado() { return idRepGenerado; }
 
@@ -2078,7 +2063,7 @@ public class FormularioReparacionController {
         }
 
         void actualizarBotonGuardarFila() {
-            if (guardada || modoEdicion || solicitudActiva) return;
+            if (guardada || modoEdicion || formularioEnEdicion || solicitudActiva) return;
             boolean activa = isActiva() && !esAgotadoNuevo();
             if (activa) {
                 recibidoPendienteUso = false;
