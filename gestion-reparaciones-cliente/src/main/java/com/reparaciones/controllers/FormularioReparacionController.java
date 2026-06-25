@@ -1227,6 +1227,7 @@ public class FormularioReparacionController {
                 lblObservacion.setManaged(false);
                 btnBorrarObs.setVisible(false);
                 btnBorrarObs.setManaged(false);
+                notificar();   // borrar el comentario también es un cambio: recalcular botones
             });
         }
 
@@ -1367,6 +1368,7 @@ public class FormularioReparacionController {
                     lblObservacion.setManaged(true);
                     btnBorrarObs.setVisible(true);
                     btnBorrarObs.setManaged(true);
+                    notificar();   // recalcular botones: en edición, un cambio de solo-comentario debe mostrar "Guardar cambios"
                 }
                 dialog.close();
             });
