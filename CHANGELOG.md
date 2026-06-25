@@ -9,6 +9,20 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.11.0] - 2026-06-25
+
+### Added
+- **Filtro de Cliente** en el historial agrupado (con opción "(Sin cliente)"), en los tres roles.
+- **Filtro de Pieza** en el historial plano (Glass / Pantalla / Marco / Batería / Cámara / Chasis / Otros), en los tres roles.
+- **Urgente automático por cliente vencido**: las reparaciones pendientes con cliente que pasan de día se marcan **urgentes** solas (tarea del servidor a las 00:00 Europe/Madrid).
+- **Orden de prioridad** en pendientes: urgente → con cliente → normal (Asignaciones y "Mis pendientes").
+
+### Changed
+- Asignar una reparación **con cliente** ya **no** la marca urgente automáticamente (ahora lo hace la regla de vencimiento).
+- **Barra de filtros responsive**: los filtros se reacomodan a otra línea en pantallas estrechas; el badge de conteo va junto al título y los botones de acción pasan a la fila de filtros (consistente en todas las vistas).
+- El contador deja de limitarse a "999+" (muestra el número real).
+- Las **cabeceras de columna ya no reordenan** al hacer clic en historial/pendientes/pulidos (el orden lo llevan los filtros y la prioridad).
+
 ## [0.10.0] - 2026-06-24
 
 ### Added
@@ -50,5 +64,6 @@ _(cambios para la próxima versión)_
 _Las versiones 0.9.1 y anteriores no están detalladas aquí: el changelog se inició en la 0.10.0.
 Para su historial, consulta los tags de Git._
 
-[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.9.1...v0.10.0
