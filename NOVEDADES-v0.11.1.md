@@ -1,6 +1,6 @@
-# 🎉 Novedades — Versión 0.11.0
+# 🎉 Novedades — Versión 0.11.1
 
-¡Hola! Esta actualización mejora el historial con **nuevos filtros**, automatiza las **urgencias de pedidos** y pule la interfaz. Esto es lo que vas a notar:
+¡Hola! Esta actualización mejora el historial con **nuevos filtros**, automatiza las **urgencias de pedidos**, pule la interfaz y **arregla el modal de edición de reparaciones**. Esto es lo que vas a notar:
 
 ---
 
@@ -33,4 +33,13 @@
 
 ---
 
-_¿Dudas con alguna novedad? Pregunta al responsable de la tienda._
+## 🛠️ Arreglos en el modal de "Editar reparación"
+
+- Al **editar** una reparación ya **no aparecen los botones "Guardar fila"** por fila (esos solo tienen sentido al crear una reparación nueva).
+- El botón **"Guardar cambios"** ahora se muestra siempre que haya un cambio válido — incluso si **solo cambias el comentario** de una fila.
+- Tocar una fila que **no tenía reparación** ya no da el error _"La asignación ya fue eliminada"_.
+- _Nota:_ por ahora el modal de edición no permite cambiar **quién hizo** la reparación (lo dejamos para una mejora futura).
+
+---
+
+_¿Dudas con alguna novedad? Pregunta a Imad._

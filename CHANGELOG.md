@@ -9,6 +9,16 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.11.1] - 2026-06-25
+
+### Fixed
+- **Modal de edición de reparación**: al editar ya no aparecen los botones "Guardar fila" por fila (solo tienen sentido al crear) y el botón **"Guardar cambios"** se muestra correctamente cuando hay cambios válidos.
+- Un cambio que afecta **solo al comentario** (observación) de una fila ahora recalcula los botones al instante (antes había que tocar otra cosa para que apareciera "Guardar cambios").
+- Editar una fila **no intervenida** ya no provoca el error "La asignación ya fue eliminada".
+
+### Changed
+- En el modal de edición se **oculta** el selector de técnico por fila (cambiar el reparador de una reparación existente queda como mejora futura, requiere cambio en el servidor).
+
 ## [0.11.0] - 2026-06-25
 
 ### Added
@@ -64,6 +74,7 @@ _(cambios para la próxima versión)_
 _Las versiones 0.9.1 y anteriores no están detalladas aquí: el changelog se inició en la 0.10.0.
 Para su historial, consulta los tags de Git._
 
-[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.9.1...v0.10.0
