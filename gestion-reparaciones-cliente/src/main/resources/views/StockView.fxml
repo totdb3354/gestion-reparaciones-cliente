@@ -111,6 +111,11 @@
             <VBox fx:id="pnlPedidos" spacing="12" visible="false" managed="false">
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <Label text="Pedidos" styleClass="vista-titulo"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox spacing="0" alignment="CENTER_LEFT">
+                        <ToggleButton fx:id="toggleCompPedidos" text="Componentes" selected="true" styleClass="toggle-pill-left"/>
+                        <ToggleButton fx:id="toggleOtrosPedidos" text="Otros" styleClass="toggle-pill-right"/>
+                    </HBox>
                 </HBox>
                 <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <MenuButton fx:id="menuFiltroEstado" text="Estado" prefWidth="140"/>
@@ -124,6 +129,10 @@
                     <Button fx:id="btnLimpiarFiltrosPedidos" text="Limpiar filtros"
                             styleClass="btn-secondary" onAction="#limpiarFiltrosPedidos"/>
                     <Button fx:id="btnNuevoPedido" text="Nuevo pedido" styleClass="btn-primary" onAction="#nuevoPedido">
+                        <FlowPane.margin><Insets left="24"/></FlowPane.margin>
+                    </Button>
+                    <Button fx:id="btnNuevoOtroPedido" text="Nuevo otro pedido" styleClass="btn-primary"
+                            onAction="#nuevoOtroPedido" visible="false" managed="false">
                         <FlowPane.margin><Insets left="24"/></FlowPane.margin>
                     </Button>
                 </FlowPane>
@@ -140,6 +149,20 @@
                         <TableColumn fx:id="cpId"         text="ID"         prefWidth="50" visible="false"/>
                     </columns>
                     <placeholder><Label text="Sin pedidos"/></placeholder>
+                </TableView>
+                <TableView fx:id="tablaOtros" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS"
+                           visible="false" managed="false">
+                    <columns>
+                        <TableColumn fx:id="coFecha"     text="Pedido"     prefWidth="115"/>
+                        <TableColumn fx:id="coConcepto"  text="Concepto"   prefWidth="220"/>
+                        <TableColumn fx:id="coProveedor" text="Proveedor"  prefWidth="130"/>
+                        <TableColumn fx:id="coCantidad"  text="Cant."      prefWidth="60"/>
+                        <TableColumn fx:id="coPrecio"    text="P.Unit."    prefWidth="80"/>
+                        <TableColumn fx:id="coEur"       text="EUR"        prefWidth="80"/>
+                        <TableColumn fx:id="coEstado"    text="Estado"     prefWidth="110"/>
+                        <TableColumn fx:id="coId"        text="ID"         prefWidth="50" visible="false"/>
+                    </columns>
+                    <placeholder><Label text="Sin otros pedidos"/></placeholder>
                 </TableView>
                 <Label fx:id="lblUltimaActPedidos"
                        style="-fx-font-size: 10px; -fx-text-fill: #A0A0A0;"

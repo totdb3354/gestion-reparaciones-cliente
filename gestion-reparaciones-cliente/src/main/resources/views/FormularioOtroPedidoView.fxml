@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.reparaciones.controllers.FormularioOtroPedidoController"
+      styleClass="vista-container"
+      stylesheets="@../styles/app.css"
+      spacing="16" prefWidth="700">
+    <padding><Insets top="28" right="28" bottom="28" left="28"/></padding>
+
+    <Label text="Nuevo otro pedido" styleClass="vista-titulo"/>
+
+    <!-- Tabla de líneas -->
+    <TableView fx:id="tablaLineas" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS"
+               editable="true" prefHeight="220">
+        <columns>
+            <TableColumn fx:id="colConcepto"  text="Concepto"   prefWidth="200"/>
+            <TableColumn fx:id="colProveedor" text="Proveedor"  prefWidth="155"/>
+            <TableColumn fx:id="colCantidad"  text="Cant."      prefWidth="55"/>
+            <TableColumn fx:id="colPrecio"    text="P.Unit."    prefWidth="80"/>
+            <TableColumn fx:id="colUrgente"   text="Urg."       prefWidth="45"/>
+            <TableColumn fx:id="colTotalEur"  text="Total EUR"  prefWidth="90"/>
+            <TableColumn fx:id="colQuitar"    text=""           prefWidth="40"/>
+        </columns>
+        <placeholder><Label text="Añade al menos una línea"/></placeholder>
+    </TableView>
+
+    <Button text="+ Añadir línea" styleClass="btn-secondary" onAction="#anadirLinea"/>
+
+    <!-- Botones -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar"        styleClass="btn-secondary" onAction="#cancelar"/>
+        <Button fx:id="btnConfirmar" text="Confirmar pedido" styleClass="btn-primary" onAction="#confirmar"/>
+    </HBox>
+
+</VBox>
