@@ -198,7 +198,10 @@ public class FormularioOtroPedidoController {
                 super.updateItem(item, empty);
                 if (empty) { setGraphic(null); }
                 else {
-                    campo.setText(item != null ? item : "");
+                    String val = item != null ? item : "";
+                    // Solo re-set si cambia de verdad: evita reposicionar el cursor
+                    // al teclear (si no, el texto se escribiría al revés).
+                    if (!campo.getText().equals(val)) campo.setText(val);
                     setGraphic(campo);
                 }
             }
