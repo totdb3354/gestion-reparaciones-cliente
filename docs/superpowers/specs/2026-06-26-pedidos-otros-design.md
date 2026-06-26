@@ -52,7 +52,7 @@ Espeja a `Compra_componente` **quitando** `ID_COM` y **añadiendo** `CONCEPTO`.
 | `PRECIO_UNIDAD_PEDIDO` | DOUBLE / DECIMAL | mismo tipo que en `Compra_componente` |
 | `DIVISA` | VARCHAR | hereda la del proveedor por defecto |
 | `PRECIO_EUR` | DOUBLE / DECIMAL | |
-| `ESTADO` | VARCHAR | `pendiente`/`en_camino`/`parcial`/`recibido`/`cancelado` |
+| `ESTADO` | ENUM(`pendiente`,`en_camino`,`parcial`,`recibido`,`cancelado`) | NOT NULL DEFAULT `pendiente` — idéntico a `Compra_componente` |
 | `UPDATED_AT` | TIMESTAMP | misma definición que `Compra_componente.UPDATED_AT` (bloqueo optimista, truncado a segundos) |
 
 ### Cardinalidades
