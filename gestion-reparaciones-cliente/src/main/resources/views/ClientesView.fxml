@@ -24,11 +24,15 @@
 
             <VBox fx:id="pnlClientes" spacing="12">
                 <HBox alignment="CENTER_LEFT" spacing="12">
-                    <Label text="Clientes" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <Label text="Clientes" styleClass="vista-titulo"/>
+                </HBox>
+                <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <MultiSelectComboBox fx:id="menuFiltroClientes" prefWidth="160"/>
                     <Button fx:id="btnNuevo" text="Nuevo cliente" styleClass="btn-primary"
-                            onAction="#nuevoCliente"/>
-                </HBox>
+                            onAction="#nuevoCliente">
+                        <FlowPane.margin><Insets left="24"/></FlowPane.margin>
+                    </Button>
+                </FlowPane>
 
                 <TableView fx:id="tablaClientes" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
                     <columns>

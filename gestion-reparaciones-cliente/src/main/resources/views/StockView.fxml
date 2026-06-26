@@ -31,13 +31,15 @@
             <!-- ══ Panel: Stock actual ══════════════════════════════════════════ -->
             <VBox fx:id="pnlStock" spacing="12" visible="true" managed="true">
                 <HBox alignment="CENTER_LEFT" spacing="12">
-                    <Label text="Stock actual" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <Label text="Stock actual" styleClass="vista-titulo"/>
+                </HBox>
+                <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <MenuButton fx:id="menuFiltroStock" text="Estado" prefWidth="130"/>
                     <TextField fx:id="txtBuscador" promptText="Buscar componente…"
                                styleClass="buscador" prefWidth="220"/>
                     <Button fx:id="btnLimpiarFiltrosStock" text="Limpiar filtros"
                             styleClass="btn-secondary" onAction="#limpiarFiltrosStock"/>
-                </HBox>
+                </FlowPane>
                 <HBox spacing="16" VBox.vgrow="ALWAYS">
                     <VBox HBox.hgrow="ALWAYS" spacing="0">
                     <TableView fx:id="tablaStock" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
@@ -108,7 +110,9 @@
             <!-- ══ Panel: Pedidos ═══════════════════════════════════════════════ -->
             <VBox fx:id="pnlPedidos" spacing="12" visible="false" managed="false">
                 <HBox alignment="CENTER_LEFT" spacing="12">
-                    <Label text="Pedidos" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
+                    <Label text="Pedidos" styleClass="vista-titulo"/>
+                </HBox>
+                <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <MenuButton fx:id="menuFiltroEstado" text="Estado" prefWidth="140"/>
                     <MultiSelectComboBox fx:id="menuFiltroProveedorPedidos" prefWidth="140"/>
                     <TextField fx:id="txtBuscadorPedidos" promptText="Buscar componente…"
@@ -119,8 +123,10 @@
                     <DatePicker fx:id="dpPedidosHasta" prefWidth="130"/>
                     <Button fx:id="btnLimpiarFiltrosPedidos" text="Limpiar filtros"
                             styleClass="btn-secondary" onAction="#limpiarFiltrosPedidos"/>
-                    <Button fx:id="btnNuevoPedido" text="Nuevo pedido" styleClass="btn-primary" onAction="#nuevoPedido"/>
-                </HBox>
+                    <Button fx:id="btnNuevoPedido" text="Nuevo pedido" styleClass="btn-primary" onAction="#nuevoPedido">
+                        <FlowPane.margin><Insets left="24"/></FlowPane.margin>
+                    </Button>
+                </FlowPane>
                 <TableView fx:id="tablaPedidos" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="cpFecha"      text="Pedido"     prefWidth="115"/>
@@ -143,10 +149,14 @@
             <!-- ══ Panel: Proveedores ═══════════════════════════════════════════ -->
             <VBox fx:id="pnlProveedores" spacing="12" visible="false" managed="false">
                 <HBox alignment="CENTER_LEFT" spacing="12">
-                    <Label text="Proveedores" styleClass="vista-titulo" HBox.hgrow="ALWAYS"/>
-                    <MultiSelectComboBox fx:id="menuFiltroProveedores" prefWidth="160"/>
-                    <Button fx:id="btnNuevoProveedor" text="Nuevo proveedor" styleClass="btn-primary" onAction="#nuevoProveedor"/>
+                    <Label text="Proveedores" styleClass="vista-titulo"/>
                 </HBox>
+                <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
+                    <MultiSelectComboBox fx:id="menuFiltroProveedores" prefWidth="160"/>
+                    <Button fx:id="btnNuevoProveedor" text="Nuevo proveedor" styleClass="btn-primary" onAction="#nuevoProveedor">
+                        <FlowPane.margin><Insets left="24"/></FlowPane.margin>
+                    </Button>
+                </FlowPane>
                 <TableView fx:id="tablaProveedores" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="cpvNombre"     text="Nombre"     prefWidth="200"/>
