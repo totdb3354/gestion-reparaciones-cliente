@@ -1,10 +1,12 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.dao.CompraComponenteDAO;
+import com.reparaciones.dao.CompraOtroDAO;
 import com.reparaciones.dao.ComponenteDAO;
 import com.reparaciones.dao.ProveedorDAO;
 import com.reparaciones.models.CompraComponente;
 import com.reparaciones.models.CompraComponente.Estado;
+import com.reparaciones.models.CompraOtro;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.Proveedor;
 import com.reparaciones.utils.Alertas;
@@ -98,6 +100,22 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     @FXML private DatePicker                              dpPedidosHasta;
     private final java.util.List<CheckBox> cbsEstado = new java.util.ArrayList<>();
 
+    // ── Panel Pedidos — toggle Componentes | Otros ────────────────────────────
+    @FXML private javafx.scene.control.ToggleButton toggleCompPedidos;
+    @FXML private javafx.scene.control.ToggleButton toggleOtrosPedidos;
+    @FXML private TableView<CompraOtro>                   tablaOtros;
+    @FXML private TableColumn<CompraOtro, String>         coFecha;
+    @FXML private TableColumn<CompraOtro, String>         coConcepto;
+    @FXML private TableColumn<CompraOtro, String>         coProveedor;
+    @FXML private TableColumn<CompraOtro, Object>         coCantidad;
+    @FXML private TableColumn<CompraOtro, String>         coPrecio;
+    @FXML private TableColumn<CompraOtro, String>         coEur;
+    @FXML private TableColumn<CompraOtro, String>         coEstado;
+    @FXML private TableColumn<CompraOtro, Integer>        coId;
+    @FXML private Button btnNuevoOtroPedido;
+    private final CompraOtroDAO compraOtroDAO = new CompraOtroDAO();
+    private final ObservableList<CompraOtro> datosOtros = FXCollections.observableArrayList();
+
     // ── Panel Proveedores ─────────────────────────────────────────────────────
     @FXML private TableView<Proveedor>             tablaProveedores;
     @FXML private TableColumn<Proveedor, String>   cpvNombre;
@@ -147,10 +165,13 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     public void initialize() {
         configurarTablaStock();
         configurarTablaPedidos();
+        configurarTablaOtros();
+        configurarTogglePedidos();
         configurarTablaProveedores();
         if (!com.reparaciones.Sesion.esSuperTecnico()) {
-            btnNuevoPedido   .setVisible(false); btnNuevoPedido   .setManaged(false);
-            btnNuevoProveedor.setVisible(false); btnNuevoProveedor.setManaged(false);
+            btnNuevoPedido      .setVisible(false); btnNuevoPedido      .setManaged(false);
+            btnNuevoProveedor   .setVisible(false); btnNuevoProveedor   .setManaged(false);
+            btnNuevoOtroPedido  .setVisible(false); btnNuevoOtroPedido  .setManaged(false);
         }
         cargarProveedores();
         cargarStock();
@@ -185,7 +206,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @Override
     public void recargar() {
-        if (pnlPedidos.isVisible())       cargarPedidos();
+        if (pnlPedidos.isVisible()) { if (toggleOtrosPedidos.isSelected()) cargarOtros(); else cargarPedidos(); }
         else if (pnlProveedores.isVisible()) cargarProveedores();
         else                               cargarStock();
     }
@@ -996,6 +1017,425 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    // ─── Toggle Componentes | Otros ───────────────────────────────────────────
+
+    private void configurarTogglePedidos() {
+        javafx.scene.control.ToggleGroup grupo = new javafx.scene.control.ToggleGroup();
+        toggleCompPedidos.setToggleGroup(grupo);
+        toggleOtrosPedidos.setToggleGroup(grupo);
+        grupo.selectedToggleProperty().addListener((obs, old, sel) -> {
+            if (sel == null) { old.setSelected(true); return; }      // no permitir deselección
+            boolean otros = sel == toggleOtrosPedidos;
+            tablaPedidos.setVisible(!otros); tablaPedidos.setManaged(!otros);
+            tablaOtros.setVisible(otros);    tablaOtros.setManaged(otros);
+            boolean superT = com.reparaciones.Sesion.esSuperTecnico();
+            btnNuevoPedido.setVisible(!otros && superT);    btnNuevoPedido.setManaged(!otros && superT);
+            btnNuevoOtroPedido.setVisible(otros && superT); btnNuevoOtroPedido.setManaged(otros && superT);
+            if (otros) cargarOtros(); else cargarPedidos();
+        });
+    }
+
+    // ─── Configurar tabla Otros ───────────────────────────────────────────────
+
+    private void configurarTablaOtros() {
+        coId.setCellValueFactory(c ->
+                new javafx.beans.property.SimpleIntegerProperty(c.getValue().getIdCompraOtro()).asObject());
+        coFecha.setCellValueFactory(c ->
+                sp(FechaUtils.formatear(c.getValue().getFechaPedido(), FMT)));
+        coConcepto.setCellValueFactory(c -> sp(c.getValue().getConcepto()));
+        coConcepto.setCellFactory(col -> new TableCell<>() {
+            private final Label lbl = new Label();
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); return; }
+                lbl.setText(item);
+                setGraphic(lbl);
+            }
+        });
+        coProveedor.setCellValueFactory(c -> sp(c.getValue().getNombreProveedor()));
+        coCantidad.setCellValueFactory(c -> {
+            CompraOtro p = c.getValue();
+            String texto = switch (p.getEstado()) {
+                case parcial   -> p.getCantidadRecibida() != null
+                        ? p.getCantidadRecibida() + "/" + p.getCantidad()
+                        : String.valueOf(p.getCantidad());
+                case recibido  -> p.getCantidadRecibida() != null
+                        ? String.valueOf(p.getCantidadRecibida())
+                        : String.valueOf(p.getCantidad());
+                default        -> String.valueOf(p.getCantidad());
+            };
+            return new javafx.beans.property.SimpleObjectProperty<>(texto);
+        });
+        coPrecio.setCellFactory(col -> new TableCell<>() {
+            private final Label lbl   = new Label();
+            private final Label alert = new Label("!");
+            private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(4, lbl, alert);
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                alert.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD +
+                        "; -fx-font-weight: bold; -fx-font-size: 12px;");
+            }
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) { setGraphic(null); return; }
+                CompraOtro p = getTableRow().getItem();
+                String simbolo = switch (p.getDivisa()) {
+                    case "EUR" -> "€";
+                    case "USD" -> "$";
+                    default    -> p.getDivisa();
+                };
+                boolean sinPrecio = p.getPrecioUnidadPedido() == 0 && p.getEstado() == Estado.recibido;
+                lbl.setText(String.format("%.2f %s", p.getPrecioUnidadPedido(), simbolo));
+                lbl.setStyle(sinPrecio ? "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + "; -fx-font-weight: bold;" : "");
+                alert.setVisible(sinPrecio);
+                alert.setManaged(sinPrecio);
+                setGraphic(box);
+            }
+        });
+        coPrecio.setCellValueFactory(c -> sp(""));
+        coEur.setCellFactory(col -> new TableCell<>() {
+            private final Label lbl   = new Label();
+            private final Label alert = new Label("!");
+            private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(4, lbl, alert);
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                alert.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD +
+                        "; -fx-font-weight: bold; -fx-font-size: 12px;");
+            }
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) { setGraphic(null); return; }
+                CompraOtro p = getTableRow().getItem();
+                int unidades = p.getEstado() == Estado.recibido && p.getCantidadRecibida() != null
+                        ? p.getCantidadRecibida() : p.getCantidad();
+                double total = unidades * p.getPrecioEur();
+                boolean sinPrecio = total == 0 && p.getEstado() == Estado.recibido;
+                lbl.setText(String.format("%.2f €", total));
+                lbl.setStyle(sinPrecio ? "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + "; -fx-font-weight: bold;" : "");
+                alert.setVisible(sinPrecio);
+                alert.setManaged(sinPrecio);
+                setGraphic(box);
+            }
+        });
+        coEur.setCellValueFactory(c -> sp(""));
+        coEstado.setCellValueFactory(c -> sp(c.getValue().getEstado().name()));
+
+        // Color fila por estado
+        tablaOtros.setRowFactory(tv -> new TableRow<>() {
+            {
+                selectedProperty().addListener((obs, o, sel) -> actualizarEstilo());
+            }
+            private void actualizarEstilo() {
+                CompraOtro item = getItem();
+                if (isEmpty() || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
+                if (isSelected()) {
+                    setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
+                            "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
+                            "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0;");
+                    return;
+                }
+                String sep = com.reparaciones.utils.Colores.FILA_SEP;
+                String barraIzq = "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " ";
+                setStyle(switch (item.getEstado()) {
+                    case pendiente -> barraIzq + "#C8961E;";
+                    case en_camino -> item.isEsUrgente()
+                            ? barraIzq + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + ";"
+                            : "-fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " transparent;";
+                    case recibido  -> barraIzq + com.reparaciones.utils.Colores.FILA_RECIBIDO_BRD + ";";
+                    case parcial   -> barraIzq + com.reparaciones.utils.Colores.FILA_PARCIAL_BRD + ";";
+                    case cancelado -> "-fx-opacity: 0.45; -fx-border-width: 0 0 1 8; -fx-border-insets: 1 0 0 0; -fx-border-color: transparent transparent " + sep + " transparent;";
+                });
+            }
+            @Override protected void updateItem(CompraOtro item, boolean empty) {
+                super.updateItem(item, empty);
+                actualizarEstilo();
+            }
+        });
+
+        // Badge de estado en columna Estado
+        coEstado.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            private final Label alerta = new Label("⚠");
+            private final javafx.scene.layout.HBox contenedor = new javafx.scene.layout.HBox(6, badge, alerta);
+            {
+                contenedor.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                alerta.setStyle("-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD + "; -fx-font-size: 13px;");
+                setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            }
+            @Override protected void updateItem(String val, boolean empty) {
+                super.updateItem(val, empty);
+                if (empty || val == null || getTableRow() == null || getTableRow().getItem() == null) {
+                    setGraphic(null); return;
+                }
+                CompraOtro p = getTableRow().getItem();
+                boolean urgente = p.isEsUrgente();
+                boolean cancelado = p.getEstado() != Estado.en_camino && p.getEstado() != Estado.parcial;
+                String bg, txt;
+                switch (p.getEstado()) {
+                    case pendiente -> { bg = "#FFF3D6"; txt = "#B26A00"; }
+                    case en_camino -> { bg = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BG  : "#E8EAF0";
+                                        txt = urgente ? com.reparaciones.utils.Colores.FILA_SOLICITUD_BRD : "#586376"; }
+                    case recibido  -> { bg = com.reparaciones.utils.Colores.FILA_RECIBIDO_BG;  txt = com.reparaciones.utils.Colores.FILA_RECIBIDO_BRD; }
+                    case parcial   -> { bg = com.reparaciones.utils.Colores.FILA_PARCIAL_BG;   txt = com.reparaciones.utils.Colores.FILA_PARCIAL_BRD; }
+                    case cancelado -> { bg = com.reparaciones.utils.Colores.FILA_CANCELADO_BG; txt = com.reparaciones.utils.Colores.FILA_CANCELADO_TEXT; }
+                    default        -> { bg = "#E8EAF0"; txt = "#586376"; }
+                }
+                badge.setText(val);
+                badge.setStyle("-fx-background-color: " + bg + "; -fx-text-fill: " + txt + ";" +
+                        "-fx-background-radius: 12; -fx-padding: 3 10 3 10; -fx-font-size: 11px; -fx-font-weight: bold;");
+                alerta.setVisible(urgente && !cancelado);
+                alerta.setManaged(urgente && !cancelado);
+                setGraphic(contenedor);
+            }
+        });
+
+        // Filtros compartidos con tablaPedidos
+        FilteredList<CompraOtro> filtradaOtros = new FilteredList<>(datosOtros, p -> true);
+        tablaOtros.setItems(filtradaOtros);
+        Runnable aplicarFiltroOtros = () -> {
+            java.util.List<String> sel     = cbsEstado.stream()
+                    .filter(CheckBox::isSelected).map(CheckBox::getText)
+                    .collect(java.util.stream.Collectors.toList());
+            java.util.List<String> selProv = new java.util.ArrayList<>(seleccionadosPedidos);
+            String texto = txtBuscadorPedidos.getText();
+            java.time.LocalDate desde = dpPedidosDesde.getValue();
+            java.time.LocalDate hasta = dpPedidosHasta.getValue();
+            filtradaOtros.setPredicate(p -> {
+                boolean coincideEstado    = sel.isEmpty()     || sel.contains(p.getEstado().name().replace('_', ' '));
+                boolean coincideProveedor = selProv.isEmpty() || selProv.contains(p.getNombreProveedor());
+                boolean coincideTexto     = texto == null || texto.isBlank() ||
+                        p.getConcepto().toLowerCase().contains(texto.toLowerCase().trim());
+                java.time.LocalDate fecha = FechaUtils.toLocalDate(p.getFechaPedido());
+                boolean coincideDesde = desde == null || fecha == null || !fecha.isBefore(desde);
+                boolean coincideHasta = hasta == null || fecha == null || !fecha.isAfter(hasta);
+                return coincideEstado && coincideProveedor && coincideTexto && coincideDesde && coincideHasta;
+            });
+        };
+        cbsEstado.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> aplicarFiltroOtros.run()));
+        txtBuscadorPedidos.textProperty().addListener((obs, o, n) -> aplicarFiltroOtros.run());
+        dpPedidosDesde.valueProperty().addListener((obs, o, n) -> aplicarFiltroOtros.run());
+        dpPedidosHasta.valueProperty().addListener((obs, o, n) -> aplicarFiltroOtros.run());
+        // Registrar también en el listener de proveedor de pedidos
+        Runnable prevFiltroProv = onFiltroPedidosProveedor;
+        onFiltroPedidosProveedor = () -> { prevFiltroProv.run(); aplicarFiltroOtros.run(); };
+
+        // Menú contextual (solo supertecnico)
+        if (com.reparaciones.Sesion.esSuperTecnico()) {
+            ContextMenu ctxOtros = new ContextMenu();
+            tablaOtros.setContextMenu(ctxOtros);
+            tablaOtros.getSelectionModel().selectedItemProperty().addListener(
+                    (obs, old, sel) -> construirMenuContextualOtros(ctxOtros, sel));
+        }
+        tablaOtros.getColumns().forEach(c -> c.setReorderable(false));
+    }
+
+    private void construirMenuContextualOtros(ContextMenu ctx, CompraOtro sel) {
+        ctx.getItems().clear();
+        if (sel == null) return;
+        switch (sel.getEstado()) {
+            case pendiente -> {
+                MenuItem confirmar = new MenuItem("Confirmar pedido");
+                MenuItem borrar    = new MenuItem("Borrar");
+                confirmar.setOnAction(e -> confirmarPedidoOtro());
+                borrar   .setOnAction(e -> borrarPedidoOtro());
+                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), borrar);
+            }
+            case en_camino -> {
+                MenuItem parcial  = new MenuItem("Recepción parcial");
+                MenuItem confirmar = new MenuItem("Confirmar recibido");
+                MenuItem cancelar  = new MenuItem("Cancelar pedido");
+                parcial  .setOnAction(e -> confirmarParcialOtro());
+                confirmar.setOnAction(e -> confirmarRecibidoOtro());
+                cancelar .setOnAction(e -> cancelarPedidoOtro());
+                ctx.getItems().addAll(parcial, confirmar, new SeparatorMenuItem(), cancelar);
+            }
+            case parcial -> {
+                MenuItem resto    = new MenuItem("Recibir resto");
+                MenuItem alterado = new MenuItem("Cerrar sin resto");
+                resto   .setOnAction(e -> recibirRestoOtro());
+                alterado.setOnAction(e -> confirmarAlteradoOtro());
+                ctx.getItems().addAll(resto, alterado);
+            }
+            case recibido -> {
+                MenuItem desrecibir = new MenuItem("Revertir a En camino");
+                desrecibir.setOnAction(e -> desrecibirPedidoOtro());
+                ctx.getItems().add(desrecibir);
+            }
+            default -> { /* cancelado: sin acciones */ }
+        }
+    }
+
+    private void cargarOtros() {
+        try {
+            datosOtros.setAll(compraOtroDAO.getAll());
+            String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            if (lblUltimaActPedidos != null) lblUltimaActPedidos.setText("Actualizado " + hora);
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    // ── Acciones otros pedidos ────────────────────────────────────────────────
+
+    @FXML private void nuevoOtroPedido() {
+        FormularioOtroPedidoController.abrir(() -> cargarOtros());
+    }
+
+    private void confirmarPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            compraOtroDAO.confirmar(sel);
+            cargarOtros();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarOtros();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    private void confirmarRecibidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            compraOtroDAO.confirmarRecibido(sel);
+            cargarOtros();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarOtros();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    private void confirmarParcialOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+
+        TextInputDialog dCant = new TextInputDialog();
+        dCant.setTitle("Recepción parcial");
+        dCant.setHeaderText("Pedido #" + sel.getIdCompraOtro() + " — " + sel.getConcepto()
+                + " (" + sel.getCantidad() + " pedidas)");
+        dCant.setContentText("Cantidad recibida ahora:");
+        Optional<String> rCant = dCant.showAndWait();
+        if (rCant.isEmpty()) return;
+        int cant;
+        try {
+            cant = Integer.parseInt(rCant.get().trim());
+            if (cant <= 0 || cant >= sel.getCantidad()) {
+                new Alert(Alert.AlertType.WARNING,
+                        "La cantidad debe ser mayor que 0 y menor que " + sel.getCantidad() + ".").showAndWait();
+                return;
+            }
+        } catch (NumberFormatException e) {
+            new Alert(Alert.AlertType.WARNING, "Cantidad no válida.").showAndWait();
+            return;
+        }
+
+        try {
+            compraOtroDAO.confirmarParcial(sel, cant);
+            cargarOtros();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarOtros();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    private void recibirRestoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        int restante = sel.getCantidad() - (sel.getCantidadRecibida() != null ? sel.getCantidadRecibida() : 0);
+
+        TextInputDialog dCant = new TextInputDialog(String.valueOf(restante));
+        dCant.setTitle("Recibir unidades");
+        dCant.setHeaderText("Pedido #" + sel.getIdCompraOtro() + " — " + sel.getConcepto()
+                + " (recibidas: " + sel.getCantidadRecibida() + "/" + sel.getCantidad() + ")"
+                + "\nSi introduces " + restante + " o más, el pedido se cerrará como recibido.");
+        dCant.setContentText("Cantidad que llega ahora:");
+        Optional<String> rCant = dCant.showAndWait();
+        if (rCant.isEmpty()) return;
+        int cant;
+        try {
+            cant = Integer.parseInt(rCant.get().trim());
+            if (cant <= 0) {
+                new Alert(Alert.AlertType.WARNING, "La cantidad debe ser mayor que 0.").showAndWait();
+                return;
+            }
+            int yaRecibidas = sel.getCantidadRecibida() != null ? sel.getCantidadRecibida() : 0;
+            if (yaRecibidas + cant > sel.getCantidad()) {
+                new Alert(Alert.AlertType.WARNING,
+                        "No puedes recibir más de lo pedido. Faltan " + restante + " unidad(es).").showAndWait();
+                return;
+            }
+        } catch (NumberFormatException e) {
+            new Alert(Alert.AlertType.WARNING, "Cantidad no válida.").showAndWait();
+            return;
+        }
+
+        try {
+            compraOtroDAO.recibirResto(sel, cant);
+            cargarOtros();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarOtros();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    private void confirmarAlteradoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        try {
+            compraOtroDAO.confirmarAlterado(sel);
+            cargarOtros();
+        } catch (com.reparaciones.utils.StaleDataException e) {
+            mostrarConflicto(); cargarOtros();
+        } catch (SQLException e) { mostrarError(e); }
+    }
+
+    private void cancelarPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        ConfirmDialog.mostrar(
+                "Cancelar pedido",
+                "¿Cancelar el pedido #" + sel.getIdCompraOtro() + " de " + sel.getConcepto() + "?",
+                "Cancelar pedido",
+                () -> {
+                    try {
+                        compraOtroDAO.cancelar(sel);
+                        cargarOtros();
+                    } catch (com.reparaciones.utils.StaleDataException e) {
+                        mostrarConflicto(); cargarOtros();
+                    } catch (SQLException e) { mostrarError(e); }
+                });
+    }
+
+    private void borrarPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        ConfirmDialog.mostrar(
+                "Borrar pedido",
+                "¿Borrar el pedido pendiente #" + sel.getIdCompraOtro() + " de " + sel.getConcepto() + "?",
+                "Borrar",
+                () -> {
+                    try {
+                        compraOtroDAO.borrar(sel);
+                        cargarOtros();
+                    } catch (com.reparaciones.utils.StaleDataException e) {
+                        mostrarConflicto(); cargarOtros();
+                    } catch (SQLException e) { mostrarError(e); }
+                });
+    }
+
+    private void desrecibirPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        ConfirmDialog.mostrar(
+                "Revertir a En camino",
+                "¿Revertir el pedido #" + sel.getIdCompraOtro() + " de " + sel.getConcepto() +
+                " a En camino?",
+                "Revertir a En camino",
+                () -> {
+                    try {
+                        compraOtroDAO.desrecibir(sel);
+                        cargarOtros();
+                    } catch (com.reparaciones.utils.StaleDataException e) {
+                        new Alert(Alert.AlertType.WARNING, e.getMessage()).showAndWait();
+                        cargarOtros();
+                    } catch (SQLException e) { mostrarError(e); }
+                });
     }
 
     // ── Acciones pedidos ──────────────────────────────────────────────────────
