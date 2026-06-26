@@ -132,16 +132,17 @@ del contexto manualmente.
 En `pnlPedidos` (StockView.fxml), encima de la barra de filtros:
 
 ```
-Pedidos
-[ Componentes | Otros ]                       <- ToggleButton toggle-pill-left/right
+Pedidos                                       [ Componentes | Otros ]   <- toggle a la dcha del título
 [Estado v][Proveedor v][Buscar...] Desde[] Hasta[]   ·margen·  [ Nuevo (otro) pedido ]
 ┌───────────────────────────────────────────────────────────────┐
 │ tablaPedidos  (Componentes)   |   tablaOtros  (Otros)          │   <- visible/managed swap
 └───────────────────────────────────────────────────────────────┘
 ```
 
-- Mismo patrón de toggle-píldora que el historial (`toggle-pill-left` /
-  `toggle-pill-right`).
+- El toggle **Componentes | Otros** va **a la derecha de la fila del título**
+  (título a la izquierda, `Region HBox.hgrow="ALWAYS"` que empuja, toggle a la
+  derecha), igual que el toggle **Agrupado | Plano** del historial. Mismo
+  `toggle-pill-left` / `toggle-pill-right`.
 - **`tablaPedidos` (Componentes) queda intacta.**
 - **`tablaOtros`** nueva, columnas: `Pedido` (fecha) · **`Concepto`** · `Proveedor`
   · `Cant.` · `P.Unit` · `EUR` · `Estado` (+ `Id` oculta). Se reutilizan los
