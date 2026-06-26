@@ -467,12 +467,20 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             private final Label lblDetalle = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListenerDetalle =
                 (obs, o, sel) -> lblDetalle.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+            private final javafx.beans.value.ChangeListener<Boolean> selListenerGrupo =
+                (obs, o, sel) -> lblGrupo.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
                 lblGrupo.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
                 lblDetalle.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
-                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListenerDetalle);
-                    if (newRow != null) newRow.selectedProperty().addListener(selListenerDetalle);
+                    if (oldRow != null) {
+                        oldRow.selectedProperty().removeListener(selListenerDetalle);
+                        oldRow.selectedProperty().removeListener(selListenerGrupo);
+                    }
+                    if (newRow != null) {
+                        newRow.selectedProperty().addListener(selListenerDetalle);
+                        newRow.selectedProperty().addListener(selListenerGrupo);
+                    }
                 });
             }
             @Override
@@ -484,6 +492,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                 Object row = getTableView().getItems().get(getIndex());
                 if (row instanceof GrupoImei g) {
                     lblGrupo.setText(g.getImei());
+                    lblGrupo.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " +
+                        (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
                     setGraphic(lblGrupo);
                 } else if (row instanceof ReparacionResumen rep) {
                     lblDetalle.setText(rep.getImei());
@@ -849,10 +859,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                         if (x < offset) { colRightClick[0] = c; break; }
                     }
                 });
+                // Drill-down al hacer doble clic en fila de grupo (clic simple solo selecciona)
                 setOnMouseClicked(e -> {
                     if (!isEmpty() && getItem() instanceof GrupoImei grupo
                             && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
-                            && e.getClickCount() == 1) {
+                            && e.getClickCount() == 2) {
                         mostrarDetalle(grupo);
                     }
                 });
