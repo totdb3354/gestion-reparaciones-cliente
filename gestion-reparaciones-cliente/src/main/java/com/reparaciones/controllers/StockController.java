@@ -1011,7 +1011,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void cargarPedidos() {
         try {
-            datosPedidos.setAll(compraDAO.getAll());
+            java.util.List<CompraComponente> lista = compraDAO.getAll();
+            // Cancelados al fondo (orden estable: respeta FECHA_PEDIDO DESC del servidor dentro de cada grupo)
+            lista.sort(java.util.Comparator.comparingInt(p -> p.getEstado() == Estado.cancelado ? 1 : 0));
+            datosPedidos.setAll(lista);
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActPedidos != null) lblUltimaActPedidos.setText("Actualizado " + hora);
         } catch (SQLException e) {
@@ -1269,7 +1272,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void cargarOtros() {
         try {
-            datosOtros.setAll(compraOtroDAO.getAll());
+            java.util.List<CompraOtro> lista = compraOtroDAO.getAll();
+            // Cancelados al fondo (orden estable: respeta FECHA_PEDIDO DESC del servidor dentro de cada grupo)
+            lista.sort(java.util.Comparator.comparingInt(p -> p.getEstado() == Estado.cancelado ? 1 : 0));
+            datosOtros.setAll(lista);
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActPedidos != null) lblUltimaActPedidos.setText("Actualizado " + hora);
         } catch (SQLException e) { mostrarError(e); }
