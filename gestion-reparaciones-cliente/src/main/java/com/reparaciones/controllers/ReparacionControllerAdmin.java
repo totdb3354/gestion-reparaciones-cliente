@@ -624,11 +624,11 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
                     }
                 });
 
-                // Drill-down al clicar en fila de grupo
+                // Drill-down al hacer doble clic en fila de grupo (clic simple solo selecciona)
                 setOnMouseClicked(e -> {
                     if (!isEmpty() && getItem() instanceof GrupoImei grupo
                             && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
-                            && e.getClickCount() == 1) {
+                            && e.getClickCount() == 2) {
                         mostrarDetalle(grupo);
                     }
                 });

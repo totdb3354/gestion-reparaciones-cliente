@@ -849,10 +849,11 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                         if (x < offset) { colRightClick[0] = c; break; }
                     }
                 });
+                // Drill-down al hacer doble clic en fila de grupo (clic simple solo selecciona)
                 setOnMouseClicked(e -> {
                     if (!isEmpty() && getItem() instanceof GrupoImei grupo
                             && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
-                            && e.getClickCount() == 1) {
+                            && e.getClickCount() == 2) {
                         mostrarDetalle(grupo);
                     }
                 });
