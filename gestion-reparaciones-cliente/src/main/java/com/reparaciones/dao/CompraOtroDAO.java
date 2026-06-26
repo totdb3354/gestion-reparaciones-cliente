@@ -14,8 +14,10 @@ import java.util.Map;
  * creación, edición, recepción total/parcial y cancelación.</p>
  * <p>Las operaciones de edición y confirmación usan control de concurrencia optimista
  * ({@link StaleDataException}) comparando {@code UPDATED_AT}.</p>
+ * <p>A diferencia de los pedidos de componentes, estos pedidos <b>no afectan al stock</b>:
+ * son un apunte ajeno al inventario.</p>
  *
- * @role ADMIN
+ * @role SUPERTECNICO
  */
 public class CompraOtroDAO {
 
@@ -94,7 +96,7 @@ public class CompraOtroDAO {
     }
 
     /**
-     * Marca el pedido como {@code recibido} e incrementa el stock con toda la cantidad pedida.
+     * Marca el pedido como {@code recibido} (sin efecto en stock).
      *
      * @param p pedido a confirmar
      * @throws SQLException       si falla la llamada al servidor
@@ -160,8 +162,7 @@ public class CompraOtroDAO {
     }
 
     /**
-     * Revierte un pedido {@code recibido} a {@code en_camino} y descuenta el stock añadido.
-     * El servidor rechaza la operación si el stock actual es insuficiente.
+     * Revierte un pedido {@code recibido} a {@code en_camino} (sin efecto en stock).
      *
      * @param p pedido a revertir
      * @throws SQLException       si falla la llamada al servidor
