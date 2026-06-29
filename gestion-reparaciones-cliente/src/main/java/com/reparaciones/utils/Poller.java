@@ -17,14 +17,15 @@ public final class Poller {
 
     public static void programarSiguiente(ScheduledExecutorService exec, Runnable tareaFx) {
         try {
-            exec.schedule(() -> {
-                Platform.runLater(() -> {
-                    ConexionEstado.enRefresco(true);
-                    try { tareaFx.run(); }
-                    finally { ConexionEstado.enRefresco(false); }
-                });
-                programarSiguiente(exec, tareaFx);   // reprograma siempre
-            }, ConexionEstado.delaySegundos(), TimeUnit.SECONDS);
+            exec.schedule(() -> Platform.runLater(() -> {
+                ConexionEstado.enRefresco(true);
+                try {
+                    tareaFx.run();
+                } finally {
+                    ConexionEstado.enRefresco(false);
+                    programarSiguiente(exec, tareaFx);   // reprograma con el estado ya actualizado
+                }
+            }), ConexionEstado.delaySegundos(), TimeUnit.SECONDS);
         } catch (RejectedExecutionException ignored) {
             // el executor se cerró (detenerPolling): dejar de reprogramar
         }

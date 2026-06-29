@@ -1,9 +1,16 @@
 package com.reparaciones.utils;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ConexionEstadoTest {
+
+    @BeforeEach
+    void reset() {
+        ConexionEstado.reportarExito();
+        ConexionEstado.enRefresco(false);
+    }
 
     @Test
     void arranca_conectado() {
