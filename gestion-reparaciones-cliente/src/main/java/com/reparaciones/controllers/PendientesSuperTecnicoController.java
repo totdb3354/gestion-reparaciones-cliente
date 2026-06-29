@@ -76,6 +76,8 @@ public class PendientesSuperTecnicoController {
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private FilteredList<ReparacionResumen> datosFiltrados;
     private Runnable onActualizar;
+    /** IMEI → nº de técnicos distintos con asignación pendiente (sub-indicador "N asignados"). */
+    private java.util.Map<String,Integer> conteoTecnicosPorImei = java.util.Map.of();
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
@@ -191,14 +193,22 @@ public class PendientesSuperTecnicoController {
         });
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblAsignados = new Label();
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblAsignados);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
-                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                (obs, o, sel) -> aplicarEstilos(sel);
             {
-                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblAsignados.setVisible(false); lblAsignados.setManaged(false);
+                aplicarEstilos(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
                 });
+            }
+            private void aplicarEstilos(boolean sel) {
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+                lblAsignados.setStyle("-fx-font-size: 10px; -fx-font-style: italic; -fx-text-fill: " + (sel ? "white" : "#9AA0AA") + ";");
             }
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -206,9 +216,14 @@ public class PendientesSuperTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
-                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                setGraphic(lbl);
+                String imei = getTableView().getItems().get(getIndex()).getImei();
+                lbl.setText(imei);
+                int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
+                boolean varios = n >= 2;
+                lblAsignados.setText(varios ? n + " asignados" : "");
+                lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
+                aplicarEstilos(getTableRow() != null && getTableRow().isSelected());
+                setGraphic(box);
             }
         });
         cModelo.setCellValueFactory(d -> {
@@ -615,7 +630,9 @@ public class PendientesSuperTecnicoController {
     public void cargar() {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
-            datos.setAll(reparacionDAO.getAsignaciones());
+            List<ReparacionResumen> asignaciones = reparacionDAO.getAsignaciones();
+            conteoTecnicosPorImei = contarTecnicosPorImei(asignaciones);
+            datos.setAll(asignaciones);
             // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
             datos.sort(java.util.Comparator.comparingInt((ReparacionResumen r) -> {
                 if (r.isUrgente()) return 0;
@@ -627,6 +644,21 @@ public class PendientesSuperTecnicoController {
         } catch (SQLException e) {
             mostrarError(e);
         }
+    }
+
+    /**
+     * Cuenta técnicos distintos (idTec) por IMEI a partir de las asignaciones cargadas.
+     * Las filas con IMEI {@code null} se ignoran. Puro y testeable (sin estado ni JavaFX).
+     */
+    static java.util.Map<String,Integer> contarTecnicosPorImei(List<ReparacionResumen> filas) {
+        java.util.Map<String, Set<Integer>> tecnicosPorImei = new java.util.HashMap<>();
+        for (ReparacionResumen r : filas) {
+            if (r.getImei() == null) continue;
+            tecnicosPorImei.computeIfAbsent(r.getImei(), k -> new HashSet<>()).add(r.getIdTec());
+        }
+        java.util.Map<String,Integer> conteo = new java.util.HashMap<>();
+        tecnicosPorImei.forEach((imei, tecnicos) -> conteo.put(imei, tecnicos.size()));
+        return conteo;
     }
 
     /** Construye una fila de la pila para {@code e}. onClick = cargar en el formulario; onRemove = quitar de la pila. */
