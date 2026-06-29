@@ -986,26 +986,18 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
     private void configurarFiltros() {
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            String withoutSep = n.replace(", ", ",");
-            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
-            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
-            String[] partes = n.split(",", -1);
-            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
-                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            String can = com.reparaciones.utils.FiltroImei.canonicalizar(n);
+            if (!can.equals(n)) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); });
+                return;
             }
-            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
-                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
-            boolean hayValido = !parsearImeis(n).isEmpty();
-            if (n.trim().isEmpty())
-                filtroImei.setStyle("");
-            else if (hayIncompleto)
-                filtroImei.setStyle("-fx-background-color: #F3F3F3; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
+            switch (com.reparaciones.utils.FiltroImei.estado(n)) {
+                case VACIO      -> filtroImei.setStyle("");
+                case INCOMPLETO -> filtroImei.setStyle("-fx-background-color: #F3F3F3; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else if (hayValido)
-                filtroImei.setStyle("-fx-background-color: #F3F3F3; -fx-border-color: #8AC7AF;" +
+                case VALIDO     -> filtroImei.setStyle("-fx-background-color: #F3F3F3; -fx-border-color: #8AC7AF;" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
-                filtroImei.setStyle("");
+            }
             aplicarFiltros();
         });
         filtroFechaDesde.getEditor().setDisable(true);
@@ -1114,7 +1106,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
         if (modoActual == Modo.PLANO) {
             Integer idTec = Sesion.getIdTec();
-            java.util.Set<String> imeisFiltro = parsearImeis(filtroImei.getText().trim());
+            java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(filtroImei.getText().trim());
 
             java.util.function.Predicate<ReparacionResumen> predicado = rep -> {
                 if (idTec == null || rep.getIdTec() != idTec) return false;
@@ -1202,7 +1194,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         datosFiltrados = datos.stream()
             .filter(rep -> idTec != null && rep.getIdTec() == idTec)
             .filter(rep -> {
-                java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+                java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
                 if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei()))
                     return false;
                 if (desde != null || hasta != null) {
@@ -1396,13 +1388,6 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             filas.add(fila);
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "historial_pulidos", cabeceras, filas);
-    }
-
-    private static java.util.Set<String> parsearImeis(String texto) {
-        if (texto == null || texto.isBlank()) return java.util.Set.of();
-        return java.util.Arrays.stream(texto.split(",", -1))
-                .map(String::trim).filter(s -> s.length() == 15)
-                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) {
