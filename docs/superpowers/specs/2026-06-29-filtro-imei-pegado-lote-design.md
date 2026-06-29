@@ -65,11 +65,16 @@ public final class FiltroImei {
     /** IMEIs de exactamente 15 dígitos presentes en el texto (sustituye a parsearImeis). */
     public static java.util.Set<String> imeisValidos(String texto);
 
-    /** Estilo de borde del campo según el contenido:
-     *  "" si vacío · rojo si hay algún token incompleto · verde si hay válidos. (Usa Colores.) */
-    public static String estiloBorde(String texto);
+    public enum EstadoFiltro { VACIO, INCOMPLETO, VALIDO }
+
+    /** Clasifica el contenido para el borde: VACIO (sin texto) · INCOMPLETO (hay algún
+     *  token <15) · VALIDO (hay al menos un IMEI de 15). Cada vista mapea esto a SU propio
+     *  estilo de borde (no se unifican los estilos — ver §6). */
+    public static EstadoFiltro estado(String texto);
 }
 ```
+
+> **Nota:** el helper **NO** decide el string de estilo. Devuelve la clasificación; cada controller conserva su `setStyle(...)` actual. Esto se debe a que 2 de las 8 vistas tienen estilos distintos (ver §6) y queremos **cero cambio visual**.
 
 **Reglas de `canonicalizar`** (= la canonicalización actual **+** el split nuevo):
 1. Quitar todo lo que no sea dígito o coma; normalizar `", "`→`,`, colapsar comas
@@ -94,15 +99,18 @@ filtroImei.textProperty().addListener((obs, o, n) -> {
         javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); });
         return;
     }
-    filtroImei.setStyle(com.reparaciones.utils.FiltroImei.estiloBorde(n));
-    <llamada de filtrado propia del controller>;   // aplicarFiltros() / etc., sin cambios
+    switch (com.reparaciones.utils.FiltroImei.estado(n)) {
+        case VACIO      -> filtroImei.setStyle("");
+        case INCOMPLETO -> filtroImei.setStyle(<estilo rojo DE ESTA vista, sin tocar>);
+        case VALIDO     -> filtroImei.setStyle(<estilo verde DE ESTA vista, sin tocar>);
+    }
+    <llamada de filtrado propia del controller>;   // aplicarFiltros() / aplicarFiltro(), sin cambios
 });
 ```
 
-Y donde el controller use `parsearImeis(n)` para filtrar → `FiltroImei.imeisValidos(n)`.
-Se **elimina** el método `parsearImeis` duplicado de cada controller.
-
-La llamada de filtrado de cada vista (el predicado, qué lista filtra) **no cambia**.
+- El `setStyle` de cada caso usa **exactamente los strings de estilo que esa vista tiene hoy** (6 vistas "estándar", PendientesTecnico recortado, ReparacionControllerTecnico hardcodeado). No se unifican.
+- Donde el controller use `parsearImeis(n)` para filtrar → `FiltroImei.imeisValidos(n)`. Se **elimina** el método `parsearImeis` duplicado de cada controller.
+- La llamada de filtrado de cada vista (el predicado, qué lista filtra; `aplicarFiltros()` o `aplicarFiltro()` en PulidoTecnico) **no cambia**.
 
 ## 5. Comportamiento detallado / casos
 
@@ -113,13 +121,24 @@ La llamada de filtrado de cada vista (el predicado, qué lista filtra) **no camb
 - Mezcla con comas existentes (`imei1, imei2imei3` pegado) → se reparte igualmente.
 - Campo vacío → sin borde, sin filtro.
 
-## 6. Riesgo y mitigación
+## 6. Verificación de las 8 vistas (hecha) y diferencias
 
-Los 8 listeners pueden tener **diferencias sutiles** (estilos exactos, si pintan borde
-verde, orden de pasos). La migración debe **preservar el comportamiento de cada vista**;
-el plan revisa los 8 uno por uno y, si alguno difiere de forma relevante, se ajusta el
-helper (p. ej. parametrizando el estilo) o se documenta la diferencia. El objetivo es
-DRY + comportamiento idéntico, no "uniformar a la fuerza".
+Se compararon los 8 listeners. El **núcleo es idéntico** en todos: la canonicalización
+(`withoutSep`/`limpio`), el auto-`", "` al llegar a 15, el cálculo `hayIncompleto`/
+`hayValido`, y el método `parsearImeis`. Esto es lo que se consolida en `FiltroImei`.
+
+**Diferencias reales encontradas** (se preservan, NO se unifican):
+- **6 vistas** (Admin, SuperTecnico, PulidoSuperTecnico, PulidoTecnico, PendientesSuperTecnico,
+  HistorialPulido): estilo "estándar" — `FONDO_INPUT` + `FILA_INCIDENCIA_BRD`/`FILA_REPARADO_ICO`
+  + redondeo/padding/font.
+- **PendientesTecnico**: estilo recortado — solo fondo + color de borde, **sin** redondeo/padding/font.
+- **ReparacionControllerTecnico**: colores **hardcodeados** — fondo `#F3F3F3`, verde `#8AC7AF`
+  (en vez de las constantes `Colores.*`).
+- **PulidoTecnico**: la llamada de filtrado es `aplicarFiltro()` (singular).
+
+**Decisión:** cada controller conserva su `setStyle(...)` y su llamada de filtrado **tal cual**.
+El helper solo aporta parseo + clasificación. Objetivo: DRY del parseo con **cero cambio
+visual ni de comportamiento**.
 
 ## 7. Roles
 
@@ -128,11 +147,12 @@ filtro de IMEI. No cambia ningún permiso; solo el parseo del campo.
 
 ## 8. Testing
 
-- **`FiltroImei.canonicalizar` e `imeisValidos`** → **tests JUnit puros** (mismo estilo que
-  `ImeiUtilsTest`/`PiezasTest`). Casos de `canonicalizar`: concatenado exacto (2-3×15),
-  concatenado con resto, ya con comas, mezcla, vacío, idempotencia
-  (`canonicalizar(canonicalizar(x)) == canonicalizar(x)`). Casos de `imeisValidos`:
-  varios válidos, con incompletos, vacío.
+- **`FiltroImei.canonicalizar`, `imeisValidos` y `estado`** → **tests JUnit puros** (mismo
+  estilo que `ImeiUtilsTest`/`PiezasTest`). Casos de `canonicalizar`: concatenado exacto
+  (2-3×15), concatenado con resto, ya con comas, mezcla, vacío, idempotencia
+  (`canonicalizar(canonicalizar(x)) == canonicalizar(x)`). Casos de `imeisValidos`: varios
+  válidos, con incompletos, vacío. Casos de `estado`: VACIO (vacío), INCOMPLETO (token <15),
+  VALIDO (al menos uno de 15).
 - **UI (los 8 controllers)** → prueba manual (sin arnés JavaFX): en una vista por rol,
   pegar un blob válido (se reparte, borde verde, filtra) y uno con resto (borde rojo,
   filtra por los válidos); confirmar que **teclear/escanear single** sigue igual.
