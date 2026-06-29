@@ -69,7 +69,8 @@ public class ApiClient {
     private static final String baseUrl;
     private static String token;
     private static Runnable sesionExpiradaHandler;
-    private static volatile boolean logoutEnCurso = false;
+    private static final java.util.concurrent.atomic.AtomicBoolean logoutEnCurso =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     static {
         String url = "http://localhost:8080";
@@ -86,7 +87,7 @@ public class ApiClient {
     // ── Token ─────────────────────────────────────────────────────────────────
 
     /** Guarda el JWT recibido tras el login. Llamar desde {@code UsuarioDAO.login}. */
-    public static void setToken(String jwt) { token = jwt; logoutEnCurso = false; }
+    public static void setToken(String jwt) { token = jwt; logoutEnCurso.set(false); }
 
     /** Limpia el token al cerrar sesión. Llamar desde {@code Sesion.cerrar}. */
     public static void clearToken() { token = null; }
@@ -95,16 +96,16 @@ public class ApiClient {
     public static void setSesionExpiradaHandler(Runnable h) { sesionExpiradaHandler = h; }
 
     /** @return true mientras el flujo de logout por sesión caducada está en curso. */
-    public static boolean isLogoutEnCurso() { return logoutEnCurso; }
+    public static boolean isLogoutEnCurso() { return logoutEnCurso.get(); }
 
     /**
      * Dispara el flujo de sesión caducada una sola vez. No hace nada si no hay sesión activa
      * (p. ej. un 401 durante el login = credenciales incorrectas) o no hay handler registrado.
      */
     static void dispararSesionExpirada() {
-        if (logoutEnCurso) return;
+        if (logoutEnCurso.get()) return;
         if (!Sesion.haySession() || sesionExpiradaHandler == null) return;
-        logoutEnCurso = true;
+        if (!logoutEnCurso.compareAndSet(false, true)) return;   // dedup atómico
         sesionExpiradaHandler.run();   // el handler marshala a FX por su cuenta
     }
 
