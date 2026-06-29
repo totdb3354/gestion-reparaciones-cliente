@@ -154,3 +154,31 @@ Así, los catch pueden hacer `instanceof` en vez de comparar mensajes.
   de los códigos en el cliente.
 - **Poller:** la auto-reprogramación (60s/5s) debe reprogramar la tarea **siempre** (éxito y
   fallo) y al detener el polling (`detenerPolling`) cancelar la tarea pendiente — sin fugas.
+
+### Riesgos adicionales detectados en revisión (a resolver en el plan)
+
+1. **Hay MÁS de un poller activo a la vez** (corrige el supuesto de §4.2). `MainController`
+   tiene un poller propio (`poller-notificaciones`, badges/alertas cada 60s) que corre
+   **siempre**, en paralelo con el poller del módulo visible (Stock o `ReparacionController`
+   Tec/SuperTec). Dos pollers reportando a un único `ConexionEstado` pueden **parpadear** si
+   uno falla y otro acierta. Regla a fijar: estado global por **último resultado** o por
+   "desconectado si el último ciclo falló" — evitar flapping. (Admin y Estadísticas no tienen
+   poller; ahí solo está el de Main.)
+2. **Llamadas a `ApiClient` fuera del hilo de JavaFX.** La tasa de cambio se pide en
+   `new Thread(...)` en `FormularioCompraController`/`FormularioCompraEditarController`. Si esa
+   llamada devuelve 401 o 5xx, el **hook central y el banner DEBEN marshalear a
+   `Platform.runLater`** (no se puede tocar UI desde ese hilo) → si no, `IllegalStateException`.
+3. **`initOwner` con modales anidados.** Hay ~177 usos de `mostrarError` en 21 ficheros, muchos
+   **dentro de modales** (FormularioCompra/Reparacion…). El owner debe ser la **ventana
+   enfocada/topmost**, no siempre `MainView`: si se elige `MainView` con un modal abierto, el
+   diálogo de error quedaría **detrás del modal** (peor que hoy). Resolver owner = ventana
+   actualmente enfocada.
+4. **Cargas iniciales de vista (al navegar)**, no solo el refresco periódico. Al abrir una vista
+   se hace `cargar()`; si el servidor está caído en ese instante hoy sale modal. Decisión a
+   fijar: tratarlas como fondo (**banner**, sin modal) para ser coherentes, ya que el poller
+   rellenará al reconectar.
+
+> **Nota (refuerza el diseño):** algunos catch capturan `catch (Exception)`, no solo
+> `SQLException`. Como los marcadores son subclases, también caen ahí. Por eso el **hook central
+> de 401 + flag "logout en curso" es obligatorio** (no opcional): es lo único que garantiza que
+> un 401 atrapado en un `catch (Exception)` genérico dispare el logout en vez de un diálogo suelto.
