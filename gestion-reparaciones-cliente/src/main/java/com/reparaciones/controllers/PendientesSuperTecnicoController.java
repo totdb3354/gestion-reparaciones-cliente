@@ -1224,10 +1224,31 @@ public class PendientesSuperTecnicoController {
                 return;
             }
             if (n.length() > 15) {
-                String recortado = n.substring(0, 15);
-                javafx.application.Platform.runLater(() -> tfScan.setText(recortado));
+                com.reparaciones.utils.ImeiUtils.ResultadoPegado res =
+                        com.reparaciones.utils.ImeiUtils.parsearPegadoImeis(n);
+                if (res.tipo() == com.reparaciones.utils.ImeiUtils.TipoPegado.CORRUPTO) {
+                    lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: "
+                            + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
+                    lblScanErr.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
+                    javafx.application.Platform.runLater(tfScan::clear);
+                    return;
+                }
+                int anadidos = 0, duplicados = 0;
+                for (String imei : res.imeis()) {
+                    if (pila.stream().anyMatch(x -> x.imei.equals(imei))) { duplicados++; continue; }
+                    EntradaAsignacion en = new EntradaAsignacion(imei);
+                    en.seq = ++seqCounter[0];
+                    pila.add(en);
+                    anadidos++;
+                }
+                renderPila[0].run();
+                lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-min-height: 15;");
+                lblScanErr.setText(anadidos + " IMEIs añadidos"
+                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : "."));
+                javafx.application.Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); });
                 return;
             }
+            lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
             lblScanErr.setText("");
             if (n.length() == 15) intentarAnadir.run();
         });
