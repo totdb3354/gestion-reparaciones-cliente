@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import com.reparaciones.Sesion;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,6 +68,8 @@ public class ApiClient {
 
     private static final String baseUrl;
     private static String token;
+    private static Runnable sesionExpiradaHandler;
+    private static volatile boolean logoutEnCurso = false;
 
     static {
         String url = "http://localhost:8080";
@@ -83,10 +86,27 @@ public class ApiClient {
     // ── Token ─────────────────────────────────────────────────────────────────
 
     /** Guarda el JWT recibido tras el login. Llamar desde {@code UsuarioDAO.login}. */
-    public static void setToken(String jwt) { token = jwt; }
+    public static void setToken(String jwt) { token = jwt; logoutEnCurso = false; }
 
     /** Limpia el token al cerrar sesión. Llamar desde {@code Sesion.cerrar}. */
     public static void clearToken() { token = null; }
+
+    /** Registra el flujo de "sesión caducada" (lo llama MainController al arrancar). */
+    public static void setSesionExpiradaHandler(Runnable h) { sesionExpiradaHandler = h; }
+
+    /** @return true mientras el flujo de logout por sesión caducada está en curso. */
+    public static boolean isLogoutEnCurso() { return logoutEnCurso; }
+
+    /**
+     * Dispara el flujo de sesión caducada una sola vez. No hace nada si no hay sesión activa
+     * (p. ej. un 401 durante el login = credenciales incorrectas) o no hay handler registrado.
+     */
+    static void dispararSesionExpirada() {
+        if (logoutEnCurso) return;
+        if (!Sesion.haySession() || sesionExpiradaHandler == null) return;
+        logoutEnCurso = true;
+        sesionExpiradaHandler.run();   // el handler marshala a FX por su cuenta
+    }
 
     // ── GET ───────────────────────────────────────────────────────────────────
 
@@ -279,6 +299,7 @@ public class ApiClient {
         try {
             return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
+            ConexionEstado.reportarFallo();
             String detalle = e.getMessage() != null ? ": " + e.getMessage() : "";
             throw new ConexionException("Sin conexión con el servidor" + detalle, e);
         }
@@ -286,8 +307,11 @@ public class ApiClient {
 
     private static void handleErrors(HttpResponse<String> response) throws SQLException {
         int status = response.statusCode();
-        if (status >= 200 && status < 300) return;
-        throw clasificar(status, extractMessage(response.body()));
+        if (status >= 200 && status < 300) { ConexionEstado.reportarExito(); return; }
+        SQLException ex = clasificar(status, extractMessage(response.body()));
+        if (ex instanceof ConexionException) ConexionEstado.reportarFallo();
+        if (ex instanceof SesionExpiradaException) dispararSesionExpirada();
+        throw ex;
     }
 
     /** Mapea un código HTTP de error a su excepción. Puro (no lanza, devuelve). */
