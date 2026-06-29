@@ -669,13 +669,19 @@ public class PulidoSuperTecnicoController {
                 com.reparaciones.utils.ImeiUtils.ResultadoPegado res =
                         com.reparaciones.utils.ImeiUtils.parsearPegadoImeis(n);
                 if (res.tipo() == com.reparaciones.utils.ImeiUtils.TipoPegado.CORRUPTO) {
-                    lblError.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
-                    javafx.application.Platform.runLater(tfImei::clear);
+                    javafx.application.Platform.runLater(() -> {
+                        tfImei.clear();
+                        lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-wrap-text: true;");
+                        lblError.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
+                    });
                     return;
                 }
                 if (cbTecnico.getValue() == null) {
-                    lblError.setText("Selecciona un técnico primero.");
-                    javafx.application.Platform.runLater(tfImei::clear);
+                    javafx.application.Platform.runLater(() -> {
+                        tfImei.clear();
+                        lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-wrap-text: true;");
+                        lblError.setText("Selecciona un técnico primero.");
+                    });
                     return;
                 }
                 int anadidos = 0, duplicados = 0;
@@ -684,11 +690,17 @@ public class PulidoSuperTecnicoController {
                     agregarUnoPulido.accept(imei);
                     anadidos++;
                 }
-                lblError.setText(anadidos + " IMEIs añadidos"
-                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : "."));
-                javafx.application.Platform.runLater(tfImei::clear);
+                final String resumen = anadidos + " IMEIs añadidos"
+                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : ".");
+                javafx.application.Platform.runLater(() -> {
+                    tfImei.clear();
+                    tfImei.requestFocus();
+                    lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-wrap-text: true;");
+                    lblError.setText(resumen);
+                });
                 return;
             }
+            lblError.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-wrap-text: true;");
             lblError.setText("");
             if (n.length() == 15) intentarEnviar.run();
         });

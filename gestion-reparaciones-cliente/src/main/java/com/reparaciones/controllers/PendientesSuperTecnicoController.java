@@ -1227,10 +1227,12 @@ public class PendientesSuperTecnicoController {
                 com.reparaciones.utils.ImeiUtils.ResultadoPegado res =
                         com.reparaciones.utils.ImeiUtils.parsearPegadoImeis(n);
                 if (res.tipo() == com.reparaciones.utils.ImeiUtils.TipoPegado.CORRUPTO) {
-                    lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: "
-                            + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
-                    lblScanErr.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
-                    javafx.application.Platform.runLater(tfScan::clear);
+                    javafx.application.Platform.runLater(() -> {
+                        tfScan.clear();
+                        lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: "
+                                + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
+                        lblScanErr.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
+                    });
                     return;
                 }
                 int anadidos = 0, duplicados = 0;
@@ -1242,10 +1244,14 @@ public class PendientesSuperTecnicoController {
                     anadidos++;
                 }
                 renderPila[0].run();
-                lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-min-height: 15;");
-                lblScanErr.setText(anadidos + " IMEIs añadidos"
-                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : "."));
-                javafx.application.Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); });
+                final String resumen = anadidos + " IMEIs añadidos"
+                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : ".");
+                javafx.application.Platform.runLater(() -> {
+                    tfScan.clear();
+                    tfScan.requestFocus();
+                    lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-min-height: 15;");
+                    lblScanErr.setText(resumen);
+                });
                 return;
             }
             lblScanErr.setStyle("-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;");
