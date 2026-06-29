@@ -176,9 +176,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         cargarProveedores();
         cargarStock();
 
-        poller.scheduleAtFixedRate(
-                () -> javafx.application.Platform.runLater(this::recargar),
-                60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        com.reparaciones.utils.Poller.programarSiguiente(poller, this::recargar);
         if (lblUltimaActStock != null) {
             lblUltimaActStock.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActStock.setOnMouseClicked(e -> cargarStock());
@@ -1909,6 +1907,8 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void mostrarError(SQLException e) {
+        if (e instanceof com.reparaciones.utils.ConexionException
+                && com.reparaciones.utils.ConexionEstado.enRefresco()) return;   // refresco: lo indica el banner
         Alertas.mostrarError(e.getMessage());
     }
 

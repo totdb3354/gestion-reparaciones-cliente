@@ -1388,6 +1388,8 @@ public class PendientesSuperTecnicoController {
     }
 
     private void mostrarError(Exception e) {
+        if (e instanceof com.reparaciones.utils.ConexionException
+                && com.reparaciones.utils.ConexionEstado.enRefresco()) return;   // refresco: lo indica el banner
         Alertas.mostrarError(e.getMessage());
     }
 }

@@ -270,7 +270,9 @@ public class HistorialPulidoController {
             String hora = java.time.LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
-            Alertas.mostrarError(e.getMessage());
+            if (!(e instanceof com.reparaciones.utils.ConexionException
+                    && com.reparaciones.utils.ConexionEstado.enRefresco()))
+                Alertas.mostrarError(e.getMessage());
         }
     }
 

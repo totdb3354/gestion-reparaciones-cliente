@@ -214,9 +214,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
         misPendientesController.cargar();
 
-        poller.scheduleAtFixedRate(
-                () -> javafx.application.Platform.runLater(this::recargar),
-                60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        com.reparaciones.utils.Poller.programarSiguiente(poller, this::recargar);
         if (lblUltimaActualizacion != null) {
             lblUltimaActualizacion.setCursor(javafx.scene.Cursor.HAND);
             lblUltimaActualizacion.setOnMouseClicked(e -> recargar());
@@ -1391,6 +1389,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     private void mostrarError(Exception e) {
+        if (e instanceof com.reparaciones.utils.ConexionException
+                && com.reparaciones.utils.ConexionEstado.enRefresco()) return;   // refresco: lo indica el banner
         Alertas.mostrarError(e.getMessage());
     }
 }
