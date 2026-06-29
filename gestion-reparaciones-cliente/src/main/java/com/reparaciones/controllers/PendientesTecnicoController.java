@@ -329,20 +329,16 @@ public class PendientesTecnicoController {
         }
         if (filtroImei != null) {
             filtroImei.textProperty().addListener((obs, o, n) -> {
-                String withoutSep = n.replace(", ", ",");
-                String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
-                if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
-                String[] partes = n.split(",", -1);
-                if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
-                    javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+                String can = com.reparaciones.utils.FiltroImei.canonicalizar(n);
+                if (!can.equals(n)) {
+                    javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); });
+                    return;
                 }
-                boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
-                        .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
-                boolean hayValido = !parsearImeis(n).isEmpty();
-                if (n.trim().isEmpty()) filtroImei.setStyle("");
-                else if (hayIncompleto) filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                else if (hayValido)     filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
-                else                    filtroImei.setStyle("");
+                switch (com.reparaciones.utils.FiltroImei.estado(n)) {
+                    case VACIO      -> filtroImei.setStyle("");
+                    case INCOMPLETO -> filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
+                    case VALIDO     -> filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";");
+                }
                 aplicarFiltros();
             });
         }
@@ -365,7 +361,7 @@ public class PendientesTecnicoController {
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
-        java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+        java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!filtrarSol && !filtrarInc && !filtrarAsig) return true;
@@ -443,13 +439,6 @@ public class PendientesTecnicoController {
         if (col == cFecha)     return FechaUtils.formatear(rep.getFechaAsig(), FMT);
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
         return null;
-    }
-
-    private static java.util.Set<String> parsearImeis(String texto) {
-        if (texto == null || texto.isBlank()) return java.util.Set.of();
-        return java.util.Arrays.stream(texto.split(",", -1))
-                .map(String::trim).filter(s -> s.length() == 15)
-                .collect(java.util.stream.Collectors.toSet());
     }
 
     private void mostrarError(Exception e) {

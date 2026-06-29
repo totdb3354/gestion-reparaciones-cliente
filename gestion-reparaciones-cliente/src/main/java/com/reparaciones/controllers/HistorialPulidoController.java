@@ -186,26 +186,18 @@ public class HistorialPulidoController {
         } catch (SQLException e) { Alertas.mostrarError(e.getMessage()); }
 
         filtroImei.textProperty().addListener((obs, o, n) -> {
-            String withoutSep = n.replace(", ", ",");
-            String limpio = withoutSep.replaceAll("[^\\d,]", "").replaceAll(",+", ",").replaceAll("^,", "");
-            if (!limpio.equals(withoutSep)) { String can = limpio.replace(",", ", "); javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); }); return; }
-            String[] partes = n.split(",", -1);
-            if (partes[partes.length - 1].trim().length() == 15 && !n.endsWith(", ") && !n.endsWith(",")) {
-                javafx.application.Platform.runLater(() -> { filtroImei.setText(n + ", "); filtroImei.positionCaret(filtroImei.getText().length()); }); return;
+            String can = com.reparaciones.utils.FiltroImei.canonicalizar(n);
+            if (!can.equals(n)) {
+                javafx.application.Platform.runLater(() -> { filtroImei.setText(can); filtroImei.positionCaret(can.length()); });
+                return;
             }
-            boolean hayIncompleto = java.util.Arrays.stream(n.split(",", -1))
-                    .map(String::trim).filter(s -> !s.isEmpty()).anyMatch(s -> s.length() < 15);
-            boolean hayValido = !parsearImeis(n).isEmpty();
-            if (n.trim().isEmpty())
-                filtroImei.setStyle("");
-            else if (hayIncompleto)
-                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
+            switch (com.reparaciones.utils.FiltroImei.estado(n)) {
+                case VACIO      -> filtroImei.setStyle("");
+                case INCOMPLETO -> filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else if (hayValido)
-                filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
+                case VALIDO     -> filtroImei.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-border-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + ";" +
                         "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 10; -fx-font-size: 12px;");
-            else
-                filtroImei.setStyle("");
+            }
             aplicarFiltros();
         });
 
@@ -232,7 +224,7 @@ public class HistorialPulidoController {
         String imeiStr = filtroImei.getText().trim();
         LocalDate desde = filtroFechaDesde.getValue();
         LocalDate hasta = filtroFechaHasta.getValue();
-        java.util.Set<String> imeisFiltro = parsearImeis(imeiStr);
+        java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
@@ -258,13 +250,6 @@ public class HistorialPulidoController {
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
         aplicarFiltros();
-    }
-
-    private static java.util.Set<String> parsearImeis(String texto) {
-        if (texto == null || texto.isBlank()) return java.util.Set.of();
-        return java.util.Arrays.stream(texto.split(",", -1))
-                .map(String::trim).filter(s -> s.length() == 15)
-                .collect(java.util.stream.Collectors.toSet());
     }
 
     public java.util.List<ReparacionResumen> getItemsVisibles() {
