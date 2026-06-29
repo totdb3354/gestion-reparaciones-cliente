@@ -139,3 +139,18 @@ Así, los catch pueden hacer `instanceof` en vez de comparar mensajes.
   uno a uno preservando su comportamiento, idealmente con un helper compartido.
 - **Doble disparo del 401:** el hook central debe deduplicar (no abrir N modales de sesión si
   varias llamadas fallan a la vez).
+
+### Restricciones de compatibilidad (obligatorias)
+
+- **El hook de 401 solo actúa con sesión activa.** Un 401 **durante el login** = credenciales
+  incorrectas, NO sesión caducada → el auto-logout NO debe dispararse. Gatear el hook a
+  `Sesion` logueada. `UsuarioDAO` ya trata el 401-de-login como "credenciales incorrectas"
+  (comprueba el mensaje "Sesión expirada") → **preservar ese comportamiento**.
+- **`ConexionException`/`SesionExpiradaException` DEBEN extender `SQLException`** y **conservar
+  los mismos mensajes** que hoy, para que todos los `catch (SQLException)` y las comprobaciones
+  de mensaje existentes (p. ej. `UsuarioDAO`) sigan funcionando sin cambios. El cambio es
+  aditivo; no rompe ningún catch.
+- **Sin impacto en servidor/BD ni en el contrato de la API.** Solo cambia la interpretación
+  de los códigos en el cliente.
+- **Poller:** la auto-reprogramación (60s/5s) debe reprogramar la tarea **siempre** (éxito y
+  fallo) y al detener el polling (`detenerPolling`) cancelar la tarea pendiente — sin fugas.
