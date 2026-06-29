@@ -77,18 +77,18 @@ switch (res.tipo):
 Los valores `INCOMPLETO` / `UNICO` del enum existen para que el helper sea un clasificador **completo e independientemente testeable**; en la práctica el controlador solo actúa sobre `LOTE` y `CORRUPTO` (las únicas posibles cuando `len > 15`).
 
 - **Reutiliza la creación de entrada y la dedup existentes** (`intentarAnadir` / `intentarEnviar`). Si hace falta, se extrae el núcleo "añade un IMEI al lote y devuelve si se añadió o era duplicado" para llamarlo en bucle, sin los efectos secundarios de un escaneo single (limpiar/foco/cargar-en-form se hacen una vez al final del lote, no por IMEI).
-- **No auto-cargar cada IMEI en el formulario de configuración** en el caso lote: todos entran como *pendientes de asignar* y el técnico los configura desde la lista (el escaneo single sí carga el último en el form; el lote no, para no "saltar" entre 10). *(Detalle de UX a fijar en el plan; por defecto: no auto-cargar.)*
+- **En un lote, los IMEIs entran todos a la sección "Pendiente de asignar" y ninguno se abre en el formulario de configuración de la derecha.** Contexto: al escanear UN IMEI, hoy además se "abre" esa entrada en el formulario de la derecha (modelo/cliente/técnico/comentario) para configurarla al momento. En un pegado de 10 eso no tiene sentido —acabaría abriendo solo el último y dando saltos—, así que el lote solo los deja en la lista de **pendientes** y el técnico configura cada uno haciéndole clic.
 
 ### 4.3 Mensajes al usuario
 
-- **Lote corrupto:** mensaje **amable**, sin jerga de "múltiplo de 15": p. ej.
-  `"Algún IMEI del pegado está corrupto. Revisa y vuelve a pegar."`
+- **Lote corrupto:** mensaje **amable**, sin jerga de "múltiplo de 15":
+  `"Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos."`
 - **Lote válido:** resumen breve y neutral/positivo: p. ej.
   `"8 IMEIs añadidos · 2 ya estaban en la lista."` (omitir la parte de duplicados si es 0).
 
 ### 4.4 Dedup
 
-Igual que hoy: un IMEI ya presente en el lote (pila/lote) **se salta**, no rompe el pegado. Los duplicados (ya presentes o repetidos dentro del propio pegado) se cuentan para el resumen. Un lote válido con duplicados **sí** añade los nuevos (no es "corrupto").
+Igual que hoy: un IMEI ya presente en el lote **se salta**, no rompe el pegado. El "lote" (la `pila` / `lote` interna del modal) incluye **tanto los pendientes como los ya asignados/completados** sin guardar — son la misma lista —, así que la validación de duplicados **cubre ambas secciones** automáticamente. Los duplicados (ya presentes, o repetidos dentro del propio pegado) se cuentan para el resumen. Un lote válido con duplicados **sí** añade los nuevos (no es "corrupto").
 
 ## 5. Casos límite
 
