@@ -280,26 +280,28 @@ public class ApiClient {
             return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
             String detalle = e.getMessage() != null ? ": " + e.getMessage() : "";
-            throw new SQLException("Sin conexión con el servidor" + detalle, e);
+            throw new ConexionException("Sin conexión con el servidor" + detalle, e);
         }
     }
 
     private static void handleErrors(HttpResponse<String> response) throws SQLException {
         int status = response.statusCode();
         if (status >= 200 && status < 300) return;
-        String msg = extractMessage(response.body());
-        switch (status) {
-            case 401 -> throw new SQLException("Sesión expirada. Vuelve a iniciar sesión.");
-            case 403 -> throw new SQLException("No tienes permisos para realizar esta acción.");
-            case 404 -> throw new SQLException("Recurso no encontrado.");
-            case 409 -> throw new StaleDataException(msg);
-            case 422 -> throw new SQLException("Contraseña actual incorrecta.");
-            default  -> {
-                if (status >= 500)
-                    throw new SQLException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.");
-                throw new SQLException("Error del servidor (" + status + "): " + msg);
-            }
-        }
+        throw clasificar(status, extractMessage(response.body()));
+    }
+
+    /** Mapea un código HTTP de error a su excepción. Puro (no lanza, devuelve). */
+    static SQLException clasificar(int status, String msg) {
+        return switch (status) {
+            case 401 -> new SesionExpiradaException("Sesión expirada. Vuelve a iniciar sesión.");
+            case 403 -> new SQLException("No tienes permisos para realizar esta acción.");
+            case 404 -> new SQLException("Recurso no encontrado.");
+            case 409 -> new StaleDataException(msg);
+            case 422 -> new SQLException("Contraseña actual incorrecta.");
+            default  -> (status >= 500)
+                    ? new ConexionException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.")
+                    : new SQLException("Error del servidor (" + status + "): " + msg);
+        };
     }
 
     private static String extractMessage(String body) {
