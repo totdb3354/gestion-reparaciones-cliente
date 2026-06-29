@@ -78,6 +78,7 @@ public class MainController {
     @FXML private ImageView  ivCampana;
     @FXML private StackPane  badgePane;
     @FXML private Label      lblBadge;
+    @FXML private javafx.scene.layout.HBox bannerConexion;
 
     private final Image imgCampanaOn  = new Image(getClass().getResourceAsStream("/images/NotfON.png"));
     private final Image imgCampanaOff = new Image(getClass().getResourceAsStream("/images/NotifOFF.png"));
@@ -133,6 +134,14 @@ public class MainController {
                 });
             });
         });
+
+        // Banner de conexión (no bloqueante) ligado al estado global
+        bannerConexion.visibleProperty().bind(com.reparaciones.utils.ConexionEstado.desconectadoProperty());
+        bannerConexion.managedProperty().bind(com.reparaciones.utils.ConexionEstado.desconectadoProperty());
+
+        // Auto-logout controlado al caducar la sesión (un 401 con sesión activa)
+        com.reparaciones.utils.ApiClient.setSesionExpiradaHandler(
+                () -> javafx.application.Platform.runLater(this::forzarCierreSesionPorCaducidad));
     }
 
     /**
@@ -300,7 +309,10 @@ public class MainController {
                     listaRechazadas.getChildren().add(tarjetaRechazada(s, ventana, fmt, ir++ % 2 != 0));
                 for (SolicitudStock s : rechSol)
                     listaRechazadas.getChildren().add(tarjetaRechazadaPreventiva(s, ventana, fmt, ir++ % 2 != 0));
-            } catch (SQLException ex) { mostrarError(ex); }
+            } catch (SQLException ex) {
+                if (!(ex instanceof com.reparaciones.utils.ConexionException
+                        && com.reparaciones.utils.ConexionEstado.enRefresco())) mostrarError(ex);
+            }
             actualizarBadge();
         };
         recargarRef[0].run();
@@ -312,12 +324,10 @@ public class MainController {
                 t.setDaemon(true);
                 return t;
             });
-        poller.scheduleAtFixedRate(
-            () -> Platform.runLater(() -> {
-                recargarRef[0].run();
-                recargarAlertas.run();
-            }),
-            60, 60, java.util.concurrent.TimeUnit.SECONDS);
+        com.reparaciones.utils.Poller.programarSiguiente(poller, () -> {
+            recargarRef[0].run();
+            recargarAlertas.run();
+        });
 
         // ── Acciones ──────────────────────────────────────────────────────────
         btnPedir.setOnAction(e -> {
@@ -867,6 +877,19 @@ public class MainController {
         menuUsuario.show(btnUsuario,
                 javafx.geometry.Side.BOTTOM,
                 0, 4);
+    }
+
+    /** Flujo de sesión caducada: avisa con un modal bloqueante (margen de tiempo) y vuelve al login. */
+    private void forzarCierreSesionPorCaducidad() {
+        javafx.scene.control.Alert aviso = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.WARNING,
+                "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+                javafx.scene.control.ButtonType.OK);
+        aviso.setHeaderText(null);
+        java.util.Optional.ofNullable(btnUsuario.getScene()).map(s -> s.getWindow())
+                .ifPresent(aviso::initOwner);
+        aviso.showAndWait();   // espera el OK = margen ilimitado para reaccionar
+        cerrarSesion();        // detiene pollers, Sesion.cerrar(), carga LoginView
     }
 
     /** Detiene el polling, limpia la sesión y vuelve a la pantalla de login. */
