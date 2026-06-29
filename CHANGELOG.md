@@ -9,6 +9,18 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.12.0] - 2026-06-29
+
+### Added
+- **Pedidos "Otros"**: registro de pedidos ajenos a las piezas (consumibles) desde la vista de Pedidos, con selector **Componentes | Otros**, tabla, modal multilínea y filtros. No afecta al stock. Requiere el servidor con la tabla `Compra_otro` y el endpoint `/api/compras-otros`.
+- **Pegado de lote de IMEIs**: en los modales de asignación (normal y pulidos) y en los filtros de IMEI de todas las vistas, un bloque concatenado se reparte cada 15 dígitos (lote corrupto se rechaza en los modales; en los filtros un trozo inválido se marca en rojo).
+- **Sub-indicador "N asignados"** bajo el IMEI en la vista Asignaciones: avisa cuando un dispositivo tiene asignación pendiente de varios técnicos (solo con N ≥ 2; derivado en cliente).
+- **Manejo de errores de conexión y sesión**: banner no bloqueante de "sin conexión" que se autocura (sustituye al modal huérfano); auto-logout controlado al caducar la sesión (401); diálogos de error con owner (pegados a su ventana).
+
+### Changed
+- **Historial**: doble clic abre el detalle en los tres roles; mejor contraste del IMEI en la vista de técnico.
+- **Filtros responsive** (FlowPane) debajo del título en Stock, Clientes y Estadísticas.
+
 ## [0.11.1] - 2026-06-25
 
 ### Fixed
@@ -74,7 +86,8 @@ _(cambios para la próxima versión)_
 _Las versiones 0.9.1 y anteriores no están detalladas aquí: el changelog se inició en la 0.10.0.
 Para su historial, consulta los tags de Git._
 
-[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/totdb3354/gestion-reparaciones-cliente/compare/v0.9.1...v0.10.0
