@@ -486,15 +486,8 @@ public class PulidoSuperTecnicoController {
         int[] contador = {0};
 
         // ── Lógica de envío ───────────────────────────────────────────────────
-        Runnable intentarEnviar = () -> {
-            String imei = tfImei.getText().trim();
-            if (imei.length() != 15) return;
-            if (lote.stream().anyMatch(e -> e.imei().equals(imei))) {
-                lblError.setText("Este IMEI ya está en la lista."); return;
-            }
+        java.util.function.Consumer<String> agregarUnoPulido = imei -> {
             Tecnico tec = cbTecnico.getValue();
-            if (tec == null) { lblError.setText("Selecciona un técnico primero."); return; }
-
             Tecnico[] tecSel = {tec};
             String[] comSel = {tfComentario.getText().trim()};
             ImeiConf entry = new ImeiConf(imei, tecSel, comSel);
@@ -655,6 +648,17 @@ public class PulidoSuperTecnicoController {
             });
         };
 
+        Runnable intentarEnviar = () -> {
+            String imei = tfImei.getText().trim();
+            if (imei.length() != 15) return;
+            if (lote.stream().anyMatch(e -> e.imei().equals(imei))) {
+                lblError.setText("Este IMEI ya está en la lista."); return;
+            }
+            if (cbTecnico.getValue() == null) { lblError.setText("Selecciona un técnico primero."); return; }
+            lblError.setText("");
+            agregarUnoPulido.accept(imei);
+        };
+
         tfImei.textProperty().addListener((obs, o, n) -> {
             if (!n.matches("\\d*")) {
                 String solo = n.replaceAll("[^\\d]", "");
@@ -662,8 +666,27 @@ public class PulidoSuperTecnicoController {
                 return;
             }
             if (n.length() > 15) {
-                String recortado = n.substring(0, 15);
-                javafx.application.Platform.runLater(() -> tfImei.setText(recortado));
+                com.reparaciones.utils.ImeiUtils.ResultadoPegado res =
+                        com.reparaciones.utils.ImeiUtils.parsearPegadoImeis(n);
+                if (res.tipo() == com.reparaciones.utils.ImeiUtils.TipoPegado.CORRUPTO) {
+                    lblError.setText("Algún IMEI del pegado está corrupto. Revisa que todos los IMEIs son válidos.");
+                    javafx.application.Platform.runLater(tfImei::clear);
+                    return;
+                }
+                if (cbTecnico.getValue() == null) {
+                    lblError.setText("Selecciona un técnico primero.");
+                    javafx.application.Platform.runLater(tfImei::clear);
+                    return;
+                }
+                int anadidos = 0, duplicados = 0;
+                for (String imei : res.imeis()) {
+                    if (lote.stream().anyMatch(e -> e.imei().equals(imei))) { duplicados++; continue; }
+                    agregarUnoPulido.accept(imei);
+                    anadidos++;
+                }
+                lblError.setText(anadidos + " IMEIs añadidos"
+                        + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : "."));
+                javafx.application.Platform.runLater(tfImei::clear);
                 return;
             }
             lblError.setText("");
