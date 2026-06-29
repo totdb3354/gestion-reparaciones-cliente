@@ -9,69 +9,77 @@
             stylesheets="@../styles/app.css">
 
     <top>
-        <HBox fx:id="navbar" styleClass="navbar" alignment="CENTER_LEFT" spacing="10">
-            <padding>
-                <Insets top="0" right="20" bottom="0" left="20"/>
-            </padding>
+        <VBox>
+            <HBox fx:id="navbar" styleClass="navbar" alignment="CENTER_LEFT" spacing="10">
+                <padding>
+                    <Insets top="0" right="20" bottom="0" left="20"/>
+                </padding>
 
-            <!-- Logo clicable → inicio según rol -->
-            <Button styleClass="navbar-logo-btn" onAction="#irAInicio">
-                <graphic>
-                    <ImageView fitHeight="38" preserveRatio="true">
-                        <image><Image url="@/images/logoNavBar.png"/></image>
-                    </ImageView>
-                </graphic>
-            </Button>
-            <Label text="FSGR:" styleClass="navbar-title" style="-fx-font-weight: bold;"/>
-            <Label text="Gestión de Stock y Reparaciones V.0.11.1" styleClass="navbar-title" style="-fx-font-weight: normal;"/>
-
-            <!-- Botones de navegación -->
-            <HBox styleClass="nav-switch" spacing="2" alignment="CENTER">
-                <Button fx:id="btnReparaciones" text="Reparaciones"
-                        styleClass="nav-btn"
-                        onAction="#mostrarReparaciones"/>
-                <Button fx:id="btnStock" text="Stock"
-                        styleClass="nav-btn"
-                        onAction="#mostrarStock"/>
-                <Button fx:id="btnEstadisticas" text="Estadísticas"
-                        styleClass="nav-btn"
-                        onAction="#mostrarEstadisticas"/>
-                <Button fx:id="btnClientes" text="Clientes"
-                        styleClass="nav-btn"
-                        onAction="#mostrarClientes"/>
-            </HBox>
-            <!-- Espaciador -->
-            <HBox HBox.hgrow="ALWAYS"/>
-
-            <!-- Campana solicitudes (solo supertécnico) -->
-            <StackPane fx:id="campanaPane" visible="false" managed="false" alignment="CENTER">
-                <Button fx:id="btnCampana" styleClass="navbar-bell-btn" onAction="#abrirSolicitudes">
+                <!-- Logo clicable → inicio según rol -->
+                <Button styleClass="navbar-logo-btn" onAction="#irAInicio">
                     <graphic>
-                        <ImageView fx:id="ivCampana" fitWidth="30" fitHeight="30" preserveRatio="true"/>
+                        <ImageView fitHeight="38" preserveRatio="true">
+                            <image><Image url="@/images/logoNavBar.png"/></image>
+                        </ImageView>
                     </graphic>
                 </Button>
-                <StackPane fx:id="badgePane" visible="false" managed="false"
-                           mouseTransparent="true" StackPane.alignment="TOP_RIGHT"
-                           translateX="10" translateY="-7">
-                    <ImageView fitWidth="16" fitHeight="16" preserveRatio="true">
-                        <image><Image url="@/images/Badge.png"/></image>
-                    </ImageView>
-                    <Label fx:id="lblBadge" styleClass="navbar-badge" mouseTransparent="true"/>
-                </StackPane>
-            </StackPane>
+                <Label text="FSGR:" styleClass="navbar-title" style="-fx-font-weight: bold;"/>
+                <Label text="Gestión de Stock y Reparaciones V.0.11.1" styleClass="navbar-title" style="-fx-font-weight: normal;"/>
 
-            <!-- Menú de usuario -->
-            <Button fx:id="btnUsuario" styleClass="navbar-user-btn" onAction="#mostrarMenuUsuario">
-                <graphic>
-                    <HBox spacing="10" alignment="CENTER">
-                        <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
-                            <image><Image url="@/images/user.png"/></image>
+                <!-- Botones de navegación -->
+                <HBox styleClass="nav-switch" spacing="2" alignment="CENTER">
+                    <Button fx:id="btnReparaciones" text="Reparaciones"
+                            styleClass="nav-btn"
+                            onAction="#mostrarReparaciones"/>
+                    <Button fx:id="btnStock" text="Stock"
+                            styleClass="nav-btn"
+                            onAction="#mostrarStock"/>
+                    <Button fx:id="btnEstadisticas" text="Estadísticas"
+                            styleClass="nav-btn"
+                            onAction="#mostrarEstadisticas"/>
+                    <Button fx:id="btnClientes" text="Clientes"
+                            styleClass="nav-btn"
+                            onAction="#mostrarClientes"/>
+                </HBox>
+                <!-- Espaciador -->
+                <HBox HBox.hgrow="ALWAYS"/>
+
+                <!-- Campana solicitudes (solo supertécnico) -->
+                <StackPane fx:id="campanaPane" visible="false" managed="false" alignment="CENTER">
+                    <Button fx:id="btnCampana" styleClass="navbar-bell-btn" onAction="#abrirSolicitudes">
+                        <graphic>
+                            <ImageView fx:id="ivCampana" fitWidth="30" fitHeight="30" preserveRatio="true"/>
+                        </graphic>
+                    </Button>
+                    <StackPane fx:id="badgePane" visible="false" managed="false"
+                               mouseTransparent="true" StackPane.alignment="TOP_RIGHT"
+                               translateX="10" translateY="-7">
+                        <ImageView fitWidth="16" fitHeight="16" preserveRatio="true">
+                            <image><Image url="@/images/Badge.png"/></image>
                         </ImageView>
-                        <Label fx:id="lblUsuario" styleClass="navbar-user"/>
-                    </HBox>
-                </graphic>
-            </Button>
-        </HBox>
+                        <Label fx:id="lblBadge" styleClass="navbar-badge" mouseTransparent="true"/>
+                    </StackPane>
+                </StackPane>
+
+                <!-- Menú de usuario -->
+                <Button fx:id="btnUsuario" styleClass="navbar-user-btn" onAction="#mostrarMenuUsuario">
+                    <graphic>
+                        <HBox spacing="10" alignment="CENTER">
+                            <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
+                                <image><Image url="@/images/user.png"/></image>
+                            </ImageView>
+                            <Label fx:id="lblUsuario" styleClass="navbar-user"/>
+                        </HBox>
+                    </graphic>
+                </Button>
+            </HBox>
+
+            <!-- Banner de conexión: no bloqueante, oculto salvo desconexión -->
+            <HBox fx:id="bannerConexion" styleClass="banner-conexion" alignment="CENTER"
+                  visible="false" managed="false">
+                <Label text="⚠ Sin conexión con el servidor. Reintentando…"/>
+            </HBox>
+        </VBox>
     </top>
 
     <center>

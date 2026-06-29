@@ -590,3 +590,15 @@
     -fx-text-fill: #001232;
 }
 
+/* Banner de conexión (no bloqueante) */
+.banner-conexion {
+    -fx-background-color: #F6C453;
+    -fx-padding: 4 12 4 12;
+    -fx-min-height: 24;
+}
+.banner-conexion .label {
+    -fx-text-fill: #5A4500;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+

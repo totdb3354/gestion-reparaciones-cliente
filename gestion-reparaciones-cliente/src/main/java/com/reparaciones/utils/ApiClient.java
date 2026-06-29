@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import com.reparaciones.Sesion;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,6 +68,9 @@ public class ApiClient {
 
     private static final String baseUrl;
     private static String token;
+    private static Runnable sesionExpiradaHandler;
+    private static final java.util.concurrent.atomic.AtomicBoolean logoutEnCurso =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     static {
         String url = "http://localhost:8080";
@@ -83,10 +87,27 @@ public class ApiClient {
     // ── Token ─────────────────────────────────────────────────────────────────
 
     /** Guarda el JWT recibido tras el login. Llamar desde {@code UsuarioDAO.login}. */
-    public static void setToken(String jwt) { token = jwt; }
+    public static void setToken(String jwt) { token = jwt; logoutEnCurso.set(false); }
 
     /** Limpia el token al cerrar sesión. Llamar desde {@code Sesion.cerrar}. */
     public static void clearToken() { token = null; }
+
+    /** Registra el flujo de "sesión caducada" (lo llama MainController al arrancar). */
+    public static void setSesionExpiradaHandler(Runnable h) { sesionExpiradaHandler = h; }
+
+    /** @return true mientras el flujo de logout por sesión caducada está en curso. */
+    public static boolean isLogoutEnCurso() { return logoutEnCurso.get(); }
+
+    /**
+     * Dispara el flujo de sesión caducada una sola vez. No hace nada si no hay sesión activa
+     * (p. ej. un 401 durante el login = credenciales incorrectas) o no hay handler registrado.
+     */
+    static void dispararSesionExpirada() {
+        if (logoutEnCurso.get()) return;
+        if (!Sesion.haySession() || sesionExpiradaHandler == null) return;
+        if (!logoutEnCurso.compareAndSet(false, true)) return;   // dedup atómico
+        sesionExpiradaHandler.run();   // el handler marshala a FX por su cuenta
+    }
 
     // ── GET ───────────────────────────────────────────────────────────────────
 
@@ -279,27 +300,33 @@ public class ApiClient {
         try {
             return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
+            ConexionEstado.reportarFallo();
             String detalle = e.getMessage() != null ? ": " + e.getMessage() : "";
-            throw new SQLException("Sin conexión con el servidor" + detalle, e);
+            throw new ConexionException("Sin conexión con el servidor" + detalle, e);
         }
     }
 
     private static void handleErrors(HttpResponse<String> response) throws SQLException {
         int status = response.statusCode();
-        if (status >= 200 && status < 300) return;
-        String msg = extractMessage(response.body());
-        switch (status) {
-            case 401 -> throw new SQLException("Sesión expirada. Vuelve a iniciar sesión.");
-            case 403 -> throw new SQLException("No tienes permisos para realizar esta acción.");
-            case 404 -> throw new SQLException("Recurso no encontrado.");
-            case 409 -> throw new StaleDataException(msg);
-            case 422 -> throw new SQLException("Contraseña actual incorrecta.");
-            default  -> {
-                if (status >= 500)
-                    throw new SQLException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.");
-                throw new SQLException("Error del servidor (" + status + "): " + msg);
-            }
-        }
+        if (status >= 200 && status < 300) { ConexionEstado.reportarExito(); return; }
+        SQLException ex = clasificar(status, extractMessage(response.body()));
+        if (ex instanceof ConexionException) ConexionEstado.reportarFallo();
+        if (ex instanceof SesionExpiradaException) dispararSesionExpirada();
+        throw ex;
+    }
+
+    /** Mapea un código HTTP de error a su excepción. Puro (no lanza, devuelve). */
+    static SQLException clasificar(int status, String msg) {
+        return switch (status) {
+            case 401 -> new SesionExpiradaException("Sesión expirada. Vuelve a iniciar sesión.");
+            case 403 -> new SQLException("No tienes permisos para realizar esta acción.");
+            case 404 -> new SQLException("Recurso no encontrado.");
+            case 409 -> new StaleDataException(msg);
+            case 422 -> new SQLException("Contraseña actual incorrecta.");
+            default  -> (status >= 500)
+                    ? new ConexionException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.")
+                    : new SQLException("Error del servidor (" + status + "): " + msg);
+        };
     }
 
     private static String extractMessage(String body) {
