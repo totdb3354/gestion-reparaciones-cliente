@@ -227,7 +227,16 @@ public class ReparacionDAO {
      * @throws SQLException si falla la llamada al servidor
      */
     public String getIncidenciaActivaPorImei(String imei) throws SQLException {
-        return ApiClient.getString("/api/reparaciones/imei/" + imei + "/incidencia-activa");
+        return getIncidenciaActivaPorImei(imei, "R");
+    }
+
+    /**
+     * Busca una incidencia activa para el IMEI dentro de una categoría concreta.
+     *
+     * @param tipo {@code "R"} = reparación, {@code "G"} = glass (incidencias independientes por tipo)
+     */
+    public String getIncidenciaActivaPorImei(String imei, String tipo) throws SQLException {
+        return ApiClient.getString("/api/reparaciones/imei/" + imei + "/incidencia-activa?tipo=" + tipo);
     }
 
     /**
