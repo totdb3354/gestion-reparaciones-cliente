@@ -117,6 +117,16 @@ public class PendientesSuperTecnicoController {
         boolean tieneModelo() { return modeloCode != null && !modeloCode.isEmpty(); }
     }
 
+    /** Una entrada del lote de pulido: IMEI + técnico + comentario (editable por fila). */
+    private static final class FilaPulido {
+        final String imei;
+        Tecnico tecnico;
+        String  comentario;
+        FilaPulido(String imei, Tecnico tecnico, String comentario) {
+            this.imei = imei; this.tecnico = tecnico; this.comentario = comentario;
+        }
+    }
+
     /** Tipo de trabajo de una asignación, con su etiqueta para la columna/filtro Tipo. */
     enum Tipo {
         REPARACION("Reparación"), GLASS("Glass"), PULIDO("Pulido");
@@ -829,6 +839,132 @@ public class PendientesSuperTecnicoController {
         return fila;
     }
 
+    /**
+     * Construye el sub-panel ligero de alta de pulido (técnico + comentario por defecto,
+     * escaneo con pegado de lote, lista editable por fila). Rellena {@code lote};
+     * {@code onChange} refresca la barra de guardar del modal unificado.
+     */
+    private VBox construirPulidoPane(List<FilaPulido> lote, List<Tecnico> tecnicosModal, Runnable onChange) {
+        Label lblTec = new Label("Técnico por defecto");
+        lblTec.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        ComboBox<Tecnico> cbTec = new ComboBox<>();
+        cbTec.setMaxWidth(Double.MAX_VALUE);
+        cbTec.setVisibleRowCount(8);
+        cbTec.getItems().addAll(tecnicosModal);
+        cbTec.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+            @Override public Tecnico fromString(String s) { return null; }
+        });
+
+        Label lblCom = new Label("Comentario por defecto (opcional)");
+        lblCom.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextArea taCom = new TextArea();
+        taCom.setWrapText(true); taCom.setPrefRowCount(2);
+        taCom.setPromptText("Instrucciones para el técnico...");
+        taCom.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
+                + " -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+
+        Label lblScan = new Label("Escanear IMEI → pulido");
+        lblScan.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextField tfScan = new TextField();
+        tfScan.setPromptText("Escanea o escribe el IMEI (15 dígitos)...");
+        tfScan.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
+                + " -fx-background-radius: 4; -fx-padding: 11; -fx-text-fill: #2C3B54; -fx-font-size: 14px;");
+        Label lblErr = new Label();
+        String errStyle = "-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;";
+        String okStyle  = "-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-min-height: 15;";
+        lblErr.setStyle(errStyle);
+
+        Label lblTitulo = new Label("Nada añadido aún");
+        VBox listaItems = new VBox(0);
+        listaItems.setStyle("-fx-background-color: white;");
+        ScrollPane scroll = new ScrollPane(listaItems);
+        scroll.setFitToWidth(true); scroll.setMaxHeight(260);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #C2C8D0;"
+                + " -fx-border-radius: 6; -fx-border-width: 1;");
+
+        Runnable actualizarTitulo = () -> {
+            int n = lote.size();
+            lblTitulo.setText(n == 0 ? "Nada añadido aún" : (n + (n == 1 ? " en pulido" : " en pulido")));
+            lblTitulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: " + (n == 0 ? "#586376" : "#2E7D32") + ";");
+        };
+        actualizarTitulo.run();
+
+        java.util.function.Consumer<String> agregar = imei -> {
+            FilaPulido fila = new FilaPulido(imei, cbTec.getValue(), taCom.getText().trim());
+            lote.add(fila);
+            Label lblImei = new Label(imei);
+            lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+            lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+            ComboBox<Tecnico> cbRow = new ComboBox<>();
+            cbRow.getItems().addAll(tecnicosModal);
+            cbRow.setValue(fila.tecnico);
+            cbRow.setPrefWidth(150);
+            cbRow.setStyle("-fx-font-size: 11px;");
+            cbRow.setConverter(new javafx.util.StringConverter<>() {
+                @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+                @Override public Tecnico fromString(String s) { return null; }
+            });
+            cbRow.valueProperty().addListener((o2, a, b) -> fila.tecnico = b);
+            TextField tfRow = new TextField(fila.comentario);
+            tfRow.setPromptText("Comentario...");
+            HBox.setHgrow(tfRow, javafx.scene.layout.Priority.ALWAYS);
+            tfRow.setStyle("-fx-font-size: 11px; -fx-background-color: white; -fx-border-color: #E1E5EC;"
+                    + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 5;");
+            tfRow.textProperty().addListener((o2, a, b) -> fila.comentario = b.trim());
+            Label btnX = new Label("✕");
+            String xBase = "-fx-text-fill: #c2b3b3; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
+            btnX.setStyle(xBase);
+            btnX.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+            btnX.setOnMouseEntered(ev -> btnX.setStyle("-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
+            btnX.setOnMouseExited(ev -> btnX.setStyle(xBase));
+            HBox row = new HBox(8, lblImei, cbRow, tfRow, btnX);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setStyle("-fx-padding: 6 8 6 8; -fx-border-color: transparent transparent #EEF1F5 transparent; -fx-border-width: 0 0 1 0;");
+            btnX.setOnMouseClicked(ev -> { lote.remove(fila); listaItems.getChildren().remove(row); actualizarTitulo.run(); onChange.run(); });
+            listaItems.getChildren().add(row);
+            actualizarTitulo.run();
+            onChange.run();
+        };
+
+        Runnable intentar = () -> {
+            String imei = tfScan.getText().trim();
+            if (imei.length() != 15) return;
+            if (cbTec.getValue() == null) { lblErr.setStyle(errStyle); lblErr.setText("Selecciona un técnico por defecto primero."); return; }
+            if (lote.stream().anyMatch(f -> f.imei.equals(imei))) { lblErr.setStyle(errStyle); lblErr.setText("Ese IMEI ya está en la lista de pulido."); return; }
+            lblErr.setText("");
+            agregar.accept(imei);
+            javafx.application.Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); });
+        };
+        tfScan.textProperty().addListener((obs, o, n) -> {
+            if (!n.matches("\\d*")) { String solo = n.replaceAll("[^\\d]", ""); javafx.application.Platform.runLater(() -> tfScan.setText(solo)); return; }
+            if (n.length() > 15) {
+                com.reparaciones.utils.ImeiUtils.ResultadoPegado res = com.reparaciones.utils.ImeiUtils.parsearPegadoImeis(n);
+                if (res.tipo() == com.reparaciones.utils.ImeiUtils.TipoPegado.CORRUPTO) {
+                    javafx.application.Platform.runLater(() -> { tfScan.clear(); lblErr.setStyle(errStyle); lblErr.setText("Algún IMEI del pegado está corrupto."); });
+                    return;
+                }
+                if (cbTec.getValue() == null) {
+                    javafx.application.Platform.runLater(() -> { tfScan.clear(); lblErr.setStyle(errStyle); lblErr.setText("Selecciona un técnico por defecto primero."); });
+                    return;
+                }
+                int add = 0, dup = 0;
+                for (String imei : res.imeis()) { if (lote.stream().anyMatch(f -> f.imei.equals(imei))) { dup++; continue; } agregar.accept(imei); add++; }
+                final String resumen = add + " IMEIs añadidos" + (dup > 0 ? " · " + dup + " ya estaban." : ".");
+                javafx.application.Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); lblErr.setStyle(okStyle); lblErr.setText(resumen); });
+                return;
+            }
+            lblErr.setStyle(errStyle);
+            lblErr.setText("");
+            if (n.length() == 15) intentar.run();
+        });
+        tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentar.run(); });
+
+        return new VBox(8, lblTec, cbTec, lblCom, taCom, new Separator(), lblScan, tfScan, lblErr, new Separator(), lblTitulo, scroll);
+    }
+
     @FXML
     private void abrirFormularioAsignacion() {
         // ── Estado del lote ──────────────────────────────────────────────────
@@ -838,6 +974,7 @@ public class PendientesSuperTecnicoController {
         List<Tecnico> defTecnicos = new ArrayList<>();
         long[] seqCounter = { 0 };
         Tipo[] tipoActual = { Tipo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
+        List<FilaPulido> lotePulido = new ArrayList<>();   // sub-lote de pulido (AP), independiente de la pila rica
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
         try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
@@ -854,19 +991,19 @@ public class PendientesSuperTecnicoController {
         lblSub.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
 
         // ── Selector de tipo (fija el tipo por defecto de los IMEIs que se escaneen) ──
-        ToggleButton tbRep   = new ToggleButton("Reparación");
-        ToggleButton tbGlass = new ToggleButton("Glass");
+        // El listener se enlaza más abajo, cuando ya existen los paneles que muestra/oculta.
+        ToggleButton tbRep    = new ToggleButton("Reparación");
+        ToggleButton tbGlass  = new ToggleButton("Glass");
+        ToggleButton tbPulido = new ToggleButton("Pulido");
         tbRep.getStyleClass().add("toggle-pill-left");
-        tbGlass.getStyleClass().add("toggle-pill-right");
+        tbGlass.getStyleClass().add("toggle-pill-mid");
+        tbPulido.getStyleClass().add("toggle-pill-right");
         tbRep.setSelected(true);
         javafx.scene.control.ToggleGroup tgTipo = new javafx.scene.control.ToggleGroup();
         tbRep.setToggleGroup(tgTipo);
         tbGlass.setToggleGroup(tgTipo);
-        tgTipo.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { (o == null ? tbRep : (ToggleButton) o).setSelected(true); return; }  // no permitir deselección
-            tipoActual[0] = (n == tbGlass) ? Tipo.GLASS : Tipo.REPARACION;
-        });
-        HBox selectorTipo = new HBox(0, tbRep, tbGlass);
+        tbPulido.setToggleGroup(tgTipo);
+        HBox selectorTipo = new HBox(0, tbRep, tbGlass, tbPulido);
         selectorTipo.setAlignment(Pos.CENTER_LEFT);
 
         Label lblScan = new Label("Escanear IMEI → pendiente de asignar");
@@ -1210,9 +1347,12 @@ public class PendientesSuperTecnicoController {
             scrollRojo.setPrefHeight(nRojo == 0 ? 34 : Math.min(nRojo, 5) * 39 + 4);
             scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 39 + 4);
             int sinModelo = (int) pila.stream().filter(e -> !e.asignada && !e.tieneModelo()).count();
-            lblProg.setText(nVerde + " configurados · " + nRojo + " pendientes" + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
-            btnGuardar.setText("Guardar (" + nVerde + ")");
-            btnGuardar.setDisable(nRojo != 0 || nVerde == 0);
+            int nPul = lotePulido.size();
+            lblProg.setText(nVerde + " configurados · " + nRojo + " pendientes"
+                    + (nPul > 0 ? " · " + nPul + " pulido" : "")
+                    + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
+            btnGuardar.setText("Guardar (" + (nVerde + nPul) + ")");
+            btnGuardar.setDisable(nRojo != 0 || (nVerde + nPul) == 0);
         };
 
         lanzarLookup[0] = () -> {
@@ -1455,8 +1595,25 @@ public class PendientesSuperTecnicoController {
 
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
-        VBox contenido = new VBox(12, lblTitulo, lblSub, selectorTipo, lblScan, tfScan, lblScanErr,
-                new Separator(), cols, barraFinal);
+        VBox richArea = new VBox(12, lblScan, tfScan, lblScanErr, new Separator(), cols);   // reparación + glass
+        VBox pulidoPane = construirPulidoPane(lotePulido, tecnicosModal,
+                () -> { if (renderPila[0] != null) renderPila[0].run(); });
+        pulidoPane.setVisible(false); pulidoPane.setManaged(false);
+        javafx.scene.layout.StackPane centro = new javafx.scene.layout.StackPane(richArea, pulidoPane);
+        javafx.scene.layout.StackPane.setAlignment(richArea, Pos.TOP_LEFT);
+        javafx.scene.layout.StackPane.setAlignment(pulidoPane, Pos.TOP_LEFT);
+
+        // Selector 3-way: rep/glass → pila rica; pulido → sub-pila ligera. Ambos lotes persisten.
+        tgTipo.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { (o == null ? tbRep : (ToggleButton) o).setSelected(true); return; }  // no permitir deselección
+            boolean pulido = (n == tbPulido);
+            richArea.setVisible(!pulido);  richArea.setManaged(!pulido);
+            pulidoPane.setVisible(pulido); pulidoPane.setManaged(pulido);
+            if (!pulido) tipoActual[0] = (n == tbGlass) ? Tipo.GLASS : Tipo.REPARACION;
+            if (renderPila[0] != null) renderPila[0].run();
+        });
+
+        VBox contenido = new VBox(12, lblTitulo, lblSub, selectorTipo, centro, barraFinal);
         contenido.setPadding(new Insets(26));
         contenido.setPrefWidth(720);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
@@ -1489,6 +1646,16 @@ public class PendientesSuperTecnicoController {
                             reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente);
                     }
                 }
+                for (FilaPulido f : lotePulido) {
+                    if (f.tecnico == null) { conflictos.add("• " + f.imei + " → (sin técnico)"); continue; }
+                    if (reparacionDAO.existeAsignacionParaTecnico(f.imei, f.tecnico.getIdTec(), "P")) {
+                        conflictos.add("• " + f.imei + " → " + f.tecnico.getNombre() + " (ya asignado · Pulido)");
+                        continue;
+                    }
+                    telefonoDAO.insertar(f.imei);
+                    pulidoDAO.insertarAsignacionPulido(f.imei, f.tecnico.getIdTec(),
+                            (f.comentario == null || f.comentario.isEmpty()) ? null : f.comentario);
+                }
             } catch (SQLException ex) { mostrarError(ex); return; }
             ventana.close();
             cargar();
@@ -1497,9 +1664,10 @@ public class PendientesSuperTecnicoController {
         });
 
         ventana.setOnCloseRequest(ev -> {
-            if (pila.isEmpty()) return;
+            int total = pila.size() + lotePulido.size();
+            if (total == 0) return;
             ev.consume();
-            ConfirmDialog.mostrar("Descartar", "Se descartarán los " + pila.size() + " IMEIs de la pila.",
+            ConfirmDialog.mostrar("Descartar", "Se descartarán los " + total + " IMEIs escaneados.",
                     "Descartar", ventana::close);
         });
 

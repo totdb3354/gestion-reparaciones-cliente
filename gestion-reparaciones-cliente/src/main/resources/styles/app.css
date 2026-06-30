@@ -552,6 +552,25 @@
     -fx-border-color: #001232;
 }
 
+.toggle-pill-mid {
+    -fx-background-color: #F0F2F5;
+    -fx-text-fill: #586376;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 14 5 14;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-border-color: #C8CDD5;
+    -fx-border-width: 1 1 1 0;
+    -fx-cursor: hand;
+}
+
+.toggle-pill-mid:selected {
+    -fx-background-color: #001232;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #001232;
+}
+
 .toggle-pill-right {
     -fx-background-color: #F0F2F5;
     -fx-text-fill: #586376;
