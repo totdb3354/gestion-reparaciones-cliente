@@ -21,7 +21,7 @@
 - **Task 1 — GlassDAO:** ✅ HECHA. Commit `a7b093b` (repo ProgramaReparaciones, rama `feature/separar-glass`). Compila.
 - **Task 2 — Modal filtrado por tipo:** ✅ HECHA. Commit `6db20f6`. `FormularioReparacionController.cargarFilas` filtra por glass (deriva el tipo de `idAsignacion` `AG..` / `idRepEditar` `G..`); se eliminó el delimitador (glass y reparación ya no coexisten); `ReparacionDAO.getIncidenciaActivaPorImei` tiene overload con `tipo`. Compila.
 - **Task 3 — Asignaciones unificada:** ✅ HECHA (compila + 109 tests verdes; pendiente smoke en preproducción). Tabla única A+AG+AP en `PendientesSuperTecnicoController` con columna **Tipo** (badge) y dispatch por tipo (reasignar/borrar/comentario/editar-modelo); filtros **Tipo** (Rep/Glass/Pulido) + **Estado** (renombrado); overload `ReparacionDAO.borrarIncidenciaPorImei(imei,"G")` para incidencias glass; helper testeable `tipoDe(idRep)`. Quitado el toggle `Reparaciones|Pulidos` y el panel de pulido de Asignaciones en **ambos** padres (SuperTécnico + **Admin**, que comparte el componente en modo solo-lectura). `PulidoSuperTecnicoController/View` quedan huérfanos hasta Task 4.
-- **Task 4 — Modal con selector:** ⬜ PENDIENTE. (Devuelve el alta de pulido, ahora sin botón propio; añade selector `Reparación | Glass | Pulido`.)
+- **Task 4 — Modal con selector:** 🟡 EN CURSO. **4a HECHA** (compila + 109 tests; pendiente smoke): selector `Reparación | Glass` + tipo por entrada + dedup `(IMEI,tipo)` + guardado A/AG; dedup por categoría sin servidor (greying desde `datos` + guard `existeAsignacionParaTecnico(...,categoria)`). **4b PENDIENTE**: integrar la sub-pila ligera de pulido (selector a 3-way + guardado AP).
 - **Task 5 — Pendientes 3 pestañas:** ⬜ PENDIENTE.
 
 Backend (Plan 1) ✅ HECHO, validado en preproducción (smoke 6/6 contra `api.fonestore.es`), mergeado a `main` y pusheado en el repo del servidor.
@@ -55,11 +55,18 @@ Para retomar: Task 4 (modal de alta con selector de tipo) en `PendientesSuperTec
 - Entregable: una tabla con los 3 tipos, columna Tipo y filtros Tipo+Estado.
 
 ### Task 4: Modal de alta con selector de tipo
-**Files:** Modify `…/controllers/PendientesSuperTecnicoController.java` (`abrirFormularioAsignacion`)
-- Añadir selector `Reparación | Glass | Pulido` arriba del modal.
-- Rep y glass: **misma pila** rica (modelo/cliente/técnico/comentario); cada entrada lleva su tipo (default = selector). Al guardar, crea `A` o `AG` (vía `ReparacionDAO`/`GlassDAO`).
-- Pulido: sub-pila ligera (técnico+comentario), integra el flujo de `PulidoSuperTecnicoController.abrirFormularioAsignacion`; al guardar crea `AP`.
-- Dedup de la pila por `(IMEI, tipo)`.
+**Files:** Modify `…/controllers/PendientesSuperTecnicoController.java` (`abrirFormularioAsignacion`) + `dao/ReparacionDAO.java` (overload).
+
+**Diseño (expandido 2026-06-30):**
+- **Selector arriba** = 3 ToggleButtons `Reparación | Glass | Pulido`. Fija el tipo por defecto de los IMEIs nuevos y, para Pulido, cambia el centro a la sub-pila ligera.
+- **Rep+Glass → misma pila rica** existente (rojo/verde, modelo/cliente/técnico/comentario). `EntradaAsignacion` gana `Tipo tipo` (REPARACION|GLASS). En el formulario, toggle `Rep/Glass` por entrada cargada; badge de tipo en la fila de la pila.
+- **Pulido → sub-pila ligera** (técnico por defecto + comentario + escaneo + lista expandible), portando la lógica de `PulidoSuperTecnicoController.abrirFormularioAsignacion`.
+- **Persistencia de ambos lotes** al cambiar de selector; un único **Guardar (N)** confirma todo (N = total verde rep/glass + pulido).
+- **Dedup por `(IMEI, tipo)`** en la pila (mismo IMEI puede estar como Rep y como Glass).
+- **Bloqueo de técnico por categoría (sin cambio de servidor):**
+  - Pre-check (greying en `cargarEntrada`): calcular desde `datos` (lista unificada ya cargada) los `idTec` con `(imei, categoría)` → cliente puro, per-categoría, sin HTTP.
+  - Guard al guardar: `ReparacionDAO.existeAsignacionParaTecnico(imei, idTec, categoria)` (el server ya acepta `?tipo=`; añadir overload cliente con `categoria`). Fresco y per-categoría.
+- **Guardar**: por entrada verde → `telefonoDAO.insertar(imei, modelo, idCli)`; por técnico → `A` vía `reparacionDAO.insertarAsignacion` o `AG` vía `glassDAO.insertarAsignacionGlass` según `entrada.tipo`. Pulido → `telefonoDAO.insertar(imei)` + `pulidoDAO.insertarAsignacionPulido`.
 - Entregable: un único modal da de alta los 3 tipos por lotes.
 
 ### Task 5: Pendientes 3 pestañas + completar glass
