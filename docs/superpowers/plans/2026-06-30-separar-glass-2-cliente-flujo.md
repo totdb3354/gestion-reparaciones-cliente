@@ -20,13 +20,13 @@
 
 - **Task 1 — GlassDAO:** ✅ HECHA. Commit `a7b093b` (repo ProgramaReparaciones, rama `feature/separar-glass`). Compila.
 - **Task 2 — Modal filtrado por tipo:** ✅ HECHA. Commit `6db20f6`. `FormularioReparacionController.cargarFilas` filtra por glass (deriva el tipo de `idAsignacion` `AG..` / `idRepEditar` `G..`); se eliminó el delimitador (glass y reparación ya no coexisten); `ReparacionDAO.getIncidenciaActivaPorImei` tiene overload con `tipo`. Compila.
-- **Task 3 — Asignaciones unificada:** ⬜ PENDIENTE.
-- **Task 4 — Modal con selector:** ⬜ PENDIENTE.
+- **Task 3 — Asignaciones unificada:** ✅ HECHA (compila + 109 tests verdes; pendiente smoke en preproducción). Tabla única A+AG+AP en `PendientesSuperTecnicoController` con columna **Tipo** (badge) y dispatch por tipo (reasignar/borrar/comentario/editar-modelo); filtros **Tipo** (Rep/Glass/Pulido) + **Estado** (renombrado); overload `ReparacionDAO.borrarIncidenciaPorImei(imei,"G")` para incidencias glass; helper testeable `tipoDe(idRep)`. Quitado el toggle `Reparaciones|Pulidos` y el panel de pulido de Asignaciones en **ambos** padres (SuperTécnico + **Admin**, que comparte el componente en modo solo-lectura). `PulidoSuperTecnicoController/View` quedan huérfanos hasta Task 4.
+- **Task 4 — Modal con selector:** ⬜ PENDIENTE. (Devuelve el alta de pulido, ahora sin botón propio; añade selector `Reparación | Glass | Pulido`.)
 - **Task 5 — Pendientes 3 pestañas:** ⬜ PENDIENTE.
 
 Backend (Plan 1) ✅ HECHO, validado en preproducción (smoke 6/6 contra `api.fonestore.es`), mergeado a `main` y pusheado en el repo del servidor.
 
-Para retomar: expandir Task 3 a pasos bite-sized leyendo `PendientesSuperTecnicoController` (~1427 líneas) y `ReparacionViewSuperTecnico.fxml`.
+Para retomar: Task 4 (modal de alta con selector de tipo) en `PendientesSuperTecnicoController.abrirFormularioAsignacion`, reutilizando la pila rica (rep+glass) e integrando la sub-pila ligera de pulido (`PulidoSuperTecnicoController.abrirFormularioAsignacion`).
 
 ---
 
@@ -45,11 +45,14 @@ Para retomar: expandir Task 3 a pasos bite-sized leyendo `PendientesSuperTecnico
 - Entregable: al completar una `AG`, el modal solo ofrece glass/marco/otro y genera `G`.
 
 ### Task 3: Asignaciones unificada (tabla + columna Tipo + filtro)
-**Files:** Modify `…/controllers/PendientesSuperTecnicoController.java` + `…/views/PendientesSuperTecnicoView.fxml` (y el FXML padre `ReparacionViewSuperTecnico.fxml`: quitar el toggle `Reparaciones|Pulidos` de la sección Asignaciones).
-- Cargar `A` + `AG` + `AP` en una sola tabla; añadir columna **Tipo** (badge) y filtro por tipo.
-- El badge del sidebar "Asignaciones" suma los 3 tipos pendientes.
-- Editar/eliminar fila operan por ID (reutilizan endpoints).
-- Entregable: una tabla con los 3 tipos y su filtro.
+**Files (expandido contra el código real 2026-06-30):**
+- `dao/ReparacionDAO.java`: añadir overload `borrarIncidenciaPorImei(imei, categoria)` (el server ya acepta `?tipo=`, "G"=glass; el cliente solo tenía la versión sin tipo → borraría la incidencia de reparación al borrar una de glass).
+- `controllers/PendientesSuperTecnicoController.java`: enum `Tipo` + `tipoDe(idRep)` (AG→glass, AP→pulido, A→reparación); `GlassDAO`/`PulidoDAO`; `cargar()` une A+AG+AP; columna **Tipo** (badge); dispatch por tipo en reasignar técnico (pulido→`PulidoDAO`, rep/glass→`ReparacionDAO` por ID), borrar (pulido→`eliminarAsignacionPulido`; incidencia glass→`borrarIncidenciaPorImei(imei,"G")`), menú contextual (rep/glass: comentario+urgente+cliente; pulido: comentario+editar modelo), filtro **Tipo** nuevo + renombrar el filtro existente a **Estado**.
+- `views/PendientesSuperTecnicoView.fxml`: columna Tipo + `MenuButton` filtroTipo + renombrar `filtroSolicitud` a "Estado".
+- **Padres (super + admin)** — el componente `PendientesSuperTecnicoView` está incluido en `ReparacionViewSuperTecnico.fxml` **y** `ReparacionViewAdmin.fxml`: quitar el toggle `Reparaciones|Pulidos` y el sub-panel de pulido de Asignaciones en **ambos** FXML + limpiar el wiring (`togglePend*`, `pnlPend*`, `pulidoSuperTecnicoController`, `tgPend`) en `ReparacionControllerSuperTecnico.java` y `ReparacionControllerAdmin.java`. (Historial y Mis Pendientes conservan su toggle de pulido — son Plan 3 / Task 5.)
+- El badge del sidebar "Asignaciones" suma los 3 tipos automáticamente (`getTotalItems()` ya cuenta la tabla unificada).
+- **Nota intermedia:** al quitar el panel de pulido desaparece el botón "Nueva asignación de pulido"; el alta de pulido vuelve en Task 4 (modal con selector). El botón "Asignar reparación" se mantiene sin cambios en Task 3.
+- Entregable: una tabla con los 3 tipos, columna Tipo y filtros Tipo+Estado.
 
 ### Task 4: Modal de alta con selector de tipo
 **Files:** Modify `…/controllers/PendientesSuperTecnicoController.java` (`abrirFormularioAsignacion`)
