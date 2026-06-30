@@ -16,6 +16,20 @@
 
 ---
 
+## Progreso (actualizado 2026-06-30)
+
+- **Task 1 — GlassDAO:** ✅ HECHA. Commit `a7b093b` (repo ProgramaReparaciones, rama `feature/separar-glass`). Compila.
+- **Task 2 — Modal filtrado por tipo:** ✅ HECHA. Commit `6db20f6`. `FormularioReparacionController.cargarFilas` filtra por glass (deriva el tipo de `idAsignacion` `AG..` / `idRepEditar` `G..`); se eliminó el delimitador (glass y reparación ya no coexisten); `ReparacionDAO.getIncidenciaActivaPorImei` tiene overload con `tipo`. Compila.
+- **Task 3 — Asignaciones unificada:** ⬜ PENDIENTE.
+- **Task 4 — Modal con selector:** ⬜ PENDIENTE.
+- **Task 5 — Pendientes 3 pestañas:** ⬜ PENDIENTE.
+
+Backend (Plan 1) ✅ HECHO, validado en preproducción (smoke 6/6 contra `api.fonestore.es`), mergeado a `main` y pusheado en el repo del servidor.
+
+Para retomar: expandir Task 3 a pasos bite-sized leyendo `PendientesSuperTecnicoController` (~1427 líneas) y `ReparacionViewSuperTecnico.fxml`.
+
+---
+
 ### Task 1: `GlassDAO` (cliente)
 **Files:** Create `…/cliente/.../dao/GlassDAO.java`
 - Espejo de `PulidoDAO` para lo propio de glass: `getAsignacionesGlass(idTec?)`, `getHistorialGlass(idTec?)`, `getAsignacionesGlassPorImei`, `getHistorialGlassPorImei`, `insertarAsignacionGlass(imei, idTec, comentario, urgente)` → `POST /api/glass/asignaciones`.
