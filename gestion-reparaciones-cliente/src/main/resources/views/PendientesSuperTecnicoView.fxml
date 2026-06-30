@@ -22,7 +22,7 @@
         <MenuButton fx:id="filtroSolicitud" text="Estado" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
         <Button fx:id="btnAsignar"
-                text="Asignar reparación"
+                text="Asignar"
                 onAction="#abrirFormularioAsignacion"
                 styleClass="btn-primary">
             <FlowPane.margin><Insets left="24"/></FlowPane.margin>

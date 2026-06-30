@@ -252,6 +252,17 @@ public class ReparacionDAO {
                 "/api/reparaciones/imei/" + imei + "/tiene-asignacion?tecnico=" + idTec);
     }
 
+    /**
+     * Comprueba si el técnico ya tiene una asignación pendiente del IMEI dentro de una categoría.
+     *
+     * @param categoria {@code "R"} = reparación, {@code "G"} = glass, {@code "P"} = pulido
+     *                  (un IMEI puede asignarse al mismo técnico una vez por categoría)
+     */
+    public boolean existeAsignacionParaTecnico(String imei, int idTec, String categoria) throws SQLException {
+        return ApiClient.getBoolean(
+                "/api/reparaciones/imei/" + imei + "/tiene-asignacion?tecnico=" + idTec + "&tipo=" + categoria);
+    }
+
     public List<Integer> getTecnicosConAsignacionActiva(String imei) throws SQLException {
         return ApiClient.getList("/api/reparaciones/imei/" + imei + "/tecnicos-asignados", Integer.class);
     }

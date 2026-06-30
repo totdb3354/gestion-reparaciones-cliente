@@ -102,6 +102,7 @@ public class PendientesSuperTecnicoController {
     /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
     private static final class EntradaAsignacion {
         final String imei;
+        Tipo tipo = Tipo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
         String modeloCode;                       // código interno del modelo, o null si falta
         final List<Tecnico> tecnicos = new ArrayList<>();
         Cliente cliente;                         // cliente del IMEI (por entrada), o null
@@ -757,11 +758,27 @@ public class PendientesSuperTecnicoController {
         return conteo;
     }
 
+    /** Técnicos (idTec) que ya tienen una asignación pendiente de ese IMEI en esa categoría,
+     *  calculado desde la tabla unificada ya cargada ({@link #datos}) — per-categoría, sin HTTP extra. */
+    private java.util.Set<Integer> tecnicosOcupados(String imei, Tipo tipo) {
+        java.util.Set<Integer> ids = new HashSet<>();
+        for (ReparacionResumen r : datos)
+            if (imei.equals(r.getImei()) && tipoDe(r.getIdRep()) == tipo) ids.add(r.getIdTec());
+        return ids;
+    }
+
     /** Construye una fila de la pila para {@code e}. onClick = cargar en el formulario; onRemove = quitar de la pila. */
     private HBox crearFilaPila(EntradaAsignacion e, boolean seleccionada, Runnable onClick, Runnable onRemove) {
         Label lblImei = new Label(e.imei);
         lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
         lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);   // nunca se recorta el IMEI
+
+        Label badgeTipo = new Label(e.tipo == Tipo.GLASS ? "Glass" : "Rep");
+        badgeTipo.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        badgeTipo.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
+                + (e.tipo == Tipo.GLASS
+                   ? " -fx-background-color: #E0F2F1; -fx-text-fill: #00796B;"
+                   : " -fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;"));
 
         Label estado = new Label();
         if (e.tieneModelo()) {
@@ -781,7 +798,7 @@ public class PendientesSuperTecnicoController {
 
         // El contenido (IMEI + modelo) crece y se RECORTA limpio (sin "...") si no cabe;
         // la ✕ va fuera del recorte, pegada a la derecha → siempre visible.
-        HBox contenido = new HBox(8, lblImei, estado);
+        HBox contenido = new HBox(8, lblImei, badgeTipo, estado);
         contenido.setAlignment(Pos.CENTER_LEFT);
         contenido.setMinWidth(0);
         HBox.setHgrow(contenido, javafx.scene.layout.Priority.ALWAYS);
@@ -820,6 +837,7 @@ public class PendientesSuperTecnicoController {
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
         long[] seqCounter = { 0 };
+        Tipo[] tipoActual = { Tipo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
         try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
@@ -830,10 +848,26 @@ public class PendientesSuperTecnicoController {
         catch (SQLException ex) { mostrarError(ex); }
 
         // ── Cabecera + escaneo ───────────────────────────────────────────────
-        Label lblTitulo = new Label("Asignar reparaciones");
+        Label lblTitulo = new Label("Asignar trabajos");
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-        Label lblSub = new Label("Escanea IMEIs y configúralos. Técnicos y comentario se mantienen entre IMEIs. Se guardan todos al final.");
+        Label lblSub = new Label("Elige el tipo, escanea IMEIs y configúralos. Técnicos y comentario se mantienen entre IMEIs. Se guardan todos al final.");
         lblSub.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
+
+        // ── Selector de tipo (fija el tipo por defecto de los IMEIs que se escaneen) ──
+        ToggleButton tbRep   = new ToggleButton("Reparación");
+        ToggleButton tbGlass = new ToggleButton("Glass");
+        tbRep.getStyleClass().add("toggle-pill-left");
+        tbGlass.getStyleClass().add("toggle-pill-right");
+        tbRep.setSelected(true);
+        javafx.scene.control.ToggleGroup tgTipo = new javafx.scene.control.ToggleGroup();
+        tbRep.setToggleGroup(tgTipo);
+        tbGlass.setToggleGroup(tgTipo);
+        tgTipo.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { (o == null ? tbRep : (ToggleButton) o).setSelected(true); return; }  // no permitir deselección
+            tipoActual[0] = (n == tbGlass) ? Tipo.GLASS : Tipo.REPARACION;
+        });
+        HBox selectorTipo = new HBox(0, tbRep, tbGlass);
+        selectorTipo.setAlignment(Pos.CENTER_LEFT);
 
         Label lblScan = new Label("Escanear IMEI → pendiente de asignar");
         lblScan.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
@@ -1072,13 +1106,28 @@ public class PendientesSuperTecnicoController {
         Label lblImeiCurso = new Label("—");
         lblImeiCurso.setStyle("-fx-font-family: monospace; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
+        // Tipo de la entrada en curso (editable por fila); el handler se enlaza más abajo.
+        Label lblTipoEnt = new Label("Tipo");
+        lblTipoEnt.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        ToggleButton tbEntRep   = new ToggleButton("Reparación");
+        ToggleButton tbEntGlass = new ToggleButton("Glass");
+        tbEntRep.getStyleClass().add("toggle-pill-left");
+        tbEntGlass.getStyleClass().add("toggle-pill-right");
+        tbEntRep.setSelected(true);
+        javafx.scene.control.ToggleGroup tgEnt = new javafx.scene.control.ToggleGroup();
+        tbEntRep.setToggleGroup(tgEnt);
+        tbEntGlass.setToggleGroup(tgEnt);
+        boolean[] actualizandoTipoEnt = { false };
+        HBox tipoEntradaBox = new HBox(0, tbEntRep, tbEntGlass);
+        tipoEntradaBox.setAlignment(Pos.CENTER_LEFT);
+
         Button btnAsignar = new Button("Asignar →");
         btnAsignar.getStyleClass().add("btn-primary");
         btnAsignar.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnAsignar, javafx.scene.layout.Priority.ALWAYS);
         HBox accionesForm = new HBox(10, btnAsignar);
 
-        VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
+        VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblTipoEnt, tipoEntradaBox, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
                 lblComentario, tfComentario, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
@@ -1103,6 +1152,7 @@ public class PendientesSuperTecnicoController {
         @SuppressWarnings("unchecked")
         java.util.function.Consumer<EntradaAsignacion>[] cargarEntrada = new java.util.function.Consumer[1];
         Runnable[] lanzarLookup = new Runnable[1];
+        Runnable[] recomputeOcupados = new Runnable[1];
 
         Runnable validarForm = () -> {
             boolean modeloOk = modeloSel[0] != null;
@@ -1209,6 +1259,21 @@ public class PendientesSuperTecnicoController {
             t.start();
         };
 
+        recomputeOcupados[0] = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null) return;
+            java.util.Set<Integer> ocupados = tecnicosOcupados(e.imei, e.tipo);   // per-categoría, desde la tabla cargada
+            for (int i = 0; i < tecnicosModal.size(); i++) {
+                boolean ocup = ocupados.contains(tecnicosModal.get(i).getIdTec());
+                checkboxes.get(i).setDisable(ocup);
+                if (ocup) checkboxes.get(i).setSelected(false);
+            }
+            long n = checkboxes.stream().filter(CheckBox::isDisabled).count();
+            pillAsignados.setText(n + (n == 1 ? " asignado" : " asignados"));
+            pillAsignados.setVisible(n >= 1);
+            pillAsignados.setManaged(n >= 1);
+        };
+
         cargarEntrada[0] = (EntradaAsignacion e) -> {
             actual[0] = e;
             editandoVerde[0] = e.asignada;
@@ -1231,18 +1296,11 @@ public class PendientesSuperTecnicoController {
             tfCliente.setText(e.cliente != null ? e.cliente.getNombre() : "");
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
-            try {
-                List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
-                for (int i = 0; i < tecnicosModal.size(); i++) {
-                    boolean ocup = ocupados.contains(tecnicosModal.get(i).getIdTec());
-                    checkboxes.get(i).setDisable(ocup);
-                    if (ocup) checkboxes.get(i).setSelected(false);
-                }
-                long n = checkboxes.stream().filter(CheckBox::isDisabled).count();
-                pillAsignados.setText(n + (n == 1 ? " asignado" : " asignados"));
-                pillAsignados.setVisible(n >= 1);
-                pillAsignados.setManaged(n >= 1);
-            } catch (SQLException ex) { /* silencioso */ }
+            // Sincroniza el toggle de tipo de la entrada en curso sin disparar su handler
+            actualizandoTipoEnt[0] = true;
+            (e.tipo == Tipo.GLASS ? tbEntGlass : tbEntRep).setSelected(true);
+            actualizandoTipoEnt[0] = false;
+            recomputeOcupados[0].run();   // greying per-categoría según e.tipo
             btnAsignar.setText(e.asignada ? "Guardar cambios" : "Asignar →");
             if (!e.asignada) lanzarLookup[0].run();
             validarForm.run();
@@ -1327,9 +1385,11 @@ public class PendientesSuperTecnicoController {
         Runnable intentarAnadir = () -> {
             String imei = tfScan.getText().trim();
             if (imei.length() != 15) return;
-            if (pila.stream().anyMatch(x -> x.imei.equals(imei))) { lblScanErr.setText("Ese IMEI ya está en la pila."); return; }
+            if (pila.stream().anyMatch(x -> x.imei.equals(imei) && x.tipo == tipoActual[0])) {
+                lblScanErr.setText("Ese IMEI ya está en la pila (" + tipoActual[0].etiqueta + ")."); return; }
             lblScanErr.setText("");
             EntradaAsignacion e = new EntradaAsignacion(imei);
+            e.tipo = tipoActual[0];
             e.seq = ++seqCounter[0];
             pila.add(e);
             renderPila[0].run();
@@ -1357,8 +1417,9 @@ public class PendientesSuperTecnicoController {
                 }
                 int anadidos = 0, duplicados = 0;
                 for (String imei : res.imeis()) {
-                    if (pila.stream().anyMatch(x -> x.imei.equals(imei))) { duplicados++; continue; }
+                    if (pila.stream().anyMatch(x -> x.imei.equals(imei) && x.tipo == tipoActual[0])) { duplicados++; continue; }
                     EntradaAsignacion en = new EntradaAsignacion(imei);
+                    en.tipo = tipoActual[0];
                     en.seq = ++seqCounter[0];
                     pila.add(en);
                     anadidos++;
@@ -1381,11 +1442,20 @@ public class PendientesSuperTecnicoController {
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
+        tgEnt.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (actualizandoTipoEnt[0]) return;
+            if (n == null) { (o == null ? tbEntRep : (ToggleButton) o).setSelected(true); return; }   // no deselección
+            if (actual[0] == null) return;
+            actual[0].tipo = (n == tbEntGlass) ? Tipo.GLASS : Tipo.REPARACION;
+            recomputeOcupados[0].run();   // recalcula técnicos ocupados para la nueva categoría
+            renderPila[0].run();          // actualiza el badge de la fila
+            validarForm.run();
+        });
         btnAsignar.setOnAction(ev -> asignarActual.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
-        VBox contenido = new VBox(12, lblTitulo, lblSub, lblScan, tfScan, lblScanErr,
+        VBox contenido = new VBox(12, lblTitulo, lblSub, selectorTipo, lblScan, tfScan, lblScanErr,
                 new Separator(), cols, barraFinal);
         contenido.setPadding(new Insets(26));
         contenido.setPrefWidth(720);
@@ -1396,21 +1466,27 @@ public class PendientesSuperTecnicoController {
         ventana.setResizable(true);
         ventana.setMinWidth(720);
         ventana.setMinHeight(560);
-        ventana.setTitle("Asignar reparaciones");
+        ventana.setTitle("Asignar trabajos");
 
         btnGuardar.setOnAction(ev -> {
             List<String> conflictos = new ArrayList<>();
             try {
                 for (EntradaAsignacion e : pila) {
                     if (!e.asignada) continue;
-                    List<Integer> ocupados = reparacionDAO.getTecnicosConAsignacionActiva(e.imei);
+                    String categoria = (e.tipo == Tipo.GLASS) ? "G" : "R";
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
+                    String com = e.comentario.isEmpty() ? null : e.comentario;
                     boolean urgente = false;   // el urgente ya no se automatiza al asignar (lo hace el job por vencimiento)
                     for (Tecnico t : e.tecnicos) {
-                        if (ocupados.contains(t.getIdTec())) { conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado)"); continue; }
-                        reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(),
-                                e.comentario.isEmpty() ? null : e.comentario, urgente);
+                        if (reparacionDAO.existeAsignacionParaTecnico(e.imei, t.getIdTec(), categoria)) {
+                            conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado · " + e.tipo.etiqueta + ")");
+                            continue;
+                        }
+                        if (e.tipo == Tipo.GLASS)
+                            glassDAO.insertarAsignacionGlass(e.imei, t.getIdTec(), com, urgente);
+                        else
+                            reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente);
                     }
                 }
             } catch (SQLException ex) { mostrarError(ex); return; }
