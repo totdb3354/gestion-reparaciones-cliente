@@ -464,7 +464,18 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
      * @throws SQLException si falla la llamada al servidor
      */
     public void borrarIncidenciaPorImei(String imei) throws SQLException {
-        ApiClient.delete("/api/reparaciones/imei/" + imei + "/incidencia-activa");
+        borrarIncidenciaPorImei(imei, "R");
+    }
+
+    /**
+     * Cancela la incidencia activa de un IMEI dentro de una categoría concreta.
+     *
+     * @param imei      IMEI del dispositivo
+     * @param categoria {@code "R"} = reparación, {@code "G"} = glass (incidencias independientes por tipo)
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public void borrarIncidenciaPorImei(String imei, String categoria) throws SQLException {
+        ApiClient.delete("/api/reparaciones/imei/" + imei + "/incidencia-activa?tipo=" + categoria);
     }
 
     /**

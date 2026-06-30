@@ -1,6 +1,8 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.dao.ClienteDAO;
+import com.reparaciones.dao.GlassDAO;
+import com.reparaciones.dao.PulidoDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
@@ -53,6 +55,7 @@ public class PendientesSuperTecnicoController {
     @FXML private TableView<ReparacionResumen>           tablaPendientes;
     @FXML private TableColumn<ReparacionResumen, Void>   cEstado;
     @FXML private TableColumn<ReparacionResumen, String> cId;
+    @FXML private TableColumn<ReparacionResumen, Void>   cTipo;
     @FXML private TableColumn<ReparacionResumen, String> cTecnico;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
@@ -65,9 +68,12 @@ public class PendientesSuperTecnicoController {
     private boolean soloLectura = false;
     @FXML private TextField  filtroImei;
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
+    @FXML private MenuButton filtroTipo;
     @FXML private MenuButton filtroSolicitud;
 
     private final ReparacionDAO  reparacionDAO = new ReparacionDAO();
+    private final GlassDAO       glassDAO      = new GlassDAO();
+    private final PulidoDAO      pulidoDAO     = new PulidoDAO();
     private final TecnicoDAO     tecnicoDAO    = new TecnicoDAO();
     private final TelefonoDAO    telefonoDAO   = new TelefonoDAO();
     private final ClienteDAO     clienteDAO    = new ClienteDAO();
@@ -82,6 +88,9 @@ public class PendientesSuperTecnicoController {
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
 
+    private CheckBox cbTipoReparacion;
+    private CheckBox cbTipoGlass;
+    private CheckBox cbTipoPulido;
     private CheckBox cbSoloSolicitudes;
     private CheckBox cbSoloIncidencias;
     private CheckBox cbSoloAsignaciones;
@@ -107,6 +116,25 @@ public class PendientesSuperTecnicoController {
         boolean tieneModelo() { return modeloCode != null && !modeloCode.isEmpty(); }
     }
 
+    /** Tipo de trabajo de una asignación, con su etiqueta para la columna/filtro Tipo. */
+    enum Tipo {
+        REPARACION("Reparación"), GLASS("Glass"), PULIDO("Pulido");
+        final String etiqueta;
+        Tipo(String etiqueta) { this.etiqueta = etiqueta; }
+    }
+
+    /**
+     * Deriva el tipo de trabajo a partir del prefijo del {@code ID_REP}.
+     * Cubre asignaciones ({@code AG}→glass, {@code AP}→pulido, {@code A}→reparación)
+     * e historial ({@code G}→glass, {@code P}→pulido, {@code R}→reparación). Puro y testeable.
+     */
+    static Tipo tipoDe(String idRep) {
+        if (idRep == null) return Tipo.REPARACION;
+        if (idRep.startsWith("AG") || idRep.startsWith("G")) return Tipo.GLASS;
+        if (idRep.startsWith("AP") || idRep.startsWith("P")) return Tipo.PULIDO;
+        return Tipo.REPARACION;
+    }
+
     @FXML
     public void initialize() {
         tablaPendientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
@@ -114,6 +142,23 @@ public class PendientesSuperTecnicoController {
 
 
         cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
+        cTipo.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Tipo tipo = tipoDe(getTableView().getItems().get(getIndex()).getIdRep());
+                badge.setText(tipo.etiqueta);
+                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold;";
+                switch (tipo) {
+                    case REPARACION -> badge.setStyle(base + "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
+                    case GLASS      -> badge.setStyle(base + "-fx-background-color: #E0F2F1; -fx-text-fill: #00796B;");
+                    case PULIDO     -> badge.setStyle(base + "-fx-background-color: #EDE7F6; -fx-text-fill: #5E35B1;");
+                }
+                setGraphic(badge);
+            }
+        });
         cTecnico.setCellFactory(col -> new TableCell<>() {
             private final ComboBox<Tecnico> cb = new ComboBox<>();
             private boolean actualizando = false;
@@ -152,7 +197,10 @@ public class PendientesSuperTecnicoController {
                     // Guardado directo: reasignar el técnico ya en BD.
                     String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     try {
-                        reparacionDAO.actualizarAsignacion(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
+                        if (tipoDe(rep.getIdRep()) == Tipo.PULIDO)
+                            pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
+                        else   // reparación y glass operan por ID en ReparacionDAO
+                            reparacionDAO.actualizarAsignacion(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
                         cargar();
                         if (onActualizar != null) onActualizar.run();   // refresca el badge del sidebar
                     } catch (com.reparaciones.utils.StaleDataException ex) {
@@ -303,6 +351,12 @@ public class PendientesSuperTecnicoController {
                     PendientesSuperTecnicoController.this.abrirEditorComentario(rep, actual);
                 });
                 menu.getItems().add(editarComentario);
+                MenuItem editarModelo = new MenuItem("Editar modelo");   // solo pulido (no pasa por el modal de piezas)
+                ImageView ivEditarMod = new ImageView(imgEditar);
+                ivEditarMod.setFitWidth(14); ivEditarMod.setFitHeight(14); ivEditarMod.setPreserveRatio(true);
+                editarModelo.setGraphic(ivEditarMod);
+                editarModelo.setOnAction(e -> { if (getItem() != null) abrirSelectorModelo(getItem()); });
+                menu.getItems().add(editarModelo);
                 MenuItem toggleUrgente = new MenuItem();
                 toggleUrgente.setOnAction(e -> {
                     if (getItem() == null) return;
@@ -337,9 +391,11 @@ public class PendientesSuperTecnicoController {
                 });
                 menu.setOnShowing(e -> {
                     // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
+                    boolean esPulido = getItem() != null && tipoDe(getItem().getIdRep()) == Tipo.PULIDO;
                     editarComentario.setVisible(!soloLectura);
-                    toggleUrgente.setVisible(!soloLectura);
-                    editarCliente.setVisible(!soloLectura);
+                    editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
+                    toggleUrgente.setVisible(!soloLectura && !esPulido);
+                    editarCliente.setVisible(!soloLectura && !esPulido);
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
@@ -457,11 +513,14 @@ public class PendientesSuperTecnicoController {
                                     : ".");
                     ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(), desc,
                             "Borrar asignación", () -> {
+                                Tipo tipo = tipoDe(rep.getIdRep());
                                 try {
-                                    if (rep.isEsIncidencia())
-                                        reparacionDAO.borrarIncidenciaPorImei(rep.getImei());
+                                    if (tipo == Tipo.PULIDO)
+                                        pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
+                                    else if (rep.isEsIncidencia())
+                                        reparacionDAO.borrarIncidenciaPorImei(rep.getImei(), tipo == Tipo.GLASS ? "G" : "R");
                                     else
-                                        reparacionDAO.eliminarAsignacion(rep.getIdRep());
+                                        reparacionDAO.eliminarAsignacion(rep.getIdRep());   // sirve para A y AG
                                     cargar();
                                     if (onActualizar != null) onActualizar.run();
                                 } catch (SQLException ex) { mostrarError(ex); }
@@ -506,7 +565,20 @@ public class PendientesSuperTecnicoController {
                 etiquetaTec);
         } catch (SQLException e) { mostrarError(e); }
 
-        // Filtro tipo
+        // Filtro por tipo de trabajo (Reparación / Glass / Pulido)
+        cbTipoReparacion = new CheckBox("Reparación");
+        cbTipoGlass      = new CheckBox("Glass");
+        cbTipoPulido     = new CheckBox("Pulido");
+        for (CheckBox cb : new CheckBox[]{cbTipoReparacion, cbTipoGlass, cbTipoPulido}) {
+            cb.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
+            cb.selectedProperty().addListener((obs, o, n) -> { actualizarTextoFiltroTipo(); aplicarFiltros(); });
+        }
+        filtroTipo.getItems().addAll(
+                new CustomMenuItem(cbTipoReparacion, false),
+                new CustomMenuItem(cbTipoGlass, false),
+                new CustomMenuItem(cbTipoPulido, false));
+
+        // Filtro estado (categoría de fila)
         cbSoloSolicitudes = new CheckBox("Solicitudes pieza");
         cbSoloSolicitudes.setStyle("-fx-font-size: 12px; -fx-padding: 2 4 2 4;");
         cbSoloSolicitudes.selectedProperty().addListener((obs, o, n) -> {
@@ -569,12 +641,23 @@ public class PendientesSuperTecnicoController {
         // The button cell observes etiquetaTec and updates its own text automatically.
     }
 
+    private void actualizarTextoFiltroTipo() {
+        boolean rep = cbTipoReparacion.isSelected();
+        boolean gla = cbTipoGlass.isSelected();
+        boolean pul = cbTipoPulido.isSelected();
+        long total = java.util.stream.Stream.of(rep, gla, pul).filter(Boolean::booleanValue).count();
+        if      (total == 0) filtroTipo.setText("Tipo");
+        else if (total == 3) filtroTipo.setText("Todos");
+        else if (total == 1) filtroTipo.setText(rep ? "Reparación" : gla ? "Glass" : "Pulido");
+        else                 filtroTipo.setText(total + " tipos");
+    }
+
     private void actualizarTextoFiltroSolicitud() {
         boolean sol  = cbSoloSolicitudes.isSelected();
         boolean inc  = cbSoloIncidencias.isSelected();
         boolean asig = cbSoloAsignaciones.isSelected();
         long total = java.util.stream.Stream.of(sol, inc, asig).filter(Boolean::booleanValue).count();
-        if      (total == 0) filtroSolicitud.setText("Tipo");
+        if      (total == 0) filtroSolicitud.setText("Estado");
         else if (total == 3) filtroSolicitud.setText("Todas");
         else if (total == 1) filtroSolicitud.setText(sol ? "Solicitudes pieza" : inc ? "Incidencias" : "Asignaciones");
         else                 filtroSolicitud.setText(total + " filtros");
@@ -586,12 +669,17 @@ public class PendientesSuperTecnicoController {
         boolean filtrarSol  = cbSoloSolicitudes.isSelected();
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
+        java.util.EnumSet<Tipo> tiposSelec = java.util.EnumSet.noneOf(Tipo.class);
+        if (cbTipoReparacion.isSelected()) tiposSelec.add(Tipo.REPARACION);
+        if (cbTipoGlass.isSelected())      tiposSelec.add(Tipo.GLASS);
+        if (cbTipoPulido.isSelected())     tiposSelec.add(Tipo.PULIDO);
 
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
         java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
+            if (!tiposSelec.isEmpty() && !tiposSelec.contains(tipoDe(rep.getIdRep()))) return false;
             if (filtrarSol || filtrarInc || filtrarAsig) {
                 boolean esSol  = rep.getEsSolicitud() > 0;
                 boolean esInc  = rep.isEsIncidencia();
@@ -613,10 +701,14 @@ public class PendientesSuperTecnicoController {
         idsTecFiltro.clear();
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         etiquetaTec.set("Técnico");
+        cbTipoReparacion.setSelected(false);
+        cbTipoGlass.setSelected(false);
+        cbTipoPulido.setSelected(false);
+        filtroTipo.setText("Tipo");
         cbSoloSolicitudes.setSelected(false);
         cbSoloIncidencias.setSelected(false);
         cbSoloAsignaciones.setSelected(false);
-        filtroSolicitud.setText("Tipo");
+        filtroSolicitud.setText("Estado");
         aplicarFiltros();
     }
 
@@ -630,7 +722,11 @@ public class PendientesSuperTecnicoController {
     public void cargar() {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
-            List<ReparacionResumen> asignaciones = reparacionDAO.getAsignaciones();
+            // Tabla unificada: reparación (A) + glass (AG) + pulido (AP). El tipo se deriva del prefijo del ID.
+            List<ReparacionResumen> asignaciones = new ArrayList<>();
+            asignaciones.addAll(reparacionDAO.getAsignaciones());
+            asignaciones.addAll(glassDAO.getAsignacionesGlass());
+            asignaciones.addAll(pulidoDAO.getAsignacionesPulido());
             conteoTecnicosPorImei = contarTecnicosPorImei(asignaciones);
             datos.setAll(asignaciones);
             // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
@@ -1391,7 +1487,10 @@ public class PendientesSuperTecnicoController {
         btnGuardar.setOnAction(e -> {
             String nuevoTexto = ta.getText();
             try {
-                reparacionDAO.actualizarAsignacion(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
+                if (tipoDe(rep.getIdRep()) == Tipo.PULIDO)
+                    pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
+                else
+                    reparacionDAO.actualizarAsignacion(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
                 ventana.close();
                 cargar();
             } catch (com.reparaciones.utils.StaleDataException ex) {
@@ -1407,6 +1506,68 @@ public class PendientesSuperTecnicoController {
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
         javafx.application.Platform.runLater(ta::requestFocus);
+        ventana.showAndWait();
+    }
+
+    /** Selector de modelo para una asignación de pulido (no pasa por el modal de piezas). */
+    private void abrirSelectorModelo(ReparacionResumen rep) {
+        javafx.collections.ObservableList<String> todos =
+                javafx.collections.FXCollections.observableArrayList(
+                        FormularioReparacionController.MODELOS_ORDENADOS);
+        FilteredList<String> filtrados = new FilteredList<>(todos, s -> true);
+
+        TextField tfFiltro = new TextField();
+        tfFiltro.setPromptText("Filtrar modelo…");
+        tfFiltro.textProperty().addListener((obs, o, n) -> {
+            String lower = n == null ? "" : n.trim().toLowerCase();
+            filtrados.setPredicate(c -> lower.isEmpty()
+                    || FormularioReparacionController.traducirModelo(c).toLowerCase().contains(lower));
+        });
+
+        ListView<String> lista = new ListView<>(filtrados);
+        lista.setPrefHeight(220);
+        lista.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(String m, boolean empty) {
+                super.updateItem(m, empty);
+                setText((empty || m == null) ? null : FormularioReparacionController.traducirModelo(m));
+            }
+        });
+        if (rep.getModelo() != null && !rep.getModelo().isEmpty()) {
+            lista.getSelectionModel().select(rep.getModelo());
+            lista.scrollTo(rep.getModelo());
+        }
+
+        Button btnConfirmar = new Button("Guardar");
+        Button btnCancelar  = new Button("Cancelar");
+        btnConfirmar.disableProperty().bind(lista.getSelectionModel().selectedItemProperty().isNull());
+
+        HBox botones = new HBox(10, btnCancelar, btnConfirmar);
+        botones.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox contenido = new VBox(10,
+                new Label("Selecciona el modelo:"), tfFiltro, lista, botones);
+        contenido.setPadding(new Insets(20));
+        contenido.setPrefWidth(320);
+        contenido.setStyle("-fx-background-color: #DDE1E7;");
+
+        javafx.stage.Stage ventana = new javafx.stage.Stage();
+        ventana.setTitle("Editar modelo");
+        ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        ventana.setScene(scene);
+
+        btnCancelar.setOnAction(ev -> ventana.close());
+        btnConfirmar.setOnAction(ev -> {
+            String codigoInterno = lista.getSelectionModel().getSelectedItem();
+            if (codigoInterno == null) return;
+            try {
+                telefonoDAO.insertar(rep.getImei(), codigoInterno);
+                ventana.close();
+                cargar();
+            } catch (SQLException ex) { mostrarError(ex); }
+        });
+
         ventana.showAndWait();
     }
 

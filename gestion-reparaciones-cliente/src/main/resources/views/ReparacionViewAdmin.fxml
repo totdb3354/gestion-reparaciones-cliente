@@ -103,21 +103,9 @@
                     </StackPane>
                 </VBox>
 
-                <!-- Panel: asignaciones (solo lectura) -->
+                <!-- Panel: asignaciones (solo lectura, tabla unificada: reparación + glass + pulido) -->
                 <VBox fx:id="pnlAsignaciones" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                    <HBox spacing="0" alignment="CENTER_LEFT">
-                        <VBox.margin><Insets bottom="8"/></VBox.margin>
-                        <ToggleButton fx:id="togglePendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
-                        <ToggleButton fx:id="togglePendPul" text="Pulidos" styleClass="toggle-pill-right"/>
-                    </HBox>
-                    <StackPane VBox.vgrow="ALWAYS">
-                        <VBox fx:id="pnlPendRep" VBox.vgrow="ALWAYS">
-                            <fx:include source="PendientesSuperTecnicoView.fxml" fx:id="pendientesSuperTecnico"/>
-                        </VBox>
-                        <VBox fx:id="pnlPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
-                            <fx:include source="PulidoSuperTecnicoView.fxml" fx:id="pulidoSuperTecnico"/>
-                        </VBox>
-                    </StackPane>
+                    <fx:include source="PendientesSuperTecnicoView.fxml" fx:id="pendientesSuperTecnico"/>
                 </VBox>
 
             </StackPane>

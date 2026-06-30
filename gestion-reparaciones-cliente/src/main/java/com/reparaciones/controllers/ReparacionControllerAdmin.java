@@ -88,12 +88,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
     @FXML private javafx.scene.control.Button btnTabHistorial;
     @FXML private VBox pnlHistorial;
     @FXML private VBox pnlAsignaciones;
-    @FXML private javafx.scene.control.ToggleButton togglePendRep;
-    @FXML private javafx.scene.control.ToggleButton togglePendPul;
-    @FXML private VBox pnlPendRep;
-    @FXML private VBox pnlPendPul;
     @FXML private PendientesSuperTecnicoController pendientesSuperTecnicoController;
-    @FXML private PulidoSuperTecnicoController     pulidoSuperTecnicoController;
 
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
@@ -201,22 +196,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
 
-        // Modo solo lectura para el admin en los paneles de asignaciones
+        // Modo solo lectura para el admin en la tabla unificada de asignaciones
         pendientesSuperTecnicoController.setSoloLectura(true);
-        pulidoSuperTecnicoController.setSoloLectura(true);
-
-        // Toggle Reparaciones/Pulidos dentro de Asignaciones
-        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
-        togglePendRep.setToggleGroup(tgPend);
-        togglePendPul.setToggleGroup(tgPend);
-        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { togglePendRep.setSelected(true); return; }
-            boolean rep = (n == togglePendRep);
-            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
-            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
-            if (rep) pendientesSuperTecnicoController.cargar();
-            else     pulidoSuperTecnicoController.cargar();
-        });
     }
 
     @FXML
@@ -236,8 +217,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         pnlHistorial.setVisible(false);    pnlHistorial.setManaged(false);
         btnTabAsignaciones.getStyleClass().setAll("stock-sidebar-btn-active");
         btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn");
-        if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
-        else                            pendientesSuperTecnicoController.cargar();
+        pendientesSuperTecnicoController.cargar();
     }
 
     @Override

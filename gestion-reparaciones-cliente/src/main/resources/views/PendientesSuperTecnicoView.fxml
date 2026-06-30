@@ -18,7 +18,8 @@
     <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
-        <MenuButton fx:id="filtroSolicitud" text="Tipo" prefWidth="130"/>
+        <MenuButton fx:id="filtroTipo" text="Tipo" prefWidth="130"/>
+        <MenuButton fx:id="filtroSolicitud" text="Estado" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>
         <Button fx:id="btnAsignar"
                 text="Asignar reparación"
@@ -31,6 +32,7 @@
     <TableView fx:id="tablaPendientes" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="cId"      text="Id Asignación"    prefWidth="90"/>
+            <TableColumn fx:id="cTipo"    text="Tipo"             prefWidth="90"/>
             <TableColumn fx:id="cTecnico" text="Técnico"          prefWidth="110"/>
             <TableColumn fx:id="cImei"    text="IMEI"             prefWidth="130"/>
             <TableColumn fx:id="cModelo"  text="Modelo"           prefWidth="120"/>

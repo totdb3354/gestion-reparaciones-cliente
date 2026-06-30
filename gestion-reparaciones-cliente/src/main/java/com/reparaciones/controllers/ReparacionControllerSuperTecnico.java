@@ -99,12 +99,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private VBox pnlHistPul;
     @FXML private HistorialPulidoController historialPulidoController;
 
-    @FXML private javafx.scene.control.ToggleButton togglePendRep;
-    @FXML private javafx.scene.control.ToggleButton togglePendPul;
-    @FXML private VBox pnlPendRep;
-    @FXML private VBox pnlPendPul;
-    @FXML private PulidoSuperTecnicoController pulidoSuperTecnicoController;
-
     @FXML private javafx.scene.control.ToggleButton toggleMisPendRep;
     @FXML private javafx.scene.control.ToggleButton toggleMisPendPul;
     @FXML private VBox pnlMisPendRep;
@@ -217,18 +211,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             }
         });
 
-        // Toggle pendientes: Reparaciones ↔ Pulidos
-        javafx.scene.control.ToggleGroup tgPend = new javafx.scene.control.ToggleGroup();
-        togglePendRep.setToggleGroup(tgPend);
-        togglePendPul.setToggleGroup(tgPend);
-        tgPend.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { togglePendRep.setSelected(true); return; }
-            boolean rep = (n == togglePendRep);
-            pnlPendRep.setVisible(rep);  pnlPendRep.setManaged(rep);
-            pnlPendPul.setVisible(!rep); pnlPendPul.setManaged(!rep);
-            if (!rep) { pulidoSuperTecnicoController.setFiltroImei(pendientesSuperTecnicoController.getFiltroImei()); pulidoSuperTecnicoController.cargar(); }
-            else      { pendientesSuperTecnicoController.setFiltroImei(pulidoSuperTecnicoController.getFiltroImei()); pendientesSuperTecnicoController.cargar(); }
-        });
+        // Asignaciones: tabla unificada (reparación + glass + pulido). Sin toggle.
 
         // Toggle mis pendientes: Reparaciones ↔ Pulidos
         javafx.scene.control.ToggleGroup tgMisPend = new javafx.scene.control.ToggleGroup();
@@ -277,8 +260,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @Override
     public void recargar() {
         if (pnlPendientes.isVisible()) {
-            if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
-            else                            pendientesSuperTecnicoController.cargar();
+            pendientesSuperTecnicoController.cargar();
         } else if (pnlMisPendientes.isVisible()) {
             if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
             else                               misPendientesController.cargar();
@@ -287,7 +269,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             else                            cargarDatos();
         }
         // Badge data siempre fresco, independiente del panel visible
-        if (!pnlPendientes.isVisible()    || togglePendPul.isSelected())    pendientesSuperTecnicoController.cargar();
+        if (!pnlPendientes.isVisible())                                     pendientesSuperTecnicoController.cargar();
         if (!pnlMisPendientes.isVisible() || toggleMisPendPul.isSelected()) misPendientesController.cargar();
         actualizarBadges();
     }
@@ -342,8 +324,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         } else if (panel == pnlPendientes) {
-            if (togglePendPul.isSelected()) pulidoSuperTecnicoController.cargar();
-            else                            pendientesSuperTecnicoController.cargar();
+            pendientesSuperTecnicoController.cargar();
         } else {
             if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
             else                               misPendientesController.cargar();
@@ -1627,10 +1608,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         if (pnlPendientes.isVisible()) {
-            if (togglePendPul.isSelected()) {
-                exportarPulidosPendientes(owner, pulidoSuperTecnicoController.getItemsVisibles(), true);
-                return;
-            }
+            // Tabla unificada (reparación + glass + pulido): exporta todo lo visible.
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",

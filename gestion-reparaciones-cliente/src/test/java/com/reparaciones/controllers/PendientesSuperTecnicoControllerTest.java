@@ -61,4 +61,40 @@ class PendientesSuperTecnicoControllerTest {
         assertEquals(1, c.get("222222222222222"));
         assertEquals(1, c.size());
     }
+
+    // ─── tipoDe: deriva el tipo de trabajo del prefijo del ID ──────────────────
+
+    @Test
+    void tipo_asignacion_reparacion() {
+        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe("A20260630_3"));
+    }
+
+    @Test
+    void tipo_asignacion_glass() {
+        assertEquals(PendientesSuperTecnicoController.Tipo.GLASS,
+                PendientesSuperTecnicoController.tipoDe("AG20260630_3"));
+    }
+
+    @Test
+    void tipo_asignacion_pulido() {
+        assertEquals(PendientesSuperTecnicoController.Tipo.PULIDO,
+                PendientesSuperTecnicoController.tipoDe("AP20260630_3"));
+    }
+
+    @Test
+    void tipo_historial_por_prefijo() {
+        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe("R20260630_1"));
+        assertEquals(PendientesSuperTecnicoController.Tipo.GLASS,
+                PendientesSuperTecnicoController.tipoDe("G20260630_1"));
+        assertEquals(PendientesSuperTecnicoController.Tipo.PULIDO,
+                PendientesSuperTecnicoController.tipoDe("P20260630_1"));
+    }
+
+    @Test
+    void tipo_null_es_reparacion() {
+        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe(null));
+    }
 }
