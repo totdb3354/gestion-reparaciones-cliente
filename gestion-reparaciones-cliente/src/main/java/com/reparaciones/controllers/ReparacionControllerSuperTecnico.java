@@ -7,7 +7,6 @@ import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
-import com.reparaciones.models.GrupoImei;
 import com.reparaciones.models.ReparacionResumen;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -17,11 +16,8 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.MenuButton;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import javafx.stage.Stage;
@@ -31,9 +27,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javafx.scene.control.CheckBox;
@@ -66,9 +60,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, Void>   colEstado;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
-    @FXML private TableColumn<Object, String> colObservacionTelefono;
-    @FXML private TableColumn<Object, String> colCliente;
-    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
     @FXML private javafx.scene.control.Label        lblContadorPlano;
     @FXML private Label      lblUltimaActualizacion;
@@ -119,22 +110,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private final com.reparaciones.dao.GlassDAO glassDAO = new com.reparaciones.dao.GlassDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
-    private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
-    private final com.reparaciones.dao.ClienteDAO clienteDAO = new com.reparaciones.dao.ClienteDAO();
 
     // ── Datos ─────────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
-    private List<ReparacionResumen> datosFiltrados = new ArrayList<>();
     private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
-
-    // ── Drill-down ────────────────────────────────────────────────────────────
-    private enum Modo { MAESTRO, DETALLE, PLANO }
-    private Modo   modoActual  = Modo.MAESTRO;
-    private String imeiDetalle = null;
-    private HBox   barraNavegacion;
-    private Label  lblNavImei;
-    private Label  lblNavModelo;
-    private Label  lblNavCount;
 
     private final Set<Integer>   idsTecFiltro  = new HashSet<>();
     private final Set<String>    idsAjenas     = new HashSet<>();
@@ -232,7 +211,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             else                              { misPulidosTecnicoController.setFiltroImei(filtro);  misPulidosTecnicoController.cargar(); }
         });
 
-        crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
         entrarModoPlano();   // el Historial es siempre plano; el agrupado vive en su apartado
 
@@ -298,7 +276,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     // ─── Sidebar ─────────────────────────────────────────────────────────────
 
     @FXML private void mostrarHistorial() {
-        if (modoActual == Modo.DETALLE) { volverAGrupos(); return; }
         mostrarPanel(pnlHistorial, btnTabHistorial);
     }
 
@@ -311,9 +288,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     }
 
     private void mostrarPanel(VBox panel, Button btnActivo) {
-        // Al salir del historial en modo detalle, resetear a maestro
-        if (pnlHistorial.isVisible() && panel != pnlHistorial && modoActual == Modo.DETALLE)
-            resetarModo();
         // Al salir del apartado Agrupado, volver su drill-down a maestro
         if (pnlAgrupado.isVisible() && panel != pnlAgrupado)
             agrupadoController.resetarModo();
@@ -373,19 +347,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             }
         });
 
-        Image imgHistorial = new Image(getClass().getResourceAsStream("/images/Historial.png"));
         colImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
-            private final ImageView ivHist = new ImageView(imgHistorial);
-            private final HBox contenedor = new HBox(6, lbl, ivHist);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> lbl.setStyle(lbl.getUserData() + "-fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
-                ivHist.setFitWidth(25);
-                ivHist.setFitHeight(25);
-                ivHist.setPreserveRatio(true);
-                ivHist.setStyle("-fx-cursor: hand;");
-                contenedor.setAlignment(Pos.CENTER_LEFT);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
@@ -398,21 +364,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     setGraphic(null); return;
                 }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    String baseStyle = "-fx-font-size: 12px; -fx-font-weight: bold; ";
-                    lbl.setUserData(baseStyle);
-                    lbl.setText(grupo.getImei());
-                    lbl.setStyle(baseStyle + "-fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                    ivHist.setVisible(true); ivHist.setManaged(true);
-                    ivHist.setOnMouseClicked(e -> { e.consume(); mostrarDetalle(grupo); });
-                    setGraphic(contenedor);
-                } else if (row instanceof ReparacionResumen rep) {
+                if (row instanceof ReparacionResumen rep) {
                     String baseStyle = "-fx-font-size: 12px; ";
                     lbl.setUserData(baseStyle);
                     lbl.setText(rep.getImei());
                     lbl.setStyle(baseStyle + "-fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                    ivHist.setVisible(false); ivHist.setManaged(false);
-                    setGraphic(contenedor);
+                    setGraphic(lbl);
+                } else {
+                    setGraphic(null);
                 }
             }
         });
@@ -420,8 +379,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colModelo.setCellValueFactory(d -> {
             Object row = d.getValue();
             String m = null;
-            if (row instanceof GrupoImei grupo) m = grupo.getModelo();
-            else if (row instanceof ReparacionResumen rep) m = rep.getModelo();
+            if (row instanceof ReparacionResumen rep) m = rep.getModelo();
             return new javafx.beans.property.SimpleStringProperty(
                 (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
@@ -469,10 +427,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 super.updateItem(item, empty); setText(null);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    lblInicio.setText(grupo.getFechaMasAntigua()  != null ? FechaUtils.formatear(grupo.getFechaMasAntigua(), FORMATO_FECHA)  : "—");
-                    lblFin.setText("→ " + (grupo.getFechaMasReciente() != null ? FechaUtils.formatear(grupo.getFechaMasReciente(), FORMATO_FECHA) : "—"));
-                } else if (row instanceof ReparacionResumen rep) {
+                if (row instanceof ReparacionResumen rep) {
                     lblInicio.setText(rep.getFechaAsig() != null ? FechaUtils.formatear(rep.getFechaAsig(), FORMATO_FECHA) : "—");
                     lblFin.setText("→ " + (rep.getFechaFin() != null ? FechaUtils.formatear(rep.getFechaFin(), FORMATO_FECHA) : "—"));
                 } else { setGraphic(null); return; }
@@ -504,9 +459,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 setGraphic(null); setText(null);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    setText(grupo.getReparaciones().size() + " reparaciones");
-                } else if (row instanceof ReparacionResumen rep) {
+                if (row instanceof ReparacionResumen rep) {
                     lblTipo.setText(rep.getTipoComponente() != null ? rep.getTipoComponente() : "");
                     lblReut.setVisible(rep.isEsReutilizado()); lblReut.setManaged(rep.isEsReutilizado());
                     actualizarColores(getTableRow() != null && getTableRow().isSelected());
@@ -525,46 +478,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     setGraphic(labelExpandible("Observaciones", rep.getObservaciones()));
                 else
                     setGraphic(null);
-            }
-        });
-
-        colObservacionTelefono.setCellValueFactory(d -> {
-            Object row = d.getValue();
-            String obs = null;
-            if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
-            else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
-            return new javafx.beans.property.SimpleStringProperty(obs != null ? obs : "");
-        });
-        colObservacionTelefono.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                Object row = getTableView().getItems().get(getIndex());
-                String obs = null;
-                if (row instanceof com.reparaciones.models.GrupoImei grupo) obs = grupo.getObservacion();
-                else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
-                setGraphic(labelExpandible("Observación", obs));
-            }
-        });
-
-        colCliente.setCellValueFactory(d -> {
-            Object row = d.getValue();
-            String cli = null;
-            if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
-            else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
-            return new javafx.beans.property.SimpleStringProperty(cli != null ? cli : "");
-        });
-        colCliente.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                Object row = getTableView().getItems().get(getIndex());
-                String cli = null;
-                if (row instanceof com.reparaciones.models.GrupoImei grupo) cli = grupo.getCliente();
-                else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
-                setGraphic(labelExpandible("Cliente", cli));
             }
         });
 
@@ -611,7 +524,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         configurarColEstado();
         configurarColIncidencia();
-        configurarColRevision();
     }
 
     private void configurarColEstado() {
@@ -628,18 +540,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 Object row = getTableView().getItems().get(getIndex());
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10;" +
                               "-fx-font-size: 11px; -fx-font-weight: bold;";
-                if (row instanceof GrupoImei grupo) {
-                    if (grupo.getCountIncAbiertas() > 0) {
-                        badge.setText("Incidencia");
-                        badge.setStyle(base +
-                            "-fx-background-color: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BG + ";" +
-                            "-fx-text-fill: " + com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD + ";");
-                    } else {
-                        badge.setText("Normal");
-                        badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
-                    }
-                    setGraphic(badge);
-                } else if (row instanceof ReparacionResumen rep) {
+                if (row instanceof ReparacionResumen rep) {
                     if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
                         badge.setText("Incidencia");
                         badge.setStyle(base +
@@ -701,92 +602,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         });
     }
 
-    private void configurarColRevision() {
-        colRevision.setCellFactory(col -> new TableCell<>() {
-            private final ToggleButton toggle = new ToggleButton();
-            {
-                toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
-                                "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
-                setAlignment(javafx.geometry.Pos.CENTER);
-
-                toggle.setOnAction(e -> {
-                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
-                    Object row = getTableView().getItems().get(getIndex());
-                    if (!(row instanceof GrupoImei grupo)) return;
-                    if (grupo.isTieneAsignaciones()) { toggle.setSelected(false); return; }
-
-                    boolean nuevoValor = toggle.isSelected();
-                    boolean estadoAnterior = !nuevoValor;
-
-                    new Thread(() -> {
-                        try {
-                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor, grupo.getTelefonoUpdatedAt());
-                            javafx.application.Platform.runLater(this::actualizarVista);
-                        } catch (com.reparaciones.utils.StaleDataException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new javafx.scene.control.Alert(
-                                        javafx.scene.control.Alert.AlertType.WARNING,
-                                        "El teléfono fue modificado por otro usuario. Se recargan los datos.")
-                                        .showAndWait();
-                                actualizarVista();
-                            });
-                        } catch (java.sql.SQLException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new javafx.scene.control.Alert(
-                                        javafx.scene.control.Alert.AlertType.ERROR,
-                                        "Error al guardar: " + ex.getMessage())
-                                        .showAndWait();
-                            });
-                        }
-                    }).start();
-                });
-            }
-
-            private void aplicarEstiloToggle(boolean on) {
-                if (on) {
-                    toggle.setText("OK");
-                    toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
-                                    "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; " +
-                                    "-fx-background-color: #2E7D32; -fx-text-fill: white;");
-                } else {
-                    toggle.setText("—");
-                    toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; " +
-                                    "-fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; " +
-                                    "-fx-background-color: #9E9E9E; -fx-text-fill: white;");
-                }
-            }
-
-            private void actualizarVista() {
-                cargarDatos();
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null); return;
-                }
-                Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
-                    toggle.setSelected(efectivo);
-                    aplicarEstiloToggle(efectivo);
-                    if (grupo.isTieneAsignaciones()) {
-                        toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") +
-                                        " -fx-opacity: 0.5;");
-                    }
-                    setGraphic(toggle);
-                } else {
-                    setGraphic(null);
-                }
-            }
-        });
-    }
-
     private void configurarFilas() {
         tablaReparaciones.setRowFactory(tv -> new TableRow<>() {
             {
@@ -797,15 +612,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 MenuItem borrar      = new MenuItem("Borrar");
                 MenuItem aniadirInc  = new MenuItem("Añadir incidencia");
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
-                MenuItem editarObs   = new MenuItem("Editar observación");
-                MenuItem editarCli   = new MenuItem("Editar cliente");
-                Image imgEditarCtx = new Image(getClass().getResourceAsStream("/images/editar.png"));
-                ImageView ivEditarCli = new ImageView(imgEditarCtx);
-                ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
-                editarCli.setGraphic(ivEditarCli);
-                ImageView ivEditarObs = new ImageView(imgEditarCtx);
-                ivEditarObs.setFitWidth(14); ivEditarObs.setFitHeight(14); ivEditarObs.setPreserveRatio(true);
-                editarObs.setGraphic(ivEditarObs);
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -837,32 +643,11 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 borrar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarReparacion(rep); });
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
-                editarObs  .setOnAction(e -> { if (getItem() instanceof com.reparaciones.models.GrupoImei grupo) ReparacionControllerSuperTecnico.this.abrirDialogoObservacionTelefono(grupo); });
-                editarCli  .setOnAction(e -> {
-                    if (!(getItem() instanceof com.reparaciones.models.GrupoImei grupo)) return;
-                    try {
-                        java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
-                        Integer idActual = activos.stream()
-                                .filter(c -> c.getNombre().equals(grupo.getCliente()))
-                                .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
-                        java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
-                        if (sel.isEmpty()) return;
-                        Integer idCli = (sel.get() == -1) ? null : sel.get();
-                        telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
-                        cargarDatos();
-                    } catch (com.reparaciones.utils.StaleDataException ex) {
-                        Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
-                        cargarDatos();
-                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
-                });
-                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
+                menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(), aniadirInc, cancelarInc);
                 menu.setOnShowing(e -> {
-                    boolean esGrupo = getItem() instanceof com.reparaciones.models.GrupoImei;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
-                        editarObs.setVisible(esGrupo);
-                        editarCli.setVisible(esGrupo && modoActual == Modo.MAESTRO);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -870,8 +655,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     borrar      .setVisible(true);
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
-                    editarObs   .setVisible(false);
-                    editarCli   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
@@ -882,33 +665,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     }
                 });
 
-                // Drill-down al hacer doble clic en fila de grupo (clic simple solo selecciona)
-                setOnMouseClicked(e -> {
-                    if (!isEmpty() && getItem() instanceof GrupoImei grupo
-                            && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
-                            && e.getClickCount() == 2) {
-                        mostrarDetalle(grupo);
-                    }
-                });
-
                 selectedProperty().addListener((obs, wasSelected, isSelected) -> aplicarEstilo(getItem(), isEmpty()));
             }
 
             private void aplicarEstilo(Object item, boolean empty) {
                 if (empty || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
-                if (item instanceof GrupoImei g) {
-                    if (isSelected()) {
-                        setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
-                                "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
-                                "-fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0;");
-                    } else {
-                        String brd = g.getCountIncAbiertas() > 0 ? com.reparaciones.utils.Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
-                        setStyle("-fx-background-color: #EEF0F5;" +
-                                "-fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0;" +
-                                "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SEP + " " + brd + ";" +
-                                "-fx-cursor: hand;");
-                    }
-                } else if (item instanceof ReparacionResumen rep) {
+                if (item instanceof ReparacionResumen rep) {
                     if (isSelected()) {
                         setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.AZUL_MEDIO + ";" +
                                 "-fx-border-color: transparent transparent " + com.reparaciones.utils.Colores.FILA_SELECTED_BRD + " transparent;" +
@@ -935,15 +697,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     }
 
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
-        if (row instanceof GrupoImei g) {
-            if (col == colImei)       return g.getImei();
-            if (col == colModelo)     { String m = g.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? FechaUtils.formatear(g.getFechaMasAntigua(), FORMATO_FECHA) : "—")
-                                            + " → " + (g.getFechaMasReciente() != null ? FechaUtils.formatear(g.getFechaMasReciente(), FORMATO_FECHA) : "—");
-            if (col == colComponente) return g.getReparaciones().size() + " reparaciones";
-            if (col == colEstado)     return g.getCountIncAbiertas() > 0 ? "Incidencia" : "Normal";
-            return null;
-        }
         if (!(row instanceof ReparacionResumen rep)) return null;
         if (col == colIdRep)         return rep.getIdRep();
         if (col == colImei)          return rep.getImei();
@@ -1100,180 +853,36 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         boolean filtrarCerradas = cbIncidenciasCerradas.isSelected();
         boolean filtrarNormales = cbNormales.isSelected();
         idsAjenas.clear();
-        if (modoActual == Modo.PLANO) {
-            java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(filtroImei.getText().trim());
-            List<ReparacionResumen> filtradas = datos.stream()
-                .filter(rep -> {
-                    if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
-                    if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
-                    if (desde != null || hasta != null) {
-                        if (rep.getFechaFin() == null) return false;
-                        LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
-                        if (desde != null && fechaFin.isBefore(desde)) return false;
-                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
-                    }
-                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
-                        boolean mostrar = false;
-                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
-                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto())  mostrar = true;
-                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto())  mostrar = true;
-                        if (!mostrar) return false;
-                    }
-                    if (!piezasFiltro.isEmpty()) {
-                        String cat = com.reparaciones.utils.Piezas.categoria(rep.getTipoComponente());
-                        if (!piezasFiltro.contains(cat)) return false;
-                    }
-                    return true;
-                }).collect(java.util.stream.Collectors.toList());
-            tablaItems.setAll(filtradas);
-            lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
-            lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
-            return;
-        }
-        if (modoActual == Modo.DETALLE) {
-            lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
-            List<ReparacionResumen> todas = datos.stream()
-                .filter(r -> r.getImei().equals(imeiDetalle))
-                .filter(rep -> {
-                    if (desde != null || hasta != null) {
-                        if (rep.getFechaFin() == null) return false;
-                        LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
-                        if (desde != null && fechaFin.isBefore(desde)) return false;
-                        if (hasta != null && fechaFin.isAfter(hasta))  return false;
-                    }
-                    if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
-                        boolean mostrar = false;
-                        if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
-                        if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto()) mostrar = true;
-                        if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto()) mostrar = true;
-                        if (!mostrar) return false;
-                    }
-                    return true;
-                }).collect(Collectors.toList());
-
-            if (idsTecFiltro.isEmpty()) {
-                tablaItems.setAll(todas);
-                lblNavCount.setText("  •  " + todas.size() + " reparaci" + (todas.size() == 1 ? "ón" : "ones"));
-            } else {
-                List<ReparacionResumen> delFiltro = todas.stream()
-                    .filter(r -> idsTecFiltro.contains(r.getIdTec())).collect(Collectors.toList());
-                List<ReparacionResumen> otras = todas.stream()
-                    .filter(r -> !idsTecFiltro.contains(r.getIdTec())).collect(Collectors.toList());
-                otras.forEach(r -> idsAjenas.add(r.getIdRep()));
-                List<ReparacionResumen> resultado = new ArrayList<>(delFiltro);
-                resultado.addAll(otras);
-                tablaItems.setAll(resultado);
-                int nO = otras.size();
-                lblNavCount.setText("  •  " + delFiltro.size() + " de filtrados"
-                    + (nO > 0 ? " + " + nO + " de otros" : ""));
-            }
-            return;
-        }
-
-        String imeiStr = filtroImei.getText().trim();
-        datosFiltrados = datos.stream().filter(rep -> {
-            java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
-            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
-            if (desde != null || hasta != null) {
-                if (rep.getFechaFin() == null) return false;
-                LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
-                if (desde != null && fechaFin.isBefore(desde)) return false;
-                if (hasta != null && fechaFin.isAfter(hasta))  return false;
-            }
-            if (!clientesFiltro.isEmpty()) {
-                String cli = rep.getCliente();
-                boolean sin = (cli == null || cli.isEmpty());
-                boolean coincide = (sin && clientesFiltro.contains(SIN_CLIENTE))
-                                || (!sin && clientesFiltro.contains(cli));
-                if (!coincide) return false;
-            }
-            return true;
-        }).collect(Collectors.toList());
-        buildTablaItems();
-        int nImeis = tablaItems.size();
-        lblContadorPlano.setText(nImeis + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(filtroImei.getText().trim());
+        List<ReparacionResumen> filtradas = datos.stream()
+            .filter(rep -> {
+                if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
+                if (!idsTecFiltro.isEmpty() && !idsTecFiltro.contains(rep.getIdTec())) return false;
+                if (desde != null || hasta != null) {
+                    if (rep.getFechaFin() == null) return false;
+                    LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
+                    if (desde != null && fechaFin.isBefore(desde)) return false;
+                    if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                }
+                if (filtrarAbiertas || filtrarCerradas || filtrarNormales) {
+                    boolean mostrar = false;
+                    if (filtrarNormales && !rep.isEsIncidencia())                        mostrar = true;
+                    if (filtrarAbiertas && rep.isEsIncidencia() && !rep.isEsResuelto())  mostrar = true;
+                    if (filtrarCerradas && rep.isEsIncidencia() &&  rep.isEsResuelto())  mostrar = true;
+                    if (!mostrar) return false;
+                }
+                if (!piezasFiltro.isEmpty()) {
+                    String cat = com.reparaciones.utils.Piezas.categoria(rep.getTipoComponente());
+                    if (!piezasFiltro.contains(cat)) return false;
+                }
+                return true;
+            }).collect(java.util.stream.Collectors.toList());
+        tablaItems.setAll(filtradas);
+        lblContadorPlano.setText(filtradas.size() + " reparaci" + (filtradas.size() == 1 ? "ón" : "ones"));
         lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
     }
 
-    private void buildTablaItems() {
-        LinkedHashMap<String, List<ReparacionResumen>> porImei = new LinkedHashMap<>();
-        for (ReparacionResumen rep : datosFiltrados)
-            porImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
-
-        boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
-        boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
-
-        tablaItems.clear();
-        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
-            GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
-            if (!idsTecFiltro.isEmpty()
-                    && e.getValue().stream().noneMatch(r -> idsTecFiltro.contains(r.getIdTec())))
-                continue;
-            if (filtrarInc || filtrarNormal) {
-                boolean tieneInc = grupo.getCountIncAbiertas() > 0;
-                boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
-                if (!ok) continue;
-            }
-            tablaItems.add(grupo);
-        }
-    }
-
     // ─── Drill-down ───────────────────────────────────────────────────────────
-
-    private void crearBarraNavegacion() {
-        Button btnVolver = new Button("← Volver");
-        btnVolver.getStyleClass().add("btn-secondary");
-        btnVolver.setOnAction(e -> volverAGrupos());
-
-        lblNavImei   = new Label();
-        lblNavModelo = new Label();
-        lblNavCount  = new Label();
-        lblNavImei  .setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
-        lblNavModelo.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
-        lblNavCount .setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
-
-        barraNavegacion = new HBox(12, btnVolver,
-                new Separator(javafx.geometry.Orientation.VERTICAL),
-                lblNavImei, lblNavModelo, lblNavCount);
-        barraNavegacion.setAlignment(Pos.CENTER_LEFT);
-        barraNavegacion.setPadding(new Insets(6, 0, 6, 0));
-        barraNavegacion.setVisible(false);
-        barraNavegacion.setManaged(false);
-
-        // Insertar entre filtros (índice 0) y tabla (índice 1)
-        pnlHistRep.getChildren().add(1, barraNavegacion);
-    }
-
-    private void mostrarDetalle(GrupoImei grupo) {
-        mostrarDetalleParaImei(grupo.getImei());
-    }
-
-    private void mostrarDetalleParaImei(String imei) {
-        modoActual  = Modo.DETALLE;
-        imeiDetalle = imei;
-
-        String modelo = datos.stream()
-                .filter(r -> r.getImei().equals(imei))
-                .map(ReparacionResumen::getModelo)
-                .filter(m -> m != null && !m.isEmpty())
-                .findFirst().orElse("");
-        lblNavImei  .setText("IMEI: " + imei);
-        lblNavModelo.setText(!modelo.isEmpty() ? "  •  " + FormularioReparacionController.traducirModelo(modelo) : "");
-
-        filtroImei     .setVisible(false); filtroImei     .setManaged(false);
-        barraNavegacion.setVisible(true);  barraNavegacion.setManaged(true);
-        colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
-        colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
-        colRevision.setVisible(false);
-        colComponente.setText("Componente");
-        adaptarFiltrosDetalle();
-        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
-            aplicarAnchosDetalle();
-            tablaReparaciones.refresh();
-        }));
-        aplicarFiltros();
-    }
 
     private void aplicarAnchosDetalle() {
         double w = tablaReparaciones.getWidth();
@@ -1291,44 +900,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         colIdAnterior   .setPrefWidth(Math.max(150, 150 * u));
     }
 
-    private void volverAGrupos() {
-        resetarModo();
-        cargarDatos();
-    }
-
-    /** Resetea el estado a MAESTRO sin reconstruir la lista (útil cuando el panel se va a ocultar). */
-    private void resetarModo() {
-        modoActual  = Modo.MAESTRO;
-        imeiDetalle = null;
-        if (barraNavegacion != null) {
-            barraNavegacion.setVisible(false); barraNavegacion.setManaged(false);
-            filtroImei     .setVisible(true);  filtroImei     .setManaged(true);
-        }
-        colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
-        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
-        colRevision.setVisible(true);
-        colComponente.setText("Reparaciones");
-        adaptarFiltrosMaestro();
-        javafx.application.Platform.runLater(() -> {
-            tablaReparaciones.setColumnResizePolicy(param -> true);
-            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
-            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
-        });
-    }
-
     /** Entra en modo PLANO: todas las reparaciones sin agrupar, columnas estilo detalle,
      *  filtro de IMEI visible y sin barra de navegación. */
     private void entrarModoPlano() {
-        modoActual  = Modo.PLANO;
-        imeiDetalle = null;
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true);
-        colIdAnterior.setVisible(true); colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
-        colRevision.setVisible(false);
+        colIdAnterior.setVisible(true);
         colComponente.setText("Componente");
         filtroImei.setVisible(true); filtroImei.setManaged(true);
-        if (barraNavegacion != null) { barraNavegacion.setVisible(false); barraNavegacion.setManaged(false); }
         adaptarFiltrosDetalle();
         lblContadorPlano.setVisible(true); lblContadorPlano.setManaged(true);
         javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
@@ -1340,23 +919,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     // ─── Helpers de filtro ────────────────────────────────────────────────────
 
-    private void adaptarFiltrosMaestro() {
-        filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
-        filtroCliente.setVisible(true); filtroCliente.setManaged(true);
-        filtroPieza.setVisible(false); filtroPieza.setManaged(false);
-        actualizarTextoFiltroTecnico();
-        if (filtroTecHandle != null) filtroTecHandle.refresh();
-        cbIncidenciasAbiertas.setText("Incidencia");
-        cbIncidenciasCerradas.setSelected(false);
-        if (itemCerradas != null) itemCerradas.setVisible(false);
-        cbNormales.setText("Normal");
-        actualizarTextoFiltroIncidencias();
-    }
-
     private void adaptarFiltrosDetalle() {
         filtroTecnico.setVisible(true); filtroTecnico.setManaged(true);
         filtroCliente.setVisible(false); filtroCliente.setManaged(false);
-        filtroPieza.setVisible(modoActual == Modo.PLANO); filtroPieza.setManaged(modoActual == Modo.PLANO);
+        filtroPieza.setVisible(true); filtroPieza.setManaged(true);
         cbIncidenciasAbiertas.setText("Abiertas");
         if (itemCerradas != null) itemCerradas.setVisible(true);
         cbNormales.setText("Sin incidencia");
@@ -1391,7 +957,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
         mostrarHistorial();
-        if (modoActual == Modo.DETALLE) volverAGrupos();
         if (tecnico != null) {
             idsTecFiltro.clear();
             tecnicosLista.stream().filter(t -> t.getNombre().equals(tecnico))
@@ -1527,47 +1092,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         dialog.showAndWait();
     }
 
-    private void abrirDialogoObservacionTelefono(com.reparaciones.models.GrupoImei grupo) {
-        TextArea tfObs = new TextArea(grupo.getObservacion() != null ? grupo.getObservacion() : "");
-        tfObs.setPromptText("Observación del teléfono...");
-        tfObs.setWrapText(true);
-        tfObs.setPrefRowCount(4);
-        tfObs.setStyle("-fx-background-color: white; -fx-border-color: " + com.reparaciones.utils.Colores.GRIS_BORDE + ";" +
-                "-fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 13px;");
-
-        Button btnConfirmar = new Button("Guardar");
-        btnConfirmar.setMaxWidth(Double.MAX_VALUE);
-        btnConfirmar.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FILA_REPARADO_ICO + "; -fx-text-fill: white;" +
-                " -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
-
-        VBox form = new VBox(8, new Label("Observación — IMEI " + grupo.getImei()), tfObs, btnConfirmar);
-        form.setPadding(new Insets(16));
-        form.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
-        form.setPrefWidth(480);
-
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle("Observación del teléfono");
-        dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().setPrefWidth(520);
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-
-        btnConfirmar.setOnAction(e -> {
-            try {
-                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim(), grupo.getTelefonoUpdatedAt());
-                dialog.close();
-                cargarDatos();
-            } catch (com.reparaciones.utils.StaleDataException ex) {
-                Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
-                dialog.close();
-                cargarDatos();
-            } catch (SQLException ex) {
-                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
-            }
-        });
-
-        dialog.showAndWait();
-    }
-
     private void borrarIncidencia(ReparacionResumen rep) {
         ConfirmDialog.mostrar(
                 "Borrar incidencia",
@@ -1620,7 +1144,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     @Override
     public void exportarCSV(Stage owner) {
-        DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         if (pnlAgrupado.isVisible()) { agrupadoController.exportarCSV(owner); return; }
@@ -1658,33 +1181,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             return;
         }
 
-        if (modoActual == Modo.MAESTRO) {
-            List<String> cabeceras = List.of(
-                    "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
-                    "Nº reparaciones", "Inc. abiertas", "Observación", "Revisión logística");
-            List<List<String>> filas = new ArrayList<>();
-            for (Object o : tablaItems) {
-                if (!(o instanceof GrupoImei g)) continue;
-                String modelo  = g.getModelo();
-                String tecnico = g.getReparaciones().isEmpty() ? "" :
-                        (g.getReparaciones().get(0).getNombreTecnico() != null ? g.getReparaciones().get(0).getNombreTecnico() : "");
-                filas.add(List.of(
-                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
-                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
-                        tecnico,
-                        FechaUtils.formatear(g.getFechaMasAntigua(), fmt),
-                        FechaUtils.formatear(g.getFechaMasReciente(), fmt),
-                        String.valueOf(g.getReparaciones().size()),
-                        String.valueOf(g.getCountIncAbiertas()),
-                        g.getObservacion() != null ? g.getObservacion() : "",
-                        (g.isRevisionLogistica() && !g.isTieneAsignaciones()) ? "Sí" : "No"
-                ));
-            }
-            com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
-            return;
-        }
-
-        // DETALLE
         List<ReparacionResumen> items = tablaItems.stream()
                 .filter(o -> o instanceof ReparacionResumen)
                 .map(o -> (ReparacionResumen) o)
