@@ -233,8 +233,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
         actualizarBadges();
-        updateBadgeStyle(lblBadgeAsignaciones, false);
-        updateBadgeStyle(lblBadgePendientes,   false);
+        // El estilo (invertido) de ambos badges lo fija ya mostrarPanel(pnlPendientes, …)
+        // según la pestaña activa. No re-forzar aquí a inactivo o el badge de la pestaña
+        // inicial (Asignaciones) no aparece invertido hasta cambiar de opción en el sidebar.
     }
 
     @Override
