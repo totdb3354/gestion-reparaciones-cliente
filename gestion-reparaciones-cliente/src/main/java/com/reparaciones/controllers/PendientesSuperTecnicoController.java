@@ -7,6 +7,7 @@ import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.FechaUtils;
+import com.reparaciones.utils.TipoTrabajo;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
@@ -102,7 +103,7 @@ public class PendientesSuperTecnicoController {
     /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
     private static final class EntradaAsignacion {
         final String imei;
-        Tipo tipo = Tipo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
+        TipoTrabajo tipo = TipoTrabajo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
         String modeloCode;                       // código interno del modelo, o null si falta
         final List<Tecnico> tecnicos = new ArrayList<>();
         Cliente cliente;                         // cliente del IMEI (por entrada), o null
@@ -127,23 +128,9 @@ public class PendientesSuperTecnicoController {
         }
     }
 
-    /** Tipo de trabajo de una asignación, con su etiqueta para la columna/filtro Tipo. */
-    enum Tipo {
-        REPARACION("Reparación"), GLASS("Glass"), PULIDO("Pulido");
-        final String etiqueta;
-        Tipo(String etiqueta) { this.etiqueta = etiqueta; }
-    }
-
-    /**
-     * Deriva el tipo de trabajo a partir del prefijo del {@code ID_REP}.
-     * Cubre asignaciones ({@code AG}→glass, {@code AP}→pulido, {@code A}→reparación)
-     * e historial ({@code G}→glass, {@code P}→pulido, {@code R}→reparación). Puro y testeable.
-     */
-    static Tipo tipoDe(String idRep) {
-        if (idRep == null) return Tipo.REPARACION;
-        if (idRep.startsWith("AG") || idRep.startsWith("G")) return Tipo.GLASS;
-        if (idRep.startsWith("AP") || idRep.startsWith("P")) return Tipo.PULIDO;
-        return Tipo.REPARACION;
+    /** Deriva el tipo de trabajo del prefijo del {@code ID_REP}. Delega en {@link TipoTrabajo#desde}. */
+    static TipoTrabajo tipoDe(String idRep) {
+        return TipoTrabajo.desde(idRep);
     }
 
     @FXML
@@ -159,14 +146,9 @@ public class PendientesSuperTecnicoController {
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                Tipo tipo = tipoDe(getTableView().getItems().get(getIndex()).getIdRep());
-                badge.setText(tipo.etiqueta);
-                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold;";
-                switch (tipo) {
-                    case REPARACION -> badge.setStyle(base + "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
-                    case GLASS      -> badge.setStyle(base + "-fx-background-color: #E0F2F1; -fx-text-fill: #00796B;");
-                    case PULIDO     -> badge.setStyle(base + "-fx-background-color: #EDE7F6; -fx-text-fill: #5E35B1;");
-                }
+                TipoTrabajo tipo = tipoDe(getTableView().getItems().get(getIndex()).getIdRep());
+                badge.setText(tipo.etiqueta());
+                badge.setStyle(tipo.estiloBadge());
                 setGraphic(badge);
             }
         });
@@ -208,7 +190,7 @@ public class PendientesSuperTecnicoController {
                     // Guardado directo: reasignar el técnico ya en BD.
                     String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     try {
-                        if (tipoDe(rep.getIdRep()) == Tipo.PULIDO)
+                        if (tipoDe(rep.getIdRep()) == TipoTrabajo.PULIDO)
                             pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
                         else   // reparación y glass operan por ID en ReparacionDAO
                             reparacionDAO.actualizarAsignacion(rep.getIdRep(), sel.getIdTec(), com, rep.getUpdatedAt());
@@ -402,7 +384,7 @@ public class PendientesSuperTecnicoController {
                 });
                 menu.setOnShowing(e -> {
                     // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
-                    boolean esPulido = getItem() != null && tipoDe(getItem().getIdRep()) == Tipo.PULIDO;
+                    boolean esPulido = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.PULIDO;
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
                     toggleUrgente.setVisible(!soloLectura && !esPulido);
@@ -524,12 +506,12 @@ public class PendientesSuperTecnicoController {
                                     : ".");
                     ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(), desc,
                             "Borrar asignación", () -> {
-                                Tipo tipo = tipoDe(rep.getIdRep());
+                                TipoTrabajo tipo = tipoDe(rep.getIdRep());
                                 try {
-                                    if (tipo == Tipo.PULIDO)
+                                    if (tipo == TipoTrabajo.PULIDO)
                                         pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
                                     else if (rep.isEsIncidencia())
-                                        reparacionDAO.borrarIncidenciaPorImei(rep.getImei(), tipo == Tipo.GLASS ? "G" : "R");
+                                        reparacionDAO.borrarIncidenciaPorImei(rep.getImei(), tipo == TipoTrabajo.GLASS ? "G" : "R");
                                     else
                                         reparacionDAO.eliminarAsignacion(rep.getIdRep());   // sirve para A y AG
                                     cargar();
@@ -680,10 +662,10 @@ public class PendientesSuperTecnicoController {
         boolean filtrarSol  = cbSoloSolicitudes.isSelected();
         boolean filtrarInc  = cbSoloIncidencias.isSelected();
         boolean filtrarAsig = cbSoloAsignaciones.isSelected();
-        java.util.EnumSet<Tipo> tiposSelec = java.util.EnumSet.noneOf(Tipo.class);
-        if (cbTipoReparacion.isSelected()) tiposSelec.add(Tipo.REPARACION);
-        if (cbTipoGlass.isSelected())      tiposSelec.add(Tipo.GLASS);
-        if (cbTipoPulido.isSelected())     tiposSelec.add(Tipo.PULIDO);
+        java.util.EnumSet<TipoTrabajo> tiposSelec = java.util.EnumSet.noneOf(TipoTrabajo.class);
+        if (cbTipoReparacion.isSelected()) tiposSelec.add(TipoTrabajo.REPARACION);
+        if (cbTipoGlass.isSelected())      tiposSelec.add(TipoTrabajo.GLASS);
+        if (cbTipoPulido.isSelected())     tiposSelec.add(TipoTrabajo.PULIDO);
 
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
         java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
@@ -770,7 +752,7 @@ public class PendientesSuperTecnicoController {
 
     /** Técnicos (idTec) que ya tienen una asignación pendiente de ese IMEI en esa categoría,
      *  calculado desde la tabla unificada ya cargada ({@link #datos}) — per-categoría, sin HTTP extra. */
-    private java.util.Set<Integer> tecnicosOcupados(String imei, Tipo tipo) {
+    private java.util.Set<Integer> tecnicosOcupados(String imei, TipoTrabajo tipo) {
         java.util.Set<Integer> ids = new HashSet<>();
         for (ReparacionResumen r : datos)
             if (imei.equals(r.getImei()) && tipoDe(r.getIdRep()) == tipo) ids.add(r.getIdTec());
@@ -783,10 +765,10 @@ public class PendientesSuperTecnicoController {
         lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
         lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);   // nunca se recorta el IMEI
 
-        Label badgeTipo = new Label(e.tipo == Tipo.GLASS ? "Glass" : "Rep");
+        Label badgeTipo = new Label(e.tipo == TipoTrabajo.GLASS ? "Glass" : "Rep");
         badgeTipo.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         badgeTipo.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
-                + (e.tipo == Tipo.GLASS
+                + (e.tipo == TipoTrabajo.GLASS
                    ? " -fx-background-color: #E0F2F1; -fx-text-fill: #00796B;"
                    : " -fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;"));
 
@@ -973,7 +955,7 @@ public class PendientesSuperTecnicoController {
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
         long[] seqCounter = { 0 };
-        Tipo[] tipoActual = { Tipo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
+        TipoTrabajo[] tipoActual = { TipoTrabajo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
         List<FilaPulido> lotePulido = new ArrayList<>();   // sub-lote de pulido (AP), independiente de la pila rica
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
@@ -1438,7 +1420,7 @@ public class PendientesSuperTecnicoController {
             actualizandoCliente[0] = false;
             // Sincroniza el toggle de tipo de la entrada en curso sin disparar su handler
             actualizandoTipoEnt[0] = true;
-            (e.tipo == Tipo.GLASS ? tbEntGlass : tbEntRep).setSelected(true);
+            (e.tipo == TipoTrabajo.GLASS ? tbEntGlass : tbEntRep).setSelected(true);
             actualizandoTipoEnt[0] = false;
             recomputeOcupados[0].run();   // greying per-categoría según e.tipo
             btnAsignar.setText(e.asignada ? "Guardar cambios" : "Asignar →");
@@ -1526,7 +1508,7 @@ public class PendientesSuperTecnicoController {
             String imei = tfScan.getText().trim();
             if (imei.length() != 15) return;
             if (pila.stream().anyMatch(x -> x.imei.equals(imei) && x.tipo == tipoActual[0])) {
-                lblScanErr.setText("Ese IMEI ya está en la pila (" + tipoActual[0].etiqueta + ")."); return; }
+                lblScanErr.setText("Ese IMEI ya está en la pila (" + tipoActual[0].etiqueta() + ")."); return; }
             lblScanErr.setText("");
             EntradaAsignacion e = new EntradaAsignacion(imei);
             e.tipo = tipoActual[0];
@@ -1586,7 +1568,7 @@ public class PendientesSuperTecnicoController {
             if (actualizandoTipoEnt[0]) return;
             if (n == null) { (o == null ? tbEntRep : (ToggleButton) o).setSelected(true); return; }   // no deselección
             if (actual[0] == null) return;
-            actual[0].tipo = (n == tbEntGlass) ? Tipo.GLASS : Tipo.REPARACION;
+            actual[0].tipo = (n == tbEntGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
             recomputeOcupados[0].run();   // recalcula técnicos ocupados para la nueva categoría
             renderPila[0].run();          // actualiza el badge de la fila
             validarForm.run();
@@ -1609,7 +1591,7 @@ public class PendientesSuperTecnicoController {
             boolean pulido = (n == tbPulido);
             richArea.setVisible(!pulido);  richArea.setManaged(!pulido);
             pulidoPane.setVisible(pulido); pulidoPane.setManaged(pulido);
-            if (!pulido) tipoActual[0] = (n == tbGlass) ? Tipo.GLASS : Tipo.REPARACION;
+            if (!pulido) tipoActual[0] = (n == tbGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
             if (renderPila[0] != null) renderPila[0].run();
         });
 
@@ -1630,17 +1612,17 @@ public class PendientesSuperTecnicoController {
             try {
                 for (EntradaAsignacion e : pila) {
                     if (!e.asignada) continue;
-                    String categoria = (e.tipo == Tipo.GLASS) ? "G" : "R";
+                    String categoria = (e.tipo == TipoTrabajo.GLASS) ? "G" : "R";
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
                     telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
                     String com = e.comentario.isEmpty() ? null : e.comentario;
                     boolean urgente = false;   // el urgente ya no se automatiza al asignar (lo hace el job por vencimiento)
                     for (Tecnico t : e.tecnicos) {
                         if (reparacionDAO.existeAsignacionParaTecnico(e.imei, t.getIdTec(), categoria)) {
-                            conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado · " + e.tipo.etiqueta + ")");
+                            conflictos.add("• " + e.imei + " → " + t.getNombre() + " (ya asignado · " + e.tipo.etiqueta() + ")");
                             continue;
                         }
-                        if (e.tipo == Tipo.GLASS)
+                        if (e.tipo == TipoTrabajo.GLASS)
                             glassDAO.insertarAsignacionGlass(e.imei, t.getIdTec(), com, urgente);
                         else
                             reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente);
@@ -1731,7 +1713,7 @@ public class PendientesSuperTecnicoController {
         btnGuardar.setOnAction(e -> {
             String nuevoTexto = ta.getText();
             try {
-                if (tipoDe(rep.getIdRep()) == Tipo.PULIDO)
+                if (tipoDe(rep.getIdRep()) == TipoTrabajo.PULIDO)
                     pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());
                 else
                     reparacionDAO.actualizarAsignacion(rep.getIdRep(), rep.getIdTec(), nuevoTexto, rep.getUpdatedAt());

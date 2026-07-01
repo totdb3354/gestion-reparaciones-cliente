@@ -1,6 +1,7 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.models.ReparacionResumen;
+import com.reparaciones.utils.TipoTrabajo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -66,35 +67,35 @@ class PendientesSuperTecnicoControllerTest {
 
     @Test
     void tipo_asignacion_reparacion() {
-        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+        assertEquals(TipoTrabajo.REPARACION,
                 PendientesSuperTecnicoController.tipoDe("A20260630_3"));
     }
 
     @Test
     void tipo_asignacion_glass() {
-        assertEquals(PendientesSuperTecnicoController.Tipo.GLASS,
+        assertEquals(TipoTrabajo.GLASS,
                 PendientesSuperTecnicoController.tipoDe("AG20260630_3"));
     }
 
     @Test
     void tipo_asignacion_pulido() {
-        assertEquals(PendientesSuperTecnicoController.Tipo.PULIDO,
+        assertEquals(TipoTrabajo.PULIDO,
                 PendientesSuperTecnicoController.tipoDe("AP20260630_3"));
     }
 
     @Test
     void tipo_historial_por_prefijo() {
-        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+        assertEquals(TipoTrabajo.REPARACION,
                 PendientesSuperTecnicoController.tipoDe("R20260630_1"));
-        assertEquals(PendientesSuperTecnicoController.Tipo.GLASS,
+        assertEquals(TipoTrabajo.GLASS,
                 PendientesSuperTecnicoController.tipoDe("G20260630_1"));
-        assertEquals(PendientesSuperTecnicoController.Tipo.PULIDO,
+        assertEquals(TipoTrabajo.PULIDO,
                 PendientesSuperTecnicoController.tipoDe("P20260630_1"));
     }
 
     @Test
     void tipo_null_es_reparacion() {
-        assertEquals(PendientesSuperTecnicoController.Tipo.REPARACION,
+        assertEquals(TipoTrabajo.REPARACION,
                 PendientesSuperTecnicoController.tipoDe(null));
     }
 }
