@@ -1235,7 +1235,7 @@ public class AgrupadoController {
                         g.getCliente() != null ? g.getCliente() : "",
                         (g.isRevisionLogistica() && !g.isTieneAsignaciones()) ? "Sí" : "No"));
             }
-            com.reparaciones.utils.CsvExporter.exportar(owner, "agrupado_por_imei", cab, filas);
+            com.reparaciones.utils.CsvExporter.exportar(owner, "agrupado_resumen", cab, filas);
             return;
         }
 
