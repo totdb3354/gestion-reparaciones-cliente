@@ -191,6 +191,28 @@ public class AgrupadoController {
         }
         aplicarColumnasMaestro();
         adaptarFiltrosMaestro();
+        javafx.application.Platform.runLater(() -> {
+            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
+            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
+        });
+    }
+
+    /** Anchos del modo detalle, escalados al ancho de la tabla (mismo criterio que el Historial + columna Tipo). */
+    private void aplicarAnchosDetalle() {
+        double w = tabla.getWidth();
+        if (w <= 0) return;
+        double u = w / 1470.0;   // 1370 del Historial + ~100 de la columna Tipo nueva
+        colTipo         .setPrefWidth(Math.max(100, 100 * u));
+        colIdRep        .setPrefWidth(Math.max(110, 110 * u));
+        colImei         .setPrefWidth(Math.max(130, 130 * u));
+        colModelo       .setPrefWidth(Math.max(100, 100 * u));
+        colReparador    .setPrefWidth(Math.max(100, 100 * u));
+        colFecha        .setPrefWidth(Math.max(110, 110 * u));
+        colComponente   .setPrefWidth(Math.max(150, 150 * u));
+        colObservaciones.setPrefWidth(Math.max(200, 200 * u));
+        colEstado       .setPrefWidth(Math.max(120, 120 * u));
+        colIncidencia   .setPrefWidth(Math.max(200, 200 * u));
+        colIdAnterior   .setPrefWidth(Math.max(150, 150 * u));
     }
 
     // ── Columnas ────────────────────────────────────────────────────────────
@@ -200,7 +222,7 @@ public class AgrupadoController {
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
         colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
-        colRevision.setVisible(esSuper);
+        colRevision.setVisible(true);   // visible para todos; solo el supertécnico puede editarla
         colComponente.setText("Trabajos");
     }
 
@@ -446,7 +468,10 @@ public class AgrupadoController {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof ReparacionResumen rep && rep.getIdRepAnterior() != null) {
+                // El pulido guarda en ID_REP_ANTERIOR el id de su asignación (enlace interno P→AP),
+                // no una reincidencia: no tiene sentido mostrarlo aquí.
+                if (row instanceof ReparacionResumen rep && rep.getIdRepAnterior() != null
+                        && TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.PULIDO) {
                     lblLink.setText(rep.getIdRepAnterior());
                     setGraphic(lblLink);
                 } else {
@@ -537,7 +562,9 @@ public class AgrupadoController {
             {
                 toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
                 setAlignment(Pos.CENTER);
+                toggle.setMouseTransparent(!esSuper);   // admin/técnico: solo lectura del estado
                 toggle.setOnAction(e -> {
+                    if (!esSuper) return;
                     if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                     Object row = getTableView().getItems().get(getIndex());
                     if (!(row instanceof GrupoImei grupo)) return;
@@ -1028,6 +1055,10 @@ public class AgrupadoController {
         barraNavegacion.setVisible(true); barraNavegacion.setManaged(true);
         aplicarColumnasDetalle();
         adaptarFiltrosDetalle();
+        javafx.application.Platform.runLater(() -> javafx.application.Platform.runLater(() -> {
+            aplicarAnchosDetalle();
+            tabla.refresh();
+        }));
         aplicarFiltros();
     }
 
