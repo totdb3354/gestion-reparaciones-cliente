@@ -100,9 +100,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private HistorialPulidoController historialPulidoController;
 
     @FXML private javafx.scene.control.ToggleButton toggleMisPendRep;
+    @FXML private javafx.scene.control.ToggleButton toggleMisPendGlass;
     @FXML private javafx.scene.control.ToggleButton toggleMisPendPul;
     @FXML private VBox pnlMisPendRep;
+    @FXML private VBox pnlMisPendGlass;
     @FXML private VBox pnlMisPendPul;
+    @FXML private PendientesTecnicoController misPendientesGlassController;
     @FXML private PulidoTecnicoController misPulidosTecnicoController;
 
     private CheckBox cbIncidenciasAbiertas;
@@ -184,11 +187,19 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             cargarDatos();
             pendientesSuperTecnicoController.cargar();
             misPendientesController.cargar();
+            misPendientesGlassController.cargar();
             actualizarBadges();
         });
         misPendientesController.setOnCerrar(() -> {
             cargarDatos();
             misPendientesController.cargar();
+            actualizarBadges();
+        });
+        misPendientesGlassController.setModoGlass();
+        misPendientesGlassController.cargar();   // recarga como AG (el initialize del include cargó A por defecto)
+        misPendientesGlassController.setOnCerrar(() -> {
+            cargarDatos();
+            misPendientesGlassController.cargar();
             actualizarBadges();
         });
 
@@ -213,17 +224,22 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         // Asignaciones: tabla unificada (reparación + glass + pulido). Sin toggle.
 
-        // Toggle mis pendientes: Reparaciones ↔ Pulidos
+        // Toggle mis pendientes: Reparaciones | Glass | Pulidos
         javafx.scene.control.ToggleGroup tgMisPend = new javafx.scene.control.ToggleGroup();
         toggleMisPendRep.setToggleGroup(tgMisPend);
+        toggleMisPendGlass.setToggleGroup(tgMisPend);
         toggleMisPendPul.setToggleGroup(tgMisPend);
         tgMisPend.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { toggleMisPendRep.setSelected(true); return; }
-            boolean rep = (n == toggleMisPendRep);
-            pnlMisPendRep.setVisible(rep);  pnlMisPendRep.setManaged(rep);
-            pnlMisPendPul.setVisible(!rep); pnlMisPendPul.setManaged(!rep);
-            if (!rep) { misPulidosTecnicoController.setFiltroImei(misPendientesController.getFiltroImei()); misPulidosTecnicoController.cargar(); }
-            else      { misPendientesController.setFiltroImei(misPulidosTecnicoController.getFiltroImei()); misPendientesController.cargar(); }
+            if (n == null) { (o == null ? toggleMisPendRep : (javafx.scene.control.ToggleButton) o).setSelected(true); return; }
+            String filtro = o == toggleMisPendGlass ? misPendientesGlassController.getFiltroImei()
+                          : o == toggleMisPendPul   ? misPulidosTecnicoController.getFiltroImei()
+                          :                           misPendientesController.getFiltroImei();
+            pnlMisPendRep.setVisible(n == toggleMisPendRep);     pnlMisPendRep.setManaged(n == toggleMisPendRep);
+            pnlMisPendGlass.setVisible(n == toggleMisPendGlass); pnlMisPendGlass.setManaged(n == toggleMisPendGlass);
+            pnlMisPendPul.setVisible(n == toggleMisPendPul);     pnlMisPendPul.setManaged(n == toggleMisPendPul);
+            if (n == toggleMisPendRep)        { misPendientesController.setFiltroImei(filtro);      misPendientesController.cargar(); }
+            else if (n == toggleMisPendGlass) { misPendientesGlassController.setFiltroImei(filtro); misPendientesGlassController.cargar(); }
+            else                              { misPulidosTecnicoController.setFiltroImei(filtro);  misPulidosTecnicoController.cargar(); }
         });
 
         crearBarraNavegacion();
@@ -262,21 +278,24 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         if (pnlPendientes.isVisible()) {
             pendientesSuperTecnicoController.cargar();
         } else if (pnlMisPendientes.isVisible()) {
-            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
-            else                               misPendientesController.cargar();
+            if (toggleMisPendPul.isSelected())        misPulidosTecnicoController.cargar();
+            else if (toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
+            else                                      misPendientesController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
-        // Badge data siempre fresco, independiente del panel visible
-        if (!pnlPendientes.isVisible())                                     pendientesSuperTecnicoController.cargar();
-        if (!pnlMisPendientes.isVisible() || toggleMisPendPul.isSelected()) misPendientesController.cargar();
+        // Badge data siempre fresco (rep + glass), independiente del panel visible
+        if (!pnlPendientes.isVisible())                                        pendientesSuperTecnicoController.cargar();
+        if (!pnlMisPendientes.isVisible() || !toggleMisPendRep.isSelected())   misPendientesController.cargar();
+        if (!pnlMisPendientes.isVisible() || !toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
         actualizarBadges();
     }
 
     private void actualizarBadges() {
         setBadge(lblBadgeAsignaciones, pendientesSuperTecnicoController.getTotalItems());
-        setBadge(lblBadgePendientes,   misPendientesController.getTotalItems());
+        setBadge(lblBadgePendientes,
+                misPendientesController.getTotalItems() + misPendientesGlassController.getTotalItems());
     }
 
     private void setBadge(Label lbl, int count) {
@@ -326,8 +345,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         } else if (panel == pnlPendientes) {
             pendientesSuperTecnicoController.cargar();
         } else {
-            if (toggleMisPendPul.isSelected()) misPulidosTecnicoController.cargar();
-            else                               misPendientesController.cargar();
+            if (toggleMisPendPul.isSelected())        misPulidosTecnicoController.cargar();
+            else if (toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
+            else                                      misPendientesController.cargar();
         }
     }
 
@@ -1624,7 +1644,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 exportarPulidosPendientes(owner, misPulidosTecnicoController.getItemsVisibles(), false);
                 return;
             }
-            List<ReparacionResumen> items = misPendientesController.getItemsVisibles();
+            List<ReparacionResumen> items = (toggleMisPendGlass.isSelected()
+                    ? misPendientesGlassController : misPendientesController).getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
                     "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");

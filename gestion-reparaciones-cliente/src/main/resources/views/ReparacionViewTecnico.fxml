@@ -110,11 +110,15 @@
                     <HBox spacing="0" alignment="CENTER_LEFT">
                         <VBox.margin><Insets bottom="8"/></VBox.margin>
                         <ToggleButton fx:id="togglePendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
+                        <ToggleButton fx:id="togglePendGlass" text="Glass" styleClass="toggle-pill-mid"/>
                         <ToggleButton fx:id="togglePendPul" text="Pulidos" styleClass="toggle-pill-right"/>
                     </HBox>
                     <StackPane VBox.vgrow="ALWAYS">
                         <VBox fx:id="pnlPendRep" VBox.vgrow="ALWAYS">
                             <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientes"/>
+                        </VBox>
+                        <VBox fx:id="pnlPendGlass" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                            <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientesGlass"/>
                         </VBox>
                         <VBox fx:id="pnlPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
                             <fx:include source="PulidoTecnicoView.fxml" fx:id="pulidoTecnico"/>
