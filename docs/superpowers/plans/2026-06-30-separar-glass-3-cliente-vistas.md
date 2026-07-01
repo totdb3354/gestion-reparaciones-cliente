@@ -17,8 +17,8 @@
   - API pública del componente para Task 3: `configurar(Rol)`, `cargar()`, `resetarModo()`.
 - **Smoke runtime del Agrupado (Tasks 2+3):** ✅ OK en preproducción (3 roles, 0 excepciones, 2026-07-01). Ajustes post-smoke commiteados: ocultar "Id Rep. Anterior" en pulido (es el id de la asignación AP, no reincidencia); Revisión logística **visible en los 3 roles, editable solo supertécnico**; anchos de columna igualados al Historial.
 - **Task 3 (integrar Agrupado en sidebar de los 3 roles):** ✅ HECHA (compila + 113 tests; smoke OK). 4ª entrada "Agrupado" con `fx:include AgrupadoView` en los 3 FXML; cada controlador cablea el include: `configurar(Rol.X)` en `initialize`, `cargar()` al mostrar el panel, `resetarModo()` al salir, refresco en `recargar()` cuando visible. Roles: SuperTecnico→SUPERTECNICO, Admin→ADMIN, Tecnico→TECNICO. Nota: el Agrupado nuevo **coexiste** con el toggle `Agrupado|Plano` viejo del Historial hasta que Task 1 lo quite.
-- **Task 1 (Historial 3-way plano):** ⬜ PENDIENTE (quitar toggle Agrupado|Plano; toggle Rep|Glass|Pul; el panel Glass reutiliza tabla cargando `getHistorialGlass`).
-- **Task 5 — Exports/contadores:** ⬜ PENDIENTE (cierre; incluye CSV del Agrupado, que quedó fuera del componente por ahora).
+- **Task 1 (Historial 3-way plano):** ✅ HECHA en los 3 roles (compila + 113 tests + smoke OK). Toggle `Reparaciones | Glass | Pulidos` siempre plano; quitado el toggle `Agrupado|Plano`; `entrarModoPlano()` en init; Glass reutiliza la tabla cargando `getHistorialGlass`. **Pendiente limpieza:** queda código maestro/detalle **inalcanzable** en los 3 controladores (mostrarDetalle, buildTablaItems, resetarModo, volverAGrupos, ramas GrupoImei de las cell factories, columnas obs.teléfono/cliente/revisión, adaptarFiltrosMaestro) → borrar en un paso de cleanup (compila-verificado + smoke).
+- **Task 5 — Exports/contadores:** ⬜ PENDIENTE (cierre; CSV del Agrupado —fuera del componente por ahora—; verificar CSV de Glass en Historial; contadores/badges ya incluyen glass desde Plan 2).
 
 Plan 2 completo y **validado en runtime** (smoke 3 roles OK, 2026-07-01). Matices menores de UI/UX de Plan 2 pendientes de pulir al final.
 
