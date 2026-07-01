@@ -189,7 +189,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         });
 
         misPendientesController.cargar();
-        misPendientesGlassController.cargar();   // para el badge (suma rep + glass)
+        misPendientesGlassController.cargar();   // para el badge y toggles (suma rep + glass + pulido)
+        pulidoTecnicoController.cargar();
 
         agrupadoController.configurar(AgrupadoController.Rol.TECNICO);
 
@@ -261,21 +262,31 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
-        // Badge data siempre fresco (rep + glass), aunque su pestaña no esté visible
+        // Badge data siempre fresco (rep + glass + pulido), aunque su pestaña no esté visible
         if (!pnlMisPendientes.isVisible() || !togglePendRep.isSelected())   misPendientesController.cargar();
         if (!pnlMisPendientes.isVisible() || !togglePendGlass.isSelected()) misPendientesGlassController.cargar();
+        if (!pnlMisPendientes.isVisible() || !togglePendPul.isSelected())   pulidoTecnicoController.cargar();
         actualizarBadges();
     }
 
     private void actualizarBadges() {
         setBadge(lblBadgePendientes,
-                misPendientesController.getTotalItems() + misPendientesGlassController.getTotalItems());
+                misPendientesController.getTotalItems() + misPendientesGlassController.getTotalItems()
+                        + pulidoTecnicoController.getTotalItems());
+        togglePendRep.setText(conteoPill("Reparaciones", misPendientesController.getTotalItems()));
+        togglePendGlass.setText(conteoPill("Glass", misPendientesGlassController.getTotalItems()));
+        togglePendPul.setText(conteoPill("Pulidos", pulidoTecnicoController.getTotalItems()));
+    }
+
+    /** Texto de un toggle de "Mis pendientes" con su conteo, cap 99+. */
+    private static String conteoPill(String base, int n) {
+        return base + " (" + (n > 99 ? "99+" : String.valueOf(n)) + ")";
     }
 
     private void setBadge(Label lbl, int count) {
         javafx.scene.layout.StackPane pane = (javafx.scene.layout.StackPane) lbl.getParent();
         if (count <= 0) { pane.setVisible(false); pane.setManaged(false); return; }
-        lbl.setText(count > 9 ? "9+" : String.valueOf(count));
+        lbl.setText(count > 99 ? "99+" : String.valueOf(count));
         pane.setVisible(true); pane.setManaged(true);
     }
 

@@ -157,6 +157,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             pendientesSuperTecnicoController.cargar();
             misPendientesController.cargar();
             misPendientesGlassController.cargar();
+            misPulidosTecnicoController.cargar();
             actualizarBadges();
         });
         misPendientesController.setOnCerrar(() -> {
@@ -166,9 +167,15 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         });
         misPendientesGlassController.setModoGlass();
         misPendientesGlassController.cargar();   // recarga como AG (el initialize del include cargó A por defecto)
+        misPulidosTecnicoController.cargar();     // para el badge y toggles (suma rep + glass + pulido)
         misPendientesGlassController.setOnCerrar(() -> {
             cargarDatos();
             misPendientesGlassController.cargar();
+            actualizarBadges();
+        });
+        misPulidosTecnicoController.setOnCerrar(() -> {
+            cargarDatos();
+            misPulidosTecnicoController.cargar();
             actualizarBadges();
         });
 
@@ -226,8 +233,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             lblUltimaActualizacion.setOnMouseExited(e -> lblUltimaActualizacion.setUnderline(false));
         }
         actualizarBadges();
-        updateBadgeStyle(lblBadgeAsignaciones, false);
-        updateBadgeStyle(lblBadgePendientes,   false);
+        // El estilo (invertido) de ambos badges lo fija ya mostrarPanel(pnlPendientes, …)
+        // según la pestaña activa. No re-forzar aquí a inactivo o el badge de la pestaña
+        // inicial (Asignaciones) no aparece invertido hasta cambiar de opción en el sidebar.
     }
 
     @Override
@@ -247,23 +255,33 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
         }
-        // Badge data siempre fresco (rep + glass), independiente del panel visible
+        // Badge data siempre fresco (rep + glass + pulido), independiente del panel visible
         if (!pnlPendientes.isVisible())                                        pendientesSuperTecnicoController.cargar();
         if (!pnlMisPendientes.isVisible() || !toggleMisPendRep.isSelected())   misPendientesController.cargar();
         if (!pnlMisPendientes.isVisible() || !toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
+        if (!pnlMisPendientes.isVisible() || !toggleMisPendPul.isSelected())   misPulidosTecnicoController.cargar();
         actualizarBadges();
     }
 
     private void actualizarBadges() {
         setBadge(lblBadgeAsignaciones, pendientesSuperTecnicoController.getTotalItems());
         setBadge(lblBadgePendientes,
-                misPendientesController.getTotalItems() + misPendientesGlassController.getTotalItems());
+                misPendientesController.getTotalItems() + misPendientesGlassController.getTotalItems()
+                        + misPulidosTecnicoController.getTotalItems());
+        toggleMisPendRep.setText(conteoPill("Reparaciones", misPendientesController.getTotalItems()));
+        toggleMisPendGlass.setText(conteoPill("Glass", misPendientesGlassController.getTotalItems()));
+        toggleMisPendPul.setText(conteoPill("Pulidos", misPulidosTecnicoController.getTotalItems()));
+    }
+
+    /** Texto de un toggle de "Mis pendientes" con su conteo, cap 99+. */
+    private static String conteoPill(String base, int n) {
+        return base + " (" + (n > 99 ? "99+" : String.valueOf(n)) + ")";
     }
 
     private void setBadge(Label lbl, int count) {
         javafx.scene.layout.StackPane pane = (javafx.scene.layout.StackPane) lbl.getParent();
         if (count <= 0) { pane.setVisible(false); pane.setManaged(false); return; }
-        lbl.setText(count > 9 ? "9+" : String.valueOf(count));
+        lbl.setText(count > 99 ? "99+" : String.valueOf(count));
         pane.setVisible(true); pane.setManaged(true);
     }
 

@@ -26,6 +26,7 @@ public class PulidoTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String>  cModelo;
     @FXML private TableColumn<ReparacionResumen, String>  cFecha;
     @FXML private TableColumn<ReparacionResumen, String>  cComentario;
+    @FXML private TableColumn<ReparacionResumen, Void>    cBorrar;
     @FXML private TextField filtroImei;
     @FXML private Button    btnCompletarSeleccionados;
     @FXML private Label     lblUltimaActualizacion;
@@ -37,6 +38,9 @@ public class PulidoTecnicoController {
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private FilteredList<ReparacionResumen> datosFiltrados;
     private final Set<String> seleccionados = new HashSet<>();
+    private Runnable onCerrar;
+
+    public void setOnCerrar(Runnable onCerrar) { this.onCerrar = onCerrar; }
 
     @FXML
     public void initialize() {
@@ -74,6 +78,38 @@ public class PulidoTecnicoController {
             FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+
+        // Borrar asignación de pulido: solo SuperTécnico (para el Técnico normal la columna se oculta).
+        if (Sesion.esSuperTecnico()) {
+            javafx.scene.image.Image imgBorrar = new javafx.scene.image.Image(getClass().getResourceAsStream("/images/borrar.png"));
+            cBorrar.setCellFactory(col -> new TableCell<>() {
+                private final javafx.scene.image.ImageView ivBorrar = new javafx.scene.image.ImageView(imgBorrar);
+                private final javafx.scene.layout.HBox box = new javafx.scene.layout.HBox(ivBorrar);
+                {
+                    ivBorrar.setFitWidth(25); ivBorrar.setFitHeight(25); ivBorrar.setPreserveRatio(true);
+                    ivBorrar.setStyle("-fx-cursor: hand;");
+                    box.setAlignment(javafx.geometry.Pos.CENTER);
+                    ivBorrar.setOnMouseClicked(e -> {
+                        ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                        com.reparaciones.utils.ConfirmDialog.mostrar("Borrar asignación " + rep.getIdRep(),
+                                "El pulido dejará de estar asignado y desaparecerá de tus pendientes.",
+                                "Borrar asignación", () -> {
+                                    try {
+                                        pulidoDAO.eliminarAsignacionPulido(rep.getIdRep());
+                                        cargar();
+                                        if (onCerrar != null) onCerrar.run();
+                                    } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+                                });
+                    });
+                }
+                @Override protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setGraphic(empty ? null : box);
+                }
+            });
+        } else {
+            cBorrar.setVisible(false);
+        }
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
