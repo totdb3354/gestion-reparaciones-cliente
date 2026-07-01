@@ -8,6 +8,13 @@
 
 **Tech Stack:** JavaFX, FXML.
 
+## Progreso (actualizado 2026-07-01)
+- **Task 4 — Filtro de logs:** ✅ HECHA (commit `c16dd40`; compila + LogControllerTest verde). `TIPOS_ACCION` incluye las 7 acciones glass + las 5 de pulido que faltaban (verificadas contra los literales del servidor).
+- **Tasks 1-2-3 (Historial 3-way + Agrupado compartido):** ⬜ PENDIENTES. Bloque acoplado y grande (Task 2 = extraer `GrupoImei`/maestro-detalle de los 3 controladores de rol a `AgrupadoController`/`AgrupadoView` compartidos). Recomendado hacerlo en una tanda enfocada.
+- **Task 5 — Exports/contadores:** ⬜ PENDIENTE (cierre).
+
+Plan 2 completo y **validado en runtime** (smoke 3 roles OK, 2026-07-01). Matices menores de UI/UX de Plan 2 pendientes de pulir al final.
+
 ## Global Constraints
 - Historial: toggle `Reparaciones | Glass | Pulido`, **siempre plano** (quitar `Agrupado|Plano`).
 - "Agrupado": nueva entrada del sidebar en **los 3 roles**, componente único `fx:include`.
