@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Checklist Pruebas — TECNICO</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #1a1a1a;
+    background: white;
+    padding: 28px 32px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  /* ── Cabecera ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #2C3B54;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+  }
+  .header-left h1 {
+    font-size: 20px;
+    color: #2C3B54;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .header-left .subtitle {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 3px;
+  }
+  .rol-badge {
+    background: #2C3B54;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Campos de identificación ── */
+  .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .meta-field {
+    border-bottom: 1.5px solid #9ca3af;
+    padding-bottom: 4px;
+  }
+  .meta-field label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .meta-field .line { height: 18px; }
+
+  /* ── Sección ── */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6b7280;
+    margin-bottom: 8px;
+    margin-top: 20px;
+    font-weight: 600;
+  }
+
+  /* ── Tabla de tareas ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+  thead th {
+    background: #2C3B54;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 10px;
+    text-align: left;
+  }
+  thead th.col-num  { width: 34px; text-align: center; }
+  thead th.col-ok   { width: 52px; text-align: center; }
+  thead th.col-obs  { width: 220px; }
+
+  tbody tr:nth-child(odd)  { background: #f8f9fb; }
+  tbody tr:nth-child(even) { background: #ffffff; }
+
+  tbody td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+    line-height: 1.4;
+  }
+  td.col-num  { text-align: center; font-weight: 700; color: #2C3B54; font-size: 12px; }
+  td.col-ok   { text-align: center; font-size: 18px; color: #d1d5db; }
+  td.col-obs  { color: #9ca3af; font-style: italic; font-size: 11px; }
+
+  .task-text { font-size: 13px; color: #111827; }
+  .task-note { font-size: 11px; color: #6b7280; margin-top: 3px; font-style: italic; }
+
+  /* ── Fase estructural ── */
+  .phase-row td {
+    background: #eef2f7 !important;
+    font-weight: 700;
+    font-size: 11px;
+    color: #2C3B54;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 10px;
+    border-bottom: none;
+  }
+
+  /* ── Comentarios ── */
+  .comments-box {
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    padding: 12px 14px;
+    min-height: 90px;
+    margin-top: 4px;
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 12px;
+  }
+
+  /* ── Leyenda ── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 16px;
+  }
+  .legend span { font-weight: 700; font-size: 14px; }
+
+  @media print {
+    body { padding: 16px 20px; max-width: none; font-size: 12px; }
+    .header-left h1 { font-size: 17px; }
+    thead th { font-size: 10px; padding: 6px 8px; }
+    tbody td { padding: 7px 8px; }
+    .task-text { font-size: 12px; }
+    table { page-break-inside: avoid; }
+    tr { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cabecera -->
+<div class="header">
+  <div class="header-left">
+    <h1>Gestión de Reparaciones — Prueba de Usuario</h1>
+    <div class="subtitle">Checklist de tareas · Sesión UAT</div>
+  </div>
+  <div class="rol-badge">TECNICO</div>
+</div>
+
+<!-- Identificación -->
+<div class="meta">
+  <div class="meta-field">
+    <label>Nombre del tester</label>
+    <div class="line"></div>
+  </div>
+  <div class="meta-field">
+    <label>Fecha</label>
+    <div class="line"></div>
+  </div>
+  <div class="meta-field">
+    <label>Usuario / equipo</label>
+    <div class="line"></div>
+  </div>
+</div>
+
+<!-- Leyenda -->
+<div class="legend">
+  <div><span>✓</span> &nbsp;Completado sin ayuda</div>
+  <div><span>~</span> &nbsp;Completado con dificultad</div>
+  <div><span>✗</span> &nbsp;No completado / fallo</div>
+</div>
+
+<!-- Tareas -->
+<div class="section-title">Tareas dirigidas</div>
+<table>
+  <thead>
+    <tr>
+      <th class="col-num">#</th>
+      <th>Tarea</th>
+      <th class="col-ok">✓ / ~ / ✗</th>
+      <th class="col-obs">Observaciones del tester / observador</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr class="phase-row">
+      <td colspan="4">Login</td>
+    </tr>
+    <tr>
+      <td class="col-num">1</td>
+      <td><div class="task-text">Iniciar sesión con las credenciales proporcionadas</div></td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+
+    <tr class="phase-row">
+      <td colspan="4">Historial</td>
+    </tr>
+    <tr>
+      <td class="col-num">2</td>
+      <td>
+        <div class="task-text">Identificar cuántos dispositivos distintos aparecen en el historial (modo maestro)</div>
+        <div class="task-note">La primera vista muestra una fila por IMEI.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">3</td>
+      <td>
+        <div class="task-text">Aplicar un filtro por fechas para ver solo el último mes</div>
+        <div class="task-note">Usar los campos "Desde" / "Hasta" en la parte superior.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">4</td>
+      <td>
+        <div class="task-text">Hacer clic en un IMEI para ver el detalle de todas sus reparaciones</div>
+        <div class="task-note">Al hacer clic, la tabla muestra el desglose del IMEI seleccionado.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">5</td>
+      <td>
+        <div class="task-text">En el modo detalle, activar el toggle "otros técnicos"</div>
+        <div class="task-note">¿Aparecen reparaciones nuevas con distinto nivel de opacidad?</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">6</td>
+      <td>
+        <div class="task-text">Exportar el historial a CSV</div>
+        <div class="task-note">Menú de usuario (icono arriba a la derecha) → Descargar CSV.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+
+    <tr class="phase-row">
+      <td colspan="4">Mis Pendientes</td>
+    </tr>
+    <tr>
+      <td class="col-num">7</td>
+      <td>
+        <div class="task-text">Navegar a "Mis Pendientes" e identificar cuántas asignaciones hay</div>
+        <div class="task-note">Botón en el panel lateral izquierdo.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">8</td>
+      <td>
+        <div class="task-text">Finalizar una asignación: abrir el formulario, seleccionar el componente usado y guardar</div>
+        <div class="task-note">Botón de acción en la fila de la asignación. Seleccionar al menos un tipo de componente.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+    <tr>
+      <td class="col-num">9</td>
+      <td>
+        <div class="task-text">En el formulario, solicitar un componente que no tienes disponible</div>
+        <div class="task-note">Buscar el botón de solicitud de pieza adicional dentro del formulario.</div>
+      </td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+
+    <tr class="phase-row">
+      <td colspan="4">Cierre</td>
+    </tr>
+    <tr>
+      <td class="col-num">10</td>
+      <td><div class="task-text">Cerrar sesión</div></td>
+      <td class="col-ok">○</td>
+      <td class="col-obs"></td>
+    </tr>
+
+  </tbody>
+</table>
+
+<!-- Comentarios generales -->
+<div class="section-title">Comentarios generales</div>
+<div class="comments-box">
+  <!-- espacio para notas libres -->
+</div>
+
+</body>
+</html>

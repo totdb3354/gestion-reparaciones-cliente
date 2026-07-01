@@ -10,8 +10,14 @@
 
 ## Progreso (actualizado 2026-07-01)
 - **Task 4 — Filtro de logs:** ✅ HECHA (commit `c16dd40`; compila + LogControllerTest verde). `TIPOS_ACCION` incluye las 7 acciones glass + las 5 de pulido que faltaban (verificadas contra los literales del servidor).
-- **Tasks 1-2-3 (Historial 3-way + Agrupado compartido):** ⬜ PENDIENTES. Bloque acoplado y grande (Task 2 = extraer `GrupoImei`/maestro-detalle de los 3 controladores de rol a `AgrupadoController`/`AgrupadoView` compartidos). Recomendado hacerlo en una tanda enfocada.
-- **Task 5 — Exports/contadores:** ⬜ PENDIENTE (cierre).
+- **Task 2 — Componente Agrupado compartido:** ✅ HECHA (compila + 113 tests verdes; smoke runtime PENDIENTE hasta integrar Task 3). Desglose:
+  - `utils/TipoTrabajo` nuevo: enum (Rep/Glass/Pul) + `desde(idRep)` + etiqueta/estilo de badge. Migrado `PendientesSuperTecnicoController` y su test (antes tenían el enum/`tipoDe` privados). Commit refactor aparte.
+  - `models/GrupoImei` ampliado: agrega los 3 tipos, `getCountRep/Glass/Pul` + `getResumenTipos()` ("2 Rep · 1 Glass", omite ceros). Test unitario nuevo (`GrupoImeiTest`).
+  - `controllers/AgrupadoController` + `views/AgrupadoView.fxml`: maestro/detalle portado de SuperTécnico, SIN modo plano ni filtro de pieza. Detalle cronológico (orden `fechaAsig`) con columna Tipo. Parametrizado por `Rol`: SUPER = todos los datos + revisión logística + menú edición (editar/borrar/incidencia + obs/cliente); ADMIN = todos, solo lectura; TECNICO = solo sus trabajos (vía endpoints `PorTecnico` con `Sesion.getIdTec()`), solo lectura. Carga = unión de `getReparacionesResumen`/`getHistorialGlass`/`getHistorialPulido` (o sus `PorTecnico`).
+  - API pública del componente para Task 3: `configurar(Rol)`, `cargar()`, `resetarModo()`.
+- **Task 3 (integrar Agrupado en sidebar de los 3 roles):** ⬜ SIGUIENTE. 4ª entrada "Agrupado" (orden: Asignaciones · Pendientes · Historial · Agrupado) con `fx:include AgrupadoView` en los 3 FXML; en cada controlador: obtener el controller del include, `configurar(Rol.X)`, `cargar()` al mostrar el panel, `resetarModo()` al ocultar. Recordar quitar la doble llamada a `mostrarDetalle`/PLANO del Historial en Task 1.
+- **Task 1 (Historial 3-way plano):** ⬜ PENDIENTE (quitar toggle Agrupado|Plano; toggle Rep|Glass|Pul; el panel Glass reutiliza tabla cargando `getHistorialGlass`).
+- **Task 5 — Exports/contadores:** ⬜ PENDIENTE (cierre; incluye CSV del Agrupado, que quedó fuera del componente por ahora).
 
 Plan 2 completo y **validado en runtime** (smoke 3 roles OK, 2026-07-01). Matices menores de UI/UX de Plan 2 pendientes de pulir al final.
 
