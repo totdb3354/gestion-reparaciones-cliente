@@ -1,55 +1,64 @@
-# Ítem 1 clúster A — Badge de pendientes: cap 99+ e incluir pulidos
+# Clúster A — Contadores/badges de pendientes entre las 3 categorías
 
 Fecha: 2026-07-01
 Rama: `feature/contadores-asignaciones`
-Origen: backlog post-Glass, clúster A ítem 1.
+Origen: backlog post-Glass, clúster A (ítems 1-3).
 
-## Objetivo
+Se implementan de golpe los 3 ítems del clúster A (todos cliente, pequeños).
 
-El badge de "Mis pendientes" hoy (a) corta el conteo en `9+` y (b) suma solo
-reparaciones + glass. Se quiere subir el cap a `99+` y **sumar también los
-pulidos**, para que el badge refleje la carga real de las tres categorías.
+## Ítem 1 — Badge de pendientes: cap 99+ e incluir pulidos
 
-## Alcance
+El badge de "Mis pendientes" (a) cortaba el conteo en `9+` y (b) sumaba solo
+reparaciones + glass. Ahora cap `99+` y **suma también los pulidos**.
 
-Afecta a los **2 controladores de rol con badge de pendientes**:
+Afecta a los 2 controladores de rol con badge de pendientes
+(`ReparacionControllerTecnico`, `ReparacionControllerSuperTecnico`; ADMIN no
+tiene "mis pendientes"). Los controladores de pulido ya están inyectados y
+exponen `getTotalItems()`: `pulidoTecnicoController` (Tecnico),
+`misPulidosTecnicoController` (SuperTecnico).
 
-- `ReparacionControllerTecnico`
-- `ReparacionControllerSuperTecnico`
+Cambios (idénticos salvo el nombre del controlador de pulido):
 
-(ADMIN no tiene "mis pendientes"; queda fuera.)
+1. **Cap 99+** — en `setBadge`: `count > 9 ? "9+"` → `count > 99 ? "99+"`.
+2. **Sumar pulidos** — en `actualizarBadges`, añadir `+ <ctrlPulido>.getTotalItems()`.
+3. **Frescura** — en el bloque "Badge data siempre fresco" de `recargar()`,
+   añadir línea que fuerce `<ctrlPulido>.cargar()` cuando su pestaña no esté
+   visible, en paralelo a rep y glass. Y cargar pulidos también en el init
+   (antes solo se cargaban rep+glass), para que el conteo sea correcto desde el
+   arranque.
 
-Los controladores de pulido ya están inyectados y exponen `getTotalItems()`:
-`pulidoTecnicoController` (Tecnico) y `misPulidosTecnicoController` (SuperTecnico).
+## Ítem 2 — Conteo por toggle (Reparaciones/Glass/Pulidos)
 
-## Cambios
+Cada toggle de "Mis pendientes" muestra su propio conteo. Enfoque elegido:
+**sufijo en el texto del toggle** (p.ej. `Reparaciones (5)`), sin cambios de
+FXML. Se decidió frente a un badge circular real por rapidez y bajo riesgo.
 
-Idénticos en ambos controladores salvo el nombre del controlador de pulido:
+En `actualizarBadges` de ambos controladores se fija el texto de cada toggle
+(`togglePendRep/Glass/Pul` en Tecnico; `toggleMisPendRep/Glass/Pul` en
+SuperTecnico) con `base + " (" + n + ")"`, cap `99+` vía helper `conteoPill`.
+Se muestra siempre el número, incluido `(0)`.
 
-1. **Cap 99+** — en `setBadge(Label, int)`:
-   `lbl.setText(count > 9 ? "9+" : ...)` → `count > 99 ? "99+" : ...`.
+## Ítem 3 — Label "N asignados" cross-categoría — YA FUNCIONA (verificado)
 
-2. **Sumar pulidos** — en `actualizarBadges()`, añadir
-   `+ <ctrlPulido>.getTotalItems()` al conteo de `lblBadgePendientes`.
-
-3. **Frescura del dato de pulidos** — en el bloque "Badge data siempre fresco"
-   de `recargar()`, añadir una línea que fuerce `<ctrlPulido>.cargar()` cuando su
-   pestaña/toggle no esté visible, en paralelo a las que ya existen para rep y
-   glass. Sin esto, el conteo de pulidos del badge quedaría obsoleto salvo cuando
-   la pestaña de pulidos está abierta.
+El anchor del backlog pedía **verificar** que el label "N asignados" de
+Asignaciones cuenta entre categorías. Verificado: `conteoTecnicosPorImei` se
+calcula en `PendientesSuperTecnicoController.cargar()` sobre la lista unificada
+rep+glass+pulido, y `contarTecnicosPorImei` cuenta técnicos distintos por IMEI
+sin filtrar por categoría. **No requiere cambio.** (El `pillAsignados` del modal
+de asignación sí es per-categoría, pero es intencional y no es este label.)
 
 ## Fuera de alcance
 
-- Badge por toggle Reparaciones/Glass/Pulidos (ítem 2 del clúster).
-- Label "N técnicos asignados" cross-categoría (ítem 3).
-- Badge de Asignaciones del SuperTecnico (`lblBadgeAsignaciones`, suma
-  `pendientesSuperTecnicoController`) — es otra métrica, no se toca.
+- Alerta de asignación cruzada (clúster B) y consistencia de columnas/acciones
+  (clúster C), asignación masiva (clúster D): ítems posteriores del backlog.
 
 ## Verificación
 
-`setBadge`/`actualizarBadges` son métodos privados de controladores JavaFX, no
-unit-testeables sin TestFX (la suite actual no los cubre). Validación:
+`setBadge`/`actualizarBadges` y el texto de toggles son UI privada de
+controladores JavaFX, no unit-testeables sin TestFX (la suite actual no los
+cubre). Validación:
 
-- Compila (`mvn -q compile`).
+- Compila (`mvn -q -o compile`).
 - Smoke manual en los 2 roles: el badge suma rep+glass+pulido y muestra `99+`
-  cuando el total supera 99.
+  al pasar de 99; cada toggle muestra su conteo; el label "N asignados" sigue
+  correcto.
