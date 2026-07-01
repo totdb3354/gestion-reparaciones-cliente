@@ -118,7 +118,8 @@ public class FormularioReparacionController {
         this.idRepAnterior = idRepAnterior;
         if (this.idRepAnterior == null) {
             try {
-                this.idRepAnterior = reparacionDAO.getIncidenciaActivaPorImei(imei);
+                boolean esGlass = idAsignacion != null && idAsignacion.startsWith("AG");
+                this.idRepAnterior = reparacionDAO.getIncidenciaActivaPorImei(imei, esGlass ? "G" : "R");
             } catch (SQLException e) {
                 mostrarError(e);
             }
@@ -364,6 +365,11 @@ public class FormularioReparacionController {
 
     private void cargarFilas() {
         try {
+            // Glass ≈ reparación, pero el modal filtra qué filas ofrece según el tipo:
+            //  - Glass    (idAsignacion AG.. / idRepEditar G..): solo Glass, Marco y Otro.
+            //  - Reparación (A.. / R..):                          todo menos Glass y Marco (Otro se mantiene).
+            boolean esGlass = (idAsignacion != null && idAsignacion.startsWith("AG"))
+                           || (idRepEditar  != null && idRepEditar.startsWith("G"));
             Map<String, List<Componente>> grupos = componenteDAO.getAgrupadosPorTipo();
             Image imgBorrar  = new Image(getClass().getResourceAsStream("/images/borrar.png"));
             Image imgEditar  = new Image(getClass().getResourceAsStream("/images/editar.png"));
@@ -371,38 +377,31 @@ public class FormularioReparacionController {
             for (Map.Entry<String, List<Componente>> entry : grupos.entrySet()) {
                 if (entry.getValue().isEmpty())
                     continue;
-                if (entry.getKey().equals("otro")) {
+                String key = entry.getKey();
+                boolean esVidrioMarco = key.equals("g") || key.equals("mc");
+                // Filtrado por tipo de trabajo
+                if (esGlass) { if (!esVidrioMarco && !key.equals("otro")) continue; }
+                else         { if (esVidrioMarco) continue; }
+                if (key.equals("otro")) {
                     otrasAcciones = new OtrasAccionesUI(entry.getValue(), imgBorrar);
                     otrasAcciones.setOnCambio(this::actualizarBoton);
                     otrasAcciones.setGuardador(this::guardarAccionOtroIndividual);
                     contenedorOtros.getChildren().add(otrasAcciones.getRoot());
                     continue;
                 }
-                FilaUI fila = new FilaUI(entry.getKey(), entry.getValue(), imgBorrar, imgEditar);
+                FilaUI fila = new FilaUI(key, entry.getValue(), imgBorrar, imgEditar);
                 fila.setOnCambio(this::actualizarBoton);
                 fila.setOnGuardarFila(() -> guardarFilaIndividual(fila));
                 filasUI.add(fila);
-                if (entry.getKey().equals("g") || entry.getKey().equals("mc"))
-                    vidrioMarco.add(fila);   // Glass y Marco van al final, tras un delimitador
+                if (esVidrioMarco)
+                    vidrioMarco.add(fila);
                 else
                     contenedorFilas.getChildren().add(fila.getRoot());
             }
-            if (!vidrioMarco.isEmpty()) {
-                contenedorFilas.getChildren().add(crearDelimitador());
-                for (FilaUI f : vidrioMarco) contenedorFilas.getChildren().add(f.getRoot());
-            }
+            for (FilaUI f : vidrioMarco) contenedorFilas.getChildren().add(f.getRoot());
         } catch (SQLException e) {
             mostrarError(e);
         }
-    }
-
-    /** Banda separadora (sin texto) entre las filas principales y Glass/Marco. */
-    private javafx.scene.Node crearDelimitador() {
-        javafx.scene.layout.Region r = new javafx.scene.layout.Region();
-        r.setMinHeight(7); r.setPrefHeight(7);
-        r.setStyle("-fx-background-color: #E4E7EC;" +
-                "-fx-border-color: #BCC2CB transparent #BCC2CB transparent; -fx-border-width: 1 0 1 0;");
-        return r;
     }
 
     private void configurarFiltroModelo() {

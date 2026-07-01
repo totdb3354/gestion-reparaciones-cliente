@@ -35,6 +35,8 @@
             </StackPane>
             <Button fx:id="btnTabHistorial"     text="Historial"      maxWidth="Infinity"
                     styleClass="stock-sidebar-btn"        onAction="#mostrarHistorial"/>
+            <Button fx:id="btnTabAgrupado"      text="Agrupado"       maxWidth="Infinity"
+                    styleClass="stock-sidebar-btn"        onAction="#mostrarAgrupado"/>
         </VBox>
     </left>
 
@@ -51,6 +53,7 @@
                     <HBox spacing="0" alignment="CENTER_LEFT">
                         <VBox.margin><Insets bottom="8"/></VBox.margin>
                         <ToggleButton fx:id="toggleHistRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
+                        <ToggleButton fx:id="toggleHistGlass" text="Glass" styleClass="toggle-pill-mid"/>
                         <ToggleButton fx:id="toggleHistPul" text="Pulidos" styleClass="toggle-pill-right"/>
                     </HBox>
                     <StackPane VBox.vgrow="ALWAYS">
@@ -60,10 +63,6 @@
                                 <Label styleClass="vista-titulo" text="Mis reparaciones"/>
                                 <Label fx:id="lblContadorPlano" visible="false" managed="false" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
                                 <Region HBox.hgrow="ALWAYS" />
-                                <HBox spacing="0" alignment="CENTER_LEFT">
-                                    <ToggleButton fx:id="toggleAgrupar" text="Agrupado" selected="true" styleClass="toggle-pill-left"/>
-                                    <ToggleButton fx:id="toggleDesagrupar" text="Plano" styleClass="toggle-pill-right"/>
-                                </HBox>
                             </HBox>
                             <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                                 <VBox.margin><Insets bottom="8"/></VBox.margin>
@@ -90,9 +89,6 @@
                                     <TableColumn fx:id="colEstado" minWidth="110" prefWidth="120" maxWidth="150" text="Estado"/>
                                     <TableColumn fx:id="colIncidencia" minWidth="200" maxWidth="360" text="Incidencia"/>
                                     <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
-                                    <TableColumn fx:id="colObservacionTelefono" minWidth="150" maxWidth="300" text="Observación"/>
-                                    <TableColumn fx:id="colCliente" minWidth="150" maxWidth="300" text="Cliente"/>
-                                    <TableColumn fx:id="colRevision" minWidth="90" prefWidth="100" maxWidth="120" text="Revisión"/>
                                 </columns>
                             </TableView>
                             <Label fx:id="lblUltimaActualizacion"
@@ -110,16 +106,25 @@
                     <HBox spacing="0" alignment="CENTER_LEFT">
                         <VBox.margin><Insets bottom="8"/></VBox.margin>
                         <ToggleButton fx:id="togglePendRep" text="Reparaciones" selected="true" styleClass="toggle-pill-left"/>
+                        <ToggleButton fx:id="togglePendGlass" text="Glass" styleClass="toggle-pill-mid"/>
                         <ToggleButton fx:id="togglePendPul" text="Pulidos" styleClass="toggle-pill-right"/>
                     </HBox>
                     <StackPane VBox.vgrow="ALWAYS">
                         <VBox fx:id="pnlPendRep" VBox.vgrow="ALWAYS">
                             <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientes"/>
                         </VBox>
+                        <VBox fx:id="pnlPendGlass" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                            <fx:include source="PendientesTecnicoView.fxml" fx:id="misPendientesGlass"/>
+                        </VBox>
                         <VBox fx:id="pnlPendPul" visible="false" managed="false" VBox.vgrow="ALWAYS">
                             <fx:include source="PulidoTecnicoView.fxml" fx:id="pulidoTecnico"/>
                         </VBox>
                     </StackPane>
+                </VBox>
+
+                <!-- Panel: Agrupado por IMEI (componente compartido) -->
+                <VBox fx:id="pnlAgrupado" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                    <fx:include source="AgrupadoView.fxml" fx:id="agrupado"/>
                 </VBox>
 
             </StackPane>

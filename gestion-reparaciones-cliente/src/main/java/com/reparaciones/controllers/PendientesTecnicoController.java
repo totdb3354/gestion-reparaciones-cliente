@@ -1,6 +1,7 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.Sesion;
+import com.reparaciones.dao.GlassDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
@@ -46,6 +47,8 @@ public class PendientesTecnicoController {
     @FXML private Label      lblContador;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
+    private final GlassDAO      glassDAO      = new GlassDAO();
+    private boolean             glass         = false;   // true → pestaña Glass (lista AG, completa como G)
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -243,7 +246,7 @@ public class PendientesTecnicoController {
         });
 
         cAccion.setCellFactory(col -> new TableCell<>() {
-            private final Button btn = new Button("Añadir reparación");
+            private final Button btn = new Button();
             {
                 btn.getStyleClass().add("btn-primary");
                 btn.setOnAction(e -> {
@@ -252,12 +255,14 @@ public class PendientesTecnicoController {
                         cargar();
                         if (onCerrar != null) onCerrar.run();
                     };
+                    // Glass: el modal se filtra a glass/marco/otro y genera G (el prefijo AG lo activa).
                     FormularioReparacionController.abrir(
                             asig.getImei(), null, asig.getIdRep(), alCerrar);
                 });
             }
             @Override protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
+                if (!empty) btn.setText(glass ? "Añadir glass" : "Añadir reparación");
                 setGraphic(empty ? null : btn);
             }
         });
@@ -281,9 +286,9 @@ public class PendientesTecnicoController {
                                 "Borrar asignación", () -> {
                                     try {
                                         if (rep.isEsIncidencia())
-                                            reparacionDAO.borrarIncidenciaPorImei(rep.getImei());
+                                            reparacionDAO.borrarIncidenciaPorImei(rep.getImei(), glass ? "G" : "R");
                                         else
-                                            reparacionDAO.eliminarAsignacion(rep.getIdRep());
+                                            reparacionDAO.eliminarAsignacion(rep.getIdRep());   // sirve para A y AG
                                         cargar();
                                         if (onCerrar != null) onCerrar.run();
                                     } catch (SQLException ex) { mostrarError(ex); }
@@ -400,7 +405,8 @@ public class PendientesTecnicoController {
         try {
             Integer idTec = Sesion.getIdTec();
             if (idTec == null) return;
-            datos.setAll(reparacionDAO.getAsignacionesPorTecnico(idTec));
+            datos.setAll(glass ? glassDAO.getAsignacionesGlassPorTecnico(idTec)
+                               : reparacionDAO.getAsignacionesPorTecnico(idTec));
             // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
             datos.sort(java.util.Comparator.comparingInt((ReparacionResumen r) -> {
                 if (r.isUrgente()) return 0;
@@ -417,6 +423,9 @@ public class PendientesTecnicoController {
     public void setOnCerrar(Runnable onCerrar) {
         this.onCerrar = onCerrar;
     }
+
+    /** Activa el modo Glass: lista asignaciones {@code AG} y al completar genera {@code G}. Llamar antes de {@link #cargar()}. */
+    public void setModoGlass() { this.glass = true; }
 
     /** @return los ítems actualmente visibles en la tabla (respetando filtros activos) */
     public java.util.List<ReparacionResumen> getItemsVisibles() {

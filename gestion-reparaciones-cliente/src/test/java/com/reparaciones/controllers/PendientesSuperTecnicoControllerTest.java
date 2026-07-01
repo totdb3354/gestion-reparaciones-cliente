@@ -1,6 +1,7 @@
 package com.reparaciones.controllers;
 
 import com.reparaciones.models.ReparacionResumen;
+import com.reparaciones.utils.TipoTrabajo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -60,5 +61,41 @@ class PendientesSuperTecnicoControllerTest {
         assertFalse(c.containsKey(null));
         assertEquals(1, c.get("222222222222222"));
         assertEquals(1, c.size());
+    }
+
+    // ─── tipoDe: deriva el tipo de trabajo del prefijo del ID ──────────────────
+
+    @Test
+    void tipo_asignacion_reparacion() {
+        assertEquals(TipoTrabajo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe("A20260630_3"));
+    }
+
+    @Test
+    void tipo_asignacion_glass() {
+        assertEquals(TipoTrabajo.GLASS,
+                PendientesSuperTecnicoController.tipoDe("AG20260630_3"));
+    }
+
+    @Test
+    void tipo_asignacion_pulido() {
+        assertEquals(TipoTrabajo.PULIDO,
+                PendientesSuperTecnicoController.tipoDe("AP20260630_3"));
+    }
+
+    @Test
+    void tipo_historial_por_prefijo() {
+        assertEquals(TipoTrabajo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe("R20260630_1"));
+        assertEquals(TipoTrabajo.GLASS,
+                PendientesSuperTecnicoController.tipoDe("G20260630_1"));
+        assertEquals(TipoTrabajo.PULIDO,
+                PendientesSuperTecnicoController.tipoDe("P20260630_1"));
+    }
+
+    @Test
+    void tipo_null_es_reparacion() {
+        assertEquals(TipoTrabajo.REPARACION,
+                PendientesSuperTecnicoController.tipoDe(null));
     }
 }
