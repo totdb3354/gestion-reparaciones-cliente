@@ -430,8 +430,13 @@ public class FormularioOtroPedidoController {
     @FXML private void anadirLinea() {
         LineaOtro linea = new LineaOtro();
         lineas.add(linea);
-        tablaLineas.getSelectionModel().selectLast();
-        tablaLineas.scrollTo(lineas.size() - 1);
+        // Diferido: el scrollTo síncrono tras añadir no lleva de forma fiable la nueva
+        // última fila al viewport cuando la tabla ya necesita scroll (queda recortada/sin
+        // renderizar y no se puede interactuar). Se ejecuta tras el layout de la fila.
+        Platform.runLater(() -> {
+            tablaLineas.getSelectionModel().selectLast();
+            tablaLineas.scrollTo(lineas.size() - 1);
+        });
     }
 
     // ─── Confirmar ────────────────────────────────────────────────────────────
