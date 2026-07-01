@@ -70,8 +70,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private TableColumn<Object, String> colCliente;
     @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private TextField  filtroImei;
-    @FXML private javafx.scene.control.ToggleButton toggleAgrupar;
-    @FXML private javafx.scene.control.ToggleButton toggleDesagrupar;
     @FXML private javafx.scene.control.Label        lblContadorPlano;
     @FXML private Label      lblUltimaActualizacion;
     @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> filtroTecnico;
@@ -97,6 +95,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     // ── Toggles y sub-paneles de pulido ───────────────────────────────────────
     @FXML private javafx.scene.control.ToggleButton toggleHistRep;
+    @FXML private javafx.scene.control.ToggleButton toggleHistGlass;
     @FXML private javafx.scene.control.ToggleButton toggleHistPul;
     @FXML private VBox pnlHistRep;
     @FXML private VBox pnlHistPul;
@@ -117,6 +116,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     private CustomMenuItem itemCerradas;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
+    private final com.reparaciones.dao.GlassDAO glassDAO = new com.reparaciones.dao.GlassDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
     private final TecnicoDAO tecnicoDAO = new TecnicoDAO();
     private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
@@ -172,19 +172,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         configurarFiltros();
 
         lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
-        javafx.scene.control.ToggleGroup tgAgrupar = new javafx.scene.control.ToggleGroup();
-        toggleAgrupar.setToggleGroup(tgAgrupar);
-        toggleDesagrupar.setToggleGroup(tgAgrupar);
-        tgAgrupar.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { toggleAgrupar.setSelected(true); return; }  // no permitir deselección
-            if (n == toggleDesagrupar) {                                  // pasar a plano
-                entrarModoPlano();
-            } else {                                                      // volver a agrupado
-                lblContadorPlano.setVisible(false); lblContadorPlano.setManaged(false);
-                resetarModo();
-                aplicarFiltros();
-            }
-        });
 
         pendientesSuperTecnicoController.setOnActualizar(() -> {
             cargarDatos();
@@ -206,22 +193,22 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             actualizarBadges();
         });
 
-        // Toggle historial: Reparaciones ↔ Pulidos
+        // Toggle historial: Reparaciones | Glass | Pulidos (siempre plano)
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
         toggleHistRep.setToggleGroup(tgHist);
+        toggleHistGlass.setToggleGroup(tgHist);
         toggleHistPul.setToggleGroup(tgHist);
         tgHist.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (n == null) { toggleHistRep.setSelected(true); return; }
-            boolean rep = (n == toggleHistRep);
-            pnlHistRep.setVisible(rep);  pnlHistRep.setManaged(rep);
-            pnlHistPul.setVisible(!rep); pnlHistPul.setManaged(!rep);
-            if (!rep) {
-                if (modoActual == Modo.DETALLE) resetarModo();
+            if (n == null) { (o != null ? (javafx.scene.control.ToggleButton) o : toggleHistRep).setSelected(true); return; }
+            boolean pulido = (n == toggleHistPul);
+            pnlHistRep.setVisible(!pulido); pnlHistRep.setManaged(!pulido);
+            pnlHistPul.setVisible(pulido);  pnlHistPul.setManaged(pulido);
+            if (pulido) {
                 historialPulidoController.setFiltroImei(filtroImei.getText());
                 historialPulidoController.cargar();
             } else {
-                filtroImei.setText(historialPulidoController.getFiltroImei());
-                cargarDatos();
+                if (o == toggleHistPul) filtroImei.setText(historialPulidoController.getFiltroImei());
+                cargarDatos();   // rep o glass según el toggle seleccionado
             }
         });
 
@@ -247,17 +234,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
         crearBarraNavegacion();
         tablaReparaciones.setItems(tablaItems);
-        colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
-        colObservaciones.setVisible(false); colIncidencia.setVisible(false);
-        colIdAnterior.setVisible(false); colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
-        colRevision.setVisible(true);
-        colComponente.setText("Reparaciones");
-        adaptarFiltrosMaestro();
-        javafx.application.Platform.runLater(() -> {
-            tablaReparaciones.setColumnResizePolicy(param -> true);
-            colImei.setPrefWidth(180); colModelo.setPrefWidth(150);
-            colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
-        });
+        entrarModoPlano();   // el Historial es siempre plano; el agrupado vive en su apartado
 
         agrupadoController.configurar(AgrupadoController.Rol.SUPERTECNICO);
 
@@ -982,7 +959,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
 
     private void cargarDatos() {
         try {
-            datos.setAll(reparacionDAO.getReparacionesResumen());
+            datos.setAll(toggleHistGlass.isSelected()
+                    ? glassDAO.getHistorialGlass()
+                    : reparacionDAO.getReparacionesResumen());
             poblarFiltroCliente();
             poblarFiltroPieza();
             aplicarFiltros();
