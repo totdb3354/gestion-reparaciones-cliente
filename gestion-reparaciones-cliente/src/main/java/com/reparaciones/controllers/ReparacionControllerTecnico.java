@@ -74,9 +74,12 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     // ── Sidebar + paneles ─────────────────────────────────────────────────────
     @FXML private Button btnTabHistorial;
     @FXML private Button btnTabMisPendientes;
+    @FXML private Button btnTabAgrupado;
     @FXML private Label  lblBadgePendientes;
     @FXML private VBox   pnlHistorial;
     @FXML private VBox   pnlMisPendientes;
+    @FXML private VBox   pnlAgrupado;
+    @FXML private AgrupadoController agrupadoController;
     @FXML private Label  lblUltimaActualizacion;
     @FXML private PendientesTecnicoController misPendientesController;
 
@@ -228,6 +231,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
         misPendientesController.cargar();
         misPendientesGlassController.cargar();   // para el badge (suma rep + glass)
+
+        agrupadoController.configurar(AgrupadoController.Rol.TECNICO);
 
         com.reparaciones.utils.Poller.programarSiguiente(poller, this::recargar);
         if (lblUltimaActualizacion != null) {
@@ -398,6 +403,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             if (togglePendPul.isSelected())        pulidoTecnicoController.cargar();
             else if (togglePendGlass.isSelected()) misPendientesGlassController.cargar();
             else                                   misPendientesController.cargar();
+        } else if (pnlAgrupado.isVisible()) {
+            agrupadoController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
@@ -432,15 +439,23 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         cargarDatos();
     }
 
+    @FXML private void mostrarAgrupado() {
+        mostrarPanel(pnlAgrupado, btnTabAgrupado);
+        agrupadoController.cargar();
+    }
+
     public void irAInicio() { mostrarPanel(pnlMisPendientes, btnTabMisPendientes); }
 
     private void mostrarPanel(VBox panel, Button btnActivo) {
         if (pnlHistorial.isVisible() && panel != pnlHistorial && modoActual == Modo.DETALLE)
             resetarModo();
+        if (pnlAgrupado.isVisible() && panel != pnlAgrupado)
+            agrupadoController.resetarModo();
         pnlHistorial    .setVisible(false); pnlHistorial    .setManaged(false);
         pnlMisPendientes.setVisible(false); pnlMisPendientes.setManaged(false);
+        pnlAgrupado     .setVisible(false); pnlAgrupado     .setManaged(false);
         panel.setVisible(true); panel.setManaged(true);
-        for (Button b : new Button[]{btnTabHistorial, btnTabMisPendientes}) {
+        for (Button b : new Button[]{btnTabHistorial, btnTabMisPendientes, btnTabAgrupado}) {
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }

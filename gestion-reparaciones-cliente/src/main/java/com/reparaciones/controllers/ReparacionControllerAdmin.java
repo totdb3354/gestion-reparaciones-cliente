@@ -86,8 +86,11 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @FXML private javafx.scene.control.Button btnTabAsignaciones;
     @FXML private javafx.scene.control.Button btnTabHistorial;
+    @FXML private javafx.scene.control.Button btnTabAgrupado;
     @FXML private VBox pnlHistorial;
     @FXML private VBox pnlAsignaciones;
+    @FXML private VBox pnlAgrupado;
+    @FXML private AgrupadoController agrupadoController;
     @FXML private PendientesSuperTecnicoController pendientesSuperTecnicoController;
 
     private CheckBox cbIncidenciasAbiertas;
@@ -198,6 +201,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
         // Modo solo lectura para el admin en la tabla unificada de asignaciones
         pendientesSuperTecnicoController.setSoloLectura(true);
+
+        agrupadoController.configurar(AgrupadoController.Rol.ADMIN);
     }
 
     @FXML
@@ -205,19 +210,35 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         // Estando ya en el historial dentro del detalle de un IMEI, volver a pulsar
         // "Historial" devuelve a la vista agrupada (igual que para el supertécnico).
         if (pnlHistorial.isVisible() && modoActual == Modo.DETALLE) { volverAGrupos(); return; }
+        if (pnlAgrupado.isVisible()) agrupadoController.resetarModo();
         pnlHistorial.setVisible(true);   pnlHistorial.setManaged(true);
         pnlAsignaciones.setVisible(false); pnlAsignaciones.setManaged(false);
-        btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn-active");
-        btnTabAsignaciones.getStyleClass().setAll("stock-sidebar-btn");
+        pnlAgrupado.setVisible(false);   pnlAgrupado.setManaged(false);
+        estiloSidebar(btnTabHistorial);
     }
 
     @FXML
     private void mostrarAsignaciones() {
+        if (pnlAgrupado.isVisible()) agrupadoController.resetarModo();
         pnlAsignaciones.setVisible(true);  pnlAsignaciones.setManaged(true);
         pnlHistorial.setVisible(false);    pnlHistorial.setManaged(false);
-        btnTabAsignaciones.getStyleClass().setAll("stock-sidebar-btn-active");
-        btnTabHistorial.getStyleClass().setAll("stock-sidebar-btn");
+        pnlAgrupado.setVisible(false);     pnlAgrupado.setManaged(false);
+        estiloSidebar(btnTabAsignaciones);
         pendientesSuperTecnicoController.cargar();
+    }
+
+    @FXML
+    private void mostrarAgrupado() {
+        pnlAgrupado.setVisible(true);      pnlAgrupado.setManaged(true);
+        pnlHistorial.setVisible(false);    pnlHistorial.setManaged(false);
+        pnlAsignaciones.setVisible(false); pnlAsignaciones.setManaged(false);
+        estiloSidebar(btnTabAgrupado);
+        agrupadoController.cargar();
+    }
+
+    private void estiloSidebar(javafx.scene.control.Button activo) {
+        for (javafx.scene.control.Button b : new javafx.scene.control.Button[]{btnTabAsignaciones, btnTabHistorial, btnTabAgrupado})
+            b.getStyleClass().setAll(b == activo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
     }
 
     @Override
@@ -225,6 +246,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @Override
     public void recargar() {
+        if (pnlAgrupado.isVisible()) { agrupadoController.cargar(); return; }
         if (toggleHistPul.isSelected()) historialPulidoController.cargar();
         else                            cargarDatos();
     }

@@ -44,6 +44,8 @@
             </StackPane>
             <Button fx:id="btnTabHistorial"    text="Historial"       maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarHistorial"/>
+            <Button fx:id="btnTabAgrupado"     text="Agrupado"        maxWidth="Infinity"
+                    styleClass="stock-sidebar-btn" onAction="#mostrarAgrupado"/>
         </VBox>
     </left>
 
@@ -118,6 +120,11 @@
                 <!-- Panel: Asignaciones supertécnico (tabla unificada: reparación + glass + pulido) -->
                 <VBox fx:id="pnlPendientes" visible="false" managed="false" VBox.vgrow="ALWAYS">
                     <fx:include source="PendientesSuperTecnicoView.fxml" fx:id="pendientesSuperTecnico"/>
+                </VBox>
+
+                <!-- Panel: Agrupado por IMEI (componente compartido) -->
+                <VBox fx:id="pnlAgrupado" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                    <fx:include source="AgrupadoView.fxml" fx:id="agrupado"/>
                 </VBox>
 
                 <!-- Panel: Mis pendientes (técnico) -->

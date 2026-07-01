@@ -84,11 +84,14 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     @FXML private Button btnTabHistorial;
     @FXML private Button btnTabPendientes;
     @FXML private Button btnTabMisPendientes;
+    @FXML private Button btnTabAgrupado;
     @FXML private Label  lblBadgeAsignaciones;
     @FXML private Label  lblBadgePendientes;
     @FXML private VBox   pnlHistorial;
     @FXML private VBox   pnlPendientes;
     @FXML private VBox   pnlMisPendientes;
+    @FXML private VBox   pnlAgrupado;
+    @FXML private AgrupadoController agrupadoController;
     @FXML private PendientesSuperTecnicoController pendientesSuperTecnicoController;
     @FXML private PendientesTecnicoController      misPendientesController;
 
@@ -256,6 +259,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             colFecha.setPrefWidth(130); colComponente.setPrefWidth(160); colEstado.setPrefWidth(130);
         });
 
+        agrupadoController.configurar(AgrupadoController.Rol.SUPERTECNICO);
+
         mostrarPanel(pnlPendientes, btnTabPendientes);
 
         com.reparaciones.utils.Poller.programarSiguiente(poller, this::recargar);
@@ -281,6 +286,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             if (toggleMisPendPul.isSelected())        misPulidosTecnicoController.cargar();
             else if (toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
             else                                      misPendientesController.cargar();
+        } else if (pnlAgrupado.isVisible()) {
+            agrupadoController.cargar();
         } else {
             if (toggleHistPul.isSelected()) historialPulidoController.cargar();
             else                            cargarDatos();
@@ -318,6 +325,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         mostrarPanel(pnlHistorial, btnTabHistorial);
     }
 
+    @FXML private void mostrarAgrupado() {
+        mostrarPanel(pnlAgrupado, btnTabAgrupado);
+    }
+
     public void irAInicio() {
         mostrarPanel(pnlPendientes, btnTabPendientes);
     }
@@ -326,14 +337,18 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         // Al salir del historial en modo detalle, resetear a maestro
         if (pnlHistorial.isVisible() && panel != pnlHistorial && modoActual == Modo.DETALLE)
             resetarModo();
+        // Al salir del apartado Agrupado, volver su drill-down a maestro
+        if (pnlAgrupado.isVisible() && panel != pnlAgrupado)
+            agrupadoController.resetarModo();
 
         if (pnlPendientes.isVisible() && panel != pnlPendientes)
             pendientesSuperTecnicoController.resetearCambios();
         pnlHistorial    .setVisible(false); pnlHistorial    .setManaged(false);
         pnlPendientes   .setVisible(false); pnlPendientes   .setManaged(false);
         pnlMisPendientes.setVisible(false); pnlMisPendientes.setManaged(false);
+        pnlAgrupado     .setVisible(false); pnlAgrupado     .setManaged(false);
         panel.setVisible(true); panel.setManaged(true);
-        for (Button b : new Button[]{btnTabHistorial, btnTabPendientes, btnTabMisPendientes}) {
+        for (Button b : new Button[]{btnTabHistorial, btnTabPendientes, btnTabMisPendientes, btnTabAgrupado}) {
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
@@ -344,6 +359,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             else                            cargarDatos();
         } else if (panel == pnlPendientes) {
             pendientesSuperTecnicoController.cargar();
+        } else if (panel == pnlAgrupado) {
+            agrupadoController.cargar();
         } else {
             if (toggleMisPendPul.isSelected())        misPulidosTecnicoController.cargar();
             else if (toggleMisPendGlass.isSelected()) misPendientesGlassController.cargar();
