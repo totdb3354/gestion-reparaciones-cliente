@@ -1623,6 +1623,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+        if (pnlAgrupado.isVisible()) { agrupadoController.exportarCSV(owner); return; }
+
         if (pnlPendientes.isVisible()) {
             // Tabla unificada (reparación + glass + pulido): exporta todo lo visible.
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
@@ -1692,7 +1694,8 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                 "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
         List<List<String>> filas = new ArrayList<>();
         for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
-        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner,
+                toggleHistGlass.isSelected() ? "historial_glass" : "historial_reparaciones", cabeceras, filas);
     }
 
     private List<String> filaReparacion(ReparacionResumen r, DateTimeFormatter fmt) {

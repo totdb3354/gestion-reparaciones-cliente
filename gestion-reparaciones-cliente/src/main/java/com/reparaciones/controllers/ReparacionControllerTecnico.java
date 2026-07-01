@@ -1279,6 +1279,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     public void exportarCSV(Stage owner) {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+        if (pnlAgrupado.isVisible()) { agrupadoController.exportarCSV(owner); return; }
+
         if (pnlMisPendientes.isVisible()) {
             if (togglePendPul.isSelected()) {
                 exportarPulidosPendientes(owner, pulidoTecnicoController.getItemsVisibles(), false);
@@ -1359,7 +1361,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                     r.getIdRepAnterior() != null ? r.getIdRepAnterior() : ""
             ));
         }
-        com.reparaciones.utils.CsvExporter.exportar(owner, "mis_reparaciones", cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner,
+                toggleHistGlass.isSelected() ? "mis_glass" : "mis_reparaciones", cabeceras, filas);
     }
 
     private void exportarPulidosPendientes(Stage owner, List<ReparacionResumen> items, boolean conTecnico) {

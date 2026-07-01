@@ -1119,6 +1119,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+        if (pnlAgrupado.isVisible()) { agrupadoController.exportarCSV(owner); return; }
+
         if (modoActual == Modo.MAESTRO) {
             List<String> cabeceras = List.of(
                     "IMEI", "Modelo", "Técnico", "Primera reparación", "Última reparación",
@@ -1169,7 +1171,8 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
             fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
             filas.add(fila);
         }
-        com.reparaciones.utils.CsvExporter.exportar(owner, "historial_reparaciones", cabeceras, filas);
+        com.reparaciones.utils.CsvExporter.exportar(owner,
+                toggleHistGlass.isSelected() ? "historial_glass" : "historial_reparaciones", cabeceras, filas);
     }
 
     private void mostrarError(Exception e) { Alertas.mostrarError(e.getMessage()); }

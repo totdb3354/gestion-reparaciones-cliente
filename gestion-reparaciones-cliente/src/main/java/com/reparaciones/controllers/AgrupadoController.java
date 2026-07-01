@@ -1206,6 +1206,66 @@ public class AgrupadoController {
         } catch (SQLException e) { mostrarError(e); }
     }
 
+    // ── Exportación CSV ─────────────────────────────────────────────────────
+
+    /** Exporta el contenido visible del apartado (maestro por IMEI o detalle de un IMEI). */
+    public void exportarCSV(javafx.stage.Stage owner) {
+        DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+        if (modoActual == Modo.MAESTRO) {
+            List<String> cab = List.of(
+                    "IMEI", "Modelo", "Primera", "Última",
+                    "Reparaciones", "Glass", "Pulidos", "Inc. abiertas",
+                    "Observación", "Cliente", "Revisión logística");
+            List<List<String>> filas = new ArrayList<>();
+            for (Object o : tablaItems) {
+                if (!(o instanceof GrupoImei g)) continue;
+                String modelo = g.getModelo();
+                filas.add(java.util.Arrays.asList(
+                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        FechaUtils.formatear(g.getFechaMasAntigua(), fmt),
+                        FechaUtils.formatear(g.getFechaMasReciente(), fmt),
+                        String.valueOf(g.getCountRep()),
+                        String.valueOf(g.getCountGlass()),
+                        String.valueOf(g.getCountPul()),
+                        String.valueOf(g.getCountIncAbiertas()),
+                        g.getObservacion() != null ? g.getObservacion() : "",
+                        g.getCliente() != null ? g.getCliente() : "",
+                        (g.isRevisionLogistica() && !g.isTieneAsignaciones()) ? "Sí" : "No"));
+            }
+            com.reparaciones.utils.CsvExporter.exportar(owner, "agrupado_por_imei", cab, filas);
+            return;
+        }
+
+        // DETALLE: recorrido cronológico del IMEI (R + G + P) con columna Tipo
+        List<String> cab = List.of(
+                "Tipo", "ID", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
+                "Componente", "Reutilizado", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+        List<List<String>> filas = new ArrayList<>();
+        for (Object o : tablaItems) {
+            if (!(o instanceof ReparacionResumen r)) continue;
+            TipoTrabajo tipo = TipoTrabajo.desde(r.getIdRep());
+            String idAnt = (tipo == TipoTrabajo.PULIDO || r.getIdRepAnterior() == null) ? "" : r.getIdRepAnterior();
+            filas.add(java.util.Arrays.asList(
+                    tipo.etiqueta(),
+                    r.getIdRep(),
+                    com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()),
+                    r.getNombreTecnico() != null ? r.getNombreTecnico() : "",
+                    FechaUtils.formatear(r.getFechaAsig(), fmtHora),
+                    FechaUtils.formatear(r.getFechaFin(), fmtHora),
+                    r.getTipoComponente() != null ? r.getTipoComponente() : "",
+                    r.isEsReutilizado() ? "Sí" : "No",
+                    r.getObservaciones() != null ? r.getObservaciones() : "",
+                    r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No",
+                    r.isEsResuelto() ? "Sí" : "No",
+                    idAnt));
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner,
+                "agrupado_" + (imeiDetalle != null ? imeiDetalle : "detalle"), cab, filas);
+    }
+
     private void mostrarError(Exception e) {
         if (e instanceof com.reparaciones.utils.ConexionException && com.reparaciones.utils.ConexionEstado.enRefresco()) return;
         Alertas.mostrarError(e.getMessage());
