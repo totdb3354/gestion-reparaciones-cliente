@@ -7,7 +7,6 @@ import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.Componente;
 import com.reparaciones.models.FilaReparacion;
-import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 
 import javafx.application.Platform;
@@ -127,18 +126,33 @@ public class FormularioReparacionController {
 
         lblImei.setText("IMEI: " + imei);
 
-        // Aviso si el mismo IMEI está asignado activamente a otro técnico
+        // Aviso si el mismo IMEI está asignado activamente en cualquier categoría
+        // (reparación/glass/pulido), excluyendo la asignación en edición. Agrupado por
+        // categoría y marcando "(tú)" si es el técnico logueado.
         try {
-            List<ReparacionResumen> otras = reparacionDAO.getAsignacionesPorImei(imei)
-                    .stream()
-                    .filter(a -> !a.getIdRep().equals(idAsignacion))
-                    .collect(Collectors.toList());
+            Integer idTecActual = Sesion.getIdTec();
+            List<com.reparaciones.models.AsignacionActiva> otras =
+                    reparacionDAO.getAsignacionesActivasPorImei(imei).stream()
+                            .filter(a -> !a.getIdRep().equals(idAsignacion))
+                            .collect(Collectors.toList());
             if (!otras.isEmpty()) {
-                String nombres = otras.stream()
-                        .map(ReparacionResumen::getNombreTecnico)
-                        .distinct()
-                        .collect(Collectors.joining(", "));
-                lblConflictoTecnico.setText("⚠ Este IMEI también está asignado a: " + nombres);
+                java.util.Map<String, java.util.List<String>> porCat = new java.util.LinkedHashMap<>();
+                porCat.put("Reparación", new java.util.ArrayList<>());
+                porCat.put("Glass",      new java.util.ArrayList<>());
+                porCat.put("Pulido",     new java.util.ArrayList<>());
+                for (com.reparaciones.models.AsignacionActiva a : otras) {
+                    String cat = a.getIdRep().startsWith("AG") ? "Glass"
+                               : a.getIdRep().startsWith("AP") ? "Pulido"
+                               :                                  "Reparación";
+                    String nombre = a.getNombreTecnico()
+                            + (idTecActual != null && a.getIdTec() == idTecActual ? " (tú)" : "");
+                    porCat.get(cat).add(nombre);
+                }
+                String msg = porCat.entrySet().stream()
+                        .filter(e -> !e.getValue().isEmpty())
+                        .map(e -> e.getKey() + ": " + String.join(", ", e.getValue()))
+                        .collect(Collectors.joining(" · "));
+                lblConflictoTecnico.setText("⚠ Este IMEI también está asignado a — " + msg);
                 filaConflictoTecnico.setVisible(true);
                 filaConflictoTecnico.setManaged(true);
             }
