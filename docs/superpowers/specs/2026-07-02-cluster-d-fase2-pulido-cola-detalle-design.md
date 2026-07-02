@@ -23,10 +23,12 @@ seleccionándola en el detalle de la derecha (master-detail).
 ## Decisiones acordadas
 - **Una sola cola**, sin "Pendiente": las filas nacen listas (como todo verde).
   Sin "Asignar".
-- **Sin sección "por defecto"** arriba (ni técnico ni comentario por defecto).
-- **Sin arrastre:** cada IMEI nace **sin técnico** (como rep/glass) y **sin
-  comentario**; se configura individualmente en el detalle. El cliente se
-  precarga de BD / del mapa por-IMEI (como hoy).
+- **Técnico arriba (selector) que se aplica a los IMEIs escaneados** hasta que
+  se cambie: el IMEI nuevo **hereda el técnico del selector superior** (puede ser
+  null → se marca "(sin técnico)"). **Editable por fila** en el detalle
+  (override, sin afectar al resto ni al selector de arriba). Sin sección de
+  "comentario por defecto" (el comentario nace vacío por IMEI).
+- El cliente se precarga de BD / del mapa por-IMEI (como hoy).
 - **Cliente = autocompletado inline** idéntico a rep/glass (con "— Sin cliente
   —", restaurar-al-blur y el mapa `clienteManual` + sync), **no** el botón +
   `SelectorClienteDialog`.
@@ -46,8 +48,9 @@ Guardado (`btnGuardar`, en `abrirFormularioAsignacion`) recorre `lotePulido`.
 ## Diseño
 
 ### Layout
-- **Arriba:** solo el **escaneo** (`tfScan` + error). Se elimina la sección
-  técnico/comentario por defecto.
+- **Arriba:** selector **"Técnico"** (`cbTecTop`, por defecto para los IMEIs que
+  se escaneen) + **escaneo** (`tfScan` + error). Se elimina la sección
+  "comentario por defecto".
 - **Abajo: `HBox(listaBox, detalleBox)`** (como `cols` de rep/glass):
   - **`listaBox` (izquierda):** la lista de `FilaPulido`, en una caja estilo
     "Asignados/verde". Cada fila = resumen **IMEI** + **"técnico · cliente"**;
@@ -55,7 +58,8 @@ Guardado (`btnGuardar`, en `abrirFormularioAsignacion`) recorre `lotePulido`.
     carga en el detalle. **✕** para quitar.
   - **`detalleBox` (derecha, estilo formBox de rep/glass):**
     - **IMEI en curso** (label mono).
-    - **Técnico:** `ComboBox<Tecnico>` (1 técnico), vacío al nacer la fila.
+    - **Técnico:** `ComboBox<Tecnico>` (1 técnico) — override por fila; el IMEI
+      nuevo hereda el técnico del selector superior.
     - **Cliente:** **autocompletado inline** (TextField + popup con lista
       filtrada), con la fila "— Sin cliente —" (sentinel `-1`), restaurar-al-blur
       y registro en el mapa `clienteManual` + `onClienteCambiado` (sync por-IMEI).
@@ -65,8 +69,9 @@ Guardado (`btnGuardar`, en `abrirFormularioAsignacion`) recorre `lotePulido`.
       (sin "Asignar") y refresca su resumen en la lista.
 
 ### Flujo
-- Escanear IMEI → crea `FilaPulido` **sin técnico, sin comentario** (cliente por
-  precarga/mapa), la añade a la lista y **la auto-selecciona** en el detalle.
+- Escanear IMEI → crea `FilaPulido` con el **técnico del selector de arriba**
+  (puede ser null) y **sin comentario** (cliente por precarga/mapa), la añade a
+  la lista y **la auto-selecciona** en el detalle.
 - Seleccionar otra fila → el detalle muestra sus valores; editar los cambia.
 - Borrar (✕) → quita la fila; si era la seleccionada, limpia/deshabilita el
   detalle.
