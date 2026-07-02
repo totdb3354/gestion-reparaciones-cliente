@@ -67,10 +67,20 @@ public class TelefonoDAO {
      * @throws SQLException si falla la llamada al servidor
      */
     public void insertar(String imei, String modelo, Integer idCli) throws SQLException {
+        insertar(imei, modelo, idCli, false);
+    }
+
+    /**
+     * Alta/actualización de teléfono. Si {@code clienteExplicito} es true, el servidor
+     * fija ID_CLI al valor dado (incluido null → sin cliente); si es false, un idCli
+     * null preserva el cliente actual (COALESCE).
+     */
+    public void insertar(String imei, String modelo, Integer idCli, boolean clienteExplicito) throws SQLException {
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("imei", imei);
         body.put("modelo", modelo != null ? modelo : "");
         body.put("idCli", idCli); // puede ser null
+        body.put("clienteExplicito", clienteExplicito);
         ApiClient.post("/api/telefonos", body);
     }
 
