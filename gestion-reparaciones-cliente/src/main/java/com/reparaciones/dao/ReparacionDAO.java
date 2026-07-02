@@ -2,6 +2,7 @@ package com.reparaciones.dao;
 
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.reparaciones.models.AsignacionActiva;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.PuntoEstadistica;
 import com.reparaciones.models.Reparacion;
@@ -134,6 +135,11 @@ public class ReparacionDAO {
      */
     public List<ReparacionResumen> getAsignacionesPorImei(String imei) throws SQLException {
         return ApiClient.getList("/api/reparaciones/asignaciones/imei/" + imei, ReparacionResumen.class);
+    }
+
+    /** Asignaciones activas del IMEI en las 3 categorías (rep/glass/pulido), para el aviso cruzado. */
+    public List<AsignacionActiva> getAsignacionesActivasPorImei(String imei) throws SQLException {
+        return ApiClient.getList("/api/reparaciones/imei/" + imei + "/asignaciones-activas", AsignacionActiva.class);
     }
 
     /**
