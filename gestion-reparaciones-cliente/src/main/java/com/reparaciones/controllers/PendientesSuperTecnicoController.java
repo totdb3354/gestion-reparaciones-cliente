@@ -1120,6 +1120,9 @@ public class PendientesSuperTecnicoController {
         lblCliente.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         javafx.collections.ObservableList<Cliente> todosClientes =
                 FXCollections.observableArrayList(clientesModal);
+        // Opción "sin cliente" (id -1) arriba del desplegable, como en SelectorClienteDialog.
+        final Cliente SIN_CLIENTE = new Cliente(-1, "— Sin cliente —", true, null);
+        todosClientes.add(0, SIN_CLIENTE);
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
         TextField tfCliente = new TextField();
         tfCliente.setPromptText("Escribe cliente...");
@@ -1161,6 +1164,7 @@ public class PendientesSuperTecnicoController {
         popupCliente.getContent().add(listaClientes);
         Cliente[] clienteSel = { null };
         boolean[] actualizandoCliente = { false };
+        boolean[] sinClienteSel = { false };   // estado comprometido: "sin cliente" explícito
 
         Runnable mostrarPopupCliente = () -> {
             if (clientesFiltrados.isEmpty() || tfCliente.getScene() == null) { popupCliente.hide(); return; }
@@ -1171,9 +1175,11 @@ public class PendientesSuperTecnicoController {
             }
         };
         java.util.function.Consumer<Cliente> confirmarCliente = cli -> {
-            clienteSel[0] = cli;
+            boolean sin = cli.getIdCli() == -1;
+            clienteSel[0] = sin ? null : cli;
+            sinClienteSel[0] = sin;
             actualizandoCliente[0] = true;
-            tfCliente.setText(cli.getNombre());
+            tfCliente.setText(cli.getNombre());   // el nombre del sentinel ya es "— Sin cliente —"
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
             popupCliente.hide();
@@ -1181,8 +1187,6 @@ public class PendientesSuperTecnicoController {
 
         tfCliente.textProperty().addListener((obs, oldText, newText) -> {
             if (actualizandoCliente[0]) return;
-            if (clienteSel[0] != null && clienteSel[0].getNombre().equals(newText)) return;
-            clienteSel[0] = null;
             String lower = newText == null ? "" : newText.trim().toLowerCase();
             clientesFiltrados.setPredicate(c -> lower.isEmpty()
                     || c.getNombre().toLowerCase().contains(lower));
@@ -1195,21 +1199,17 @@ public class PendientesSuperTecnicoController {
             if (!focused) javafx.application.Platform.runLater(() -> {
                 popupCliente.hide();
                 String texto = tfCliente.getText() == null ? "" : tfCliente.getText().trim();
-                if (clienteSel[0] != null && clienteSel[0].getNombre().equals(texto)) {
-                    clientesFiltrados.setPredicate(c -> true);
-                    return;
-                }
+                // Coincidencia exacta (cliente real o el sentinel "— Sin cliente —") → confirmar.
                 Cliente exacto = todosClientes.stream()
                         .filter(c -> c.getNombre().equalsIgnoreCase(texto))
                         .findFirst().orElse(null);
-                if (exacto != null) {
-                    confirmarCliente.accept(exacto);
-                } else {
-                    actualizandoCliente[0] = true;
-                    tfCliente.setText(clienteSel[0] != null ? clienteSel[0].getNombre() : "");
-                    clientesFiltrados.setPredicate(c -> true);
-                    actualizandoCliente[0] = false;
-                }
+                if (exacto != null) { confirmarCliente.accept(exacto); return; }
+                // Texto a medias / borrado / no coincide → restaurar el estado comprometido.
+                actualizandoCliente[0] = true;
+                tfCliente.setText(clienteSel[0] != null ? clienteSel[0].getNombre()
+                        : (sinClienteSel[0] ? "— Sin cliente —" : ""));
+                clientesFiltrados.setPredicate(c -> true);
+                actualizandoCliente[0] = false;
             });
         });
         listaClientes.setOnMouseClicked(e -> {
@@ -1449,8 +1449,10 @@ public class PendientesSuperTecnicoController {
             // Cliente: por IMEI, NO se arrastra (a diferencia de los técnicos). Parte de lo que
             // tenga la entrada; si es nueva, vacío (y la precarga de BD lo rellenará si el IMEI ya tenía uno).
             clienteSel[0] = e.cliente;
+            sinClienteSel[0] = e.sinCliente;
             actualizandoCliente[0] = true;
-            tfCliente.setText(e.cliente != null ? e.cliente.getNombre() : "");
+            tfCliente.setText(e.cliente != null ? e.cliente.getNombre()
+                    : (e.sinCliente ? "— Sin cliente —" : ""));
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
             recomputeOcupados[0].run();   // greying per-categoría según e.tipo
@@ -1478,6 +1480,7 @@ public class PendientesSuperTecnicoController {
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
             e.cliente = clienteSel[0];
+            e.sinCliente = sinClienteSel[0];
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
             defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
