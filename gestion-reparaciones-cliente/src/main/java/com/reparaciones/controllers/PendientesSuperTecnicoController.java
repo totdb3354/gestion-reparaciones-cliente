@@ -1260,28 +1260,13 @@ public class PendientesSuperTecnicoController {
         Label lblImeiCurso = new Label("—");
         lblImeiCurso.setStyle("-fx-font-family: monospace; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
-        // Tipo de la entrada en curso (editable por fila); el handler se enlaza más abajo.
-        Label lblTipoEnt = new Label("Tipo");
-        lblTipoEnt.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-        ToggleButton tbEntRep   = new ToggleButton("Reparación");
-        ToggleButton tbEntGlass = new ToggleButton("Glass");
-        tbEntRep.getStyleClass().add("toggle-pill-left");
-        tbEntGlass.getStyleClass().add("toggle-pill-right");
-        tbEntRep.setSelected(true);
-        javafx.scene.control.ToggleGroup tgEnt = new javafx.scene.control.ToggleGroup();
-        tbEntRep.setToggleGroup(tgEnt);
-        tbEntGlass.setToggleGroup(tgEnt);
-        boolean[] actualizandoTipoEnt = { false };
-        HBox tipoEntradaBox = new HBox(0, tbEntRep, tbEntGlass);
-        tipoEntradaBox.setAlignment(Pos.CENTER_LEFT);
-
         Button btnAsignar = new Button("Asignar →");
         btnAsignar.getStyleClass().add("btn-primary");
         btnAsignar.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnAsignar, javafx.scene.layout.Priority.ALWAYS);
         HBox accionesForm = new HBox(10, btnAsignar);
 
-        VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblTipoEnt, tipoEntradaBox, lblModelo, tfModelo,
+        VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
                 lblComentario, tfComentario, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
@@ -1453,10 +1438,6 @@ public class PendientesSuperTecnicoController {
             tfCliente.setText(e.cliente != null ? e.cliente.getNombre() : "");
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
-            // Sincroniza el toggle de tipo de la entrada en curso sin disparar su handler
-            actualizandoTipoEnt[0] = true;
-            (e.tipo == TipoTrabajo.GLASS ? tbEntGlass : tbEntRep).setSelected(true);
-            actualizandoTipoEnt[0] = false;
             recomputeOcupados[0].run();   // greying per-categoría según e.tipo
             btnAsignar.setText(e.asignada ? "Guardar cambios" : "Asignar →");
             if (!e.asignada) lanzarLookup[0].run();
@@ -1599,15 +1580,6 @@ public class PendientesSuperTecnicoController {
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
-        tgEnt.selectedToggleProperty().addListener((obs, o, n) -> {
-            if (actualizandoTipoEnt[0]) return;
-            if (n == null) { (o == null ? tbEntRep : (ToggleButton) o).setSelected(true); return; }   // no deselección
-            if (actual[0] == null) return;
-            actual[0].tipo = (n == tbEntGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
-            recomputeOcupados[0].run();   // recalcula técnicos ocupados para la nueva categoría
-            renderPila[0].run();          // actualiza el badge de la fila
-            validarForm.run();
-        });
         btnAsignar.setOnAction(ev -> asignarActual.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
