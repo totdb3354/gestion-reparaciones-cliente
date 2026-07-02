@@ -107,6 +107,7 @@ public class PendientesSuperTecnicoController {
         String modeloCode;                       // código interno del modelo, o null si falta
         final List<Tecnico> tecnicos = new ArrayList<>();
         Cliente cliente;                         // cliente del IMEI (por entrada), o null
+        boolean sinCliente;                      // true = el usuario eligió explícitamente "— Sin cliente —"
         String comentario = "";
         boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
@@ -124,6 +125,7 @@ public class PendientesSuperTecnicoController {
         Tecnico tecnico;
         String  comentario;
         com.reparaciones.models.Cliente cliente;   // por IMEI, no se arrastra (como rep/glass)
+        boolean sinCliente;                        // true = "— Sin cliente —" explícito
         FilaPulido(String imei, Tecnico tecnico, String comentario) {
             this.imei = imei; this.tecnico = tecnico; this.comentario = comentario;
         }
@@ -907,9 +909,11 @@ public class PendientesSuperTecnicoController {
                 java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(clientesActivos, idActual);
                 if (sel.isEmpty()) return;
                 Integer idCli = sel.get() == -1 ? null : sel.get();
+                fila.sinCliente = (sel.get() == -1);   // -1 → sin cliente explícito
                 fila.cliente = idCli == null ? null
                         : clientesActivos.stream().filter(c -> c.getIdCli() == idCli).findFirst().orElse(null);
-                btnCli.setText(fila.cliente != null ? fila.cliente.getNombre() : "Cliente");
+                btnCli.setText(fila.sinCliente ? "— Sin cliente —"
+                        : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
             });
             TextField tfRow = new TextField(fila.comentario);
             tfRow.setPromptText("Comentario...");
@@ -937,7 +941,7 @@ public class PendientesSuperTecnicoController {
                 try { idCli = telefonoDAO.getClienteId(imei); } catch (Exception ignore) {}
                 final Integer idCliRes = idCli;
                 javafx.application.Platform.runLater(() -> {
-                    if (idCliRes != null && fila.cliente == null) {
+                    if (idCliRes != null && fila.cliente == null && !fila.sinCliente) {
                         com.reparaciones.models.Cliente existente = clientesTodos.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
                         if (existente != null) { fila.cliente = existente; btnCli.setText(existente.getNombre()); }
@@ -1391,7 +1395,7 @@ public class PendientesSuperTecnicoController {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
                     // Precargar el cliente que el IMEI ya tuviera en BD (prevalece sobre el arrastre)
-                    if (idCliRes != null && e.cliente == null) {
+                    if (idCliRes != null && e.cliente == null && !e.sinCliente) {
                         Cliente existente = todosClientes.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
                         if (existente != null) {
@@ -1636,7 +1640,7 @@ public class PendientesSuperTecnicoController {
                     if (!e.asignada) continue;
                     String categoria = (e.tipo == TipoTrabajo.GLASS) ? "G" : "R";
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
-                    telefonoDAO.insertar(e.imei, e.modeloCode, idCli);
+                    telefonoDAO.insertar(e.imei, e.modeloCode, idCli, e.sinCliente);
                     String com = e.comentario.isEmpty() ? null : e.comentario;
                     boolean urgente = false;   // el urgente ya no se automatiza al asignar (lo hace el job por vencimiento)
                     for (Tecnico t : e.tecnicos) {
@@ -1656,7 +1660,7 @@ public class PendientesSuperTecnicoController {
                         conflictos.add("• " + f.imei + " → " + f.tecnico.getNombre() + " (ya asignado · Pulido)");
                         continue;
                     }
-                    telefonoDAO.insertar(f.imei, null, f.cliente != null ? f.cliente.getIdCli() : null);
+                    telefonoDAO.insertar(f.imei, null, f.cliente != null ? f.cliente.getIdCli() : null, f.sinCliente);
                     pulidoDAO.insertarAsignacionPulido(f.imei, f.tecnico.getIdTec(),
                             (f.comentario == null || f.comentario.isEmpty()) ? null : f.comentario);
                 }
