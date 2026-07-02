@@ -839,6 +839,7 @@ public class PendientesSuperTecnicoController {
                                      java.util.function.Consumer<FilaPulido> onClienteCambiado,
                                      List<Runnable> refrescadoresCliente,
                                      java.util.function.Consumer<FilaPulido> sembrarCliente) {
+        // ── Cabecera: técnico/comentario por defecto + escaneo ──────────────
         Label lblTec = new Label("Técnico por defecto");
         lblTec.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<Tecnico> cbTec = new ComboBox<>();
@@ -873,7 +874,7 @@ public class PendientesSuperTecnicoController {
         VBox listaItems = new VBox(0);
         listaItems.setStyle("-fx-background-color: white;");
         ScrollPane scroll = new ScrollPane(listaItems);
-        scroll.setFitToWidth(true); scroll.setMaxHeight(260);
+        scroll.setFitToWidth(true); scroll.setMaxHeight(300); scroll.setPrefWidth(300); scroll.setMinWidth(280);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #C2C8D0;"
@@ -881,75 +882,145 @@ public class PendientesSuperTecnicoController {
 
         Runnable actualizarTitulo = () -> {
             int n = lote.size();
-            lblTitulo.setText(n == 0 ? "Nada añadido aún" : (n + (n == 1 ? " en pulido" : " en pulido")));
+            lblTitulo.setText(n == 0 ? "Nada añadido aún" : (n + " en pulido"));
             lblTitulo.setStyle("-fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: " + (n == 0 ? "#586376" : "#2E7D32") + ";");
         };
-        actualizarTitulo.run();
 
-        final List<com.reparaciones.models.Cliente> clientesActivos = new ArrayList<>();   // para el selector
-        final List<com.reparaciones.models.Cliente> clientesTodos   = new ArrayList<>();   // para precargar (incluye inactivos)
+        final List<com.reparaciones.models.Cliente> clientesActivos = new ArrayList<>();
+        final List<com.reparaciones.models.Cliente> clientesTodos   = new ArrayList<>();
         try {
             clientesActivos.addAll(clienteDAO.getActivos());
             clientesTodos.addAll(clienteDAO.getAll());
         } catch (SQLException ex) { /* no crítico: el pane sigue funcionando */ }
 
+        // ── Estado de selección + orquestación ──────────────────────────────
+        FilaPulido[] seleccionada = { null };
+        boolean[] cargando = { false };
+        Runnable[] render = new Runnable[1];
+
+        // ── Detalle (derecha): edita la fila seleccionada, en vivo ───────────
+        Label lblImeiDetCap = new Label("IMEI en curso");
+        lblImeiDetCap.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        Label lblImeiDet = new Label("—");
+        lblImeiDet.setStyle("-fx-font-family: monospace; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label lblTecDet = new Label("Técnico");
+        lblTecDet.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        ComboBox<Tecnico> cbTecDet = new ComboBox<>();
+        cbTecDet.setMaxWidth(Double.MAX_VALUE);
+        cbTecDet.setVisibleRowCount(8);
+        cbTecDet.getItems().addAll(tecnicosModal);
+        cbTecDet.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+            @Override public Tecnico fromString(String s) { return null; }
+        });
+        Label lblCliDet = new Label("Cliente");
+        lblCliDet.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        Button btnCliDet = new Button("Cliente");
+        btnCliDet.setMaxWidth(Double.MAX_VALUE);
+        btnCliDet.setStyle("-fx-font-size: 12px; -fx-background-color: white; -fx-border-color: #C2C8D0;"
+                + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6 10 6 10; -fx-cursor: hand;");
+        Label lblComDet = new Label("Comentario");
+        lblComDet.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
+        TextArea tfComDet = new TextArea();
+        tfComDet.setWrapText(true); tfComDet.setPrefRowCount(2);
+        tfComDet.setPromptText("Instrucciones para el técnico...");
+        tfComDet.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
+                + " -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        VBox detalleBox = new VBox(8, lblImeiDetCap, lblImeiDet, lblTecDet, cbTecDet, lblCliDet, btnCliDet, lblComDet, tfComDet);
+        detalleBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
+        HBox.setHgrow(detalleBox, javafx.scene.layout.Priority.ALWAYS);
+        detalleBox.setDisable(true);
+
+        java.util.function.Consumer<FilaPulido> cargarDetalle = fila -> {
+            seleccionada[0] = fila;
+            cargando[0] = true;
+            detalleBox.setDisable(fila == null);
+            lblImeiDet.setText(fila == null ? "—" : fila.imei);
+            cbTecDet.setValue(fila == null ? null : fila.tecnico);
+            btnCliDet.setText(fila == null ? "Cliente"
+                    : (fila.sinCliente ? "— Sin cliente —" : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente")));
+            tfComDet.setText(fila == null || fila.comentario == null ? "" : fila.comentario);
+            cargando[0] = false;
+            if (render[0] != null) render[0].run();
+        };
+
+        cbTecDet.valueProperty().addListener((o, a, b) -> {
+            if (cargando[0] || seleccionada[0] == null) return;
+            seleccionada[0].tecnico = b;
+            render[0].run();
+        });
+        tfComDet.textProperty().addListener((o, a, b) -> {
+            if (cargando[0] || seleccionada[0] == null) return;
+            seleccionada[0].comentario = b.trim();
+        });
+        btnCliDet.setOnAction(ev -> {
+            if (seleccionada[0] == null) return;
+            FilaPulido fila = seleccionada[0];
+            Integer idActual = fila.cliente != null ? fila.cliente.getIdCli() : null;
+            java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(clientesActivos, idActual);
+            if (sel.isEmpty()) return;
+            Integer idCli = sel.get() == -1 ? null : sel.get();
+            fila.sinCliente = (sel.get() == -1);
+            fila.cliente = idCli == null ? null
+                    : clientesActivos.stream().filter(c -> c.getIdCli() == idCli).findFirst().orElse(null);
+            btnCliDet.setText(fila.sinCliente ? "— Sin cliente —"
+                    : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
+            onClienteCambiado.accept(fila);
+            render[0].run();
+        });
+
+        // ── Lista (izquierda): resumen por fila, seleccionable ──────────────
+        render[0] = () -> {
+            listaItems.getChildren().clear();
+            for (FilaPulido fila : lote) {
+                Label lblImei = new Label(fila.imei);
+                lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+                String tec = fila.tecnico != null ? fila.tecnico.getNombre() : "(sin técnico)";
+                String cli = fila.sinCliente ? "sin cliente" : (fila.cliente != null ? fila.cliente.getNombre() : "—");
+                Label lblResumen = new Label(tec + " · " + cli);
+                lblResumen.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376;");
+                VBox info = new VBox(1, lblImei, lblResumen);
+                HBox.setHgrow(info, javafx.scene.layout.Priority.ALWAYS);
+                Label btnX = new Label("✕");
+                String xBase = "-fx-text-fill: #c2b3b3; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
+                btnX.setStyle(xBase);
+                btnX.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                btnX.setOnMouseEntered(ev -> btnX.setStyle("-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
+                btnX.setOnMouseExited(ev -> btnX.setStyle(xBase));
+                btnX.setOnMouseClicked(ev -> {
+                    lote.remove(fila);
+                    if (seleccionada[0] == fila) cargarDetalle.accept(null);
+                    actualizarTitulo.run(); render[0].run(); onChange.run();
+                });
+                HBox row = new HBox(8, info, btnX);
+                row.setAlignment(Pos.CENTER_LEFT);
+                boolean sel = (fila == seleccionada[0]);
+                row.setStyle("-fx-padding: 8; -fx-cursor: hand; -fx-border-color: transparent transparent #EEF1F5 transparent;"
+                        + " -fx-border-width: 0 0 1 0;" + (sel ? " -fx-background-color: #E8EEF7;" : ""));
+                row.setOnMouseClicked(ev -> { if (ev.getTarget() != btnX) cargarDetalle.accept(fila); });
+                listaItems.getChildren().add(row);
+            }
+            actualizarTitulo.run();
+        };
+
+        // Refresco global de cliente (lo llama propagarCliente al sincronizar por IMEI)
+        refrescadoresCliente.add(() -> {
+            if (seleccionada[0] != null) {
+                FilaPulido f = seleccionada[0];
+                btnCliDet.setText(f.sinCliente ? "— Sin cliente —" : (f.cliente != null ? f.cliente.getNombre() : "Cliente"));
+            }
+            render[0].run();
+        });
+
+        // ── Alta de fila ────────────────────────────────────────────────────
         java.util.function.Consumer<String> agregar = imei -> {
             FilaPulido fila = new FilaPulido(imei, cbTec.getValue(), taCom.getText().trim());
             lote.add(fila);
             sembrarCliente.accept(fila);   // hereda el cliente ya decidido en el modal para este IMEI
-            Label lblImei = new Label(imei);
-            lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-            lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-            ComboBox<Tecnico> cbRow = new ComboBox<>();
-            cbRow.getItems().addAll(tecnicosModal);
-            cbRow.setValue(fila.tecnico);
-            cbRow.setPrefWidth(150);
-            cbRow.setStyle("-fx-font-size: 11px;");
-            cbRow.setConverter(new javafx.util.StringConverter<>() {
-                @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
-                @Override public Tecnico fromString(String s) { return null; }
-            });
-            cbRow.valueProperty().addListener((o2, a, b) -> fila.tecnico = b);
-            Button btnCli = new Button(fila.sinCliente ? "— Sin cliente —"
-                    : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
-            btnCli.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-            btnCli.setStyle("-fx-font-size: 11px; -fx-background-color: white; -fx-border-color: #C2C8D0;"
-                    + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 8 4 8; -fx-cursor: hand;");
-            btnCli.setOnAction(ev -> {
-                Integer idActual = fila.cliente != null ? fila.cliente.getIdCli() : null;
-                java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(clientesActivos, idActual);
-                if (sel.isEmpty()) return;
-                Integer idCli = sel.get() == -1 ? null : sel.get();
-                fila.sinCliente = (sel.get() == -1);   // -1 → sin cliente explícito
-                fila.cliente = idCli == null ? null
-                        : clientesActivos.stream().filter(c -> c.getIdCli() == idCli).findFirst().orElse(null);
-                btnCli.setText(fila.sinCliente ? "— Sin cliente —"
-                        : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
-                onClienteCambiado.accept(fila);
-            });
-            refrescadoresCliente.add(() -> btnCli.setText(fila.sinCliente ? "— Sin cliente —"
-                    : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente")));
-            TextField tfRow = new TextField(fila.comentario);
-            tfRow.setPromptText("Comentario...");
-            HBox.setHgrow(tfRow, javafx.scene.layout.Priority.ALWAYS);
-            tfRow.setStyle("-fx-font-size: 11px; -fx-background-color: white; -fx-border-color: #E1E5EC;"
-                    + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 5;");
-            tfRow.textProperty().addListener((o2, a, b) -> fila.comentario = b.trim());
-            Label btnX = new Label("✕");
-            String xBase = "-fx-text-fill: #c2b3b3; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;";
-            btnX.setStyle(xBase);
-            btnX.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-            btnX.setOnMouseEntered(ev -> btnX.setStyle("-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
-            btnX.setOnMouseExited(ev -> btnX.setStyle(xBase));
-            HBox row = new HBox(8, lblImei, cbRow, btnCli, tfRow, btnX);
-            row.setAlignment(Pos.CENTER_LEFT);
-            row.setStyle("-fx-padding: 6 8 6 8; -fx-border-color: transparent transparent #EEF1F5 transparent; -fx-border-width: 0 0 1 0;");
-            btnX.setOnMouseClicked(ev -> { lote.remove(fila); listaItems.getChildren().remove(row); actualizarTitulo.run(); onChange.run(); });
-            listaItems.getChildren().add(row);
-            actualizarTitulo.run();
+            render[0].run();
             onChange.run();
-
-            // Precargar el cliente que el IMEI ya tuviera en BD (paridad con rep/glass), en segundo plano.
+            cargarDetalle.accept(fila);    // auto-selecciona la recién escaneada
+            // Precargar el cliente que el IMEI ya tuviera en BD (si no hay decisión en el modal), en 2º plano.
             new Thread(() -> {
                 Integer idCli = null;
                 try { idCli = telefonoDAO.getClienteId(imei); } catch (Exception ignore) {}
@@ -958,7 +1029,11 @@ public class PendientesSuperTecnicoController {
                     if (idCliRes != null && fila.cliente == null && !fila.sinCliente) {
                         com.reparaciones.models.Cliente existente = clientesTodos.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
-                        if (existente != null) { fila.cliente = existente; btnCli.setText(existente.getNombre()); }
+                        if (existente != null) {
+                            fila.cliente = existente;
+                            if (seleccionada[0] == fila) btnCliDet.setText(existente.getNombre());
+                            render[0].run();
+                        }
                     }
                 });
             }, "pulido-precarga-cliente").start();
@@ -997,7 +1072,11 @@ public class PendientesSuperTecnicoController {
         });
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentar.run(); });
 
-        return new VBox(8, lblTec, cbTec, lblCom, taCom, new Separator(), lblScan, tfScan, lblErr, new Separator(), lblTitulo, scroll);
+        render[0].run();
+
+        HBox cols = new HBox(18, scroll, detalleBox);
+        return new VBox(8, lblTec, cbTec, lblCom, taCom, new Separator(), lblScan, tfScan, lblErr,
+                new Separator(), lblTitulo, cols);
     }
 
     @FXML
