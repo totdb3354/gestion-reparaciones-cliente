@@ -131,6 +131,12 @@ public class PendientesSuperTecnicoController {
         }
     }
 
+    /** Propaga cliente/sin-cliente de un IMEI a las colas del modal. */
+    @FunctionalInterface
+    private interface TriConsumerCliente {
+        void accept(String imei, com.reparaciones.models.Cliente cliente, boolean sinCliente);
+    }
+
     /** Deriva el tipo de trabajo del prefijo del {@code ID_REP}. Delega en {@link TipoTrabajo#desde}. */
     static TipoTrabajo tipoDe(String idRep) {
         return TipoTrabajo.desde(idRep);
@@ -829,7 +835,9 @@ public class PendientesSuperTecnicoController {
      * escaneo con pegado de lote, lista editable por fila). Rellena {@code lote};
      * {@code onChange} refresca la barra de guardar del modal unificado.
      */
-    private VBox construirPulidoPane(List<FilaPulido> lote, List<Tecnico> tecnicosModal, Runnable onChange) {
+    private VBox construirPulidoPane(List<FilaPulido> lote, List<Tecnico> tecnicosModal, Runnable onChange,
+                                     java.util.function.Consumer<FilaPulido> onClienteCambiado,
+                                     List<Runnable> refrescadoresCliente) {
         Label lblTec = new Label("Técnico por defecto");
         lblTec.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<Tecnico> cbTec = new ComboBox<>();
@@ -914,7 +922,10 @@ public class PendientesSuperTecnicoController {
                         : clientesActivos.stream().filter(c -> c.getIdCli() == idCli).findFirst().orElse(null);
                 btnCli.setText(fila.sinCliente ? "— Sin cliente —"
                         : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
+                onClienteCambiado.accept(fila);
             });
+            refrescadoresCliente.add(() -> btnCli.setText(fila.sinCliente ? "— Sin cliente —"
+                    : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente")));
             TextField tfRow = new TextField(fila.comentario);
             tfRow.setPromptText("Comentario...");
             HBox.setHgrow(tfRow, javafx.scene.layout.Priority.ALWAYS);
@@ -1469,6 +1480,16 @@ public class PendientesSuperTecnicoController {
             else { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
         };
 
+        List<Runnable> refrescadoresClientePulido = new ArrayList<>();
+        // Propaga el cliente (o "sin cliente") a todas las entradas/filas del mismo IMEI en las 3 colas.
+        TriConsumerCliente propagarCliente = (imei, cliente, sin) -> {
+            for (EntradaAsignacion x : pilaRep)   if (x.imei.equals(imei)) { x.cliente = cliente; x.sinCliente = sin; }
+            for (EntradaAsignacion x : pilaGlass) if (x.imei.equals(imei)) { x.cliente = cliente; x.sinCliente = sin; }
+            for (FilaPulido f : lotePulido)       if (f.imei.equals(imei))  { f.cliente = cliente; f.sinCliente = sin; }
+            refrescadoresClientePulido.forEach(Runnable::run);
+            renderPila[0].run();
+        };
+
         Runnable asignarActual = () -> {
             EntradaAsignacion e = actual[0];
             if (e == null || modeloSel[0] == null) return;
@@ -1481,6 +1502,7 @@ public class PendientesSuperTecnicoController {
             e.comentario = tfComentario.getText().trim();
             e.cliente = clienteSel[0];
             e.sinCliente = sinClienteSel[0];
+            propagarCliente.accept(e.imei, e.cliente, e.sinCliente);
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
             defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
@@ -1604,7 +1626,9 @@ public class PendientesSuperTecnicoController {
         HBox cols = new HBox(18, pilaBox, formBox);
         VBox richArea = new VBox(12, lblScan, tfScan, lblScanErr, new Separator(), cols);   // reparación + glass
         VBox pulidoPane = construirPulidoPane(lotePulido, tecnicosModal,
-                () -> { if (renderPila[0] != null) renderPila[0].run(); });
+                () -> { if (renderPila[0] != null) renderPila[0].run(); },
+                fila -> propagarCliente.accept(fila.imei, fila.cliente, fila.sinCliente),
+                refrescadoresClientePulido);
         pulidoPane.setVisible(false); pulidoPane.setManaged(false);
         javafx.scene.layout.StackPane centro = new javafx.scene.layout.StackPane(richArea, pulidoPane);
         javafx.scene.layout.StackPane.setAlignment(richArea, Pos.TOP_LEFT);
