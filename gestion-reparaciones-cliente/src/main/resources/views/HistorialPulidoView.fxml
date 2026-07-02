@@ -34,6 +34,8 @@
             <TableColumn fx:id="cFechaIni"   text="Fecha asignación" prefWidth="130"/>
             <TableColumn fx:id="cFechaFin"   text="Fecha fin"        prefWidth="130"/>
             <TableColumn fx:id="cComentario" text="Comentario"       prefWidth="160"/>
+            <TableColumn fx:id="cCliente"    text="Cliente"          prefWidth="110"/>
+            <TableColumn fx:id="cAsignadoPor" text="Asignado por"    prefWidth="120"/>
         </columns>
         <placeholder><Label text="No hay pulidos completados"/></placeholder>
     </TableView>

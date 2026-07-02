@@ -118,11 +118,12 @@ public class PendientesSuperTecnicoController {
         boolean tieneModelo() { return modeloCode != null && !modeloCode.isEmpty(); }
     }
 
-    /** Una entrada del lote de pulido: IMEI + técnico + comentario (editable por fila). */
+    /** Una entrada del lote de pulido: IMEI + técnico + comentario + cliente (editable por fila). */
     private static final class FilaPulido {
         final String imei;
         Tecnico tecnico;
         String  comentario;
+        com.reparaciones.models.Cliente cliente;   // por IMEI, no se arrastra (como rep/glass)
         FilaPulido(String imei, Tecnico tecnico, String comentario) {
             this.imei = imei; this.tecnico = tecnico; this.comentario = comentario;
         }
@@ -388,7 +389,7 @@ public class PendientesSuperTecnicoController {
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
                     toggleUrgente.setVisible(!soloLectura && !esPulido);
-                    editarCliente.setVisible(!soloLectura && !esPulido);
+                    editarCliente.setVisible(!soloLectura);   // cliente aplica a cualquier tipo, pulido incluido
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
@@ -874,6 +875,13 @@ public class PendientesSuperTecnicoController {
         };
         actualizarTitulo.run();
 
+        final List<com.reparaciones.models.Cliente> clientesActivos = new ArrayList<>();   // para el selector
+        final List<com.reparaciones.models.Cliente> clientesTodos   = new ArrayList<>();   // para precargar (incluye inactivos)
+        try {
+            clientesActivos.addAll(clienteDAO.getActivos());
+            clientesTodos.addAll(clienteDAO.getAll());
+        } catch (SQLException ex) { /* no crítico: el pane sigue funcionando */ }
+
         java.util.function.Consumer<String> agregar = imei -> {
             FilaPulido fila = new FilaPulido(imei, cbTec.getValue(), taCom.getText().trim());
             lote.add(fila);
@@ -890,6 +898,19 @@ public class PendientesSuperTecnicoController {
                 @Override public Tecnico fromString(String s) { return null; }
             });
             cbRow.valueProperty().addListener((o2, a, b) -> fila.tecnico = b);
+            Button btnCli = new Button(fila.cliente != null ? fila.cliente.getNombre() : "Cliente");
+            btnCli.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+            btnCli.setStyle("-fx-font-size: 11px; -fx-background-color: white; -fx-border-color: #C2C8D0;"
+                    + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 8 4 8; -fx-cursor: hand;");
+            btnCli.setOnAction(ev -> {
+                Integer idActual = fila.cliente != null ? fila.cliente.getIdCli() : null;
+                java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(clientesActivos, idActual);
+                if (sel.isEmpty()) return;
+                Integer idCli = sel.get() == -1 ? null : sel.get();
+                fila.cliente = idCli == null ? null
+                        : clientesActivos.stream().filter(c -> c.getIdCli() == idCli).findFirst().orElse(null);
+                btnCli.setText(fila.cliente != null ? fila.cliente.getNombre() : "Cliente");
+            });
             TextField tfRow = new TextField(fila.comentario);
             tfRow.setPromptText("Comentario...");
             HBox.setHgrow(tfRow, javafx.scene.layout.Priority.ALWAYS);
@@ -902,13 +923,27 @@ public class PendientesSuperTecnicoController {
             btnX.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
             btnX.setOnMouseEntered(ev -> btnX.setStyle("-fx-text-fill: #C0392B; -fx-font-size: 12px; -fx-cursor: hand; -fx-padding: 0 4 0 4;"));
             btnX.setOnMouseExited(ev -> btnX.setStyle(xBase));
-            HBox row = new HBox(8, lblImei, cbRow, tfRow, btnX);
+            HBox row = new HBox(8, lblImei, cbRow, btnCli, tfRow, btnX);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setStyle("-fx-padding: 6 8 6 8; -fx-border-color: transparent transparent #EEF1F5 transparent; -fx-border-width: 0 0 1 0;");
             btnX.setOnMouseClicked(ev -> { lote.remove(fila); listaItems.getChildren().remove(row); actualizarTitulo.run(); onChange.run(); });
             listaItems.getChildren().add(row);
             actualizarTitulo.run();
             onChange.run();
+
+            // Precargar el cliente que el IMEI ya tuviera en BD (paridad con rep/glass), en segundo plano.
+            new Thread(() -> {
+                Integer idCli = null;
+                try { idCli = telefonoDAO.getClienteId(imei); } catch (Exception ignore) {}
+                final Integer idCliRes = idCli;
+                javafx.application.Platform.runLater(() -> {
+                    if (idCliRes != null && fila.cliente == null) {
+                        com.reparaciones.models.Cliente existente = clientesTodos.stream()
+                                .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
+                        if (existente != null) { fila.cliente = existente; btnCli.setText(existente.getNombre()); }
+                    }
+                });
+            }, "pulido-precarga-cliente").start();
         };
 
         Runnable intentar = () -> {
@@ -1634,7 +1669,7 @@ public class PendientesSuperTecnicoController {
                         conflictos.add("• " + f.imei + " → " + f.tecnico.getNombre() + " (ya asignado · Pulido)");
                         continue;
                     }
-                    telefonoDAO.insertar(f.imei);
+                    telefonoDAO.insertar(f.imei, null, f.cliente != null ? f.cliente.getIdCli() : null);
                     pulidoDAO.insertarAsignacionPulido(f.imei, f.tecnico.getIdTec(),
                             (f.comentario == null || f.comentario.isEmpty()) ? null : f.comentario);
                 }

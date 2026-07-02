@@ -26,6 +26,8 @@ public class PulidoTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String>  cModelo;
     @FXML private TableColumn<ReparacionResumen, String>  cFecha;
     @FXML private TableColumn<ReparacionResumen, String>  cComentario;
+    @FXML private TableColumn<ReparacionResumen, String>  cCliente;
+    @FXML private TableColumn<ReparacionResumen, String>  cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>    cBorrar;
     @FXML private TextField filtroImei;
     @FXML private Button    btnCompletarSeleccionados;
@@ -33,6 +35,8 @@ public class PulidoTecnicoController {
     @FXML private Label     lblContador;
 
     private final PulidoDAO pulidoDAO = new PulidoDAO();
+    private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
+    private final com.reparaciones.dao.ClienteDAO  clienteDAO  = new com.reparaciones.dao.ClienteDAO();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -78,6 +82,10 @@ public class PulidoTecnicoController {
             FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+        cCliente.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getCliente() != null ? d.getValue().getCliente() : ""));
+        cAsignadoPor.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getNombreTecnicoAsigna() != null ? d.getValue().getNombreTecnicoAsigna() : "—"));
 
         // Borrar asignación de pulido: solo SuperTécnico (para el Técnico normal la columna se oculta).
         if (Sesion.esSuperTecnico()) {
@@ -121,6 +129,38 @@ public class PulidoTecnicoController {
         tablaPulidos.setRowFactory(tv -> new TableRow<>() {
             {
                 selectedProperty().addListener((obs, o, sel) -> actualizarEstilo());
+
+                ContextMenu menu = new ContextMenu();
+                TableColumn<?, ?>[] colRightClick = {null};
+                MenuItem copiar = new MenuItem("📋  Copiar celda");
+                copiar.setOnAction(e -> {
+                    if (getItem() == null || colRightClick[0] == null) return;
+                    String texto = textoDeCelda(getItem(), colRightClick[0]);
+                    if (texto == null || texto.isEmpty()) return;
+                    javafx.scene.input.ClipboardContent cc = new javafx.scene.input.ClipboardContent();
+                    cc.putString(texto);
+                    javafx.scene.input.Clipboard.getSystemClipboard().setContent(cc);
+                });
+                // Edición solo para SuperTécnico (como el borrado; el técnico normal solo copia).
+                if (Sesion.esSuperTecnico()) {
+                    MenuItem edCom = new MenuItem("Editar comentario");
+                    edCom.setOnAction(e -> { if (getItem() != null) editarComentario(getItem()); });
+                    MenuItem edMod = new MenuItem("Editar modelo");
+                    edMod.setOnAction(e -> { if (getItem() != null) editarModelo(getItem()); });
+                    MenuItem edCli = new MenuItem("Editar cliente");
+                    edCli.setOnAction(e -> { if (getItem() != null) editarCliente(getItem()); });
+                    menu.getItems().addAll(edCom, edMod, edCli, new SeparatorMenuItem(), copiar);
+                } else {
+                    menu.getItems().add(copiar);
+                }
+                setContextMenu(menu);
+                setOnContextMenuRequested(e -> {
+                    double x = e.getX(); double offset = 0;
+                    for (TableColumn<?, ?> c : tv.getVisibleLeafColumns()) {
+                        offset += c.getWidth();
+                        if (x < offset) { colRightClick[0] = c; break; }
+                    }
+                });
             }
             private void actualizarEstilo() {
                 if (isEmpty() || getItem() == null) { setStyle(""); return; }
@@ -219,6 +259,75 @@ public class PulidoTecnicoController {
 
     public String getFiltroImei() { return filtroImei.getText(); }
     public void setFiltroImei(String imei) { filtroImei.setText(imei != null ? imei : ""); }
+
+    // ── Menú contextual (SuperTécnico) ────────────────────────────────────────
+
+    private String textoDeCelda(ReparacionResumen rep, TableColumn<?, ?> col) {
+        if (col == cId)          return rep.getIdRep();
+        if (col == cImei)        return rep.getImei();
+        if (col == cModelo)      { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+        if (col == cFecha)       return FechaUtils.formatear(rep.getFechaAsig(), FMT);
+        if (col == cComentario)  { String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
+        if (col == cCliente)     { String c = rep.getCliente(); return c != null ? c : ""; }
+        if (col == cAsignadoPor) { String a = rep.getNombreTecnicoAsigna(); return a != null ? a : ""; }
+        return null;
+    }
+
+    private void editarComentario(ReparacionResumen rep) {
+        javafx.scene.control.TextArea ta = new javafx.scene.control.TextArea(
+                rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
+        ta.setWrapText(true); ta.setPrefRowCount(4); ta.setPrefWidth(340);
+        ta.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
+                + " -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        javafx.scene.control.Button guardar = new javafx.scene.control.Button("Guardar");
+        guardar.getStyleClass().add("btn-primary");
+        javafx.scene.control.Button cancelar = new javafx.scene.control.Button("Cancelar");
+        cancelar.getStyleClass().add("btn-secondary");
+        javafx.scene.layout.HBox botones = new javafx.scene.layout.HBox(10, cancelar, guardar);
+        botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+        javafx.scene.layout.VBox cont = new javafx.scene.layout.VBox(12,
+                new Label("Comentario de asignación"), ta, botones);
+        cont.setPadding(new javafx.geometry.Insets(24));
+        cont.setStyle("-fx-background-color: #DDE1E7;");
+        javafx.stage.Stage v = new javafx.stage.Stage();
+        v.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        v.setTitle("Editar comentario");
+        javafx.scene.Scene sc = new javafx.scene.Scene(cont);
+        sc.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        v.setScene(sc);
+        cancelar.setOnAction(e -> v.close());
+        guardar.setOnAction(e -> {
+            try {
+                // Mismo técnico: no altera "Asignado por" (ID_TEC_ASIGNA).
+                pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), rep.getIdTec(), ta.getText().trim(), rep.getUpdatedAt());
+                v.close(); cargar(); if (onCerrar != null) onCerrar.run();
+            } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+        });
+        v.showAndWait();
+    }
+
+    private void editarModelo(ReparacionResumen rep) {
+        SelectorModeloDialog.elegir(rep.getModelo()).ifPresent(codigo -> {
+            try {
+                telefonoDAO.insertar(rep.getImei(), codigo);
+                cargar(); if (onCerrar != null) onCerrar.run();
+            } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+        });
+    }
+
+    private void editarCliente(ReparacionResumen rep) {
+        try {
+            java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
+            Integer idActual = activos.stream()
+                    .filter(c -> c.getNombre().equals(rep.getCliente()))
+                    .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
+            java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
+            if (sel.isEmpty()) return;
+            Integer idCli = (sel.get() == -1) ? null : sel.get();
+            telefonoDAO.actualizarCliente(rep.getImei(), idCli, rep.getTelefonoUpdatedAt());
+            cargar(); if (onCerrar != null) onCerrar.run();
+        } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
+    }
 
     public void cargar() {
         try {

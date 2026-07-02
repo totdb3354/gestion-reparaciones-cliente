@@ -163,6 +163,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         misPendientesController.setOnCerrar(() -> {
             cargarDatos();
             misPendientesController.cargar();
+            pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
         misPendientesGlassController.setModoGlass();
@@ -171,11 +172,13 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         misPendientesGlassController.setOnCerrar(() -> {
             cargarDatos();
             misPendientesGlassController.cargar();
+            pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
         misPulidosTecnicoController.setOnCerrar(() -> {
             cargarDatos();
             misPulidosTecnicoController.cargar();
+            pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
 
