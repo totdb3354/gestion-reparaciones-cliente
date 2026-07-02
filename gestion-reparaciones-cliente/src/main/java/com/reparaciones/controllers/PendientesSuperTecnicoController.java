@@ -985,12 +985,16 @@ public class PendientesSuperTecnicoController {
     @FXML
     private void abrirFormularioAsignacion() {
         // ── Estado del lote ──────────────────────────────────────────────────
-        List<EntradaAsignacion> pila = new ArrayList<>();
+        List<EntradaAsignacion> pilaRep   = new ArrayList<>();
+        List<EntradaAsignacion> pilaGlass = new ArrayList<>();
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
         List<Tecnico> defTecnicos = new ArrayList<>();
         long[] seqCounter = { 0 };
         TipoTrabajo[] tipoActual = { TipoTrabajo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
+        // Cola de la categoría activa (rep/glass); pulido va aparte en lotePulido.
+        java.util.function.Supplier<List<EntradaAsignacion>> pilaActiva =
+                () -> tipoActual[0] == TipoTrabajo.GLASS ? pilaGlass : pilaRep;
         List<FilaPulido> lotePulido = new ArrayList<>();   // sub-lote de pulido (AP), independiente de la pila rica
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
@@ -1323,13 +1327,14 @@ public class PendientesSuperTecnicoController {
             boxRojo.getChildren().clear();
             boxVerde.getChildren().clear();
             java.util.Comparator<EntradaAsignacion> porSeqDesc = (a, b) -> Long.compare(b.seq, a.seq);
-            List<EntradaAsignacion> rojos  = pila.stream().filter(x -> !x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
-            List<EntradaAsignacion> verdes = pila.stream().filter(x ->  x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
+            List<EntradaAsignacion> activa = pilaActiva.get();
+            List<EntradaAsignacion> rojos  = activa.stream().filter(x -> !x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
+            List<EntradaAsignacion> verdes = activa.stream().filter(x ->  x.asignada).sorted(porSeqDesc).collect(java.util.stream.Collectors.toList());
             int nRojo = rojos.size(), nVerde = verdes.size();
             for (EntradaAsignacion e : rojos) {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
-                    pila.remove(e);
+                    activa.remove(e);
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -1338,7 +1343,7 @@ public class PendientesSuperTecnicoController {
             for (EntradaAsignacion e : verdes) {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
-                    pila.remove(e);
+                    activa.remove(e);
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -1348,13 +1353,19 @@ public class PendientesSuperTecnicoController {
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
             scrollRojo.setPrefHeight(nRojo == 0 ? 34 : Math.min(nRojo, 5) * 39 + 4);
             scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 39 + 4);
-            int sinModelo = (int) pila.stream().filter(e -> !e.asignada && !e.tieneModelo()).count();
+            // Totales globales (rep + glass) para la barra inferior y el botón Guardar.
+            int nRojoGlobal  = (int) (pilaRep.stream().filter(x -> !x.asignada).count()
+                                    + pilaGlass.stream().filter(x -> !x.asignada).count());
+            int nVerdeGlobal = (int) (pilaRep.stream().filter(x -> x.asignada).count()
+                                    + pilaGlass.stream().filter(x -> x.asignada).count());
+            int sinModelo    = (int) (pilaRep.stream().filter(e -> !e.asignada && !e.tieneModelo()).count()
+                                    + pilaGlass.stream().filter(e -> !e.asignada && !e.tieneModelo()).count());
             int nPul = lotePulido.size();
-            lblProg.setText(nVerde + " configurados · " + nRojo + " pendientes"
+            lblProg.setText(nVerdeGlobal + " configurados · " + nRojoGlobal + " pendientes"
                     + (nPul > 0 ? " · " + nPul + " pulido" : "")
                     + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
-            btnGuardar.setText("Guardar (" + (nVerde + nPul) + ")");
-            btnGuardar.setDisable(nRojo != 0 || (nVerde + nPul) == 0);
+            btnGuardar.setText("Guardar (" + (nVerdeGlobal + nPul) + ")");
+            btnGuardar.setDisable(nRojoGlobal != 0 || (nVerdeGlobal + nPul) == 0);
         };
 
         lanzarLookup[0] = () -> {
@@ -1446,7 +1457,7 @@ public class PendientesSuperTecnicoController {
         };
 
         Runnable cargarSiguienteRojo = () -> {
-            EntradaAsignacion sig = pila.stream().filter(x -> !x.asignada)
+            EntradaAsignacion sig = pilaActiva.get().stream().filter(x -> !x.asignada)
                     .max(java.util.Comparator.comparingLong(x -> x.seq)).orElse(null);
             if (sig != null) cargarEntrada[0].accept(sig);
             else { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
@@ -1523,13 +1534,13 @@ public class PendientesSuperTecnicoController {
         Runnable intentarAnadir = () -> {
             String imei = tfScan.getText().trim();
             if (imei.length() != 15) return;
-            if (pila.stream().anyMatch(x -> x.imei.equals(imei) && x.tipo == tipoActual[0])) {
-                lblScanErr.setText("Ese IMEI ya está en la pila (" + tipoActual[0].etiqueta() + ")."); return; }
+            if (pilaActiva.get().stream().anyMatch(x -> x.imei.equals(imei))) {
+                lblScanErr.setText("Ese IMEI ya está en la cola (" + tipoActual[0].etiqueta() + ")."); return; }
             lblScanErr.setText("");
             EntradaAsignacion e = new EntradaAsignacion(imei);
             e.tipo = tipoActual[0];
             e.seq = ++seqCounter[0];
-            pila.add(e);
+            pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
             // clear()/requestFocus en runLater: hacerlo síncrono dentro del listener de texto corrompe el caret
@@ -1555,11 +1566,11 @@ public class PendientesSuperTecnicoController {
                 }
                 int anadidos = 0, duplicados = 0;
                 for (String imei : res.imeis()) {
-                    if (pila.stream().anyMatch(x -> x.imei.equals(imei) && x.tipo == tipoActual[0])) { duplicados++; continue; }
+                    if (pilaActiva.get().stream().anyMatch(x -> x.imei.equals(imei))) { duplicados++; continue; }
                     EntradaAsignacion en = new EntradaAsignacion(imei);
                     en.tipo = tipoActual[0];
                     en.seq = ++seqCounter[0];
-                    pila.add(en);
+                    pilaActiva.get().add(en);
                     anadidos++;
                 }
                 renderPila[0].run();
@@ -1599,6 +1610,8 @@ public class PendientesSuperTecnicoController {
             richArea.setVisible(!pulido);  richArea.setManaged(!pulido);
             pulidoPane.setVisible(pulido); pulidoPane.setManaged(pulido);
             if (!pulido) tipoActual[0] = (n == tbGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
+            // El detalle cargado pertenece a la cola vieja: al cambiar de cola, se limpia.
+            actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—");
             if (renderPila[0] != null) renderPila[0].run();
         });
 
@@ -1617,7 +1630,9 @@ public class PendientesSuperTecnicoController {
         btnGuardar.setOnAction(ev -> {
             List<String> conflictos = new ArrayList<>();
             try {
-                for (EntradaAsignacion e : pila) {
+                List<EntradaAsignacion> todas = new ArrayList<>(pilaRep);
+                todas.addAll(pilaGlass);
+                for (EntradaAsignacion e : todas) {
                     if (!e.asignada) continue;
                     String categoria = (e.tipo == TipoTrabajo.GLASS) ? "G" : "R";
                     Integer idCli = e.cliente != null ? e.cliente.getIdCli() : null;
@@ -1653,7 +1668,7 @@ public class PendientesSuperTecnicoController {
         });
 
         ventana.setOnCloseRequest(ev -> {
-            int total = pila.size() + lotePulido.size();
+            int total = pilaRep.size() + pilaGlass.size() + lotePulido.size();
             if (total == 0) return;
             ev.consume();
             ConfirmDialog.mostrar("Descartar", "Se descartarán los " + total + " IMEIs escaneados.",
