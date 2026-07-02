@@ -837,7 +837,8 @@ public class PendientesSuperTecnicoController {
      */
     private VBox construirPulidoPane(List<FilaPulido> lote, List<Tecnico> tecnicosModal, Runnable onChange,
                                      java.util.function.Consumer<FilaPulido> onClienteCambiado,
-                                     List<Runnable> refrescadoresCliente) {
+                                     List<Runnable> refrescadoresCliente,
+                                     java.util.function.Consumer<FilaPulido> sembrarCliente) {
         Label lblTec = new Label("Técnico por defecto");
         lblTec.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         ComboBox<Tecnico> cbTec = new ComboBox<>();
@@ -895,6 +896,7 @@ public class PendientesSuperTecnicoController {
         java.util.function.Consumer<String> agregar = imei -> {
             FilaPulido fila = new FilaPulido(imei, cbTec.getValue(), taCom.getText().trim());
             lote.add(fila);
+            sembrarCliente.accept(fila);   // hereda el cliente ya decidido en el modal para este IMEI
             Label lblImei = new Label(imei);
             lblImei.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
             lblImei.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
@@ -908,7 +910,8 @@ public class PendientesSuperTecnicoController {
                 @Override public Tecnico fromString(String s) { return null; }
             });
             cbRow.valueProperty().addListener((o2, a, b) -> fila.tecnico = b);
-            Button btnCli = new Button(fila.cliente != null ? fila.cliente.getNombre() : "Cliente");
+            Button btnCli = new Button(fila.sinCliente ? "— Sin cliente —"
+                    : (fila.cliente != null ? fila.cliente.getNombre() : "Cliente"));
             btnCli.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
             btnCli.setStyle("-fx-font-size: 11px; -fx-background-color: white; -fx-border-color: #C2C8D0;"
                     + " -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 8 4 8; -fx-cursor: hand;");
@@ -1011,6 +1014,7 @@ public class PendientesSuperTecnicoController {
         java.util.function.Supplier<List<EntradaAsignacion>> pilaActiva =
                 () -> tipoActual[0] == TipoTrabajo.GLASS ? pilaGlass : pilaRep;
         List<FilaPulido> lotePulido = new ArrayList<>();   // sub-lote de pulido (AP), independiente de la pila rica
+        TriConsumerCliente[] propagarCliente = new TriConsumerCliente[1];   // holder (fwd-ref): se asigna más abajo, lo usa confirmarCliente
 
         List<Tecnico> tecnicosModal = new ArrayList<>();
         try { tecnicosModal.addAll(tecnicoDAO.getAllActivos()); }
@@ -1134,6 +1138,9 @@ public class PendientesSuperTecnicoController {
         // Opción "sin cliente" (id -1) arriba del desplegable, como en SelectorClienteDialog.
         final Cliente SIN_CLIENTE = new Cliente(-1, "— Sin cliente —", true, null);
         todosClientes.add(0, SIN_CLIENTE);
+        // Última decisión MANUAL de cliente por IMEI en este modal; prevalece sobre la precarga de BD.
+        // Valor: cliente real, o SIN_CLIENTE (sentinel) = "sin cliente"; ausente = sin decisión manual.
+        final java.util.Map<String, Cliente> clienteManual = new java.util.HashMap<>();
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
         TextField tfCliente = new TextField();
         tfCliente.setPromptText("Escribe cliente...");
@@ -1194,6 +1201,10 @@ public class PendientesSuperTecnicoController {
             clientesFiltrados.setPredicate(c -> true);
             actualizandoCliente[0] = false;
             popupCliente.hide();
+            if (actual[0] != null) {
+                clienteManual.put(actual[0].imei, cli);                             // decisión manual por IMEI: manda ya (aunque esté pendiente)
+                propagarCliente[0].accept(actual[0].imei, sin ? null : cli, sin);   // aplica a la entrada actual + hermanas + refresca
+            }
         };
 
         tfCliente.textProperty().addListener((obs, oldText, newText) -> {
@@ -1406,7 +1417,7 @@ public class PendientesSuperTecnicoController {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
                     // Precargar el cliente que el IMEI ya tuviera en BD (prevalece sobre el arrastre)
-                    if (idCliRes != null && e.cliente == null && !e.sinCliente) {
+                    if (idCliRes != null && e.cliente == null && !e.sinCliente && !clienteManual.containsKey(e.imei)) {
                         Cliente existente = todosClientes.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
                         if (existente != null) {
@@ -1482,12 +1493,23 @@ public class PendientesSuperTecnicoController {
 
         List<Runnable> refrescadoresClientePulido = new ArrayList<>();
         // Propaga el cliente (o "sin cliente") a todas las entradas/filas del mismo IMEI en las 3 colas.
-        TriConsumerCliente propagarCliente = (imei, cliente, sin) -> {
+        propagarCliente[0] = (imei, cliente, sin) -> {
             for (EntradaAsignacion x : pilaRep)   if (x.imei.equals(imei)) { x.cliente = cliente; x.sinCliente = sin; }
             for (EntradaAsignacion x : pilaGlass) if (x.imei.equals(imei)) { x.cliente = cliente; x.sinCliente = sin; }
             for (FilaPulido f : lotePulido)       if (f.imei.equals(imei))  { f.cliente = cliente; f.sinCliente = sin; }
             refrescadoresClientePulido.forEach(Runnable::run);
             renderPila[0].run();
+        };
+
+        // Siembra en una entrada/fila nueva la última decisión MANUAL de cliente del modal para ese IMEI,
+        // para que la precarga de BD (que corre después) no la pise.
+        java.util.function.Consumer<EntradaAsignacion> sembrarClienteEntrada = e -> {
+            Cliente m = clienteManual.get(e.imei);
+            if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
+        };
+        java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
+            Cliente m = clienteManual.get(fila.imei);
+            if (m != null) { fila.sinCliente = (m == SIN_CLIENTE); fila.cliente = fila.sinCliente ? null : m; }
         };
 
         Runnable asignarActual = () -> {
@@ -1502,7 +1524,8 @@ public class PendientesSuperTecnicoController {
             e.comentario = tfComentario.getText().trim();
             e.cliente = clienteSel[0];
             e.sinCliente = sinClienteSel[0];
-            propagarCliente.accept(e.imei, e.cliente, e.sinCliente);
+            clienteManual.put(e.imei, e.sinCliente ? SIN_CLIENTE : e.cliente);   // decisión manual: prevalece sobre BD
+            propagarCliente[0].accept(e.imei, e.cliente, e.sinCliente);
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
             defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
@@ -1569,6 +1592,7 @@ public class PendientesSuperTecnicoController {
             EntradaAsignacion e = new EntradaAsignacion(imei);
             e.tipo = tipoActual[0];
             e.seq = ++seqCounter[0];
+            sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -1599,6 +1623,7 @@ public class PendientesSuperTecnicoController {
                     EntradaAsignacion en = new EntradaAsignacion(imei);
                     en.tipo = tipoActual[0];
                     en.seq = ++seqCounter[0];
+                    sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
@@ -1627,8 +1652,10 @@ public class PendientesSuperTecnicoController {
         VBox richArea = new VBox(12, lblScan, tfScan, lblScanErr, new Separator(), cols);   // reparación + glass
         VBox pulidoPane = construirPulidoPane(lotePulido, tecnicosModal,
                 () -> { if (renderPila[0] != null) renderPila[0].run(); },
-                fila -> propagarCliente.accept(fila.imei, fila.cliente, fila.sinCliente),
-                refrescadoresClientePulido);
+                fila -> { clienteManual.put(fila.imei, fila.sinCliente ? SIN_CLIENTE : fila.cliente);   // decisión manual
+                          propagarCliente[0].accept(fila.imei, fila.cliente, fila.sinCliente); },
+                refrescadoresClientePulido,
+                sembrarClientePulido);
         pulidoPane.setVisible(false); pulidoPane.setManaged(false);
         javafx.scene.layout.StackPane centro = new javafx.scene.layout.StackPane(richArea, pulidoPane);
         javafx.scene.layout.StackPane.setAlignment(richArea, Pos.TOP_LEFT);
