@@ -38,6 +38,7 @@
             <TableColumn fx:id="cModelo"     text="Modelo"          prefWidth="120"/>
             <TableColumn fx:id="cFecha"      text="Fecha asignación" prefWidth="130"/>
             <TableColumn fx:id="cComentario" text="Comentario"      prefWidth="160"/>
+            <TableColumn fx:id="cAsignadoPor" text="Asignado por"   prefWidth="120"/>
             <TableColumn fx:id="cBorrar"     text=""                prefWidth="50"/>
         </columns>
         <placeholder><Label text="No tienes pulidos pendientes"/></placeholder>

@@ -34,6 +34,7 @@ public class HistorialPulidoController {
     @FXML private TableColumn<ReparacionResumen, String> cFechaIni;
     @FXML private TableColumn<ReparacionResumen, String> cFechaFin;
     @FXML private TableColumn<ReparacionResumen, String> cComentario;
+    @FXML private TableColumn<ReparacionResumen, String> cAsignadoPor;
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private TextField  filtroImei;
     @FXML private DatePicker filtroFechaDesde;
@@ -71,6 +72,8 @@ public class HistorialPulidoController {
             FechaUtils.formatear(d.getValue().getFechaFin(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+        cAsignadoPor.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getNombreTecnicoAsigna() != null ? d.getValue().getNombreTecnicoAsigna() : "—"));
 
         datosFiltrados = new FilteredList<>(datos, p -> true);
         tablaPulidos.setItems(datosFiltrados);
@@ -349,6 +352,7 @@ public class HistorialPulidoController {
         if (col == cFechaIni)  return FechaUtils.formatear(rep.getFechaAsig(), FMT);
         if (col == cFechaFin)  return FechaUtils.formatear(rep.getFechaFin(), FMT);
         if (col == cComentario){ String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
+        if (col == cAsignadoPor){ String a = rep.getNombreTecnicoAsigna(); return a != null ? a : ""; }
         return null;
     }
 }
