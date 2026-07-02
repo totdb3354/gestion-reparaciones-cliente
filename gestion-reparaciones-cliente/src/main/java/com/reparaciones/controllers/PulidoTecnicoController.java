@@ -26,6 +26,7 @@ public class PulidoTecnicoController {
     @FXML private TableColumn<ReparacionResumen, String>  cModelo;
     @FXML private TableColumn<ReparacionResumen, String>  cFecha;
     @FXML private TableColumn<ReparacionResumen, String>  cComentario;
+    @FXML private TableColumn<ReparacionResumen, String>  cCliente;
     @FXML private TableColumn<ReparacionResumen, String>  cAsignadoPor;
     @FXML private TableColumn<ReparacionResumen, Void>    cBorrar;
     @FXML private TextField filtroImei;
@@ -81,6 +82,8 @@ public class PulidoTecnicoController {
             FechaUtils.formatear(d.getValue().getFechaAsig(), FMT)));
         cComentario.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getComentarioAsignacion() != null ? d.getValue().getComentarioAsignacion() : ""));
+        cCliente.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
+            d.getValue().getCliente() != null ? d.getValue().getCliente() : ""));
         cAsignadoPor.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(
             d.getValue().getNombreTecnicoAsigna() != null ? d.getValue().getNombreTecnicoAsigna() : "—"));
 
@@ -265,6 +268,7 @@ public class PulidoTecnicoController {
         if (col == cModelo)      { String m = rep.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
         if (col == cFecha)       return FechaUtils.formatear(rep.getFechaAsig(), FMT);
         if (col == cComentario)  { String c = rep.getComentarioAsignacion(); return c != null ? c : ""; }
+        if (col == cCliente)     { String c = rep.getCliente(); return c != null ? c : ""; }
         if (col == cAsignadoPor) { String a = rep.getNombreTecnicoAsigna(); return a != null ? a : ""; }
         return null;
     }

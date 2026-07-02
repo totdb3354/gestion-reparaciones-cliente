@@ -389,7 +389,7 @@ public class PendientesSuperTecnicoController {
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
                     toggleUrgente.setVisible(!soloLectura && !esPulido);
-                    editarCliente.setVisible(!soloLectura && !esPulido);
+                    editarCliente.setVisible(!soloLectura);   // cliente aplica a cualquier tipo, pulido incluido
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
@@ -875,8 +875,12 @@ public class PendientesSuperTecnicoController {
         };
         actualizarTitulo.run();
 
-        final List<com.reparaciones.models.Cliente> clientesActivos = new ArrayList<>();
-        try { clientesActivos.addAll(clienteDAO.getActivos()); } catch (SQLException ex) { /* no crítico: el pane sigue funcionando */ }
+        final List<com.reparaciones.models.Cliente> clientesActivos = new ArrayList<>();   // para el selector
+        final List<com.reparaciones.models.Cliente> clientesTodos   = new ArrayList<>();   // para precargar (incluye inactivos)
+        try {
+            clientesActivos.addAll(clienteDAO.getActivos());
+            clientesTodos.addAll(clienteDAO.getAll());
+        } catch (SQLException ex) { /* no crítico: el pane sigue funcionando */ }
 
         java.util.function.Consumer<String> agregar = imei -> {
             FilaPulido fila = new FilaPulido(imei, cbTec.getValue(), taCom.getText().trim());
@@ -926,6 +930,20 @@ public class PendientesSuperTecnicoController {
             listaItems.getChildren().add(row);
             actualizarTitulo.run();
             onChange.run();
+
+            // Precargar el cliente que el IMEI ya tuviera en BD (paridad con rep/glass), en segundo plano.
+            new Thread(() -> {
+                Integer idCli = null;
+                try { idCli = telefonoDAO.getClienteId(imei); } catch (Exception ignore) {}
+                final Integer idCliRes = idCli;
+                javafx.application.Platform.runLater(() -> {
+                    if (idCliRes != null && fila.cliente == null) {
+                        com.reparaciones.models.Cliente existente = clientesTodos.stream()
+                                .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
+                        if (existente != null) { fila.cliente = existente; btnCli.setText(existente.getNombre()); }
+                    }
+                });
+            }, "pulido-precarga-cliente").start();
         };
 
         Runnable intentar = () -> {
