@@ -141,13 +141,13 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
 
         misPendientesController.setOnCerrar(() -> {
             cargarDatos();
-            misPendientesController.cargar();
+            // (sin auto-recarga: quien dispara onCerrar ya se recargó a sí mismo)
             actualizarBadges();
         });
         misPendientesGlassController.setModoGlass();
         misPendientesGlassController.setOnCerrar(() -> {
             cargarDatos();
-            misPendientesGlassController.cargar();
+            // (sin auto-recarga: quien dispara onCerrar ya se recargó a sí mismo)
             actualizarBadges();
         });
 
