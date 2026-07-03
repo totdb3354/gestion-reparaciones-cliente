@@ -301,8 +301,16 @@ public class FormularioReparacionController {
                     cbFiltroModelo.setValue(modeloAccion);   // filtra filas y muestra la sección OTRAS ACCIONES
                     cbFiltroModelo.setDisable(true);
                 }
-                otrasAcciones.iniciarEdicionAccion(d.observacion);
             }
+            // Acciones "otro" de otras reparaciones del IMEI: visibles pero bloqueadas ("ya reparadas")
+            if (otrasAcciones != null) {
+                try {
+                    String catEdicion = idRep.startsWith("G") ? "G" : "R";
+                    for (String desc : reparacionDAO.getAccionesOtro(d.imei, catEdicion, idRep))
+                        otrasAcciones.agregarLineaYaReparada(desc);
+                } catch (SQLException ignore) { /* no crítico: sin precarga de acciones */ }
+            }
+            if (editandoAccion) otrasAcciones.iniciarEdicionAccion(d.observacion);
             // Segunda pasada: re-aplicar tras el reset del filtro de modelo
             for (FilaUI fila : filasUI) {
                 if (fila.getSkus().stream().anyMatch(c -> c.getIdCom() == d.idCom))
@@ -2264,6 +2272,18 @@ public class FormularioReparacionController {
         }
 
         // ── Edición de una acción existente (modal completo) ────────────────
+        /** Añade una acción ya guardada en otra reparación: visible, bloqueada y en verde. */
+        void agregarLineaYaReparada(String texto) {
+            if (texto == null || texto.isBlank()) return;
+            agregarLinea(texto.trim());
+            LineaAccion la = lineas.get(lineas.size() - 1);
+            la.guardada = true;
+            la.fechaGuardado = "";
+            bloquearLinea(la);
+            la.lblGuardada.setText("✓ Ya reparada");
+            actualizar();
+        }
+
         /** Precarga la acción editada como línea fija (sin borrar ni guardado individual). */
         void iniciarEdicionAccion(String descripcion) {
             String texto = descripcion == null ? "" : descripcion.trim();

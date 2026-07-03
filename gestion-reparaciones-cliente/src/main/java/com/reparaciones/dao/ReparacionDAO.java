@@ -142,6 +142,13 @@ public class ReparacionDAO {
         return ApiClient.getList("/api/reparaciones/imei/" + imei + "/asignaciones-activas", AsignacionActiva.class);
     }
 
+    /** Descripciones de las acciones "otro" ya guardadas del IMEI en la categoría (R/G),
+     *  excluyendo una reparación (la que se edita). Para precargarlas bloqueadas al editar. */
+    public List<String> getAccionesOtro(String imei, String categoria, String excluir) throws SQLException {
+        return ApiClient.getList("/api/reparaciones/imei/" + imei + "/acciones?categoria=" + categoria
+                + (excluir != null ? "&excluir=" + excluir : ""), String.class);
+    }
+
     /**
      * Devuelve las solicitudes de componente pendientes de una asignación.
      *
