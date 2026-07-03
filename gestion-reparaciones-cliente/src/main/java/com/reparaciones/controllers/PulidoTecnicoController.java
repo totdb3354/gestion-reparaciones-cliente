@@ -230,6 +230,7 @@ public class PulidoTecnicoController {
             pulidoDAO.completarPulidoLote(ids);
             seleccionados.clear();
             cargar();
+            if (onCerrar != null) onCerrar.run();   // badge + sufijo del toggle en vivo (como rep/glass)
         } catch (SQLException e) {
             Alertas.mostrarError(e.getMessage());
         }

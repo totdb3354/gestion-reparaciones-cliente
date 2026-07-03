@@ -150,6 +150,8 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
             // (sin auto-recarga: quien dispara onCerrar ya se recargó a sí mismo)
             actualizarBadges();
         });
+        // Pulido: al completar/borrar, refrescar badge y sufijo del toggle en vivo (faltaba cablearlo)
+        pulidoTecnicoController.setOnCerrar(this::actualizarBadges);
 
         // Toggle historial: Reparaciones | Glass | Pulidos (siempre plano)
         javafx.scene.control.ToggleGroup tgHist = new javafx.scene.control.ToggleGroup();
