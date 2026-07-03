@@ -9,6 +9,36 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.13.0] - 2026-07-03
+
+### Added
+- **Glass como tipo de trabajo propio** (`AG`/`G`): asignación separada, pestaña Glass en Mis pendientes (3 roles), modal de completar filtrado por tipo (glass = glass/marco/otro), incidencias independientes por categoría, Historial con selector **Reparaciones | Glass | Pulidos**, exports CSV de Glass, y filtro de logs para acciones de glass/pulido. Requiere servidor actualizado.
+- **Apartado "IMEIs"** (antes "Agrupado"), compartido por los 3 roles: agrupa reparaciones, glass y pulidos por dispositivo con contadores por tipo, drill-down y export; **ordenado por actividad más reciente** (cualquier categoría).
+- **Modal de asignación con 3 colas independientes** (Reparación / Glass / Pulido): cada pestaña muestra solo su cola (mismo IMEI admitido en varias); desaparece el toggle de tipo por entrada. **Pulido rediseñado a master-detail** (lista + detalle, cliente inline con autocompletado, técnico superior aplicado a los escaneos con override por fila, Guardar bloqueado si hay filas sin técnico).
+- **Cliente por IMEI en el modal de asignación**: opción "— Sin cliente —" real (persiste NULL vía flag `clienteExplicito` del servidor), restauración del cliente al perder el foco con texto a medias, y **sincronización en vivo del cliente entre colas** (el último cambio manual prevalece sobre la precarga de BD).
+- **Aviso de asignación cruzada**: al asignar, lista todas las asignaciones activas del IMEI en cualquier categoría (rep/glass/pulido), marcando "(tú)".
+- **Paridad de Pulido**: "Asignado por" (con reasignación que actualiza el asignador), columna Cliente en Mis pulidos/Historial, editar modelo/comentario/cliente desde Asignaciones, y borrar pulido propio en Mis pendientes (SuperTécnico).
+- **Contadores entre categorías**: badge de pendientes con cap **99+** que suma pulidos; conteo por toggle en Mis pendientes.
+- **Editar acción "otro" en el modal completo**: la acción se edita en su sección OTRAS ACCIONES; las acciones previas del IMEI aparecen bloqueadas ("✓ Ya reparada"); se pueden activar filas vírgenes y **añadir acciones nuevas en cualquier edición** (antes se ignoraban al guardar).
+- **Motivo obligatorio al borrar un pulido completado** (antes borraba sin confirmación); el motivo queda en el log del servidor.
+
+### Changed
+- **Editar** disponible también para reparaciones de **glass** en el historial (paridad con IMEIs/Agrupado).
+- Lo creado durante la **edición de un glass** (filas nuevas y acciones) nace como **G** (antes se creaba como reparación normal).
+- Marcas **"Ya reparado"** del modal de edición calculadas **por categoría** (las ediciones de glass no marcaban).
+- Menú contextual de Asignaciones reordenado (los "Editar…" juntos, urgente al final); en **Mis pulidos** el menú queda solo con "Copiar celda" (la edición vive en Asignaciones/Historial).
+- CSV maestro del apartado IMEIs renombrado a `agrupado_resumen_…` (no colisiona con los de detalle).
+
+### Fixed
+- Badge y contador del toggle de **pulidos** se actualizan en vivo al completar (en el rol Técnico no se actualizaban nunca).
+- Badge de Asignaciones: se refresca al cerrar/borrar desde Mis pendientes y ya no arranca con el estilo invertido.
+- **Scroll fiable** a la última fila añadida en los modales de pedidos (Componentes y Otros).
+- Refrescos más ágiles al completar/borrar: eliminadas recargas duplicadas encadenadas.
+
+### Notas de despliegue
+- Requiere el **servidor** con: flag `clienteExplicito`, `categoria` en altas, motivo en borrado de pulido y endpoints de asignaciones-activas/acciones (ya desplegado). Retrocompatible con clientes 0.12.x.
+- **Orden de actualización**: drenar el glass pendiente; el SuperTécnico no asigna glass hasta que él y los técnicos de glass tengan la 0.13.0 (actualizarlos juntos); el resto de técnicos, en cualquier momento.
+
 ## [0.12.0] - 2026-06-29
 
 ### Added

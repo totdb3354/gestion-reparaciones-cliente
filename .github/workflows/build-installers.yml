@@ -34,7 +34,7 @@ jobs:
           - os: windows-latest
             jfx-jmods-zip: openjfx-21_windows-x64_bin-jmods.zip
             pkg-type: msi
-            pkg-version: 0.12.0
+            pkg-version: 0.13.0
             icon-arg: "--icon packaging/icono_Windows.ico"
             artifact: FSGR-windows
             appimage-artifact: FSGR-windows-appimage
@@ -94,7 +94,7 @@ jobs:
             --name "FSGR" \
             --app-version ${{ matrix.pkg-version }} \
             --input target/libs \
-            --main-jar gestion-reparaciones-cliente-0.12.0.jar \
+            --main-jar gestion-reparaciones-cliente-0.13.0.jar \
             --main-class com.reparaciones.App \
             --runtime-image custom-runtime \
             --java-options "--add-modules=javafx.controls,javafx.fxml" \
@@ -117,7 +117,7 @@ jobs:
             --name "FSGR" \
             --app-version ${{ matrix.pkg-version }} \
             --input target/libs \
-            --main-jar gestion-reparaciones-cliente-0.12.0.jar \
+            --main-jar gestion-reparaciones-cliente-0.13.0.jar \
             --main-class com.reparaciones.App \
             --runtime-image custom-runtime \
             --java-options "--add-modules=javafx.controls,javafx.fxml" \
