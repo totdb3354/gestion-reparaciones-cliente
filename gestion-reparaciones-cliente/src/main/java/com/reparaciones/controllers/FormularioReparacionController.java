@@ -784,9 +784,11 @@ public class FormularioReparacionController {
                                     fila.getDescripcionSolicitud(), null));
                 }
             }
+            // Lo creado durante la edición hereda la categoría de lo editado (G si es glass)
+            String categoria = (idRepEditar != null && idRepEditar.startsWith("G")) ? "G" : null;
             for (Map.Entry<Integer, List<FilaReparacion>> entry : porTecnico.entrySet()) {
                 reparacionDAO.insertarCompleta(entry.getValue(), imeiEditar,
-                        entry.getKey(), null, null);
+                        entry.getKey(), null, null, categoria);
             }
             // 3. Acciones "otro" nuevas añadidas durante la edición (cantidad 0, stock neutro)
             if (otrasAcciones != null && otrasAcciones.getIdComOtro() != -1) {
@@ -795,7 +797,7 @@ public class FormularioReparacionController {
                     List<FilaReparacion> filasOtro = new ArrayList<>();
                     for (String desc : pendientes)
                         filasOtro.add(new FilaReparacion(otrasAcciones.getIdComOtro(), 0, false, desc, "otro", false, null, null));
-                    reparacionDAO.insertarCompleta(filasOtro, imeiEditar, idTecEditar, null, null);
+                    reparacionDAO.insertarCompleta(filasOtro, imeiEditar, idTecEditar, null, null, categoria);
                 }
             }
             Stage stage = (Stage) btnGuardar.getScene().getWindow();

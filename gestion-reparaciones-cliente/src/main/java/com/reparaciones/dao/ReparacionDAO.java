@@ -353,12 +353,22 @@ public class ReparacionDAO {
      */
     public void insertarCompleta(List<FilaReparacion> filas, String imei, int idTec,
             String idRepAnterior, String idAsignacion) throws SQLException {
+        insertarCompleta(filas, imei, idTec, idRepAnterior, idAsignacion, null);
+    }
+
+    /**
+     * Variante con categoría explícita ("G"/"R"): sin asignación (altas desde la edición),
+     * el servidor usa la categoría para el prefijo del ID (G → glass). Null = como hoy.
+     */
+    public void insertarCompleta(List<FilaReparacion> filas, String imei, int idTec,
+            String idRepAnterior, String idAsignacion, String categoria) throws SQLException {
         Map<String, Object> body = new HashMap<>();
         body.put("filas",         filas);
         body.put("imei",          imei);
         body.put("idTec",         idTec);
         body.put("idRepAnterior", idRepAnterior);
         body.put("idAsignacion",  idAsignacion);
+        body.put("categoria",     categoria);
         ApiClient.post("/api/reparaciones/completa", body);
     }
 

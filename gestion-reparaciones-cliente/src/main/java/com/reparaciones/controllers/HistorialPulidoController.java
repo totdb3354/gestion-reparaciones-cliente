@@ -129,12 +129,19 @@ public class HistorialPulidoController {
                     MenuItem borrar = new MenuItem("Borrar");
                     borrar.setOnAction(e -> {
                         if (getItem() == null) return;
-                        try {
-                            pulidoDAO.eliminarPulido(getItem().getIdRep());
-                            cargar();
-                        } catch (java.sql.SQLException ex) {
-                            Alertas.mostrarError(ex.getMessage());
-                        }
+                        var rep = getItem();
+                        com.reparaciones.utils.ConfirmDialog.mostrarConMotivo(
+                                "Borrar pulido " + rep.getIdRep(),
+                                "Se borrará " + rep.getIdRep() + " del historial de pulido. Escribe el motivo.",
+                                "Borrar",
+                                motivo -> {
+                                    try {
+                                        pulidoDAO.eliminarPulido(rep.getIdRep(), motivo);
+                                        cargar();
+                                    } catch (java.sql.SQLException ex) {
+                                        Alertas.mostrarError(ex.getMessage());
+                                    }
+                                });
                     });
                     menu.getItems().addAll(editarModelo, borrar, new SeparatorMenuItem(), copiar);
                 } else {
