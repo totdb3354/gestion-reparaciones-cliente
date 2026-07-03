@@ -401,8 +401,8 @@ public class PendientesSuperTecnicoController {
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
                 });
-                menu.getItems().add(toggleUrgente);
                 menu.getItems().add(editarCliente);
+                menu.getItems().add(toggleUrgente);   // acción de estado, al final (los "Editar…" quedan juntos)
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
