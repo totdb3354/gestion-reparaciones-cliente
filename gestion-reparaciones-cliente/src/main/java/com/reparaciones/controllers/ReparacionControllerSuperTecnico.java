@@ -672,7 +672,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
-                    editar      .setVisible(rep.getIdRep().startsWith("R"));
+                    editar      .setVisible(rep.getIdRep().startsWith("R") || rep.getIdRep().startsWith("G"));   // rep y glass (como en Agrupado)
                     borrar      .setVisible(true);
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);
