@@ -1000,7 +1000,7 @@ public class AgrupadoController {
         boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
         boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
 
-        tablaItems.clear();
+        List<GrupoImei> grupos = new ArrayList<>();
         for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
             GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
             if (!idsTecFiltro.isEmpty() && e.getValue().stream().noneMatch(r -> idsTecFiltro.contains(r.getIdTec())))
@@ -1010,8 +1010,13 @@ public class AgrupadoController {
                 boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
                 if (!ok) continue;
             }
-            tablaItems.add(grupo);
+            grupos.add(grupo);
         }
+        // Actividad más reciente arriba, cuente la categoría que cuente (rep, glass o pulido).
+        // Sin esto, el orden era el del merge (todas las R primero) y un IMEI solo-glass caía al fondo.
+        grupos.sort(Comparator.comparing(GrupoImei::getFechaMasReciente,
+                Comparator.nullsLast(Comparator.reverseOrder())));
+        tablaItems.setAll(grupos);
     }
 
     // ── Drill-down ──────────────────────────────────────────────────────────

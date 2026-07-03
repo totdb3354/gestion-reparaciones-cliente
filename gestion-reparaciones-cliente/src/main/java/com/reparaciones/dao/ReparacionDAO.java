@@ -142,6 +142,13 @@ public class ReparacionDAO {
         return ApiClient.getList("/api/reparaciones/imei/" + imei + "/asignaciones-activas", AsignacionActiva.class);
     }
 
+    /** Descripciones de las acciones "otro" ya guardadas del IMEI en la categoría (R/G),
+     *  excluyendo una reparación (la que se edita). Para precargarlas bloqueadas al editar. */
+    public List<String> getAccionesOtro(String imei, String categoria, String excluir) throws SQLException {
+        return ApiClient.getList("/api/reparaciones/imei/" + imei + "/acciones?categoria=" + categoria
+                + (excluir != null ? "&excluir=" + excluir : ""), String.class);
+    }
+
     /**
      * Devuelve las solicitudes de componente pendientes de una asignación.
      *
@@ -353,12 +360,22 @@ public class ReparacionDAO {
      */
     public void insertarCompleta(List<FilaReparacion> filas, String imei, int idTec,
             String idRepAnterior, String idAsignacion) throws SQLException {
+        insertarCompleta(filas, imei, idTec, idRepAnterior, idAsignacion, null);
+    }
+
+    /**
+     * Variante con categoría explícita ("G"/"R"): sin asignación (altas desde la edición),
+     * el servidor usa la categoría para el prefijo del ID (G → glass). Null = como hoy.
+     */
+    public void insertarCompleta(List<FilaReparacion> filas, String imei, int idTec,
+            String idRepAnterior, String idAsignacion, String categoria) throws SQLException {
         Map<String, Object> body = new HashMap<>();
         body.put("filas",         filas);
         body.put("imei",          imei);
         body.put("idTec",         idTec);
         body.put("idRepAnterior", idRepAnterior);
         body.put("idAsignacion",  idAsignacion);
+        body.put("categoria",     categoria);
         ApiClient.post("/api/reparaciones/completa", body);
     }
 

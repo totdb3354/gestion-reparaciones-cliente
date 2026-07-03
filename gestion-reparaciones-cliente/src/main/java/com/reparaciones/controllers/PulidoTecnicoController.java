@@ -35,8 +35,6 @@ public class PulidoTecnicoController {
     @FXML private Label     lblContador;
 
     private final PulidoDAO pulidoDAO = new PulidoDAO();
-    private final com.reparaciones.dao.TelefonoDAO telefonoDAO = new com.reparaciones.dao.TelefonoDAO();
-    private final com.reparaciones.dao.ClienteDAO  clienteDAO  = new com.reparaciones.dao.ClienteDAO();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
 
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -141,18 +139,9 @@ public class PulidoTecnicoController {
                     cc.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(cc);
                 });
-                // Edición solo para SuperTécnico (como el borrado; el técnico normal solo copia).
-                if (Sesion.esSuperTecnico()) {
-                    MenuItem edCom = new MenuItem("Editar comentario");
-                    edCom.setOnAction(e -> { if (getItem() != null) editarComentario(getItem()); });
-                    MenuItem edMod = new MenuItem("Editar modelo");
-                    edMod.setOnAction(e -> { if (getItem() != null) editarModelo(getItem()); });
-                    MenuItem edCli = new MenuItem("Editar cliente");
-                    edCli.setOnAction(e -> { if (getItem() != null) editarCliente(getItem()); });
-                    menu.getItems().addAll(edCom, edMod, edCli, new SeparatorMenuItem(), copiar);
-                } else {
-                    menu.getItems().add(copiar);
-                }
+                // Consistencia con Mis pendientes de rep/glass: solo "Copiar celda"
+                // (la edición de pulidos vive en Asignaciones/Historial).
+                menu.getItems().add(copiar);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -241,6 +230,7 @@ public class PulidoTecnicoController {
             pulidoDAO.completarPulidoLote(ids);
             seleccionados.clear();
             cargar();
+            if (onCerrar != null) onCerrar.run();   // badge + sufijo del toggle en vivo (como rep/glass)
         } catch (SQLException e) {
             Alertas.mostrarError(e.getMessage());
         }
@@ -271,62 +261,6 @@ public class PulidoTecnicoController {
         if (col == cCliente)     { String c = rep.getCliente(); return c != null ? c : ""; }
         if (col == cAsignadoPor) { String a = rep.getNombreTecnicoAsigna(); return a != null ? a : ""; }
         return null;
-    }
-
-    private void editarComentario(ReparacionResumen rep) {
-        javafx.scene.control.TextArea ta = new javafx.scene.control.TextArea(
-                rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "");
-        ta.setWrapText(true); ta.setPrefRowCount(4); ta.setPrefWidth(340);
-        ta.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
-                + " -fx-background-radius: 4; -fx-text-fill: #2C3B54; -fx-font-size: 13px;");
-        javafx.scene.control.Button guardar = new javafx.scene.control.Button("Guardar");
-        guardar.getStyleClass().add("btn-primary");
-        javafx.scene.control.Button cancelar = new javafx.scene.control.Button("Cancelar");
-        cancelar.getStyleClass().add("btn-secondary");
-        javafx.scene.layout.HBox botones = new javafx.scene.layout.HBox(10, cancelar, guardar);
-        botones.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-        javafx.scene.layout.VBox cont = new javafx.scene.layout.VBox(12,
-                new Label("Comentario de asignación"), ta, botones);
-        cont.setPadding(new javafx.geometry.Insets(24));
-        cont.setStyle("-fx-background-color: #DDE1E7;");
-        javafx.stage.Stage v = new javafx.stage.Stage();
-        v.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-        v.setTitle("Editar comentario");
-        javafx.scene.Scene sc = new javafx.scene.Scene(cont);
-        sc.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
-        v.setScene(sc);
-        cancelar.setOnAction(e -> v.close());
-        guardar.setOnAction(e -> {
-            try {
-                // Mismo técnico: no altera "Asignado por" (ID_TEC_ASIGNA).
-                pulidoDAO.actualizarAsignacionPulido(rep.getIdRep(), rep.getIdTec(), ta.getText().trim(), rep.getUpdatedAt());
-                v.close(); cargar(); if (onCerrar != null) onCerrar.run();
-            } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
-        });
-        v.showAndWait();
-    }
-
-    private void editarModelo(ReparacionResumen rep) {
-        SelectorModeloDialog.elegir(rep.getModelo()).ifPresent(codigo -> {
-            try {
-                telefonoDAO.insertar(rep.getImei(), codigo);
-                cargar(); if (onCerrar != null) onCerrar.run();
-            } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
-        });
-    }
-
-    private void editarCliente(ReparacionResumen rep) {
-        try {
-            java.util.List<com.reparaciones.models.Cliente> activos = clienteDAO.getActivos();
-            Integer idActual = activos.stream()
-                    .filter(c -> c.getNombre().equals(rep.getCliente()))
-                    .map(com.reparaciones.models.Cliente::getIdCli).findFirst().orElse(null);
-            java.util.Optional<Integer> sel = com.reparaciones.utils.SelectorClienteDialog.elegir(activos, idActual);
-            if (sel.isEmpty()) return;
-            Integer idCli = (sel.get() == -1) ? null : sel.get();
-            telefonoDAO.actualizarCliente(rep.getImei(), idCli, rep.getTelefonoUpdatedAt());
-            cargar(); if (onCerrar != null) onCerrar.run();
-        } catch (SQLException ex) { Alertas.mostrarError(ex.getMessage()); }
     }
 
     public void cargar() {

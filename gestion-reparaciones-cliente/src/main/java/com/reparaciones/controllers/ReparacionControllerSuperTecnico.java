@@ -162,7 +162,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         });
         misPendientesController.setOnCerrar(() -> {
             cargarDatos();
-            misPendientesController.cargar();
+            // (sin misPendientesController.cargar(): quien dispara onCerrar ya se recargó a sí mismo)
             pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
@@ -171,13 +171,13 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         misPulidosTecnicoController.cargar();     // para el badge y toggles (suma rep + glass + pulido)
         misPendientesGlassController.setOnCerrar(() -> {
             cargarDatos();
-            misPendientesGlassController.cargar();
+            // (sin auto-recarga: quien dispara onCerrar ya se recargó a sí mismo)
             pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
         misPulidosTecnicoController.setOnCerrar(() -> {
             cargarDatos();
-            misPulidosTecnicoController.cargar();
+            // (sin auto-recarga: quien dispara onCerrar ya se recargó a sí mismo)
             pendientesSuperTecnicoController.cargar();   // el badge de Asignaciones sale de aquí
             actualizarBadges();
         });
@@ -672,7 +672,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
-                    editar      .setVisible(rep.getIdRep().startsWith("R"));
+                    editar      .setVisible(rep.getIdRep().startsWith("R") || rep.getIdRep().startsWith("G"));   // rep y glass (como en Agrupado)
                     borrar      .setVisible(true);
                     aniadirInc  .setVisible(!rep.isEsIncidencia());
                     cancelarInc .setVisible(tieneInc);

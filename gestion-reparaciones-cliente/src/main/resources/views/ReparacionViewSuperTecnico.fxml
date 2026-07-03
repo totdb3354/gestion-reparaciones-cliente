@@ -44,7 +44,7 @@
             </StackPane>
             <Button fx:id="btnTabHistorial"    text="Historial"       maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarHistorial"/>
-            <Button fx:id="btnTabAgrupado"     text="Agrupado"        maxWidth="Infinity"
+            <Button fx:id="btnTabAgrupado"     text="IMEIs"        maxWidth="Infinity"
                     styleClass="stock-sidebar-btn" onAction="#mostrarAgrupado"/>
         </VBox>
     </left>

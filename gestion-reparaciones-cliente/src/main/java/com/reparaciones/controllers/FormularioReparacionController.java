@@ -69,8 +69,7 @@ public class FormularioReparacionController {
     private String        imeiEditar;
     private int           idTecEditar;
     private LocalDateTime updatedAtEdicion;
-    private TextArea taEditarOtro;
-    private int idComOtroEditar = -1;
+    private int idComOtroEditar = -1;   // ≠ -1 cuando se edita una acción "otro" (va en la sección OTRAS ACCIONES)
     private boolean esperandoConfirmacion = false;
 
     private final ReparacionDAO reparacionDAO = new ReparacionDAO();
@@ -279,12 +278,11 @@ public class FormularioReparacionController {
             this.updatedAtEdicion = d.updatedAt;
             cargarFilas(); // crea otrasAcciones (necesario para detectar si idCom es "otro")
             for (FilaUI f : filasUI) f.setFormularioEnEdicion(true);   // edición: ninguna fila muestra "Guardar fila"
-            if (otrasAcciones != null && otrasAcciones.esOtro(d.idCom)) {
-                iniciarEdicionOtro(d);
-                return;
-            }
+            // Acción "otro": modal completo (no editor reducido); la acción se edita en su sección
+            boolean editandoAccion = otrasAcciones != null && otrasAcciones.esOtro(d.idCom);
+            if (editandoAccion) idComOtroEditar = d.idCom;
 
-            lblImei.setText("IMEI: " + d.imei + "  ·  Editando " + idRep);
+            lblImei.setText("IMEI: " + d.imei + "  ·  Editando " + (editandoAccion ? "acción " : "") + idRep);
             btnGuardar.setText("Guardar cambios");
 
             List<Tecnico> tecnicos = new TecnicoDAO().getAllActivos();
@@ -296,6 +294,23 @@ public class FormularioReparacionController {
                 if (fila.getSkus().stream().anyMatch(c -> c.getIdCom() == d.idCom))
                     fila.activarModoEdicion(d.idCom, d.esReutilizado, d.observacion, d.cantidad);
             configurarFiltroModelo();
+            if (editandoAccion) {
+                // El modelo sale del propio componente "otro<modelo>" editado (no hay fila que lo detecte)
+                String modeloAccion = otrasAcciones.modeloDeOtro(d.idCom);
+                if (modeloAccion != null && cbFiltroModelo.getItems().contains(modeloAccion)) {
+                    cbFiltroModelo.setValue(modeloAccion);   // filtra filas y muestra la sección OTRAS ACCIONES
+                    cbFiltroModelo.setDisable(true);
+                }
+            }
+            // Acciones "otro" de otras reparaciones del IMEI: visibles pero bloqueadas ("ya reparadas")
+            if (otrasAcciones != null) {
+                try {
+                    String catEdicion = idRep.startsWith("G") ? "G" : "R";
+                    for (String desc : reparacionDAO.getAccionesOtro(d.imei, catEdicion, idRep))
+                        otrasAcciones.agregarLineaYaReparada(desc);
+                } catch (SQLException ignore) { /* no crítico: sin precarga de acciones */ }
+            }
+            if (editandoAccion) otrasAcciones.iniciarEdicionAccion(d.observacion);
             // Segunda pasada: re-aplicar tras el reset del filtro de modelo
             for (FilaUI fila : filasUI) {
                 if (fila.getSkus().stream().anyMatch(c -> c.getIdCom() == d.idCom))
@@ -309,37 +324,6 @@ public class FormularioReparacionController {
         } catch (SQLException e) {
             mostrarError(e);
         }
-    }
-
-    /** Modo edición de una acción "otro": oculta la maquinaria de componentes y muestra
-     *  un editor de texto para la descripción. */
-    private void iniciarEdicionOtro(ReparacionDAO.DetalleEdicion d) {
-        this.idComOtroEditar = d.idCom;
-        lblImei.setText("IMEI: " + d.imei + "  ·  Editando acción " + idRepEditar);
-        btnGuardar.setText("Guardar cambios");
-
-        contenedorFilas.setVisible(false); contenedorFilas.setManaged(false);
-        if (cabeceraColumnas != null) { cabeceraColumnas.setVisible(false); cabeceraColumnas.setManaged(false); }
-        if (otrasAcciones != null) { otrasAcciones.getRoot().setVisible(false); otrasAcciones.getRoot().setManaged(false); }
-        lblSeleccionaModelo.setVisible(false); lblSeleccionaModelo.setManaged(false);
-        cbFiltroModelo.setVisible(false); cbFiltroModelo.setManaged(false);
-
-        String original = d.observacion != null ? d.observacion : "";
-        taEditarOtro = new TextArea(original);
-        taEditarOtro.setWrapText(true);
-        taEditarOtro.setPrefRowCount(3);
-        taEditarOtro.setStyle("-fx-font-size: 13px;");
-        Label lbl = new Label("Descripción de la acción:");
-        lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
-        VBox box = new VBox(8, lbl, taEditarOtro);
-        box.setStyle("-fx-padding: 16;");
-        contenedorOtros.getChildren().add(box);
-
-        taEditarOtro.textProperty().addListener((o, a, b) -> {
-            String t = b == null ? "" : b.trim();
-            boolean valido = !t.isEmpty() && !t.equals(original.trim());
-            zonaGuardar.setVisible(valido); zonaGuardar.setManaged(valido);
-        });
     }
 
     public static void abrirEditar(String idRep, Runnable onGuardado) {
@@ -399,7 +383,8 @@ public class FormularioReparacionController {
                 if (key.equals("otro")) {
                     otrasAcciones = new OtrasAccionesUI(entry.getValue(), imgBorrar);
                     otrasAcciones.setOnCambio(this::actualizarBoton);
-                    otrasAcciones.setGuardador(this::guardarAccionOtroIndividual);
+                    // En edición no hay guardado individual de líneas: las nuevas se persisten al "Guardar cambios"
+                    if (!modoEdicion) otrasAcciones.setGuardador(this::guardarAccionOtroIndividual);
                     contenedorOtros.getChildren().add(otrasAcciones.getRoot());
                     continue;
                 }
@@ -510,7 +495,11 @@ public class FormularioReparacionController {
                     .anyMatch(f -> f.hayCambio() && f.tieneUso());
             boolean filasNuevas = filasUI.stream()
                     .filter(f -> !f.isModoEdicion()).anyMatch(FilaUI::isActiva);
-            habilitado = !filaEditadaInvalida && (cambioEnEdicion || filasNuevas);
+            boolean accionInvalida = otrasAcciones != null && otrasAcciones.accionEditadaInvalida();
+            boolean cambioAccion   = otrasAcciones != null && otrasAcciones.accionEditadaCambiada();
+            boolean accionesNuevas = otrasAcciones != null && otrasAcciones.hayAccion();
+            habilitado = !filaEditadaInvalida && !accionInvalida
+                    && (cambioEnEdicion || filasNuevas || cambioAccion || accionesNuevas);
         } else {
             boolean activa = filasUI.stream().anyMatch(f -> !f.isGuardada() && f.isActiva())
                     || (otrasAcciones != null && otrasAcciones.hayAccion());
@@ -771,22 +760,12 @@ public class FormularioReparacionController {
     }
 
     private void ejecutarGuardarEdicion() {
-        if (taEditarOtro != null) {
-            try {
-                reparacionDAO.editarReparacion(idRepEditar, idComOtroEditar, false,
-                        taEditarOtro.getText().trim(), 0, updatedAtEdicion);
-                Stage stage = (Stage) btnGuardar.getScene().getWindow();
-                stage.close();
-                if (onGuardado != null) onGuardado.run();
-            } catch (StaleDataException ex) {
-                new Alert(Alert.AlertType.WARNING,
-                        "No se pudo guardar: otro usuario modificó esta reparación.").showAndWait();
-            } catch (SQLException ex) {
-                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
-            }
-            return;
-        }
         try {
+            // 0. Acción "otro" en edición (si cambió su descripción)
+            if (idComOtroEditar != -1 && otrasAcciones != null && otrasAcciones.accionEditadaCambiada()) {
+                reparacionDAO.editarReparacion(idRepEditar, idComOtroEditar, false,
+                        otrasAcciones.getTextoAccionEditada(), 0, updatedAtEdicion);
+            }
             // 1. Editar la fila que está en modo edición (si cambió)
             for (FilaUI fila : filasUI) {
                 if (fila.isModoEdicion() && fila.hayCambio()) {
@@ -813,9 +792,21 @@ public class FormularioReparacionController {
                                     fila.getDescripcionSolicitud(), null));
                 }
             }
+            // Lo creado durante la edición hereda la categoría de lo editado (G si es glass)
+            String categoria = (idRepEditar != null && idRepEditar.startsWith("G")) ? "G" : null;
             for (Map.Entry<Integer, List<FilaReparacion>> entry : porTecnico.entrySet()) {
                 reparacionDAO.insertarCompleta(entry.getValue(), imeiEditar,
-                        entry.getKey(), null, null);
+                        entry.getKey(), null, null, categoria);
+            }
+            // 3. Acciones "otro" nuevas añadidas durante la edición (cantidad 0, stock neutro)
+            if (otrasAcciones != null && otrasAcciones.getIdComOtro() != -1) {
+                List<String> pendientes = otrasAcciones.getDescripcionesPendientes();
+                if (!pendientes.isEmpty()) {
+                    List<FilaReparacion> filasOtro = new ArrayList<>();
+                    for (String desc : pendientes)
+                        filasOtro.add(new FilaReparacion(otrasAcciones.getIdComOtro(), 0, false, desc, "otro", false, null, null));
+                    reparacionDAO.insertarCompleta(filasOtro, imeiEditar, idTecEditar, null, null, categoria);
+                }
             }
             Stage stage = (Stage) btnGuardar.getScene().getWindow();
             stage.close();
@@ -2109,6 +2100,8 @@ public class FormularioReparacionController {
         private Button btnAdd;
         private final List<LineaAccion> lineas = new ArrayList<>();
         private Function<String, String> guardador;
+        private LineaAccion lineaEdicion;          // línea de la acción en edición (modal completo), o null
+        private String textoOriginalEdicion = ""; // para detectar cambios de la acción editada
 
         OtrasAccionesUI(List<Componente> otroComponentes, Image imgBorrar) {
             this.otroComponentes = otroComponentes;
@@ -2176,6 +2169,9 @@ public class FormularioReparacionController {
 
             la.row = new HBox(8, la.tf, la.btnGuardar, la.btnDel);
             la.row.setAlignment(Pos.CENTER_LEFT);
+            if (guardador == null) {   // modo edición del formulario: sin guardado individual de líneas
+                la.btnGuardar.setVisible(false); la.btnGuardar.setManaged(false);
+            }
 
             la.btnDel.setOnAction(e -> {
                 listaLineas.getChildren().remove(la.row);
@@ -2263,15 +2259,66 @@ public class FormularioReparacionController {
                     && (l.tf.getText() == null || l.tf.getText().trim().isEmpty()));
         }
 
-        /** Descripciones pendientes (no guardadas individualmente) para el guardado final. */
+        /** Descripciones pendientes (no guardadas individualmente) para el guardado final.
+         *  Excluye la línea en edición: esa se persiste como actualización, no como alta. */
         List<String> getDescripcionesPendientes() {
             List<String> out = new ArrayList<>();
             for (LineaAccion l : lineas) {
-                if (l.guardada) continue;
+                if (l.guardada || l == lineaEdicion) continue;
                 String t = l.tf.getText() == null ? "" : l.tf.getText().trim();
                 if (!t.isEmpty()) out.add(t);
             }
             return out;
+        }
+
+        // ── Edición de una acción existente (modal completo) ────────────────
+        /** Añade una acción ya guardada en otra reparación: visible, bloqueada y en verde. */
+        void agregarLineaYaReparada(String texto) {
+            if (texto == null || texto.isBlank()) return;
+            agregarLinea(texto.trim());
+            LineaAccion la = lineas.get(lineas.size() - 1);
+            la.guardada = true;
+            la.fechaGuardado = "";
+            bloquearLinea(la);
+            la.lblGuardada.setText("✓ Ya reparada");
+            actualizar();
+        }
+
+        /** Precarga la acción editada como línea fija (sin borrar ni guardado individual). */
+        void iniciarEdicionAccion(String descripcion) {
+            String texto = descripcion == null ? "" : descripcion.trim();
+            agregarLinea(texto);
+            lineaEdicion = lineas.get(lineas.size() - 1);
+            textoOriginalEdicion = texto;
+            lineaEdicion.btnDel.setVisible(false); lineaEdicion.btnDel.setManaged(false);
+            lineaEdicion.btnGuardar.setVisible(false); lineaEdicion.btnGuardar.setManaged(false);
+        }
+
+        /** true si la acción editada quedó vacía (inválida para guardar). */
+        boolean accionEditadaInvalida() {
+            if (lineaEdicion == null) return false;
+            String t = lineaEdicion.tf.getText() == null ? "" : lineaEdicion.tf.getText().trim();
+            return t.isEmpty();
+        }
+
+        /** true si la acción editada tiene texto distinto del original. */
+        boolean accionEditadaCambiada() {
+            if (lineaEdicion == null) return false;
+            String t = lineaEdicion.tf.getText() == null ? "" : lineaEdicion.tf.getText().trim();
+            return !t.isEmpty() && !t.equals(textoOriginalEdicion);
+        }
+
+        String getTextoAccionEditada() {
+            return lineaEdicion == null ? null : lineaEdicion.tf.getText().trim();
+        }
+
+        /** Modelo del componente "otro" con ese idCom, o null si no es un "otro". */
+        String modeloDeOtro(int idCom) {
+            return otroComponentes.stream()
+                    .filter(c -> c.getIdCom() == idCom)
+                    .map(c -> extraerModelo(c.getTipo(), "otro"))
+                    .filter(m -> !m.isEmpty())
+                    .findFirst().orElse(null);
         }
 
         /** Vuelca el estado completo de cada línea (guardada o pendiente) al borrador. */

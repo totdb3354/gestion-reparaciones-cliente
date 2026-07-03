@@ -61,4 +61,10 @@ public class PulidoDAO {
     public void eliminarPulido(String idP) throws SQLException {
         ApiClient.delete("/api/pulidos/historial/" + idP);
     }
+
+    /** Elimina un pulido completado dejando el motivo en el log (paridad con reparaciones). */
+    public void eliminarPulido(String idP, String motivo) throws SQLException {
+        ApiClient.deleteWithBody("/api/pulidos/historial/" + idP,
+                Map.of("motivo", motivo));
+    }
 }
