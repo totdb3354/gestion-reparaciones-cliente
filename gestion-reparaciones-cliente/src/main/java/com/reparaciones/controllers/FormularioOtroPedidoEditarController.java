@@ -27,7 +27,7 @@ import java.util.List;
  * <p>Usa control de concurrencia optimista ({@link com.reparaciones.utils.StaleDataException})
  * y convierte el precio a EUR vía {@link com.reparaciones.dao.TipoCambioDAO}.</p>
  *
- * @role SUPERTECNICO
+ * @role ADMIN
  */
 public class FormularioOtroPedidoEditarController {
 
