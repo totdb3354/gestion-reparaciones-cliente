@@ -42,4 +42,16 @@ class GrupoImeiTest {
         GrupoImei g = new GrupoImei("111", List.of(rr("G20260630_1")));
         assertEquals("1 Glass", g.getResumenTipos());
     }
+
+    @Test
+    void indiceDeEncuentraElGrupoPorImei() {
+        GrupoImei g1 = new GrupoImei("111111111111111", java.util.List.of());
+        GrupoImei g2 = new GrupoImei("222222222222222", java.util.List.of());
+        java.util.List<Object> items = java.util.List.of(g1, "otraCosa", g2);
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, GrupoImei.indiceDe(items, "111111111111111"));
+        org.junit.jupiter.api.Assertions.assertEquals(2, GrupoImei.indiceDe(items, "222222222222222"));
+        org.junit.jupiter.api.Assertions.assertEquals(-1, GrupoImei.indiceDe(items, "999999999999999"));
+        org.junit.jupiter.api.Assertions.assertEquals(-1, GrupoImei.indiceDe(items, null));
+    }
 }
