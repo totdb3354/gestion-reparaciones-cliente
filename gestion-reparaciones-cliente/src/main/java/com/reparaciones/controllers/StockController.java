@@ -1957,19 +1957,50 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void exportarPedidos(Stage owner) {
-        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor");
+        if (toggleOtrosPedidos.isSelected()) { exportarOtros(owner); return; }
+        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor",
+                "Precio unidad", "Divisa", "Total EUR", "Estado");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (CompraComponente p : tablaPedidos.getItems()) {
+            // Total como en la columna EUR de la tabla: recibida si ya llegó, pedida si no.
+            int unidades = p.getEstado() == Estado.recibido && p.getCantidadRecibida() != null
+                    ? p.getCantidadRecibida() : p.getCantidad();
             filas.add(List.of(
                     FechaUtils.formatear(p.getFechaPedido(), fmt),
                     p.getTipoComponente() != null ? p.getTipoComponente() : "",
                     String.valueOf(p.getCantidad()),
                     p.isEsUrgente() ? "Sí" : "No",
-                    p.getNombreProveedor() != null ? p.getNombreProveedor() : ""
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
+                    String.format("%.2f", p.getPrecioUnidadPedido()),
+                    p.getDivisa() != null ? p.getDivisa() : "",
+                    String.format("%.2f", unidades * p.getPrecioEur()),
+                    p.getEstado().name()
             ));
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos", cabeceras, filas);
+    }
+
+    private void exportarOtros(Stage owner) {
+        List<String> cabeceras = List.of("Fecha pedido", "Concepto", "Cantidad", "Proveedor",
+                "Precio unidad", "Divisa", "Total EUR", "Estado");
+        List<List<String>> filas = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        for (CompraOtro p : tablaOtros.getItems()) {
+            int unidades = p.getEstado() == Estado.recibido && p.getCantidadRecibida() != null
+                    ? p.getCantidadRecibida() : p.getCantidad();
+            filas.add(List.of(
+                    FechaUtils.formatear(p.getFechaPedido(), fmt),
+                    p.getConcepto() != null ? p.getConcepto() : "",
+                    String.valueOf(p.getCantidad()),
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
+                    String.format("%.2f", p.getPrecioUnidadPedido()),
+                    p.getDivisa() != null ? p.getDivisa() : "",
+                    String.format("%.2f", unidades * p.getPrecioEur()),
+                    p.getEstado().name()
+            ));
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos_otros", cabeceras, filas);
     }
 
     private void exportarProveedores(Stage owner) {
