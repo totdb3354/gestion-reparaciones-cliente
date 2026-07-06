@@ -301,6 +301,10 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
     }
 
     @FXML private void mostrarAgrupado() {
+        if (pnlAgrupado.isVisible() && agrupadoController.enDetalle()) {
+            agrupadoController.volverAlMaestro();
+            return;
+        }
         mostrarPanel(pnlAgrupado, btnTabAgrupado);
     }
 

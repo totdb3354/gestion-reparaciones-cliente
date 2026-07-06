@@ -304,6 +304,10 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
     }
 
     @FXML private void mostrarAgrupado() {
+        if (pnlAgrupado.isVisible() && agrupadoController.enDetalle()) {
+            agrupadoController.volverAlMaestro();
+            return;
+        }
         mostrarPanel(pnlAgrupado, btnTabAgrupado);
         agrupadoController.cargar();
     }
