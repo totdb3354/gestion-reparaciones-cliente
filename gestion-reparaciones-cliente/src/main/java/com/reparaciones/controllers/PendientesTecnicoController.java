@@ -7,6 +7,7 @@ import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
+import com.reparaciones.utils.TipoTrabajo;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.collections.FXCollections;
@@ -33,6 +34,7 @@ public class PendientesTecnicoController {
     @FXML private TableView<ReparacionResumen>           tablaPendientes;
     @FXML private TableColumn<ReparacionResumen, Void>   cEstado;
     @FXML private TableColumn<ReparacionResumen, String> cId;
+    @FXML private TableColumn<ReparacionResumen, Void>   cTipo;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cCliente;
@@ -66,6 +68,27 @@ public class PendientesTecnicoController {
 
         cId.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
+        cTipo.setCellFactory(col -> new TableCell<>() {
+            private final Label badge = new Label();
+            private final Label lblChasis = new Label("Chasis");
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, badge, lblChasis);
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblChasis.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6;");
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                TipoTrabajo tipo = TipoTrabajo.desde(rep.getIdRep());
+                badge.setText(tipo.etiqueta());
+                badge.setStyle(tipo.estiloBadge());
+                boolean chasis = rep.isEsChasis() && tipo == TipoTrabajo.REPARACION;
+                lblChasis.setVisible(chasis); lblChasis.setManaged(chasis);
+                setGraphic(box);
+            }
+        });
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListener =

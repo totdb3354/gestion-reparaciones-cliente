@@ -152,14 +152,23 @@ public class PendientesSuperTecnicoController {
         cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
         cTipo.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
+            private final Label lblChasis = new Label("Chasis");
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, badge, lblChasis);
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblChasis.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6;");
+            }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                TipoTrabajo tipo = tipoDe(getTableView().getItems().get(getIndex()).getIdRep());
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                TipoTrabajo tipo = tipoDe(rep.getIdRep());
                 badge.setText(tipo.etiqueta());
                 badge.setStyle(tipo.estiloBadge());
-                setGraphic(badge);
+                boolean chasis = rep.isEsChasis() && tipo == TipoTrabajo.REPARACION;
+                lblChasis.setVisible(chasis); lblChasis.setManaged(chasis);
+                setGraphic(box);
             }
         });
         cTecnico.setCellFactory(col -> new TableCell<>() {
@@ -371,6 +380,16 @@ public class PendientesSuperTecnicoController {
                         cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
+                MenuItem toggleChasis = new MenuItem();
+                toggleChasis.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    boolean nuevoEstado = !rep.isEsChasis();
+                    try {
+                        reparacionDAO.actualizarChasis(rep.getIdRep(), nuevoEstado);
+                        cargar();
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
                 MenuItem editarCliente = new MenuItem("Editar cliente");
                 ImageView ivEditarCli = new ImageView(imgEditar);
                 ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
@@ -396,15 +415,20 @@ public class PendientesSuperTecnicoController {
                 menu.setOnShowing(e -> {
                     // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
                     boolean esPulido = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.PULIDO;
+                    boolean esRep = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.REPARACION;
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
                     toggleUrgente.setVisible(!soloLectura && !esPulido);
                     editarCliente.setVisible(!soloLectura);   // cliente aplica a cualquier tipo, pulido incluido
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
+                    toggleChasis.setVisible(!soloLectura && esRep);
+                    if (getItem() != null)
+                        toggleChasis.setText(getItem().isEsChasis() ? "Quitar chasis" : "Marcar chasis");
                 });
                 menu.getItems().add(editarCliente);
                 menu.getItems().add(toggleUrgente);   // acción de estado, al final (los "Editar…" quedan juntos)
+                menu.getItems().add(toggleChasis);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
