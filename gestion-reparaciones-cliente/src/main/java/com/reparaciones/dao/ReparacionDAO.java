@@ -339,11 +339,21 @@ public class ReparacionDAO {
      * @throws SQLException si falla la llamada al servidor
      */
     public String insertarAsignacion(String imei, int idTec, String comentario, boolean urgente) throws SQLException {
+        return insertarAsignacion(imei, idTec, comentario, urgente, false);
+    }
+
+    /**
+     * Crea una nueva asignación pendiente y devuelve su ID.
+     *
+     * @param esChasis {@code true} si la asignación es una reparación de chasis
+     */
+    public String insertarAsignacion(String imei, int idTec, String comentario, boolean urgente, boolean esChasis) throws SQLException {
         Map<String, Object> body = new HashMap<>();
         body.put("imei", imei);
         body.put("idTec", idTec);
         if (comentario != null && !comentario.isBlank()) body.put("comentario", comentario);
         body.put("urgente", urgente);
+        body.put("esChasis", esChasis);
         JsonObject resp = ApiClient.post("/api/reparaciones/asignaciones", body, JsonObject.class);
         return resp != null ? resp.get("value").getAsString() : null;
     }
@@ -409,6 +419,11 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
     public void actualizarUrgente(String idRep, boolean urgente) throws SQLException {
         ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/urgente",
                 Map.of("urgente", urgente));
+    }
+
+    public void actualizarChasis(String idRep, boolean esChasis) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/chasis",
+                Map.of("esChasis", esChasis));
     }
 
     /**

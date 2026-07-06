@@ -109,6 +109,7 @@ public class PendientesSuperTecnicoController {
         Cliente cliente;                         // cliente del IMEI (por entrada), o null
         boolean sinCliente;                      // true = el usuario eligió explícitamente "— Sin cliente —"
         String comentario = "";
+        boolean esChasis;                        // solo aplica a tipo Reparación; se resetea entre IMEIs
         boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
         boolean buscando;                        // true mientras el lookup está en vuelo
@@ -1429,6 +1430,8 @@ public class PendientesSuperTecnicoController {
         tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                 "-fx-border-radius: 4; -fx-background-radius: 4;" +
                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        CheckBox chkChasis = new CheckBox("Reparación de chasis");
+        chkChasis.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
         Label lblImeiCursoCap = new Label("IMEI en curso");
         lblImeiCursoCap.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         Label lblImeiCurso = new Label("—");
@@ -1442,7 +1445,7 @@ public class PendientesSuperTecnicoController {
 
         VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
-                lblComentario, tfComentario, accionesForm);
+                lblComentario, tfComentario, chkChasis, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
         HBox.setHgrow(formBox, javafx.scene.layout.Priority.ALWAYS);
         formBox.setDisable(true);
@@ -1613,6 +1616,9 @@ public class PendientesSuperTecnicoController {
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
             tfComentario.setText(e.comentario);   // el comentario NO se mantiene entre IMEIs (se resetea)
+            boolean esRep = (e.tipo == TipoTrabajo.REPARACION);
+            chkChasis.setVisible(esRep); chkChasis.setManaged(esRep);
+            chkChasis.setSelected(e.esChasis);   // entrada nueva = false → el check NO persiste entre IMEIs
             // Cliente: por IMEI, NO se arrastra (a diferencia de los técnicos). Parte de lo que
             // tenga la entrada; si es nueva, vacío (y la precarga de BD lo rellenará si el IMEI ya tenía uno).
             clienteSel[0] = e.cliente;
@@ -1667,6 +1673,7 @@ public class PendientesSuperTecnicoController {
             e.modeloCode = modeloSel[0];
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
+            e.esChasis = (e.tipo == TipoTrabajo.REPARACION) && chkChasis.isSelected();
             e.cliente = clienteSel[0];
             e.sinCliente = sinClienteSel[0];
             clienteManual.put(e.imei, e.sinCliente ? SIN_CLIENTE : e.cliente);   // decisión manual: prevalece sobre BD
@@ -1850,7 +1857,7 @@ public class PendientesSuperTecnicoController {
                         if (e.tipo == TipoTrabajo.GLASS)
                             glassDAO.insertarAsignacionGlass(e.imei, t.getIdTec(), com, urgente);
                         else
-                            reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente);
+                            reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente, e.esChasis);
                     }
                 }
                 for (FilaPulido f : lotePulido) {
