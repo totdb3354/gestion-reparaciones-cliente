@@ -20,9 +20,10 @@ import java.util.List;
 
 /**
  * Controlador del formulario de edición de un pedido de otros componentes.
- * <p>Permite modificar concepto, proveedor, cantidad, urgencia, precio y divisa de un
+ * <p>Permite modificar concepto, proveedor, cantidad, precio y divisa de un
  * pedido en estado {@code pendiente}, {@code en_camino} o {@code recibido}. A diferencia
- * de los pedidos de componentes, aquí no hay ajuste de stock (no son inventario).</p>
+ * de los pedidos de componentes, aquí no hay ajuste de stock (no son inventario) y la
+ * urgencia no se gestiona (se conserva el valor existente del pedido).</p>
  *
  * <p>Usa control de concurrencia optimista ({@link com.reparaciones.utils.StaleDataException})
  * y convierte el precio a EUR vía {@link com.reparaciones.dao.TipoCambioDAO}.</p>
@@ -35,7 +36,6 @@ public class FormularioOtroPedidoEditarController {
     @FXML private TextField        txtConcepto;
     @FXML private ComboBox<Proveedor> cmbProveedor;
     @FXML private TextField        txtCantidad;
-    @FXML private CheckBox         chkUrgente;
     @FXML private TextField        txtPrecio;
     @FXML private ComboBox<String> cmbDivisa;
     @FXML private Label            lblTotalEur;
@@ -97,7 +97,6 @@ public class FormularioOtroPedidoEditarController {
                 .findFirst().ifPresent(cmbProveedor::setValue);
         int cantMostrar = pedido.getCantidadRecibida() != null ? pedido.getCantidadRecibida() : pedido.getCantidad();
         txtCantidad.setText(String.valueOf(cantMostrar));
-        chkUrgente.setSelected(pedido.isEsUrgente());
         txtPrecio.setText(String.format("%.2f", pedido.getPrecioUnidadPedido()));
         cmbDivisa.setValue(pedido.getDivisa());
     }
@@ -168,8 +167,9 @@ public class FormularioOtroPedidoEditarController {
         try {
             double tasa      = tipoCambioDAO.getTasa(divisa);
             double precioEur = precio * tasa;
+            // La urgencia no se gestiona en «otros»: se conserva el valor que tuviera el pedido.
             compraOtroDAO.editar(pedidoEditar, prov.getIdProv(), concepto, cant,
-                    chkUrgente.isSelected(), precio, divisa, precioEur);
+                    pedidoEditar.isEsUrgente(), precio, divisa, precioEur);
             onGuardado.run();
             cerrarVentana();
         } catch (com.reparaciones.utils.StaleDataException e) {

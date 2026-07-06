@@ -32,20 +32,16 @@
         <TextField fx:id="txtCantidad" GridPane.rowIndex="2" GridPane.columnIndex="1"
                    styleClass="buscador" promptText="Ej. 10"/>
 
-        <!-- Urgente -->
-        <Label text="Urgente:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
-        <CheckBox fx:id="chkUrgente" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-
         <!-- Precio + divisa -->
-        <Label text="Precio unidad:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
-        <HBox GridPane.rowIndex="4" GridPane.columnIndex="1" spacing="8" alignment="CENTER_LEFT">
+        <Label text="Precio unidad:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+        <HBox GridPane.rowIndex="3" GridPane.columnIndex="1" spacing="8" alignment="CENTER_LEFT">
             <TextField fx:id="txtPrecio" styleClass="buscador" promptText="0.00" HBox.hgrow="ALWAYS"/>
             <ComboBox fx:id="cmbDivisa" prefWidth="84"/>
         </HBox>
 
         <!-- Total EUR (calculado) -->
-        <Label text="Total EUR:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
-        <Label fx:id="lblTotalEur" text="—" GridPane.rowIndex="5" GridPane.columnIndex="1"
+        <Label text="Total EUR:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+        <Label fx:id="lblTotalEur" text="—" GridPane.rowIndex="4" GridPane.columnIndex="1"
                style="-fx-font-size:13px; -fx-font-weight:bold; -fx-text-fill:#2C3B54;"/>
     </GridPane>
 
