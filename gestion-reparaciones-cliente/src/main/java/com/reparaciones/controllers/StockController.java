@@ -1238,19 +1238,23 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         switch (sel.getEstado()) {
             case pendiente -> {
                 MenuItem confirmar = new MenuItem("Confirmar pedido");
+                MenuItem editar    = new MenuItem("Editar");
                 MenuItem borrar    = new MenuItem("Borrar");
                 confirmar.setOnAction(e -> confirmarPedidoOtro());
+                editar   .setOnAction(e -> editarPedidoOtro());
                 borrar   .setOnAction(e -> borrarPedidoOtro());
-                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), borrar);
+                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), editar, borrar);
             }
             case en_camino -> {
-                MenuItem parcial  = new MenuItem("Recepción parcial");
+                MenuItem parcial   = new MenuItem("Recepción parcial");
                 MenuItem confirmar = new MenuItem("Confirmar recibido");
+                MenuItem editar    = new MenuItem("Editar");
                 MenuItem cancelar  = new MenuItem("Cancelar pedido");
                 parcial  .setOnAction(e -> confirmarParcialOtro());
                 confirmar.setOnAction(e -> confirmarRecibidoOtro());
+                editar   .setOnAction(e -> editarPedidoOtro());
                 cancelar .setOnAction(e -> cancelarPedidoOtro());
-                ctx.getItems().addAll(parcial, confirmar, new SeparatorMenuItem(), cancelar);
+                ctx.getItems().addAll(parcial, confirmar, new SeparatorMenuItem(), editar, cancelar);
             }
             case parcial -> {
                 MenuItem resto    = new MenuItem("Recibir resto");
@@ -1261,8 +1265,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             }
             case recibido -> {
                 MenuItem desrecibir = new MenuItem("Revertir a En camino");
+                MenuItem editar     = new MenuItem("Editar");
                 desrecibir.setOnAction(e -> desrecibirPedidoOtro());
-                ctx.getItems().add(desrecibir);
+                editar    .setOnAction(e -> editarPedidoOtro());
+                ctx.getItems().addAll(desrecibir, new SeparatorMenuItem(), editar);
             }
             default -> { /* cancelado: sin acciones */ }
         }
@@ -1283,6 +1289,12 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @FXML private void nuevoOtroPedido() {
         FormularioOtroPedidoController.abrir(() -> cargarOtros());
+    }
+
+    private void editarPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        FormularioOtroPedidoEditarController.abrir(sel, () -> cargarOtros());
     }
 
     private void confirmarPedidoOtro() {
