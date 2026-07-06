@@ -21,6 +21,14 @@ public final class MultiSelectDropdown {
 
     private static final int MAX_VISIBLE_ROWS = 8;
 
+    /** Alto fijo de fila. Sin fixedCellSize el VirtualFlow estima alturas y, en el
+     *  fondo de la lista, cada pasada de layout (p. ej. el hover) recoloca la vista
+     *  una fila arriba ocultando la última. */
+    private static final double ALTURA_FILA = 30;
+
+    /** Padding vertical (4+4) + borde (1+1) del list-view en app.css. */
+    private static final double RELLENO_LISTA = 10;
+
     // ── Handle ────────────────────────────────────────────────────────────────
 
     public static final class Handle {
@@ -43,6 +51,9 @@ public final class MultiSelectDropdown {
 
         if (combo.getUserData() == null) {
             combo.setUserData(listView);
+            // Solo en la variante estándar: la de cellFactory custom (Estadísticas)
+            // tiene una fila separadora de 8px que un alto fijo global rompería.
+            listView.setFixedCellSize(ALTURA_FILA);
             listView.setCellFactory(lv -> new ListCell<>() {
                 private final CheckBox check = new CheckBox();
                 {
@@ -68,7 +79,7 @@ public final class MultiSelectDropdown {
         }
 
         listView.getItems().setAll(items);
-        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * 30.0 + 4);
+        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * ALTURA_FILA + RELLENO_LISTA);
         listView.refresh();
         return new Handle(listView);
     }
@@ -90,7 +101,7 @@ public final class MultiSelectDropdown {
         }
 
         listView.getItems().setAll(items);
-        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * 30.0 + 4);
+        listView.setMaxHeight(Math.min(items.size(), MAX_VISIBLE_ROWS) * ALTURA_FILA + RELLENO_LISTA);
         listView.refresh();
         return new Handle(listView);
     }

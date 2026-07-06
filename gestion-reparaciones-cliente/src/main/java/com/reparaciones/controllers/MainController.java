@@ -275,7 +275,7 @@ public class MainController {
             if (alertasCriticas.isEmpty()) return;
             FormularioCompraController.abrirConComponentes(alertasCriticas, () -> {});
         });
-        btnVerStock.setOnAction(e -> { ventana.close(); mostrarStock(); });
+        btnVerStock.setOnAction(e -> { ventana.close(); mostrarStockEnActual(); });
 
         // ── Recargar ──────────────────────────────────────────────────────────
         final Runnable[] recargarRef = { null };
@@ -772,6 +772,14 @@ public class MainController {
         Object[] cached = vistaCache.get("/views/StockView.fxml");
         if (cached != null && cached[1] instanceof StockController sc)
             Platform.runLater(sc::irAPedidos);
+    }
+
+    /** Navega a la vista de stock y abre directamente la sección de stock actual. */
+    private void mostrarStockEnActual() {
+        mostrarStock();
+        Object[] cached = vistaCache.get("/views/StockView.fxml");
+        if (cached != null && cached[1] instanceof StockController sc)
+            Platform.runLater(sc::irAStockActual);
     }
 
     /** Navega a la vista de estadísticas. */

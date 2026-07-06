@@ -103,6 +103,10 @@ public class PulidoSuperTecnicoController {
                     ReparacionResumen rep = repMostrado;
                     Tecnico sel = cb.getValue();
                     if (sel == null || sel.getIdTec() == rep.getIdTec()) return;
+                    // Cerrar el desplegable ANTES de recargar: si cargar() recicla esta celda a
+                    // otra fila con el popup aún abierto, updateItem se salta el repintado
+                    // (guard isShowing) y el combo mostraría este técnico sobre la fila equivocada.
+                    cb.hide();
                     // Guardado directo: reasignar el técnico ya en BD.
                     String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     try {
@@ -118,9 +122,10 @@ public class PulidoSuperTecnicoController {
                 });
             }
             @Override protected void updateItem(String item, boolean empty) {
-                if (cb.isShowing()) return;
+                boolean vacia = empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size();
+                if (cb.isShowing() && !vacia) return;   // no pisar el desplegable abierto de una fila viva
                 super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                if (vacia) {
                     repMostrado = null; setGraphic(null); setText(null); setStyle(""); return;
                 }
                 actualizando = true;

@@ -180,6 +180,10 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
 
     @FXML
     private void mostrarAgrupado() {
+        if (pnlAgrupado.isVisible() && agrupadoController.enDetalle()) {
+            agrupadoController.volverAlMaestro();
+            return;
+        }
         pnlAgrupado.setVisible(true);      pnlAgrupado.setManaged(true);
         pnlHistorial.setVisible(false);    pnlHistorial.setManaged(false);
         pnlAsignaciones.setVisible(false); pnlAsignaciones.setManaged(false);

@@ -40,6 +40,7 @@ public class ReparacionResumen {
     private String        observacionTelefono;
     private String        nombreTecnicoAsigna;
     private boolean       urgente;
+    private boolean       esChasis;
     private boolean       revisionLogistica;
     private boolean       tieneAsignaciones;
     private LocalDateTime telefonoUpdatedAt;
@@ -172,6 +173,8 @@ public class ReparacionResumen {
     public void    setObservacionTelefono(String o)  { this.observacionTelefono = o; }
     public boolean isUrgente()                       { return urgente; }
     public void    setUrgente(boolean urgente)       { this.urgente = urgente; }
+    public boolean isEsChasis()                  { return esChasis; }
+    public void    setEsChasis(boolean esChasis) { this.esChasis = esChasis; }
     public boolean isRevisionLogistica()             { return revisionLogistica; }
     public void    setRevisionLogistica(boolean v)   { this.revisionLogistica = v; }
     public boolean isTieneAsignaciones()             { return tieneAsignaciones; }

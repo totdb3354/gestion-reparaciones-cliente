@@ -109,6 +109,7 @@ public class PendientesSuperTecnicoController {
         Cliente cliente;                         // cliente del IMEI (por entrada), o null
         boolean sinCliente;                      // true = el usuario eligió explícitamente "— Sin cliente —"
         String comentario = "";
+        boolean esChasis;                        // solo aplica a tipo Reparación; se resetea entre IMEIs
         boolean asignada;                        // true = verde (configurada y movida); false = rojo (pendiente)
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
         boolean buscando;                        // true mientras el lookup está en vuelo
@@ -149,18 +150,7 @@ public class PendientesSuperTecnicoController {
 
 
         cId.setCellValueFactory(d -> new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
-        cTipo.setCellFactory(col -> new TableCell<>() {
-            private final Label badge = new Label();
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                TipoTrabajo tipo = tipoDe(getTableView().getItems().get(getIndex()).getIdRep());
-                badge.setText(tipo.etiqueta());
-                badge.setStyle(tipo.estiloBadge());
-                setGraphic(badge);
-            }
-        });
+        cTipo.setCellFactory(col -> TipoTrabajo.celdaTipoConChasis());
         cTecnico.setCellFactory(col -> new TableCell<>() {
             private final ComboBox<Tecnico> cb = new ComboBox<>();
             private boolean actualizando = false;
@@ -196,6 +186,10 @@ public class PendientesSuperTecnicoController {
                     ReparacionResumen rep = getTableView().getItems().get(getIndex());
                     Tecnico sel = cb.getValue();
                     if (sel == null || sel.getIdTec() == rep.getIdTec()) return;
+                    // Cerrar el desplegable ANTES de recargar: si cargar() recicla esta celda a
+                    // otra fila con el popup aún abierto, updateItem se salta el repintado
+                    // (guard isShowing) y el combo mostraría este técnico sobre la fila equivocada.
+                    cb.hide();
                     // Guardado directo: reasignar el técnico ya en BD.
                     String com = rep.getComentarioAsignacion() != null ? rep.getComentarioAsignacion() : "";
                     try {
@@ -216,9 +210,10 @@ public class PendientesSuperTecnicoController {
             }
             @Override
             protected void updateItem(String item, boolean empty) {
-                if (cb.isShowing()) return;
+                boolean vacia = empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size();
+                if (cb.isShowing() && !vacia) return;   // no pisar el desplegable abierto de una fila viva
                 super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                if (vacia) {
                     setGraphic(null);
                     setText(null);
                     setStyle("");
@@ -369,6 +364,16 @@ public class PendientesSuperTecnicoController {
                         cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
+                MenuItem toggleChasis = new MenuItem();
+                toggleChasis.setOnAction(e -> {
+                    if (getItem() == null) return;
+                    ReparacionResumen rep = getItem();
+                    boolean nuevoEstado = !rep.isEsChasis();
+                    try {
+                        reparacionDAO.actualizarChasis(rep.getIdRep(), nuevoEstado);
+                        cargar();
+                    } catch (java.sql.SQLException ex) { mostrarError(ex); }
+                });
                 MenuItem editarCliente = new MenuItem("Editar cliente");
                 ImageView ivEditarCli = new ImageView(imgEditar);
                 ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
@@ -394,15 +399,20 @@ public class PendientesSuperTecnicoController {
                 menu.setOnShowing(e -> {
                     // Modo solo lectura (admin): solo "Copiar celda"; se ocultan las acciones de escritura.
                     boolean esPulido = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.PULIDO;
+                    boolean esRep = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.REPARACION;
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
                     toggleUrgente.setVisible(!soloLectura && !esPulido);
                     editarCliente.setVisible(!soloLectura);   // cliente aplica a cualquier tipo, pulido incluido
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
+                    toggleChasis.setVisible(!soloLectura && esRep);
+                    if (getItem() != null)
+                        toggleChasis.setText(getItem().isEsChasis() ? "Quitar chasis" : "Marcar chasis");
                 });
                 menu.getItems().add(editarCliente);
                 menu.getItems().add(toggleUrgente);   // acción de estado, al final (los "Editar…" quedan juntos)
+                menu.getItems().add(toggleChasis);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
@@ -1428,6 +1438,8 @@ public class PendientesSuperTecnicoController {
         tfComentario.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;" +
                 "-fx-border-radius: 4; -fx-background-radius: 4;" +
                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
+        CheckBox chkChasis = new CheckBox("Reparación de chasis");
+        chkChasis.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
         Label lblImeiCursoCap = new Label("IMEI en curso");
         lblImeiCursoCap.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         Label lblImeiCurso = new Label("—");
@@ -1441,7 +1453,7 @@ public class PendientesSuperTecnicoController {
 
         VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
-                lblComentario, tfComentario, accionesForm);
+                lblComentario, tfComentario, chkChasis, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
         HBox.setHgrow(formBox, javafx.scene.layout.Priority.ALWAYS);
         formBox.setDisable(true);
@@ -1612,6 +1624,9 @@ public class PendientesSuperTecnicoController {
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
             tfComentario.setText(e.comentario);   // el comentario NO se mantiene entre IMEIs (se resetea)
+            boolean esRep = (e.tipo == TipoTrabajo.REPARACION);
+            chkChasis.setVisible(esRep); chkChasis.setManaged(esRep);
+            chkChasis.setSelected(e.esChasis);   // entrada nueva = false → el check NO persiste entre IMEIs
             // Cliente: por IMEI, NO se arrastra (a diferencia de los técnicos). Parte de lo que
             // tenga la entrada; si es nueva, vacío (y la precarga de BD lo rellenará si el IMEI ya tenía uno).
             clienteSel[0] = e.cliente;
@@ -1666,6 +1681,7 @@ public class PendientesSuperTecnicoController {
             e.modeloCode = modeloSel[0];
             e.tecnicos.clear(); e.tecnicos.addAll(sel);
             e.comentario = tfComentario.getText().trim();
+            e.esChasis = (e.tipo == TipoTrabajo.REPARACION) && chkChasis.isSelected();
             e.cliente = clienteSel[0];
             e.sinCliente = sinClienteSel[0];
             clienteManual.put(e.imei, e.sinCliente ? SIN_CLIENTE : e.cliente);   // decisión manual: prevalece sobre BD
@@ -1849,7 +1865,7 @@ public class PendientesSuperTecnicoController {
                         if (e.tipo == TipoTrabajo.GLASS)
                             glassDAO.insertarAsignacionGlass(e.imei, t.getIdTec(), com, urgente);
                         else
-                            reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente);
+                            reparacionDAO.insertarAsignacion(e.imei, t.getIdTec(), com, urgente, e.esChasis);
                     }
                 }
                 for (FilaPulido f : lotePulido) {

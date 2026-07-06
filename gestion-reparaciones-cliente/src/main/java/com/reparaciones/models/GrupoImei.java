@@ -112,4 +112,15 @@ public class GrupoImei {
     }
 
     private static void sep(StringBuilder sb) { if (sb.length() > 0) sb.append(" · "); }
+
+    /**
+     * Índice del grupo con ese IMEI dentro de una lista mixta de items de tabla
+     * (la vista maestra mezcla tipos), o {@code -1} si no está.
+     */
+    public static int indiceDe(java.util.List<?> items, String imei) {
+        if (imei == null) return -1;
+        for (int i = 0; i < items.size(); i++)
+            if (items.get(i) instanceof GrupoImei g && imei.equals(g.getImei())) return i;
+        return -1;
+    }
 }

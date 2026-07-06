@@ -110,6 +110,7 @@ public class AgrupadoController {
     private enum Modo { MAESTRO, DETALLE }
     private Modo   modoActual  = Modo.MAESTRO;
     private String imeiDetalle = null;
+    private String imeiARestaurar = null;
     private HBox   barraNavegacion;
     private Label  lblNavImei;
     private Label  lblNavModelo;
@@ -1017,6 +1018,17 @@ public class AgrupadoController {
         grupos.sort(Comparator.comparing(GrupoImei::getFechaMasReciente,
                 Comparator.nullsLast(Comparator.reverseOrder())));
         tablaItems.setAll(grupos);
+        restaurarSeleccion();
+    }
+
+    /** Si venimos de un detalle, re-selecciona el grupo y hace scroll hasta él. */
+    private void restaurarSeleccion() {
+        if (imeiARestaurar == null) return;
+        int idx = GrupoImei.indiceDe(tablaItems, imeiARestaurar);
+        imeiARestaurar = null;
+        if (idx < 0) return;
+        tabla.getSelectionModel().clearAndSelect(idx);
+        tabla.scrollTo(Math.max(0, idx - 3));
     }
 
     // ── Drill-down ──────────────────────────────────────────────────────────
@@ -1068,9 +1080,16 @@ public class AgrupadoController {
     }
 
     private void volverAGrupos() {
+        imeiARestaurar = imeiDetalle;
         resetarModo();
         aplicarFiltros();
     }
+
+    /** ¿Está el drill-down en modo detalle? (para el botón del sub-sidebar) */
+    public boolean enDetalle() { return modoActual == Modo.DETALLE; }
+
+    /** Vuelve al maestro restaurando selección y scroll (equivale a «← Volver»). */
+    public void volverAlMaestro() { if (enDetalle()) volverAGrupos(); }
 
     // ── Diálogos (solo supertécnico) ────────────────────────────────────────
 

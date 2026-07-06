@@ -252,6 +252,8 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     public void irAPedidos() { mostrarTabPedidos(); }
 
+    public void irAStockActual() { mostrarTabStock(); }
+
     @FXML private void mostrarTabProveedores() {
         mostrarPanel(pnlProveedores, btnTabProveedores);
         cargarProveedores();
@@ -1238,19 +1240,23 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         switch (sel.getEstado()) {
             case pendiente -> {
                 MenuItem confirmar = new MenuItem("Confirmar pedido");
+                MenuItem editar    = new MenuItem("Editar");
                 MenuItem borrar    = new MenuItem("Borrar");
                 confirmar.setOnAction(e -> confirmarPedidoOtro());
+                editar   .setOnAction(e -> editarPedidoOtro());
                 borrar   .setOnAction(e -> borrarPedidoOtro());
-                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), borrar);
+                ctx.getItems().addAll(confirmar, new SeparatorMenuItem(), editar, borrar);
             }
             case en_camino -> {
-                MenuItem parcial  = new MenuItem("Recepción parcial");
+                MenuItem parcial   = new MenuItem("Recepción parcial");
                 MenuItem confirmar = new MenuItem("Confirmar recibido");
+                MenuItem editar    = new MenuItem("Editar");
                 MenuItem cancelar  = new MenuItem("Cancelar pedido");
                 parcial  .setOnAction(e -> confirmarParcialOtro());
                 confirmar.setOnAction(e -> confirmarRecibidoOtro());
+                editar   .setOnAction(e -> editarPedidoOtro());
                 cancelar .setOnAction(e -> cancelarPedidoOtro());
-                ctx.getItems().addAll(parcial, confirmar, new SeparatorMenuItem(), cancelar);
+                ctx.getItems().addAll(parcial, confirmar, new SeparatorMenuItem(), editar, cancelar);
             }
             case parcial -> {
                 MenuItem resto    = new MenuItem("Recibir resto");
@@ -1261,8 +1267,10 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
             }
             case recibido -> {
                 MenuItem desrecibir = new MenuItem("Revertir a En camino");
+                MenuItem editar     = new MenuItem("Editar");
                 desrecibir.setOnAction(e -> desrecibirPedidoOtro());
-                ctx.getItems().add(desrecibir);
+                editar    .setOnAction(e -> editarPedidoOtro());
+                ctx.getItems().addAll(desrecibir, new SeparatorMenuItem(), editar);
             }
             default -> { /* cancelado: sin acciones */ }
         }
@@ -1283,6 +1291,12 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     @FXML private void nuevoOtroPedido() {
         FormularioOtroPedidoController.abrir(() -> cargarOtros());
+    }
+
+    private void editarPedidoOtro() {
+        CompraOtro sel = tablaOtros.getSelectionModel().getSelectedItem();
+        if (sel == null) return;
+        FormularioOtroPedidoEditarController.abrir(sel, () -> cargarOtros());
     }
 
     private void confirmarPedidoOtro() {
@@ -1945,19 +1959,50 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
     }
 
     private void exportarPedidos(Stage owner) {
-        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor");
+        if (toggleOtrosPedidos.isSelected()) { exportarOtros(owner); return; }
+        List<String> cabeceras = List.of("Fecha pedido", "Componente", "Cantidad", "Urgente", "Proveedor",
+                "Precio unidad", "Divisa", "Total EUR", "Estado");
         List<List<String>> filas = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         for (CompraComponente p : tablaPedidos.getItems()) {
+            // Total como en la columna EUR de la tabla: recibida si ya llegó, pedida si no.
+            int unidades = p.getEstado() == Estado.recibido && p.getCantidadRecibida() != null
+                    ? p.getCantidadRecibida() : p.getCantidad();
             filas.add(List.of(
                     FechaUtils.formatear(p.getFechaPedido(), fmt),
                     p.getTipoComponente() != null ? p.getTipoComponente() : "",
                     String.valueOf(p.getCantidad()),
                     p.isEsUrgente() ? "Sí" : "No",
-                    p.getNombreProveedor() != null ? p.getNombreProveedor() : ""
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
+                    String.format("%.2f", p.getPrecioUnidadPedido()),
+                    p.getDivisa() != null ? p.getDivisa() : "",
+                    String.format("%.2f", unidades * p.getPrecioEur()),
+                    p.getEstado().name()
             ));
         }
         com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos", cabeceras, filas);
+    }
+
+    private void exportarOtros(Stage owner) {
+        List<String> cabeceras = List.of("Fecha pedido", "Concepto", "Cantidad", "Proveedor",
+                "Precio unidad", "Divisa", "Total EUR", "Estado");
+        List<List<String>> filas = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        for (CompraOtro p : tablaOtros.getItems()) {
+            int unidades = p.getEstado() == Estado.recibido && p.getCantidadRecibida() != null
+                    ? p.getCantidadRecibida() : p.getCantidad();
+            filas.add(List.of(
+                    FechaUtils.formatear(p.getFechaPedido(), fmt),
+                    p.getConcepto() != null ? p.getConcepto() : "",
+                    String.valueOf(p.getCantidad()),
+                    p.getNombreProveedor() != null ? p.getNombreProveedor() : "",
+                    String.format("%.2f", p.getPrecioUnidadPedido()),
+                    p.getDivisa() != null ? p.getDivisa() : "",
+                    String.format("%.2f", unidades * p.getPrecioEur()),
+                    p.getEstado().name()
+            ));
+        }
+        com.reparaciones.utils.CsvExporter.exportar(owner, "pedidos_otros", cabeceras, filas);
     }
 
     private void exportarProveedores(Stage owner) {

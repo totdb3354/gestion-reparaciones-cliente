@@ -7,6 +7,7 @@ import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
+import com.reparaciones.utils.TipoTrabajo;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.collections.FXCollections;
@@ -33,6 +34,7 @@ public class PendientesTecnicoController {
     @FXML private TableView<ReparacionResumen>           tablaPendientes;
     @FXML private TableColumn<ReparacionResumen, Void>   cEstado;
     @FXML private TableColumn<ReparacionResumen, String> cId;
+    @FXML private TableColumn<ReparacionResumen, Void>   cTipo;
     @FXML private TableColumn<ReparacionResumen, String> cImei;
     @FXML private TableColumn<ReparacionResumen, String> cModelo;
     @FXML private TableColumn<ReparacionResumen, String> cCliente;
@@ -66,6 +68,7 @@ public class PendientesTecnicoController {
 
         cId.setCellValueFactory(d ->
             new javafx.beans.property.SimpleStringProperty(d.getValue().getIdRep()));
+        cTipo.setCellFactory(col -> TipoTrabajo.celdaTipoConChasis());
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
