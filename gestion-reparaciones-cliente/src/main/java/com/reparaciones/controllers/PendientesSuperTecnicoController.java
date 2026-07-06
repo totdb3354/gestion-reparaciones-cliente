@@ -216,9 +216,10 @@ public class PendientesSuperTecnicoController {
             }
             @Override
             protected void updateItem(String item, boolean empty) {
-                if (cb.isShowing()) return;
+                boolean vacia = empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size();
+                if (cb.isShowing() && !vacia) return;   // no pisar el desplegable abierto de una fila viva
                 super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                if (vacia) {
                     setGraphic(null);
                     setText(null);
                     setStyle("");
