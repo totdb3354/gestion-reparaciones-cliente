@@ -639,11 +639,29 @@ public class AgrupadoController {
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
                     if (rowItem == null || colRightClick[0] == null) return;
-                    String texto = textoDeCelda(rowItem, colRightClick[0]);
+                    TableColumn<?, ?> col = colRightClick[0];
+                    String texto = textoDeCelda(rowItem, col);
                     if (texto == null || texto.isEmpty()) return;
                     javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
                     content.putString(texto);
                     javafx.scene.input.Clipboard.getSystemClipboard().setContent(content);
+                    getChildrenUnmodifiable().stream()
+                        .filter(n -> n instanceof TableCell && ((TableCell<?, ?>) n).getTableColumn() == col)
+                        .findFirst()
+                        .ifPresent(cell -> {
+                            javafx.beans.property.DoubleProperty flashAlpha = new javafx.beans.property.SimpleDoubleProperty(1.0);
+                            flashAlpha.addListener((obs2, o2, n2) -> {
+                                double a = n2.doubleValue();
+                                if (a <= 0.02) cell.setStyle("");
+                                else cell.setStyle(String.format(java.util.Locale.US,
+                                    "-fx-background-color: rgba(224,247,250,%.2f);", a));
+                            });
+                            cell.setStyle("-fx-background-color: rgba(224,247,250,1.0);");
+                            new javafx.animation.Timeline(
+                                new javafx.animation.KeyFrame(javafx.util.Duration.millis(600),
+                                    new javafx.animation.KeyValue(flashAlpha, 0.0))
+                            ).play();
+                        });
                 });
                 editar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) FormularioReparacionController.abrirEditar(rep.getIdRep(), AgrupadoController.this::cargar); });
                 borrar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarReparacion(rep); });
