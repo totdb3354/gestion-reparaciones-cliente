@@ -9,6 +9,29 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.14.0] - 2026-07-07
+
+### Added
+- **Flag de chasis en asignaciones de reparación**: check en el modal de asignación (solo cola Reparación, se resetea entre IMEIs), marca discreta bajo la píldora de tipo en Asignaciones y Mis pendientes, toggle por menú contextual (SUPERTECNICO, con log `MARCAR_CHASIS`), columna `ES_CHASIS` en BD. Requiere servidor actualizado.
+- **Columna Tipo en Mis pendientes** (píldora Reparación/Glass, paridad con Asignaciones), vía celda compartida `TipoTrabajo.celdaTipoConChasis()`.
+- **Editor de pedidos de otros componentes** (`FormularioOtroPedidoEditar`): concepto, proveedor, cantidad, precio y divisa, en pendiente/en_camino/recibido; sin gestión de urgencia. Entrada por menú contextual, con concurrencia optimista.
+- **Filtro por cliente en Asignaciones** (multiselección, "(Sin cliente)", mismo patrón que IMEIs/Historial).
+- **CSV de pedidos con precio unidad, divisa, total EUR y estado**; export propio `pedidos_otros` cuando el toggle Otros está activo (antes exportaba la tabla de componentes).
+- **Selección persistente en la vista IMEIs**: al volver del detalle (botón o sub-sidebar) se restaura fila y scroll (`GrupoImei.indiceDe`).
+
+### Changed
+- **"Ver Stock Completo"** (notificaciones) navega al apartado de stock actual (`irAStockActual`), paridad con "Ir a pedidos".
+- **Datos (preproducción)**: reparaciones históricas de los técnicos de solo-glass reclasificadas de tipo Reparación a Glass (1.276 filas `R→G`/`A→AG`; script `sql/migracion-glass-tecnicos.sql`). El filtro de piezas del historial de Reparaciones queda sin glass/marco.
+
+### Fixed
+- **Scroll estable en los dropdowns multiselección** (técnicos/clientes/proveedores): `fixedCellSize` elimina la recolocación del VirtualFlow al hacer hover en el fondo de la lista (ocultaba la última fila).
+- **Celda "reasignar" fantasma**: el combo de técnico ya no queda pintado en filas vacías al reciclarse celdas (Asignaciones y Pulidos).
+- **Combo de técnico sobre fila equivocada**: se cierra el desplegable antes de recargar tras reasignar (la celda reciclada con popup abierto se saltaba el repintado).
+- **Destello de "Copiar celda"** también en la vista IMEIs (maestro y detalle).
+
+### Notas de despliegue
+- Requiere el **servidor** con la columna `ES_CHASIS` y el PATCH de chasis (ya desplegado). Retrocompatible con clientes 0.13.0.
+
 ## [0.13.0] - 2026-07-03
 
 ### Added
