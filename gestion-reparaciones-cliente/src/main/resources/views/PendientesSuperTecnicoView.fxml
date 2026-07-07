@@ -18,6 +18,7 @@
     <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
+        <com.reparaciones.utils.MultiSelectComboBox fx:id="filtroCliente" prefWidth="130"/>
         <MenuButton fx:id="filtroTipo" text="Tipo" prefWidth="130"/>
         <MenuButton fx:id="filtroSolicitud" text="Estado" prefWidth="130"/>
         <Button onAction="#limpiarFiltros" text="Limpiar filtros" styleClass="btn-secondary"/>

@@ -100,6 +100,12 @@ public class PendientesSuperTecnicoController {
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     private final List<Tecnico>         tecnicos         = new ArrayList<>();
 
+    @FXML private com.reparaciones.utils.MultiSelectComboBox<String> filtroCliente;
+    private static final String SIN_CLIENTE_FILTRO = "(Sin cliente)";
+    private final Set<String>    clientesFiltro = new HashSet<>();
+    private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
+    private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
+
     /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
     private static final class EntradaAsignacion {
         final String imei;
@@ -577,6 +583,14 @@ public class PendientesSuperTecnicoController {
                 etiquetaTec);
         } catch (SQLException e) { mostrarError(e); }
 
+        // Filtro cliente (se puebla con los datos cargados; ver poblarFiltroCliente)
+        filtroCliHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroCliente, new ArrayList<>(), java.util.function.Function.identity(),
+            cli -> clientesFiltro.contains(cli),
+            (cli, checked) -> { if (checked) clientesFiltro.add(cli); else clientesFiltro.remove(cli);
+                                actualizarTextoFiltroCliente(); aplicarFiltros(); },
+            etiquetaCli);
+
         // Filtro por tipo de trabajo (Reparación / Glass / Pulido)
         cbTipoReparacion = new CheckBox("Reparación");
         cbTipoGlass      = new CheckBox("Glass");
@@ -653,6 +667,28 @@ public class PendientesSuperTecnicoController {
         // The button cell observes etiquetaTec and updates its own text automatically.
     }
 
+    /** Rellena las opciones del filtro de cliente con los clientes presentes en los datos cargados. */
+    private void poblarFiltroCliente() {
+        List<String> clientes = datos.stream()
+            .map(r -> { String c = r.getCliente(); return (c == null || c.isEmpty()) ? SIN_CLIENTE_FILTRO : c; })
+            .distinct().sorted()
+            .collect(java.util.stream.Collectors.toList());
+        if (clientes.remove(SIN_CLIENTE_FILTRO)) clientes.add(0, SIN_CLIENTE_FILTRO);
+        filtroCliHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
+            filtroCliente, clientes, java.util.function.Function.identity(),
+            cli -> clientesFiltro.contains(cli),
+            (cli, checked) -> { if (checked) clientesFiltro.add(cli); else clientesFiltro.remove(cli);
+                                actualizarTextoFiltroCliente(); aplicarFiltros(); },
+            etiquetaCli);
+    }
+
+    private void actualizarTextoFiltroCliente() {
+        long sel = clientesFiltro.size();
+        if (sel == 0)      etiquetaCli.set("Cliente");
+        else if (sel == 1) etiquetaCli.set(clientesFiltro.iterator().next());
+        else               etiquetaCli.set(sel + " clientes");
+    }
+
     private void actualizarTextoFiltroTipo() {
         boolean rep = cbTipoReparacion.isSelected();
         boolean gla = cbTipoGlass.isSelected();
@@ -688,9 +724,17 @@ public class PendientesSuperTecnicoController {
 
         String imeiStr = filtroImei != null ? filtroImei.getText().trim() : "";
         java.util.Set<String> imeisFiltro = com.reparaciones.utils.FiltroImei.imeisValidos(imeiStr);
+        java.util.Set<String> clientesSelec = new HashSet<>(clientesFiltro);
         datosFiltrados.setPredicate(rep -> {
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
             if (!idsTecSelec.isEmpty() && !idsTecSelec.contains(rep.getIdTec())) return false;
+            if (!clientesSelec.isEmpty()) {
+                String cli = rep.getCliente();
+                boolean sin = (cli == null || cli.isEmpty());
+                boolean coincide = (sin && clientesSelec.contains(SIN_CLIENTE_FILTRO))
+                                || (!sin && clientesSelec.contains(cli));
+                if (!coincide) return false;
+            }
             if (!tiposSelec.isEmpty() && !tiposSelec.contains(tipoDe(rep.getIdRep()))) return false;
             if (filtrarSol || filtrarInc || filtrarAsig) {
                 boolean esSol  = rep.getEsSolicitud() > 0;
@@ -713,6 +757,9 @@ public class PendientesSuperTecnicoController {
         idsTecFiltro.clear();
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         etiquetaTec.set("Técnico");
+        clientesFiltro.clear();
+        if (filtroCliHandle != null) filtroCliHandle.refresh();
+        etiquetaCli.set("Cliente");
         cbTipoReparacion.setSelected(false);
         cbTipoGlass.setSelected(false);
         cbTipoPulido.setSelected(false);
@@ -747,6 +794,7 @@ public class PendientesSuperTecnicoController {
                 if (r.getCliente() != null && !r.getCliente().isEmpty()) return 1;
                 return 2;
             }));
+            poblarFiltroCliente();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
