@@ -6,6 +6,7 @@ import com.reparaciones.dao.PulidoDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.Cliente;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.CargaTecnicos;
 import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.TipoTrabajo;
 import com.reparaciones.utils.ConfirmDialog;
@@ -24,6 +25,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -88,6 +90,8 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
+    @FXML private FlowPane franjaCarga;
+    private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
 
     private CheckBox cbTipoReparacion;
     private CheckBox cbTipoGlass;
@@ -798,6 +802,46 @@ public class PendientesSuperTecnicoController {
 
     // ─── Carga ────────────────────────────────────────────────────────────────
 
+    /** Franja "Juan 42% · Marta 33% · …" (solo supertécnico/admin; el % es global, no del filtro). */
+    private void actualizarFranjaCarga() {
+        cargasActuales = CargaTecnicos.calcular(datos);
+        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
+        franjaCarga.getChildren().clear();
+        boolean hay = !pct.isEmpty();
+        franjaCarga.setVisible(hay); franjaCarga.setManaged(hay);
+        if (!hay) return;
+        tecnicos.stream()
+                .filter(t -> pct.containsKey(t.getIdTec()))
+                .sorted((a, b) -> pct.get(b.getIdTec()) - pct.get(a.getIdTec()))
+                .forEach(t -> {
+                    CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+                    Label chip = new Label(t.getNombre() + " " + pct.get(t.getIdTec()) + "%");
+                    chip.setStyle("-fx-background-color: #E8EAF0; -fx-text-fill: #2C3B54;" +
+                            "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                            "-fx-background-radius: 12; -fx-padding: 3 10 3 10;");
+                    Tooltip tip = new Tooltip(t.getNombre() + " — " + d.normales() + " normales · "
+                            + d.chasis() + " chasis · " + d.porCerrar() + " por cerrar · "
+                            + d.glass() + " glass");
+                    tip.setShowDelay(javafx.util.Duration.ZERO);
+                    Tooltip.install(chip, tip);
+                    franjaCarga.getChildren().add(chip);
+                });
+        Label ayuda = new Label("ⓘ");
+        ayuda.setStyle("-fx-text-fill: #586376; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;");
+        ayuda.setOnMouseClicked(e -> ConfirmDialog.mostrarTexto("¿Cómo se mide la carga?",
+                "Cuentan solo las asignaciones abiertas CON cliente, de reparación y glass (pulido no).\n\n" +
+                "Cada asignación vale: normal = 1 · chasis = 2 · por cerrar = 0,083 · glass = 1.\n\n" +
+                "El porcentaje de cada técnico es su parte del total: entre todos suman 100%."));
+        franjaCarga.getChildren().add(ayuda);
+    }
+
+    /** "Nombre (42%)" con la carga vigente; sin % si el técnico no tiene carga. */
+    private String etiquetaConCarga(Tecnico t) {
+        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
+        Integer p = pct.get(t.getIdTec());
+        return p == null ? t.getNombre() : t.getNombre() + " (" + p + "%)";
+    }
+
     public void cargar() {
         try {
             tablaPendientes.getSelectionModel().clearSelection();
@@ -815,6 +859,7 @@ public class PendientesSuperTecnicoController {
                 return 2;
             }));
             poblarFiltroCliente();
+            actualizarFranjaCarga();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActualizacion != null) lblUltimaActualizacion.setText("Actualizado " + hora);
         } catch (SQLException e) {
@@ -925,7 +970,7 @@ public class PendientesSuperTecnicoController {
         cbTecTop.setVisibleRowCount(8);
         cbTecTop.getItems().addAll(tecnicosModal);
         cbTecTop.setConverter(new javafx.util.StringConverter<>() {
-            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+            @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
         });
 
@@ -982,7 +1027,7 @@ public class PendientesSuperTecnicoController {
         cbTecDet.setVisibleRowCount(8);
         cbTecDet.getItems().addAll(tecnicosModal);
         cbTecDet.setConverter(new javafx.util.StringConverter<>() {
-            @Override public String toString(Tecnico t) { return t == null ? "" : t.getNombre(); }
+            @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
         });
 
@@ -1482,7 +1527,7 @@ public class PendientesSuperTecnicoController {
         VBox cbContainer = new VBox(6);
         cbContainer.setStyle("-fx-background-color: white; -fx-padding: 8;");
         for (Tecnico t : tecnicosModal) {
-            CheckBox cb = new CheckBox(t.getNombre());
+            CheckBox cb = new CheckBox(etiquetaConCarga(t));
             cb.setStyle("-fx-font-size: 12px;");
             checkboxes.add(cb);
             cbContainer.getChildren().add(cb);

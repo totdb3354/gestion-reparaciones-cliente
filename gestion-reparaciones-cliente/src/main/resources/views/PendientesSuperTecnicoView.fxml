@@ -30,6 +30,9 @@
         </Button>
     </FlowPane>
 
+    <FlowPane fx:id="franjaCarga" hgap="8" vgap="4" alignment="CENTER_LEFT"
+              visible="false" managed="false"/>
+
     <TableView fx:id="tablaPendientes" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="cId"      text="Id Asignación"    prefWidth="90"/>
