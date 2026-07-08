@@ -25,7 +25,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -39,6 +38,7 @@ import java.util.Set;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.stage.Popup;
+import javafx.stage.Stage;
 
 /**
  * Controlador de la tabla de asignaciones pendientes (vista del supertécnico).
@@ -90,8 +90,6 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
-    @FXML private VBox cajaCarga;
-    @FXML private FlowPane franjaCarga;
     private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
 
     private CheckBox cbTipoReparacion;
@@ -387,15 +385,6 @@ public class PendientesSuperTecnicoController {
                         cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
-                MenuItem togglePorCerrar = new MenuItem();
-                togglePorCerrar.setOnAction(e -> {
-                    ReparacionResumen rep = getItem();
-                    if (rep == null) return;
-                    try {
-                        reparacionDAO.actualizarPorCerrar(rep.getIdRep(), !rep.isPorCerrar());
-                        cargar();
-                    } catch (SQLException ex) { mostrarError(ex); }
-                });
                 MenuItem editarCliente = new MenuItem("Editar cliente");
                 ImageView ivEditarCli = new ImageView(imgEditar);
                 ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
@@ -431,14 +420,10 @@ public class PendientesSuperTecnicoController {
                     toggleChasis.setVisible(!soloLectura && esRep);
                     if (getItem() != null)
                         toggleChasis.setText(getItem().isEsChasis() ? "Quitar chasis" : "Marcar chasis");
-                    togglePorCerrar.setVisible(!soloLectura && esRep);
-                    if (getItem() != null)
-                        togglePorCerrar.setText(getItem().isPorCerrar() ? "Quitar por cerrar" : "Marcar por cerrar");
                 });
                 menu.getItems().add(editarCliente);
                 menu.getItems().add(toggleUrgente);   // acción de estado, al final (los "Editar…" quedan juntos)
                 menu.getItems().add(toggleChasis);
-                menu.getItems().add(togglePorCerrar);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
@@ -818,36 +803,103 @@ public class PendientesSuperTecnicoController {
 
     // ─── Carga ────────────────────────────────────────────────────────────────
 
-    /** Recuadro "Carga por técnico" (solo supertécnico/admin; el % es global, no del filtro).
-     *  Incluye a TODOS los técnicos activos, también los que están al 0% ("¿quién está libre?"). */
+    /** Recalcula la carga vigente (la ventana y el modal la leen de aquí). */
     private void actualizarFranjaCarga() {
         cargasActuales = CargaTecnicos.calcular(datos);
+    }
+
+    /** Abre la ventana "Carga de técnicos": una barra horizontal por técnico activo,
+     *  ordenadas de más a menos carga (spec por-cerrar-carga §3, ajuste smoke 2026-07-08). */
+    @FXML
+    private void abrirCargaTecnicos() {
         Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
-        franjaCarga.getChildren().clear();
-        boolean hay = !tecnicos.isEmpty();
-        cajaCarga.setVisible(hay); cajaCarga.setManaged(hay);
-        if (!hay) return;
+
+        VBox contenido = new VBox(10);
+        contenido.setPadding(new Insets(16));
+        contenido.setStyle("-fx-background-color: white;");
+        contenido.setPrefWidth(480);
+
+        Label titulo = new Label("Carga de técnicos");
+        titulo.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+
+        VBox filas = new VBox(10);
         tecnicos.stream()
                 .sorted(java.util.Comparator
                         .comparingInt((Tecnico t) -> pct.getOrDefault(t.getIdTec(), 0)).reversed()
                         .thenComparing(Tecnico::getNombre))
-                .forEach(t -> {
-                    int p = pct.getOrDefault(t.getIdTec(), 0);
-                    Label chip = new Label(t.getNombre() + " " + p + "%");
-                    chip.setStyle("-fx-background-color: #E8EAF0; -fx-text-fill: #2C3B54;" +
-                            "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                            "-fx-background-radius: 12; -fx-padding: 2 8 2 8;");
-                    CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
-                    String textoTip = d != null
-                            ? t.getNombre() + " — " + d.normales() + " normales · "
-                                    + d.chasis() + " chasis · " + d.porCerrar() + " por cerrar · "
-                                    + d.glass() + " glass"
-                            : t.getNombre() + " — sin carga de cliente";
-                    Tooltip tip = new Tooltip(textoTip);
-                    tip.setShowDelay(javafx.util.Duration.ZERO);
-                    Tooltip.install(chip, tip);
-                    franjaCarga.getChildren().add(chip);
-                });
+                .forEach(t -> filas.getChildren().add(filaCargaTecnico(t, pct)));
+
+        ScrollPane scroll = new ScrollPane(filas);
+        scroll.setFitToWidth(true);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setMaxHeight(420);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
+        Button btnCerrar = new Button("Cerrar");
+        btnCerrar.getStyleClass().add("btn-secondary");
+        HBox botones = new HBox(btnCerrar);
+        botones.setAlignment(Pos.CENTER_RIGHT);
+
+        contenido.getChildren().addAll(titulo, scroll, botones);
+
+        Stage ventana = new Stage();
+        ventana.setTitle("Carga de técnicos");
+        ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
+        ventana.setScene(scene);
+        btnCerrar.setOnAction(e -> ventana.close());
+        ventana.showAndWait();
+    }
+
+    /** Una fila de la ventana "Carga de técnicos": nombre + barra + % + desglose. */
+    private VBox filaCargaTecnico(Tecnico t, Map<Integer, Integer> pct) {
+        int p = pct.getOrDefault(t.getIdTec(), 0);
+
+        Label lblNombre = new Label(t.getNombre());
+        lblNombre.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        lblNombre.setPrefWidth(110);
+        lblNombre.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
+
+        javafx.scene.layout.Region track = new javafx.scene.layout.Region();
+        track.setStyle("-fx-background-color: #E8EAF0; -fx-background-radius: 4;");
+        track.setMaxHeight(10); track.setMinHeight(10); track.setPrefHeight(10);
+
+        javafx.scene.layout.Region fill = new javafx.scene.layout.Region();
+        fill.setStyle("-fx-background-color: #1565C0; -fx-background-radius: 4;");
+        fill.setMaxHeight(10); fill.setMinHeight(10); fill.setPrefHeight(10);
+
+        javafx.scene.layout.StackPane barra = new javafx.scene.layout.StackPane(track, fill);
+        barra.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(barra, javafx.scene.layout.Priority.ALWAYS);
+        fill.prefWidthProperty().bind(track.widthProperty().multiply(p / 100.0));
+        fill.setMinWidth(0);
+        fill.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+
+        Label lblPct = new Label(p + "%");
+        lblPct.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        lblPct.setPrefWidth(44);
+        lblPct.setAlignment(Pos.CENTER_RIGHT);
+
+        HBox fila = new HBox(8, lblNombre, barra, lblPct);
+        fila.setAlignment(Pos.CENTER_LEFT);
+
+        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+        String textoDesglose = (d != null)
+                ? java.util.stream.Stream.of(
+                        d.normales()  > 0 ? d.normales()  + " normales"   : null,
+                        d.chasis()    > 0 ? d.chasis()    + " chasis"     : null,
+                        d.porCerrar() > 0 ? d.porCerrar() + " por cerrar" : null,
+                        d.glass()     > 0 ? d.glass()     + " glass"      : null)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining(" · "))
+                : "";
+        if (textoDesglose.isEmpty()) textoDesglose = "sin carga de cliente";
+        Label lblDesglose = new Label(textoDesglose);
+        lblDesglose.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6; -fx-padding: 0 0 0 118;");
+
+        return new VBox(2, fila, lblDesglose);
     }
 
     /** "Nombre (42%)" con la carga vigente; sin % si el técnico no tiene carga. */

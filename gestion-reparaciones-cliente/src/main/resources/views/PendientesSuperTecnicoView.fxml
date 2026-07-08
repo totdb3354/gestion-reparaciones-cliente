@@ -15,14 +15,7 @@
         <Label text="Asignaciones pendientes" styleClass="vista-titulo"/>
         <Label fx:id="lblContador" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <VBox fx:id="cajaCarga" visible="false" managed="false" spacing="4" prefWidth="330" maxWidth="330"
-              style="-fx-background-color: white; -fx-border-color: #C8CDD6; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8;">
-            <Label text="Carga por técnico" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #586376;"/>
-            <ScrollPane fx:id="cargaScroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" maxHeight="76"
-                        style="-fx-background-color: transparent; -fx-background: transparent;">
-                <FlowPane fx:id="franjaCarga" hgap="6" vgap="4"/>
-            </ScrollPane>
-        </VBox>
+        <Button fx:id="btnCargaTecnicos" text="Carga técnicos" styleClass="btn-secondary" onAction="#abrirCargaTecnicos"/>
     </HBox>
     <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
