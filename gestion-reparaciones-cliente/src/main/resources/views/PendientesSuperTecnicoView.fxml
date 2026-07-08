@@ -30,8 +30,13 @@
         </Button>
     </FlowPane>
 
-    <FlowPane fx:id="franjaCarga" hgap="8" vgap="4" alignment="CENTER_LEFT"
-              visible="false" managed="false"/>
+    <ScrollPane fx:id="franjaCargaScroll" fitToHeight="true" hbarPolicy="AS_NEEDED" vbarPolicy="NEVER"
+                visible="false" managed="false"
+                style="-fx-background-color: transparent; -fx-background: transparent;">
+        <HBox fx:id="franjaCarga" spacing="8" alignment="CENTER_LEFT">
+            <padding><Insets bottom="2"/></padding>
+        </HBox>
+    </ScrollPane>
 
     <TableView fx:id="tablaPendientes" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>

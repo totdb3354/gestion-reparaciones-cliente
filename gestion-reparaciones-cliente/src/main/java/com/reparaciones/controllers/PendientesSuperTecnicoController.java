@@ -25,7 +25,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -90,7 +89,8 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
-    @FXML private FlowPane franjaCarga;
+    @FXML private ScrollPane franjaCargaScroll;
+    @FXML private HBox franjaCarga;
     private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
 
     private CheckBox cbTipoReparacion;
@@ -107,6 +107,8 @@ public class PendientesSuperTecnicoController {
     @FXML private com.reparaciones.utils.MultiSelectComboBox<String> filtroCliente;
     private static final String SIN_CLIENTE_FILTRO = "(Sin cliente)";
     private final Set<String>    clientesFiltro = new HashSet<>();
+    /** Todos los clientes vistos hasta ahora (para saber si la selección actual los cubre todos → "Todos"). */
+    private final java.util.Set<String> clientesConocidos = new java.util.HashSet<>();
     private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
@@ -698,19 +700,31 @@ public class PendientesSuperTecnicoController {
             .distinct().sorted()
             .collect(java.util.stream.Collectors.toList());
         if (clientes.remove(SIN_CLIENTE_FILTRO)) clientes.add(0, SIN_CLIENTE_FILTRO);
+        // Clientes nuevos (primera carga o llegados en un reload) entran marcados; los desmarcados
+        // manualmente por el usuario para clientes ya conocidos se respetan.
+        for (String c : clientes) {
+            if (clientesConocidos.add(c)) clientesFiltro.add(c);
+        }
         filtroCliHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
             filtroCliente, clientes, java.util.function.Function.identity(),
             cli -> clientesFiltro.contains(cli),
             (cli, checked) -> { if (checked) clientesFiltro.add(cli); else clientesFiltro.remove(cli);
                                 actualizarTextoFiltroCliente(); aplicarFiltros(); },
             etiquetaCli);
+        actualizarTextoFiltroCliente();
     }
 
     private void actualizarTextoFiltroCliente() {
         long sel = clientesFiltro.size();
-        if (sel == 0)      etiquetaCli.set("Cliente");
-        else if (sel == 1) etiquetaCli.set(clientesFiltro.iterator().next());
-        else               etiquetaCli.set(sel + " clientes");
+        if (sel == 0) {
+            etiquetaCli.set("Cliente");
+        } else if (!clientesConocidos.isEmpty() && clientesFiltro.containsAll(clientesConocidos)) {
+            etiquetaCli.set("Todos");
+        } else if (sel == 1) {
+            etiquetaCli.set(clientesFiltro.iterator().next());
+        } else {
+            etiquetaCli.set(sel + " clientes");
+        }
     }
 
     private void actualizarTextoFiltroTipo() {
@@ -782,8 +796,9 @@ public class PendientesSuperTecnicoController {
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         etiquetaTec.set("Técnico");
         clientesFiltro.clear();
+        clientesFiltro.addAll(clientesConocidos);
         if (filtroCliHandle != null) filtroCliHandle.refresh();
-        etiquetaCli.set("Cliente");
+        actualizarTextoFiltroCliente();
         cbTipoReparacion.setSelected(false);
         cbTipoGlass.setSelected(false);
         cbTipoPulido.setSelected(false);
@@ -808,7 +823,7 @@ public class PendientesSuperTecnicoController {
         Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
         franjaCarga.getChildren().clear();
         boolean hay = !pct.isEmpty();
-        franjaCarga.setVisible(hay); franjaCarga.setManaged(hay);
+        franjaCargaScroll.setVisible(hay); franjaCargaScroll.setManaged(hay);
         if (!hay) return;
         tecnicos.stream()
                 .filter(t -> pct.containsKey(t.getIdTec()))
@@ -826,13 +841,6 @@ public class PendientesSuperTecnicoController {
                     Tooltip.install(chip, tip);
                     franjaCarga.getChildren().add(chip);
                 });
-        Label ayuda = new Label("ⓘ");
-        ayuda.setStyle("-fx-text-fill: #586376; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 0 4 0 4;");
-        ayuda.setOnMouseClicked(e -> ConfirmDialog.mostrarTexto("¿Cómo se mide la carga?",
-                "Cuentan solo las asignaciones abiertas CON cliente, de reparación y glass (pulido no).\n\n" +
-                "Cada asignación vale: normal = 1 · chasis = 2 · por cerrar = 0,083 · glass = 1.\n\n" +
-                "El porcentaje de cada técnico es su parte del total: entre todos suman 100%."));
-        franjaCarga.getChildren().add(ayuda);
     }
 
     /** "Nombre (42%)" con la carga vigente; sin % si el técnico no tiene carga. */
