@@ -380,6 +380,15 @@ public class PendientesSuperTecnicoController {
                         cargar();
                     } catch (java.sql.SQLException ex) { mostrarError(ex); }
                 });
+                MenuItem togglePorCerrar = new MenuItem();
+                togglePorCerrar.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.actualizarPorCerrar(rep.getIdRep(), !rep.isPorCerrar());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
                 MenuItem editarCliente = new MenuItem("Editar cliente");
                 ImageView ivEditarCli = new ImageView(imgEditar);
                 ivEditarCli.setFitWidth(14); ivEditarCli.setFitHeight(14); ivEditarCli.setPreserveRatio(true);
@@ -415,10 +424,14 @@ public class PendientesSuperTecnicoController {
                     toggleChasis.setVisible(!soloLectura && esRep);
                     if (getItem() != null)
                         toggleChasis.setText(getItem().isEsChasis() ? "Quitar chasis" : "Marcar chasis");
+                    togglePorCerrar.setVisible(!soloLectura && esRep);
+                    if (getItem() != null)
+                        togglePorCerrar.setText(getItem().isPorCerrar() ? "Quitar por cerrar" : "Marcar por cerrar");
                 });
                 menu.getItems().add(editarCliente);
                 menu.getItems().add(toggleUrgente);   // acción de estado, al final (los "Editar…" quedan juntos)
                 menu.getItems().add(toggleChasis);
+                menu.getItems().add(togglePorCerrar);
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     // Selecciona la fila clicada para que el guardado directo nunca caiga en otra.
@@ -459,10 +472,11 @@ public class PendientesSuperTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badgeUrgente = new Label();
-            private final Label badge        = new Label();
+            private final Label badgeUrgente   = new Label();
+            private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badge          = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badge);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -479,6 +493,12 @@ public class PendientesSuperTecnicoController {
                     badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
                 } else {
                     badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
+                if (rep.isPorCerrar()) {
+                    badgePorCerrar.setStyle(base + "-fx-background-color: #E0F2F1; -fx-text-fill: #00796B;");
+                    badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
+                } else {
+                    badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");

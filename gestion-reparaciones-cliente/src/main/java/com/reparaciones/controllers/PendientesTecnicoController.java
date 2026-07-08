@@ -145,6 +145,23 @@ public class PendientesTecnicoController {
                         });
                 });
                 menu.getItems().add(copiar);
+                MenuItem togglePorCerrar = new MenuItem("Marcar por cerrar");
+                togglePorCerrar.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.actualizarPorCerrar(rep.getIdRep(), !rep.isPorCerrar());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(togglePorCerrar);
+                menu.setOnShowing(ev -> {
+                    ReparacionResumen rep = getItem();
+                    boolean esRepNormal = rep != null && !glass
+                            && TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.REPARACION;
+                    togglePorCerrar.setVisible(esRepNormal);
+                    if (esRepNormal) togglePorCerrar.setText(rep.isPorCerrar() ? "Quitar por cerrar" : "Marcar por cerrar");
+                });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
                     double x = e.getX(); double offset = 0;
@@ -181,11 +198,12 @@ public class PendientesTecnicoController {
         });
 
         cEstado.setCellFactory(col -> new TableCell<>() {
-            private final Label badgeUrgente = new Label();
-            private final Label badge        = new Label();
-            private final Label lblTipo      = new Label();
+            private final Label badgeUrgente   = new Label();
+            private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badge          = new Label();
+            private final Label lblTipo        = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badge, lblTipo);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge, lblTipo);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -203,6 +221,12 @@ public class PendientesTecnicoController {
                     badgeUrgente.setVisible(true); badgeUrgente.setManaged(true);
                 } else {
                     badgeUrgente.setVisible(false); badgeUrgente.setManaged(false);
+                }
+                if (rep.isPorCerrar()) {
+                    badgePorCerrar.setStyle(base + "-fx-background-color: #E0F2F1; -fx-text-fill: #00796B;");
+                    badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
+                } else {
+                    badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
