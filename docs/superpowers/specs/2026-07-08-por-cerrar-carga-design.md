@@ -25,8 +25,8 @@ En el taller, una reparación normal puede quedar lista **a falta solo del glass
 - **Badge**: pastilla **"Por cerrar"** con la paleta del badge Glass (fondo `#E0F2F1`, texto `#00796B`) — enlace conceptual con glass. Se apila con "Urgente" en la columna Estado (vista Asignaciones) y en la pila de badges de la vista del técnico. **No** altera el orden de la lista, ni contadores, ni filtros.
 - **Ciclo de vida**: se quita a mano, o desaparece con la asignación al completarse la reparación. Sin auto-limpieza ni vínculo automático con asignaciones de glass (descartado: no es derivable — ver §5).
 - **BD**: `ALTER TABLE Reparacion ADD COLUMN POR_CERRAR BOOLEAN NOT NULL DEFAULT FALSE` (migración `sql/migracion-por-cerrar.sql`, la aplica el usuario; patrón `ES_CHASIS`). Actualizar también `crear_bd.sql`.
-- **Servidor**: `PATCH /api/reparaciones/{idRep}/por-cerrar` body `{porCerrar: boolean, updatedAt}` con lock optimista (409 → StaleDataException). Permisos: SUPERTECNICO cualquiera; TECNICO solo si `ID_TEC` de la asignación es el suyo; ambos solo sobre `A%` no `AG%`/`AP%` (403/422 si no). Log de actividad: `MARCAR_POR_CERRAR` / `QUITAR_POR_CERRAR` (detalle: ID + IMEI). Las queries de asignaciones devuelven el campo nuevo.
-- **Cliente**: flag `porCerrar` en `ReparacionResumen`; `ReparacionDAO.actualizarPorCerrar(idRep, porCerrar, updatedAt)`; acciones nuevas en el filtro de la vista Log.
+- **Servidor**: `PATCH /api/reparaciones/{idRep}/por-cerrar` body `{porCerrar: boolean}` — **sin lock optimista**, paridad exacta con los PATCH existentes de urgente/chasis (toggle de un boolean: último gana; marcar una asignación ya completada es inocuo porque sale de la lista). Permisos: SUPERTECNICO cualquiera; TECNICO solo si `ID_TEC` de la asignación es el suyo; ambos solo sobre `A%` no `AG%`/`AP%` (403/422 si no). Log de actividad: `MARCAR_POR_CERRAR` / `QUITAR_POR_CERRAR` (detalle: ID + IMEI). Las queries de asignaciones devuelven el campo nuevo.
+- **Cliente**: flag `porCerrar` en `ReparacionResumen`; `ReparacionDAO.actualizarPorCerrar(idRep, porCerrar)`; acciones nuevas en el filtro de la vista Log.
 
 ## 3. Cambio 2 — % de carga por técnico
 
