@@ -25,6 +25,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
@@ -89,8 +90,8 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
-    @FXML private ScrollPane franjaCargaScroll;
-    @FXML private HBox franjaCarga;
+    @FXML private VBox cajaCarga;
+    @FXML private FlowPane franjaCarga;
     private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
 
     private CheckBox cbTipoReparacion;
@@ -817,26 +818,32 @@ public class PendientesSuperTecnicoController {
 
     // ─── Carga ────────────────────────────────────────────────────────────────
 
-    /** Franja "Juan 42% · Marta 33% · …" (solo supertécnico/admin; el % es global, no del filtro). */
+    /** Recuadro "Carga por técnico" (solo supertécnico/admin; el % es global, no del filtro).
+     *  Incluye a TODOS los técnicos activos, también los que están al 0% ("¿quién está libre?"). */
     private void actualizarFranjaCarga() {
         cargasActuales = CargaTecnicos.calcular(datos);
         Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
         franjaCarga.getChildren().clear();
-        boolean hay = !pct.isEmpty();
-        franjaCargaScroll.setVisible(hay); franjaCargaScroll.setManaged(hay);
+        boolean hay = !tecnicos.isEmpty();
+        cajaCarga.setVisible(hay); cajaCarga.setManaged(hay);
         if (!hay) return;
         tecnicos.stream()
-                .filter(t -> pct.containsKey(t.getIdTec()))
-                .sorted((a, b) -> pct.get(b.getIdTec()) - pct.get(a.getIdTec()))
+                .sorted(java.util.Comparator
+                        .comparingInt((Tecnico t) -> pct.getOrDefault(t.getIdTec(), 0)).reversed()
+                        .thenComparing(Tecnico::getNombre))
                 .forEach(t -> {
-                    CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
-                    Label chip = new Label(t.getNombre() + " " + pct.get(t.getIdTec()) + "%");
+                    int p = pct.getOrDefault(t.getIdTec(), 0);
+                    Label chip = new Label(t.getNombre() + " " + p + "%");
                     chip.setStyle("-fx-background-color: #E8EAF0; -fx-text-fill: #2C3B54;" +
                             "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                            "-fx-background-radius: 12; -fx-padding: 3 10 3 10;");
-                    Tooltip tip = new Tooltip(t.getNombre() + " — " + d.normales() + " normales · "
-                            + d.chasis() + " chasis · " + d.porCerrar() + " por cerrar · "
-                            + d.glass() + " glass");
+                            "-fx-background-radius: 12; -fx-padding: 2 8 2 8;");
+                    CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+                    String textoTip = d != null
+                            ? t.getNombre() + " — " + d.normales() + " normales · "
+                                    + d.chasis() + " chasis · " + d.porCerrar() + " por cerrar · "
+                                    + d.glass() + " glass"
+                            : t.getNombre() + " — sin carga de cliente";
+                    Tooltip tip = new Tooltip(textoTip);
                     tip.setShowDelay(javafx.util.Duration.ZERO);
                     Tooltip.install(chip, tip);
                     franjaCarga.getChildren().add(chip);
