@@ -426,6 +426,11 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
                 Map.of("esChasis", esChasis));
     }
 
+    public void actualizarPorCerrar(String idRep, boolean porCerrar) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/por-cerrar",
+                Map.of("porCerrar", porCerrar));
+    }
+
     /**
      * Edita el componente y observaciones de una reparación finalizada.
      *

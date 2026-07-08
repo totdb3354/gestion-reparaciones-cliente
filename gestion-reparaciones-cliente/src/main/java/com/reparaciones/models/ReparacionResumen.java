@@ -45,6 +45,7 @@ public class ReparacionResumen {
     private boolean       tieneAsignaciones;
     private LocalDateTime telefonoUpdatedAt;
     private String        cliente;
+    private boolean       porCerrar;
 
     public ReparacionResumen() {}
 
@@ -183,4 +184,6 @@ public class ReparacionResumen {
     public void          setTelefonoUpdatedAt(LocalDateTime v)       { this.telefonoUpdatedAt = v; }
     public String        getCliente()                                { return cliente; }
     public void          setCliente(String cliente)                  { this.cliente = cliente; }
+    public boolean isPorCerrar()                                     { return porCerrar; }
+    public void    setPorCerrar(boolean porCerrar)                   { this.porCerrar = porCerrar; }
 }
