@@ -1,7 +1,7 @@
 # Fase 2 — Lotes y ciclo de vida del teléfono
 
 Fecha: 2026-07-07
-Estado: **Diseño en revisión por el usuario** (brainstorm completo; este documento ES el contexto canónico de la fase).
+Estado: **APROBADA por el usuario (2026-07-08)** — brainstorm completo; este documento ES el contexto canónico de la fase. Siguiente paso: writing-plans de F2a.
 Origen: Fase 2 del roadmap de julio 2026 (ver spec de Fase 1, sección roadmap). Diagrama de flujo: `Apuntes/FLUJO_UBICACIONES_v17.drawio` (referencia; el usuario mantiene su v16+bloqueo) y `Apuntes/Modulo Ubicaciones - Spec.md` (borrador previo del usuario, jun 2026).
 
 ---
