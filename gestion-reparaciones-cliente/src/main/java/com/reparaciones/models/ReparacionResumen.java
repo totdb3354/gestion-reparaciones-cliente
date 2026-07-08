@@ -135,6 +135,9 @@ public class ReparacionResumen {
     /** @return ID de la reparación origen si es reincidencia, o {@code null} */
     public String getIdRepAnterior() { return idRepAnterior; }
 
+    /** @return clave primaria de la reparación */
+    public void setIdRep(String idRep) { this.idRep = idRep; }
+
     /** @return ID del técnico asignado */
     public int getIdTec() { return idTec; }
 
