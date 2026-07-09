@@ -834,7 +834,7 @@ public class PendientesSuperTecnicoController {
         VBox contenido = new VBox(10);
         contenido.setPadding(new Insets(16));
         contenido.setStyle("-fx-background-color: white;");
-        contenido.setPrefWidth(480);
+        contenido.setPrefWidth(640);
 
         Label titulo = new Label("Carga de técnicos (Pedidos)");
         titulo.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
@@ -864,7 +864,8 @@ public class PendientesSuperTecnicoController {
         scroll.setFitToWidth(true);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setMaxHeight(420);
+        scroll.setPrefHeight(460);
+        VBox.setVgrow(scroll, javafx.scene.layout.Priority.ALWAYS);   // crece con la ventana (maximizar incluido)
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
         Button btnCerrar = new Button("Cerrar");
@@ -880,6 +881,10 @@ public class PendientesSuperTecnicoController {
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
+        ventana.setWidth(680);
+        ventana.setHeight(600);
+        ventana.setMinWidth(520);
+        ventana.setMinHeight(420);
         btnCerrar.setOnAction(e -> ventana.close());
         ventana.showAndWait();
     }
@@ -938,8 +943,9 @@ public class PendientesSuperTecnicoController {
 
         Label lblFigura = new Label(textoBase);
         lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-        lblFigura.setPrefWidth(64);
-        lblFigura.setAlignment(Pos.CENTER_RIGHT);
+        lblFigura.setPrefWidth(92);   // hueco fijo con sitio para el "· N%" del hover (la barra no baila)
+        lblFigura.setMinWidth(92);
+        lblFigura.setAlignment(Pos.CENTER_LEFT);   // la cifra abraza el final de la barra
 
         HBox fila = new HBox(8, lblNombre, barra, lblFigura);
         fila.setAlignment(Pos.CENTER_LEFT);
