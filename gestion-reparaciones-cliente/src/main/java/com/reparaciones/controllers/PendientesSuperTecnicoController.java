@@ -1203,6 +1203,12 @@ public class PendientesSuperTecnicoController {
             detalleBox.setDisable(fila == null);
             lblImeiDet.setText(fila == null ? "—" : fila.imei);
             cbTecDet.setValue(fila == null ? null : fila.tecnico);
+            // Viajando entre filas de pulido: si esta fila aún no tiene decisión de cliente (ni de BD ni
+            // manual) y no hay decisión manual registrada para su IMEI, pinta el cliente "pegajoso" del
+            // modal (mismo que al escanear). Una fila ya visitada (fila.cliente != null) no se re-pega.
+            if (fila != null && fila.cliente == null && !fila.sinCliente && !tieneDecisionManualCliente.test(fila.imei)) {
+                aplicarClienteDefault.accept(fila);
+            }
             actualizandoCli[0] = true;
             tfCliente.setText(fila == null ? "" : (fila.sinCliente ? "— Sin cliente —"
                     : (fila.cliente != null ? fila.cliente.getNombre() : "")));
@@ -1805,8 +1811,27 @@ public class PendientesSuperTecnicoController {
             pillAsignados.setManaged(n >= 1);
         };
 
+        // Aplica el cliente "pegajoso" del modal a una entrada rep/glass, solo si sigue sin decisión
+        // (se llama al escanear, de forma síncrona, para que se vea igual de instantáneo que el técnico,
+        // y también al VIAJAR entre IMEIs con Asignar — ver cargarEntrada[0] — para el flujo real de lote:
+        // escanear todo primero y elegir cliente ya viajando entrada a entrada. La precarga de BD que
+        // corre después la pisa si el IMEI ya tiene cliente propio — ver lanzarLookup).
+        // Declarada aquí (antes de cargarEntrada[0]) porque este último la referencia en su cuerpo.
+        java.util.function.Consumer<EntradaAsignacion> aplicarClienteDefaultEntrada = e -> {
+            if (e.cliente != null || e.sinCliente || clienteDefaultModal[0] == null) return;
+            boolean sinDef = clienteDefaultModal[0] == SIN_CLIENTE;
+            e.cliente = sinDef ? null : clienteDefaultModal[0];
+            e.sinCliente = sinDef;
+        };
+
         cargarEntrada[0] = (EntradaAsignacion e) -> {
             actual[0] = e;
+            // Viajando con Asignar: si esta entrada aún no tiene decisión de cliente (ni de BD ni manual)
+            // y no hay una decisión manual registrada para su IMEI, pinta el cliente "pegajoso" del modal
+            // (el mismo que se aplicaría al escanear). Un IMEI ya visitado (e.cliente != null) no se re-pega.
+            if (e.cliente == null && !e.sinCliente && !clienteManual.containsKey(e.imei)) {
+                aplicarClienteDefaultEntrada.accept(e);
+            }
             editandoVerde[0] = e.asignada;
             formBox.setDisable(false);
             lblImeiCurso.setText(e.imei);
@@ -1862,15 +1887,7 @@ public class PendientesSuperTecnicoController {
             Cliente m = clienteManual.get(e.imei);
             if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
         };
-        // Aplica el cliente "pegajoso" del modal a una entrada rep/glass nueva, solo si sigue sin decisión
-        // (se llama al escanear, de forma síncrona, para que se vea igual de instantáneo que el técnico;
-        // la precarga de BD que corre después la pisa si el IMEI ya tiene cliente propio — ver lanzarLookup).
-        java.util.function.Consumer<EntradaAsignacion> aplicarClienteDefaultEntrada = e -> {
-            if (e.cliente != null || e.sinCliente || clienteDefaultModal[0] == null) return;
-            boolean sinDef = clienteDefaultModal[0] == SIN_CLIENTE;
-            e.cliente = sinDef ? null : clienteDefaultModal[0];
-            e.sinCliente = sinDef;
-        };
+        // aplicarClienteDefaultEntrada está declarada más arriba (antes de cargarEntrada[0], que la usa).
         java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
             Cliente m = clienteManual.get(fila.imei);
             if (m != null) { fila.sinCliente = (m == SIN_CLIENTE); fila.cliente = fila.sinCliente ? null : m; }
