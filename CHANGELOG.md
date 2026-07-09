@@ -9,6 +9,20 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.15.0] - 2026-07-09
+
+### Added
+- **Marca "Por cerrar" en asignaciones de reparación**: la marca el **dueño** de la asignación (técnico o supertécnico, cada uno las suyas) con clic derecho en **Mis pendientes**; badge verde (paleta glass) apilado con "Urgente", visible también en Asignaciones. Columna `POR_CERRAR` en BD, PATCH con validación de propiedad en servidor y acciones `MARCAR_POR_CERRAR`/`QUITAR_POR_CERRAR` en el log. Requiere servidor actualizado.
+- **Carga de técnicos (Pedidos)**: botón en Asignaciones (SuperTécnico y Admin) que abre una ventana con una **barra por técnico activo** (0% incluidos, orden descendente, desglose por fila). Pesos: normal 1 · chasis 2 · por cerrar 0,083 · glass 1; solo cuentan asignaciones **abiertas con cliente** (pulido no); porcentaje relativo al total (suman 100). Cálculo puro en cliente (`CargaTecnicos`, con tests), recalculado en cada recarga; los filtros de la vista no lo alteran.
+- **Porcentaje de carga junto a cada técnico en el modal de asignar** (selector por defecto y combos por fila de las tres colas).
+- **Cliente persistente entre IMEIs en el modal de asignación**: la última elección se aplica al instante a los siguientes escaneos y **al viajar con "Asignar"** (misma mecánica que el técnico); prioridad manual > BD > persistido — si el IMEI ya tiene cliente en BD, ese manda (se ve el reemplazo al responder el servidor).
+
+### Changed
+- **Filtro de clientes de Asignaciones**: ahora arranca con **todo marcado** (etiqueta "Todos") y se desmarca para excluir; los clientes nuevos llegan marcados y "Limpiar filtros" vuelve a todos. Comportamiento equivalente (todo marcado = ver todo), presentación más clara.
+
+### Notas de despliegue
+- Requiere el **servidor** con la columna `POR_CERRAR` (`sql/migracion-por-cerrar.sql`, ya aplicada en preproducción) y el PATCH por-cerrar (ya desplegado). **Orden obligatorio: ALTER → servidor → cliente** (el servidor nuevo sin el ALTER rompe las queries de asignaciones). Retrocompatible con clientes 0.14.0 (campo JSON aditivo).
+
 ## [0.14.0] - 2026-07-07
 
 ### Added
