@@ -29,15 +29,16 @@ En el taller, una reparación normal puede quedar lista **a falta solo del glass
 ## 3. Cambio 2 — % de carga por técnico
 
 - **Qué cuenta**: asignaciones **abiertas** (sin fecha fin) **con cliente asignado** (el teléfono tiene `ID_CLI`), de tipo **reparación normal y glass**. El pulido queda fuera. Urgente/normal no distingue.
-- **Pesos**:
+- **Pesos** (ajustados 2026-07-09, rama `feature/carga-unidades`):
   | Asignación | Peso |
   |---|---|
   | Reparación normal | 1 |
   | Reparación con chasis | 2 |
   | Reparación con "por cerrar" | **0,083** (≈ 1/12) |
-  | Glass | 1 |
+  | Glass | **1,5** (ajustado en smoke 2026-07-09; era 1,75) |
   - Si una asignación tiene chasis **y** por cerrar, **manda "por cerrar"** (0,083): lo que queda es solo cerrar, diera igual lo que fuera antes.
-- **Fórmula**: carga(técnico) = Σ pesos de sus asignaciones que cuentan; **% = carga(técnico) / carga(total de todos) × 100**, redondeado a entero (los % suman ~100). Si la carga total es 0, la franja no se muestra.
+  - **Solicitud de pieza libera carga** (2026-07-09): una asignación con solicitud de pieza activa cuenta **0** mientras el repuesto no haya llegado; vuelve a contar cuando está **recibido** (mismo criterio que el badge "Recibido": gestionada y con stock) o si la solicitud fue rechazada (deja de ser activa). Aplica a cualquier tipo. El desglose muestra las "en espera de pieza".
+- **Fórmula y cifra principal** (ajustado 2026-07-09): carga(técnico) = Σ pesos de sus asignaciones que cuentan. La cifra principal mostrada son las **unidades de carga** (un decimal con coma; sin decimal si es entero), NO el porcentaje. Las barras son proporcionales al técnico más cargado. El **% (cuota del total) aparece solo al hover** sobre una fila: el resto de barras se atenúan (~35% de opacidad, fundido rápido — highlighting con atenuación) y junto a las unidades aparece "· N%". El modal de asignar muestra "(N uds)".
 - **Dónde se ve** (solo **SUPERTECNICO y ADMIN**; el técnico NO ve porcentajes):
   1. **Botón "Carga técnicos" arriba a la derecha** de la cabecera de la vista Asignaciones que abre una **ventana modal con barras** titulada **"Carga de técnicos (Pedidos)"** — el "(Pedidos)" deja claro que solo mide trabajo de cliente (iteración final del smoke 2026-07-08/09; sustituye al recuadro de chips, que sustituyó a la franja). La ventana: una fila por **técnico activo (0% incluidos)**, orden descendente; cada fila = nombre + **barra horizontal proporcional** (un solo tono azul `#1565C0` sobre pista `#E8EAF0`, fina y con extremos redondeados — nada de colores por técnico ni semáforos: es una cuota, no un estado) + "% en tinta" + debajo el desglose textual (n normales · n chasis · n por cerrar · n glass; "sin carga de cliente" si 0%). Scroll si hay muchos. La vista Asignaciones es compartida supertécnico/admin, así que ambos la ven sin duplicar.
   2. **Modal de asignar** (asignación masiva): el % junto a cada técnico del selector.

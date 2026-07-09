@@ -808,33 +808,64 @@ public class PendientesSuperTecnicoController {
         cargasActuales = CargaTecnicos.calcular(datos);
     }
 
+    /** Pieza de la ventana "Carga de técnicos" necesaria para el highlighting al hover:
+     *  el contenedor a atenuar/restaurar, la etiqueta de la cifra principal (para
+     *  añadir/quitar "· N%") y los valores base para restaurarla. */
+    private static final class FilaCargaInfo {
+        final VBox  contenedor;
+        final Label lblFigura;
+        final String textoBase;
+        final int    pct;
+        FilaCargaInfo(VBox contenedor, Label lblFigura, String textoBase, int pct) {
+            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.pct = pct;
+        }
+    }
+
     /** Abre la ventana "Carga de técnicos": una barra horizontal por técnico activo,
-     *  ordenadas de más a menos carga (spec por-cerrar-carga §3, ajuste smoke 2026-07-08). */
+     *  ordenadas de más a menos carga (spec por-cerrar-carga §3, ajuste 2026-07-09:
+     *  cifra principal en unidades; el % aparece solo al pasar el ratón, atenuando
+     *  el resto de filas). */
     @FXML
     private void abrirCargaTecnicos() {
+        double maxCarga = cargasActuales.values().stream()
+                .mapToDouble(CargaTecnicos.Desglose::carga).max().orElse(0);
         Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
 
         VBox contenido = new VBox(10);
         contenido.setPadding(new Insets(16));
         contenido.setStyle("-fx-background-color: white;");
-        contenido.setPrefWidth(480);
+        contenido.setPrefWidth(640);
 
         Label titulo = new Label("Carga de técnicos (Pedidos)");
         titulo.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
         VBox filas = new VBox(10);
         filas.setPadding(new Insets(0, 14, 0, 0));
+        List<FilaCargaInfo> filasInfo = new ArrayList<>();
+        double maxCargaFinal = maxCarga;
         tecnicos.stream()
                 .sorted(java.util.Comparator
-                        .comparingInt((Tecnico t) -> pct.getOrDefault(t.getIdTec(), 0)).reversed()
+                        .comparingDouble((Tecnico t) -> {
+                            CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+                            return d != null ? d.carga() : 0.0;
+                        }).reversed()
                         .thenComparing(Tecnico::getNombre))
-                .forEach(t -> filas.getChildren().add(filaCargaTecnico(t, pct)));
+                .forEach(t -> {
+                    FilaCargaInfo info = filaCargaTecnico(t, maxCargaFinal, pct);
+                    filasInfo.add(info);
+                    filas.getChildren().add(info.contenedor);
+                });
+        for (FilaCargaInfo info : filasInfo) {
+            info.contenedor.setOnMouseEntered(e -> resaltarFilaCarga(info, filasInfo));
+            info.contenedor.setOnMouseExited(e -> quitarResaltadoFilaCarga(filasInfo));
+        }
 
         ScrollPane scroll = new ScrollPane(filas);
         scroll.setFitToWidth(true);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setMaxHeight(420);
+        scroll.setPrefHeight(460);
+        VBox.setVgrow(scroll, javafx.scene.layout.Priority.ALWAYS);   // crece con la ventana (maximizar incluido)
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
         Button btnCerrar = new Button("Cerrar");
@@ -850,13 +881,44 @@ public class PendientesSuperTecnicoController {
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
+        ventana.setWidth(680);
+        ventana.setHeight(600);
+        ventana.setMinWidth(520);
+        ventana.setMinHeight(420);
         btnCerrar.setOnAction(e -> ventana.close());
         ventana.showAndWait();
     }
 
-    /** Una fila de la ventana "Carga de técnicos": nombre + barra + % + desglose. */
-    private VBox filaCargaTecnico(Tecnico t, Map<Integer, Integer> pct) {
+    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N%" a su cifra. */
+    private void resaltarFilaCarga(FilaCargaInfo actual, List<FilaCargaInfo> todas) {
+        for (FilaCargaInfo info : todas) {
+            if (info != actual) fundirOpacidad(info.contenedor, 0.35);
+        }
+        actual.lblFigura.setText(actual.textoBase + " · " + actual.pct + "%");
+    }
+
+    /** Restaura la opacidad de todas las filas y quita el "· N%" añadido al hover. */
+    private void quitarResaltadoFilaCarga(List<FilaCargaInfo> todas) {
+        for (FilaCargaInfo info : todas) {
+            fundirOpacidad(info.contenedor, 1.0);
+            info.lblFigura.setText(info.textoBase);
+        }
+    }
+
+    private void fundirOpacidad(javafx.scene.Node nodo, double opacidad) {
+        javafx.animation.FadeTransition ft =
+                new javafx.animation.FadeTransition(javafx.util.Duration.millis(120), nodo);
+        ft.setToValue(opacidad);
+        ft.play();
+    }
+
+    /** Una fila de la ventana "Carga de técnicos": nombre + barra (proporcional al técnico
+     *  más cargado) + cifra en unidades + desglose. */
+    private FilaCargaInfo filaCargaTecnico(Tecnico t, double maxCarga, Map<Integer, Integer> pct) {
+        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+        double carga = d != null ? d.carga() : 0.0;
         int p = pct.getOrDefault(t.getIdTec(), 0);
+        String textoBase = CargaTecnicos.formatearCarga(carga);
 
         Label lblNombre = new Label(t.getNombre());
         lblNombre.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
@@ -874,25 +936,27 @@ public class PendientesSuperTecnicoController {
         javafx.scene.layout.StackPane barra = new javafx.scene.layout.StackPane(track, fill);
         barra.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(barra, javafx.scene.layout.Priority.ALWAYS);
-        fill.prefWidthProperty().bind(track.widthProperty().multiply(p / 100.0));
+        double fraccion = maxCarga > 0 ? carga / maxCarga : 0;
+        fill.prefWidthProperty().bind(track.widthProperty().multiply(fraccion));
         fill.setMinWidth(0);
         fill.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
 
-        Label lblPct = new Label(p + "%");
-        lblPct.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-        lblPct.setPrefWidth(44);
-        lblPct.setAlignment(Pos.CENTER_RIGHT);
+        Label lblFigura = new Label(textoBase);
+        lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        lblFigura.setPrefWidth(92);   // hueco fijo con sitio para el "· N%" del hover (la barra no baila)
+        lblFigura.setMinWidth(92);
+        lblFigura.setAlignment(Pos.CENTER_LEFT);   // la cifra abraza el final de la barra
 
-        HBox fila = new HBox(8, lblNombre, barra, lblPct);
+        HBox fila = new HBox(8, lblNombre, barra, lblFigura);
         fila.setAlignment(Pos.CENTER_LEFT);
 
-        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
         String textoDesglose = (d != null)
                 ? java.util.stream.Stream.of(
-                        d.normales()  > 0 ? d.normales()  + " normales"   : null,
-                        d.chasis()    > 0 ? d.chasis()    + " chasis"     : null,
-                        d.porCerrar() > 0 ? d.porCerrar() + " por cerrar" : null,
-                        d.glass()     > 0 ? d.glass()     + " glass"      : null)
+                        d.normales()      > 0 ? d.normales()      + " normales"          : null,
+                        d.chasis()        > 0 ? d.chasis()        + " chasis"            : null,
+                        d.porCerrar()     > 0 ? d.porCerrar()     + " por cerrar"        : null,
+                        d.glass()         > 0 ? d.glass()         + " glass"             : null,
+                        d.enEsperaPieza() > 0 ? d.enEsperaPieza() + " en espera de pieza" : null)
                     .filter(java.util.Objects::nonNull)
                     .collect(java.util.stream.Collectors.joining(" · "))
                 : "";
@@ -900,14 +964,15 @@ public class PendientesSuperTecnicoController {
         Label lblDesglose = new Label(textoDesglose);
         lblDesglose.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6; -fx-padding: 0 0 0 118;");
 
-        return new VBox(2, fila, lblDesglose);
+        VBox contenedor = new VBox(2, fila, lblDesglose);
+        return new FilaCargaInfo(contenedor, lblFigura, textoBase, p);
     }
 
-    /** "Nombre (42%)" con la carga vigente; sin % si el técnico no tiene carga. */
+    /** "Nombre (N uds)" con la carga vigente; sin sufijo si el técnico no tiene carga. */
     private String etiquetaConCarga(Tecnico t) {
-        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
-        Integer p = pct.get(t.getIdTec());
-        return p == null ? t.getNombre() : t.getNombre() + " (" + p + "%)";
+        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
+        return d == null ? t.getNombre()
+                          : t.getNombre() + " (" + CargaTecnicos.formatearCarga(d.carga()) + " uds)";
     }
 
     public void cargar() {
