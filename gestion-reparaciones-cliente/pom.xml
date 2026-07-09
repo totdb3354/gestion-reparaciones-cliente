@@ -36,6 +36,13 @@
             <version>2.10.1</version>
         </dependency>
 
+        <!-- Apache POI — lectura de la plantilla xlsx del importador de lotes -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
