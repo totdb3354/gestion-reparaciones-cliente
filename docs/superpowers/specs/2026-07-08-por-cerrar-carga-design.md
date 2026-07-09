@@ -17,10 +17,8 @@ En el taller, una reparación normal puede quedar lista **a falta solo del glass
 
 - **Semántica**: la asignación de reparación normal está mayoritariamente hecha; solo queda cerrar el móvil (habitualmente esperando el glass de otro técnico). Marca manual — solo la persona sabe que "ya hizo la mayoría".
 - **Ámbito**: SOLO asignaciones de **reparación normal** (`ID_REP` tipo `A%`, no `AG`/`AP`). Ni glass ni pulido.
-- **Quién marca/desmarca**: el **técnico** (solo SUS asignaciones) y el **supertécnico** (cualquiera). Validado en servidor, no solo en UI.
-- **Dónde se marca**: menú contextual de la fila, junto a "Marcar urgente"/"Marcar chasis":
-  - Vista Asignaciones (supertécnico; admin es solo-lectura y no ve la acción).
-  - Vista Mis pendientes (técnico), en su menú contextual existente.
+- **Quién marca/desmarca** (ajustado en smoke 2026-07-08): **SOLO el dueño de la asignación** — técnico o supertécnico, cada uno las suyas ("solo lo sabe el que repara"). El servidor valida propiedad estricta (sin override de supertécnico sobre ajenas; ADMIN nunca).
+- **Dónde se marca** (ajustado en smoke 2026-07-08): SOLO en el menú contextual de **Mis pendientes** (componente compartido técnico/supertécnico, cada uno ve lo suyo). En la vista Asignaciones NO hay acción de marcar (se retiró), pero el **badge sí se ve** ahí.
   - Texto: "Marcar por cerrar" / "Quitar por cerrar" (según estado actual).
 - **Badge**: pastilla **"Por cerrar"** con la paleta del badge Glass (fondo `#E0F2F1`, texto `#00796B`) — enlace conceptual con glass. Se apila con "Urgente" en la columna Estado (vista Asignaciones) y en la pila de badges de la vista del técnico. **No** altera el orden de la lista, ni contadores, ni filtros.
 - **Ciclo de vida**: se quita a mano, o desaparece con la asignación al completarse la reparación. Sin auto-limpieza ni vínculo automático con asignaciones de glass (descartado: no es derivable — ver §5).
@@ -41,13 +39,9 @@ En el taller, una reparación normal puede quedar lista **a falta solo del glass
   - Si una asignación tiene chasis **y** por cerrar, **manda "por cerrar"** (0,083): lo que queda es solo cerrar, diera igual lo que fuera antes.
 - **Fórmula**: carga(técnico) = Σ pesos de sus asignaciones que cuentan; **% = carga(técnico) / carga(total de todos) × 100**, redondeado a entero (los % suman ~100). Si la carga total es 0, la franja no se muestra.
 - **Dónde se ve** (solo **SUPERTECNICO y ADMIN**; el técnico NO ve porcentajes):
-  1. **Franja de chips** encima de la tabla de la vista Asignaciones: `Juan 42% · Marta 33% · …`, ordenada de mayor a menor. Tooltip por chip con el desglose (n normales + n chasis + n por cerrar + n glass). La vista Asignaciones es un componente compartido supertécnico/admin (modo solo-lectura), así que sale para ambos sin duplicar.
+  1. **Botón "Carga técnicos" arriba a la derecha** de la cabecera de la vista Asignaciones que abre una **ventana modal con barras** titulada **"Carga de técnicos (Pedidos)"** — el "(Pedidos)" deja claro que solo mide trabajo de cliente (iteración final del smoke 2026-07-08/09; sustituye al recuadro de chips, que sustituyó a la franja). La ventana: una fila por **técnico activo (0% incluidos)**, orden descendente; cada fila = nombre + **barra horizontal proporcional** (un solo tono azul `#1565C0` sobre pista `#E8EAF0`, fina y con extremos redondeados — nada de colores por técnico ni semáforos: es una cuota, no un estado) + "% en tinta" + debajo el desglose textual (n normales · n chasis · n por cerrar · n glass; "sin carga de cliente" si 0%). Scroll si hay muchos. La vista Asignaciones es compartida supertécnico/admin, así que ambos la ven sin duplicar.
   2. **Modal de asignar** (asignación masiva): el % junto a cada técnico del selector.
-- **Ayuda**: icono **ⓘ** al final de la franja → diálogo pequeño de solo texto (reutiliza `ConfirmDialog.mostrarTexto`) que explica SOLO la fórmula:
-  > **¿Cómo se mide la carga?**
-  > Cuentan solo las asignaciones abiertas **con cliente**, de reparación y glass (pulido no).
-  > Cada asignación vale: normal = 1 · chasis = 2 · por cerrar = 0,083 · glass = 1.
-  > El porcentaje de cada técnico es su parte del total: entre todos suman 100%.
+- **Ayuda ⓘ**: RETIRADA en el smoke del 2026-07-08 a petición del usuario (no hace falta).
 - **"En vivo"**: cálculo **puro en cliente** (`CargaTecnicos`, clase de utilidad con tests JUnit) sobre las asignaciones ya cargadas; se recalcula en cada `cargar()` de la vista — es decir, tras asignar, completar, marcar/desmarcar o refrescar. Sin polling ni websockets. Los **filtros de la vista NO alteran el %** (mide la carga global real, no el subconjunto filtrado).
 - **Sin persistencia**: el % no se guarda en ninguna parte; siempre derivado.
 

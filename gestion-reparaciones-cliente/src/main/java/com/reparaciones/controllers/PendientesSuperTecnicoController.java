@@ -819,7 +819,7 @@ public class PendientesSuperTecnicoController {
         contenido.setStyle("-fx-background-color: white;");
         contenido.setPrefWidth(480);
 
-        Label titulo = new Label("Carga de técnicos");
+        Label titulo = new Label("Carga de técnicos (Pedidos)");
         titulo.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
 
         VBox filas = new VBox(10);
@@ -845,7 +845,7 @@ public class PendientesSuperTecnicoController {
         contenido.getChildren().addAll(titulo, scroll, botones);
 
         Stage ventana = new Stage();
-        ventana.setTitle("Carga de técnicos");
+        ventana.setTitle("Carga de técnicos (Pedidos)");
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
