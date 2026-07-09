@@ -1030,7 +1030,8 @@ public class PendientesSuperTecnicoController {
                                      java.util.function.Consumer<FilaPulido> onClienteCambiado,
                                      List<Runnable> refrescadoresCliente,
                                      java.util.function.Consumer<FilaPulido> sembrarCliente,
-                                     java.util.function.Consumer<FilaPulido> aplicarClienteDefault) {
+                                     java.util.function.Consumer<FilaPulido> aplicarClienteDefault,
+                                     java.util.function.Predicate<String> tieneDecisionManualCliente) {
         // ── Técnico (por defecto para los IMEIs que se escaneen; editable por fila) ──
         Label lblTecTop = new Label("Técnico (se aplica a los IMEIs que escanees)");
         lblTecTop.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
@@ -1278,6 +1279,7 @@ public class PendientesSuperTecnicoController {
             FilaPulido fila = new FilaPulido(imei, cbTecTop.getValue(), "");   // técnico del selector de arriba (puede ser null)
             lote.add(fila);
             sembrarCliente.accept(fila);
+            aplicarClienteDefault.accept(fila);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
             render[0].run();
             onChange.run();
             cargarDetalle.accept(fila);   // auto-selecciona
@@ -1286,25 +1288,16 @@ public class PendientesSuperTecnicoController {
                 try { idCli = telefonoDAO.getClienteId(imei); } catch (Exception ignore) {}
                 final Integer idCliRes = idCli;
                 javafx.application.Platform.runLater(() -> {
-                    if (idCliRes != null && fila.cliente == null && !fila.sinCliente) {
+                    // La BD manda siempre, salvo que haya una decisión MANUAL ya tomada para este IMEI:
+                    // pisa el cliente "pegajoso" que se haya podido pintar al escanear (ver aplicarClienteDefault).
+                    if (idCliRes != null && !tieneDecisionManualCliente.test(fila.imei)) {
                         com.reparaciones.models.Cliente existente = clientesTodos.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
                         if (existente != null) {
                             fila.cliente = existente;
+                            fila.sinCliente = false;
                             if (seleccionada[0] == fila) {
                                 actualizandoCli[0] = true; tfCliente.setText(existente.getNombre()); actualizandoCli[0] = false;
-                            }
-                            render[0].run();
-                        }
-                    } else if (idCliRes == null && fila.cliente == null && !fila.sinCliente) {
-                        // Sin cliente en BD para este IMEI: aplica el cliente "pegajoso" del modal (si hay).
-                        aplicarClienteDefault.accept(fila);
-                        if (fila.cliente != null || fila.sinCliente) {
-                            if (seleccionada[0] == fila) {
-                                actualizandoCli[0] = true;
-                                tfCliente.setText(fila.sinCliente ? "— Sin cliente —"
-                                        : (fila.cliente != null ? fila.cliente.getNombre() : ""));
-                                actualizandoCli[0] = false;
                             }
                             render[0].run();
                         }
@@ -1771,33 +1764,23 @@ public class PendientesSuperTecnicoController {
                     } else if (actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
-                    // Precargar el cliente que el IMEI ya tuviera en BD (prevalece sobre el arrastre)
-                    if (idCliRes != null && e.cliente == null && !e.sinCliente && !clienteManual.containsKey(e.imei)) {
+                    // Precargar el cliente que el IMEI ya tuviera en BD: la BD manda siempre, salvo que haya
+                    // una decisión MANUAL ya tomada para este IMEI: pisa el cliente "pegajoso" que se haya
+                    // podido pintar al escanear (ver aplicarClienteDefaultEntrada).
+                    if (idCliRes != null && !clienteManual.containsKey(e.imei)) {
                         Cliente existente = todosClientes.stream()
                                 .filter(c -> c.getIdCli() == idCliRes).findFirst().orElse(null);
                         if (existente != null) {
                             e.cliente = existente;
+                            e.sinCliente = false;
                             if (actual[0] == e) {
                                 clienteSel[0] = existente;
+                                sinClienteSel[0] = false;
                                 actualizandoCliente[0] = true;
                                 tfCliente.setText(existente.getNombre());
                                 clientesFiltrados.setPredicate(c -> true);
                                 actualizandoCliente[0] = false;
                             }
-                        }
-                    } else if (idCliRes == null && e.cliente == null && !e.sinCliente
-                            && !clienteManual.containsKey(e.imei) && clienteDefaultModal[0] != null) {
-                        // Sin cliente en BD ni decisión manual para este IMEI: aplica el cliente "pegajoso" del modal.
-                        boolean sinDef = clienteDefaultModal[0] == SIN_CLIENTE;
-                        e.cliente = sinDef ? null : clienteDefaultModal[0];
-                        e.sinCliente = sinDef;
-                        if (actual[0] == e) {
-                            clienteSel[0] = e.cliente;
-                            sinClienteSel[0] = e.sinCliente;
-                            actualizandoCliente[0] = true;
-                            tfCliente.setText(sinDef ? "— Sin cliente —" : (e.cliente != null ? e.cliente.getNombre() : ""));
-                            clientesFiltrados.setPredicate(c -> true);
-                            actualizandoCliente[0] = false;
                         }
                     }
                     renderPila[0].run();
@@ -1878,6 +1861,15 @@ public class PendientesSuperTecnicoController {
         java.util.function.Consumer<EntradaAsignacion> sembrarClienteEntrada = e -> {
             Cliente m = clienteManual.get(e.imei);
             if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
+        };
+        // Aplica el cliente "pegajoso" del modal a una entrada rep/glass nueva, solo si sigue sin decisión
+        // (se llama al escanear, de forma síncrona, para que se vea igual de instantáneo que el técnico;
+        // la precarga de BD que corre después la pisa si el IMEI ya tiene cliente propio — ver lanzarLookup).
+        java.util.function.Consumer<EntradaAsignacion> aplicarClienteDefaultEntrada = e -> {
+            if (e.cliente != null || e.sinCliente || clienteDefaultModal[0] == null) return;
+            boolean sinDef = clienteDefaultModal[0] == SIN_CLIENTE;
+            e.cliente = sinDef ? null : clienteDefaultModal[0];
+            e.sinCliente = sinDef;
         };
         java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
             Cliente m = clienteManual.get(fila.imei);
@@ -1974,6 +1966,7 @@ public class PendientesSuperTecnicoController {
             e.tipo = tipoActual[0];
             e.seq = ++seqCounter[0];
             sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
+            aplicarClienteDefaultEntrada.accept(e);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -2005,6 +1998,7 @@ public class PendientesSuperTecnicoController {
                     en.tipo = tipoActual[0];
                     en.seq = ++seqCounter[0];
                     sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
+                    aplicarClienteDefaultEntrada.accept(en);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
@@ -2039,7 +2033,8 @@ public class PendientesSuperTecnicoController {
                           propagarCliente[0].accept(fila.imei, fila.cliente, fila.sinCliente); },
                 refrescadoresClientePulido,
                 sembrarClientePulido,
-                aplicarClienteDefaultPulido);
+                aplicarClienteDefaultPulido,
+                imei -> clienteManual.containsKey(imei));
         pulidoPane.setVisible(false); pulidoPane.setManaged(false);
         javafx.scene.layout.StackPane centro = new javafx.scene.layout.StackPane(richArea, pulidoPane);
         javafx.scene.layout.StackPane.setAlignment(richArea, Pos.TOP_LEFT);
