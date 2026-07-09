@@ -14,6 +14,8 @@
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="Asignaciones pendientes" styleClass="vista-titulo"/>
         <Label fx:id="lblContador" style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="btnCargaTecnicos" text="Carga técnicos" styleClass="btn-secondary" onAction="#abrirCargaTecnicos"/>
     </HBox>
     <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>

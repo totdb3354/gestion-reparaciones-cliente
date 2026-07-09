@@ -45,6 +45,7 @@ public class ReparacionResumen {
     private boolean       tieneAsignaciones;
     private LocalDateTime telefonoUpdatedAt;
     private String        cliente;
+    private boolean       porCerrar;
 
     public ReparacionResumen() {}
 
@@ -134,6 +135,9 @@ public class ReparacionResumen {
     /** @return ID de la reparación origen si es reincidencia, o {@code null} */
     public String getIdRepAnterior() { return idRepAnterior; }
 
+    /** @return clave primaria de la reparación */
+    public void setIdRep(String idRep) { this.idRep = idRep; }
+
     /** @return ID del técnico asignado */
     public int getIdTec() { return idTec; }
 
@@ -183,4 +187,6 @@ public class ReparacionResumen {
     public void          setTelefonoUpdatedAt(LocalDateTime v)       { this.telefonoUpdatedAt = v; }
     public String        getCliente()                                { return cliente; }
     public void          setCliente(String cliente)                  { this.cliente = cliente; }
+    public boolean isPorCerrar()                                     { return porCerrar; }
+    public void    setPorCerrar(boolean porCerrar)                   { this.porCerrar = porCerrar; }
 }
