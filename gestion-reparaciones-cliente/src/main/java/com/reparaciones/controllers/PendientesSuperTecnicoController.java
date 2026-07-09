@@ -810,14 +810,15 @@ public class PendientesSuperTecnicoController {
 
     /** Pieza de la ventana "Carga de técnicos" necesaria para el highlighting al hover:
      *  el contenedor a atenuar/restaurar, la etiqueta de la cifra principal (para
-     *  añadir/quitar "· N%") y los valores base para restaurarla. */
+     *  añadir/quitar "· N uds") y los valores base para restaurarla.
+     *  Bridge temporal v1 (unidades) — Tarea 4 rehace esta ventana con el motor v2. */
     private static final class FilaCargaInfo {
         final VBox  contenedor;
         final Label lblFigura;
         final String textoBase;
-        final int    pct;
-        FilaCargaInfo(VBox contenedor, Label lblFigura, String textoBase, int pct) {
-            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.pct = pct;
+        final double carga;
+        FilaCargaInfo(VBox contenedor, Label lblFigura, String textoBase, double carga) {
+            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.carga = carga;
         }
     }
 
@@ -829,7 +830,6 @@ public class PendientesSuperTecnicoController {
     private void abrirCargaTecnicos() {
         double maxCarga = cargasActuales.values().stream()
                 .mapToDouble(CargaTecnicos.Desglose::carga).max().orElse(0);
-        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
 
         VBox contenido = new VBox(10);
         contenido.setPadding(new Insets(16));
@@ -851,7 +851,7 @@ public class PendientesSuperTecnicoController {
                         }).reversed()
                         .thenComparing(Tecnico::getNombre))
                 .forEach(t -> {
-                    FilaCargaInfo info = filaCargaTecnico(t, maxCargaFinal, pct);
+                    FilaCargaInfo info = filaCargaTecnico(t, maxCargaFinal);
                     filasInfo.add(info);
                     filas.getChildren().add(info.contenedor);
                 });
@@ -889,12 +889,12 @@ public class PendientesSuperTecnicoController {
         ventana.showAndWait();
     }
 
-    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N%" a su cifra. */
+    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N uds" a su cifra. */
     private void resaltarFilaCarga(FilaCargaInfo actual, List<FilaCargaInfo> todas) {
         for (FilaCargaInfo info : todas) {
             if (info != actual) fundirOpacidad(info.contenedor, 0.35);
         }
-        actual.lblFigura.setText(actual.textoBase + " · " + actual.pct + "%");
+        actual.lblFigura.setText(actual.textoBase + " · " + CargaTecnicos.formatearCarga(actual.carga) + " uds");
     }
 
     /** Restaura la opacidad de todas las filas y quita el "· N%" añadido al hover. */
@@ -914,10 +914,9 @@ public class PendientesSuperTecnicoController {
 
     /** Una fila de la ventana "Carga de técnicos": nombre + barra (proporcional al técnico
      *  más cargado) + cifra en unidades + desglose. */
-    private FilaCargaInfo filaCargaTecnico(Tecnico t, double maxCarga, Map<Integer, Integer> pct) {
+    private FilaCargaInfo filaCargaTecnico(Tecnico t, double maxCarga) {
         CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
         double carga = d != null ? d.carga() : 0.0;
-        int p = pct.getOrDefault(t.getIdTec(), 0);
         String textoBase = CargaTecnicos.formatearCarga(carga);
 
         Label lblNombre = new Label(t.getNombre());
@@ -965,7 +964,7 @@ public class PendientesSuperTecnicoController {
         lblDesglose.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6; -fx-padding: 0 0 0 118;");
 
         VBox contenedor = new VBox(2, fila, lblDesglose);
-        return new FilaCargaInfo(contenedor, lblFigura, textoBase, p);
+        return new FilaCargaInfo(contenedor, lblFigura, textoBase, carga);
     }
 
     /** "Nombre (N uds)" con la carga vigente; sin sufijo si el técnico no tiene carga. */
