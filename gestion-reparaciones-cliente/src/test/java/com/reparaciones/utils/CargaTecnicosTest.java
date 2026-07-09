@@ -108,4 +108,20 @@ class CargaTecnicosTest {
     @Test void formatearCargaCero() {
         assertEquals("0", CargaTecnicos.formatearCarga(0));
     }
+
+    @Test void formatearCargaConRedondeo() {
+        assertEquals("4,8", CargaTecnicos.formatearCarga(4.833));
+        assertEquals("0,1", CargaTecnicos.formatearCarga(CargaTecnicos.PESO_POR_CERRAR));
+    }
+
+    @Test void chasisPlusPorCerrarPlusSolicitudPendiente() {
+        ReparacionResumen r = asig("A20260709_3", 1, "WEB", true, true);
+        r.setEsSolicitud(1);
+        r.setEstadoSolicitud("PENDIENTE");
+        var cargas = CargaTecnicos.calcular(List.of(r));
+        assertEquals(0.0, cargas.get(1).carga(), 0.0001);
+        assertEquals(0, cargas.get(1).chasis());
+        assertEquals(0, cargas.get(1).porCerrar());
+        assertEquals(1, cargas.get(1).enEsperaPieza());
+    }
 }
