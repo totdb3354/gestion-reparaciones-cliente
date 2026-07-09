@@ -20,7 +20,7 @@ public final class CargaTecnicos {
     private CargaTecnicos() {}
 
     public static final double PESO_POR_CERRAR = 1.0 / 12;   // ≈ 0,083
-    public static final double PESO_GLASS      = 1.75;
+    public static final double PESO_GLASS      = 1.5;   // estimación del usuario (2026-07-09); en la v2 de capacidad diaria pasa a derivarse de los topes por jornada (spec 2026-07-09-carga-capacidad-diaria)
 
     public record Desglose(int normales, int chasis, int porCerrar, int glass, int enEsperaPieza, double carga) {
         Desglose sumar(int n, int c, int p, int g, int e, double peso) {

@@ -35,7 +35,7 @@ En el taller, una reparación normal puede quedar lista **a falta solo del glass
   | Reparación normal | 1 |
   | Reparación con chasis | 2 |
   | Reparación con "por cerrar" | **0,083** (≈ 1/12) |
-  | Glass | **1,75** |
+  | Glass | **1,5** (ajustado en smoke 2026-07-09; era 1,75) |
   - Si una asignación tiene chasis **y** por cerrar, **manda "por cerrar"** (0,083): lo que queda es solo cerrar, diera igual lo que fuera antes.
   - **Solicitud de pieza libera carga** (2026-07-09): una asignación con solicitud de pieza activa cuenta **0** mientras el repuesto no haya llegado; vuelve a contar cuando está **recibido** (mismo criterio que el badge "Recibido": gestionada y con stock) o si la solicitud fue rechazada (deja de ser activa). Aplica a cualquier tipo. El desglose muestra las "en espera de pieza".
 - **Fórmula y cifra principal** (ajustado 2026-07-09): carga(técnico) = Σ pesos de sus asignaciones que cuentan. La cifra principal mostrada son las **unidades de carga** (un decimal con coma; sin decimal si es entero), NO el porcentaje. Las barras son proporcionales al técnico más cargado. El **% (cuota del total) aparece solo al hover** sobre una fila: el resto de barras se atenúan (~35% de opacidad, fundido rápido — highlighting con atenuación) y junto a las unidades aparece "· N%". El modal de asignar muestra "(N uds)".

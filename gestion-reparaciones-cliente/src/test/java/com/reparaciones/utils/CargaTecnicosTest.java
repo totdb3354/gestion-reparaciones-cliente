@@ -27,8 +27,8 @@ class CargaTecnicosTest {
                 asig("A20260708_1", 1, "WEB", false, false),   // 1
                 asig("A20260708_2", 1, "WEB", true,  false),   // 2
                 asig("A20260708_3", 1, "WEB", false, true),    // 0,083
-                asig("AG20260708_1", 1, "WEB", false, false)));// 1,75 (glass)
-        assertEquals(4.833, cargas.get(1).carga(), 0.001);
+                asig("AG20260708_1", 1, "WEB", false, false)));// 1,5 (glass)
+        assertEquals(4.583, cargas.get(1).carga(), 0.001);
         assertEquals(1, cargas.get(1).normales());
         assertEquals(1, cargas.get(1).chasis());
         assertEquals(1, cargas.get(1).porCerrar());
