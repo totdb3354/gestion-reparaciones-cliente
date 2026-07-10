@@ -1174,13 +1174,15 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         if (pnlAgrupado.isVisible()) { agrupadoController.exportarCSV(owner); return; }
 
         if (pnlPendientes.isVisible()) {
-            // Tabla unificada (reparación + glass + pulido): exporta todo lo visible.
+            // Tabla unificada (reparación + glass + pulido): exporta todo lo visible,
+            // espejo de las columnas de la tabla de asignaciones (no de filaReparacion,
+            // pensada para el historial).
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
-                    "ID Reparación", "IMEI", "Técnico", "Fecha asig.", "Fecha fin",
-                    "Componente", "Observaciones", "Incidencia", "Resuelto", "ID Rep. anterior");
+                    "ID", "Tipo", "Técnico", "IMEI", "Modelo", "Fecha asignación", "Comentario",
+                    "Cliente", "Asignado por", "Estado", "Urgente", "Chasis", "Por cerrar", "En espera de pieza");
             List<List<String>> filas = new ArrayList<>();
-            for (ReparacionResumen r : items) filas.add(filaReparacion(r, fmtHora));
+            for (ReparacionResumen r : items) filas.add(filaAsignacion(r, fmtHora));
             com.reparaciones.utils.CsvExporter.exportar(owner, "reparaciones_pendientes", cabeceras, filas);
             return;
         }
@@ -1232,6 +1234,45 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.isEsIncidencia() ? (r.getIncidencia() != null ? r.getIncidencia() : "Sí") : "No");
         fila.add(r.isEsResuelto() ? "Sí" : "No");
         fila.add(r.getIdRepAnterior() != null ? r.getIdRepAnterior() : "");
+        return fila;
+    }
+
+    /** Fila de la tabla de asignaciones (pnlPendientes), espejo exacto de sus columnas
+     *  (ver PendientesSuperTecnicoController: celdaTipoConChasis, cEstado, menú contextual). */
+    private List<String> filaAsignacion(ReparacionResumen r, DateTimeFormatter fmt) {
+        List<String> fila = new ArrayList<>();
+        fila.add(r.getIdRep());
+        fila.add(com.reparaciones.utils.TipoTrabajo.desde(r.getIdRep()).etiqueta());
+        fila.add(r.getNombreTecnico() != null ? r.getNombreTecnico() : "");
+        fila.add(com.reparaciones.utils.CsvExporter.textoForzado(r.getImei()));
+        String m = r.getModelo();
+        fila.add((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+        fila.add(FechaUtils.formatear(r.getFechaAsig(), fmt));
+        fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
+        fila.add(r.getCliente() != null ? r.getCliente() : "");
+        fila.add(r.getNombreTecnicoAsigna() != null ? r.getNombreTecnicoAsigna() : "—");
+
+        String estado;
+        if (r.isEsIncidencia()) {
+            estado = "Incidencia";
+        } else if (r.getEsSolicitud() > 0) {
+            boolean recibido = "GESTIONADA".equals(r.getEstadoSolicitud()) && r.getStockSolicitud() > 0;
+            estado = recibido ? "Recibido" : (r.isEnCaminoSolicitud() ? "En camino" : "Solicitud");
+        } else {
+            estado = "Normal";
+        }
+        fila.add(estado);
+
+        fila.add(r.isUrgente() ? "Sí" : "No");
+        fila.add(r.isEsChasis() ? "Sí" : "No");
+        fila.add(r.isPorCerrar() ? "Sí" : "No");
+
+        // Mismo criterio que CargaTecnicos.enEsperaDePieza (privado): solicitud activa
+        // y aún no recibida (gestionada + stock disponible).
+        boolean enEsperaDePieza = r.getEsSolicitud() > 0
+                && !("GESTIONADA".equals(r.getEstadoSolicitud()) && r.getStockSolicitud() > 0);
+        fila.add(enEsperaDePieza ? "Sí" : "No");
+
         return fila;
     }
 
