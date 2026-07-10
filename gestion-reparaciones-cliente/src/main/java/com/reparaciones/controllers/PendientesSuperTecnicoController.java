@@ -822,8 +822,9 @@ public class PendientesSuperTecnicoController {
         final Label lblFigura;
         final String textoBase;
         final double unidades;
-        FilaCargaInfo(javafx.scene.Node contenedor, Label lblFigura, String textoBase, double unidades) {
-            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.unidades = unidades;
+        final boolean sinJornada;
+        FilaCargaInfo(javafx.scene.Node contenedor, Label lblFigura, String textoBase, double unidades, boolean sinJornada) {
+            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.unidades = unidades; this.sinJornada = sinJornada;
         }
     }
 
@@ -939,15 +940,17 @@ public class PendientesSuperTecnicoController {
         ventana.showAndWait();
     }
 
-    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N uds" a su cifra. */
+    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N uds" a su cifra (salvo en filas sin jornada). */
     private void resaltarFilaCarga(FilaCargaInfo actual, List<FilaCargaInfo> todas) {
         for (FilaCargaInfo info : todas) {
             if (info != actual) fundirOpacidad(info.contenedor, 0.35);
         }
-        actual.lblFigura.setText(actual.textoBase + " · " + CargaTecnicos.formatearCarga(actual.unidades) + " uds");
+        if (!actual.sinJornada) {
+            actual.lblFigura.setText(actual.textoBase + " · " + CargaTecnicos.formatearCarga(actual.unidades) + " uds");
+        }
     }
 
-    /** Restaura la opacidad de todas las filas y quita el "· N%" añadido al hover. */
+    /** Restaura la opacidad de todas las filas y quita el "· N uds" añadido al hover. */
     private void quitarResaltadoFilaCarga(List<FilaCargaInfo> todas) {
         for (FilaCargaInfo info : todas) {
             fundirOpacidad(info.contenedor, 1.0);
@@ -1076,7 +1079,7 @@ public class PendientesSuperTecnicoController {
         fila.setAlignment(Pos.CENTER_LEFT);
         Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo)));
 
-        return new FilaCargaInfo(fila, lblFigura, textoBase, unidades);
+        return new FilaCargaInfo(fila, lblFigura, textoBase, unidades, sinJornada);
     }
 
     /** "Nombre (N uds)" con la carga vigente; sin sufijo si el técnico no tiene carga. */
