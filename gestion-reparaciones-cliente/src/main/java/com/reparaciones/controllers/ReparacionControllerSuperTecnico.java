@@ -1180,7 +1180,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID", "Tipo", "Técnico", "IMEI", "Modelo", "Fecha asignación", "Comentario",
-                    "Cliente", "Asignado por", "Estado", "Urgente", "Chasis", "Por cerrar", "En espera de pieza");
+                    "Cliente", "Asignado por", "Urgente", "Chasis", "Por cerrar", "En espera de pieza");
             List<List<String>> filas = new ArrayList<>();
             for (ReparacionResumen r : items) filas.add(filaAsignacion(r, fmtHora));
             com.reparaciones.utils.CsvExporter.exportar(owner, "reparaciones_pendientes", cabeceras, filas);
@@ -1237,8 +1237,9 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         return fila;
     }
 
-    /** Fila de la tabla de asignaciones (pnlPendientes), espejo exacto de sus columnas
-     *  (ver PendientesSuperTecnicoController: celdaTipoConChasis, cEstado, menú contextual). */
+    /** Fila de la tabla de asignaciones (pnlPendientes), espejo de sus columnas
+     *  (ver PendientesSuperTecnicoController: celdaTipoConChasis, menú contextual);
+     *  sin columna Estado (decisión del usuario: sobra en el CSV). */
     private List<String> filaAsignacion(ReparacionResumen r, DateTimeFormatter fmt) {
         List<String> fila = new ArrayList<>();
         fila.add(r.getIdRep());
@@ -1251,18 +1252,6 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.getComentarioAsignacion() != null ? r.getComentarioAsignacion() : "");
         fila.add(r.getCliente() != null ? r.getCliente() : "");
         fila.add(r.getNombreTecnicoAsigna() != null ? r.getNombreTecnicoAsigna() : "—");
-
-        String estado;
-        if (r.isEsIncidencia()) {
-            estado = "Incidencia";
-        } else if (r.getEsSolicitud() > 0) {
-            boolean recibido = "GESTIONADA".equals(r.getEstadoSolicitud()) && r.getStockSolicitud() > 0;
-            estado = recibido ? "Recibido" : (r.isEnCaminoSolicitud() ? "En camino" : "Solicitud");
-        } else {
-            estado = "Normal";
-        }
-        fila.add(estado);
-
         fila.add(r.isUrgente() ? "Sí" : "No");
         fila.add(r.isEsChasis() ? "Sí" : "No");
         fila.add(r.isPorCerrar() ? "Sí" : "No");
