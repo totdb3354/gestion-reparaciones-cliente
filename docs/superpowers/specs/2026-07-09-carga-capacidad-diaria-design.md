@@ -31,7 +31,7 @@ El % deja de ser cuota del reparto entre técnicos y pasa a medir **cuánto de S
 
 - Toggle **Pedidos | Total** en la ventana "Carga de técnicos" (mismo patrón que el selector Reparaciones|Glass|Pulidos del Historial). **Pedidos es la vista por defecto** (es lo que urge y lo más mirado); Total (todo el trabajo, con o sin cliente) es la adicional — útil cuando los pedidos no aprietan.
 - **Identidad de vista = PUNTO de color fijo** junto al %: **azul = Total, violeta = Pedidos**. El punto NUNCA cambia de color (identidad, no nivel). Los dos cálculos salen del mismo motor con distinto filtro.
-- **Modal de asignación: SIN toggle.** Junto a cada técnico, fijos, los dos porcentajes con su punto: `Juan (●62% · ●85%)`.
+- **Modal de asignación: SIN toggle.** Junto a cada técnico, fijo, SOLO el porcentaje de Pedidos con su punto violeta: `Juan (●62%)` (decisión del usuario 2026-07-10 en smoke; originalmente iban los dos — el Total queda solo en la ventana de carga).
 
 ## 4. Presentación
 

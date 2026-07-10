@@ -1083,35 +1083,32 @@ public class PendientesSuperTecnicoController {
         return fila;
     }
 
-    /** "Nombre (P62% · T85%)" — texto plano, SIN color ni puntos de identidad. Es lo único que
+    /** "Nombre (P62%)" — texto plano, SIN color ni punto de identidad. Es lo único que
      *  puede pintar el buttonCell del ComboBox: lo controla el {@code StringConverter}, que solo
      *  admite texto (no nodos), así que aquí se degrada honestamente el diseño de
-     *  {@link #etiquetaConCargaNodo}. P = Pedidos, T = Total (Pedidos primero, spec). */
+     *  {@link #etiquetaConCargaNodo}. P = Pedidos (en el modal solo se muestra Pedidos,
+     *  decisión del usuario 2026-07-10; el Total queda en la ventana de carga). */
     private String etiquetaConCarga(Tecnico t) {
         double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
-        double pctTotal   = diaDe(cargaDiaTotal, t.getIdTec()).pctTotal();
-        return t.getNombre() + " (P" + CargaTecnicos.formatearPct(pctPedidos)
-                + " · T" + CargaTecnicos.formatearPct(pctTotal) + ")";
+        return t.getNombre() + " (P" + CargaTecnicos.formatearPct(pctPedidos) + ")";
     }
 
-    /** "Nombre ●62% ●85%" como nodos: punto de identidad FIJO (violeta = Pedidos, azul = Total,
-     *  spec 2026-07-09-carga-capacidad-diaria — nunca cambian por nivel) + porcentaje teñido por
+    /** "Nombre ●62%" como nodos: punto de identidad FIJO de Pedidos (violeta,
+     *  spec 2026-07-09-carga-capacidad-diaria — nunca cambia por nivel) + porcentaje teñido por
      *  SU nivel (mismos umbrales que la barra de {@link #colorNivelTexto}, tono oscuro de texto).
-     *  Pedidos va primero (spec, "donde aparezcan ambos"). Para los puntos de render que solo
-     *  admiten texto (buttonCell del ComboBox) ver {@link #etiquetaConCarga}.
+     *  En el modal solo se muestra Pedidos (decisión del usuario 2026-07-10); el Total vive en la
+     *  ventana de carga con su toggle. Para los puntos de render que solo admiten texto
+     *  (buttonCell del ComboBox) ver {@link #etiquetaConCarga}.
      *  <p>{@code resaltada} = fila seleccionada u hoveada en un popup de ListView (fondo azul
-     *  oscuro): todos los textos (nombre, puntos, porcentajes) pasan a #FAFAFA para no quedar
+     *  oscuro): todos los textos (nombre, punto, porcentaje) pasan a #FAFAFA para no quedar
      *  ilegibles — los estilos inline de esta etiqueta ganan a las reglas :selected/:hover del
      *  stylesheet, así que el conmutado hay que hacerlo aquí, no por CSS. */
     private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada) {
         double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
-        double pctTotal   = diaDe(cargaDiaTotal, t.getIdTec()).pctTotal();
 
-        String colorNombre      = resaltada ? "#FAFAFA" : "#2C3B54";
+        String colorNombre       = resaltada ? "#FAFAFA" : "#2C3B54";
         String colorPuntoPedidos = resaltada ? "#FAFAFA" : "#7B1FA2";
-        String colorPuntoTotal   = resaltada ? "#FAFAFA" : "#1565C0";
         String colorPctPedidos   = resaltada ? "#FAFAFA" : colorNivelTexto(pctPedidos);
-        String colorPctTotal     = resaltada ? "#FAFAFA" : colorNivelTexto(pctTotal);
 
         Label lblNombre = new Label(t.getNombre());
         lblNombre.setStyle("-fx-text-fill: " + colorNombre + ";");
@@ -1121,12 +1118,7 @@ public class PendientesSuperTecnicoController {
         Label lblPctPedidos = new Label(CargaTecnicos.formatearPct(pctPedidos));
         lblPctPedidos.setStyle("-fx-text-fill: " + colorPctPedidos + "; -fx-font-weight: bold;");
 
-        Label lblPuntoTotal = new Label("●");
-        lblPuntoTotal.setStyle("-fx-text-fill: " + colorPuntoTotal + "; -fx-font-size: 9px;");
-        Label lblPctTotal = new Label(CargaTecnicos.formatearPct(pctTotal));
-        lblPctTotal.setStyle("-fx-text-fill: " + colorPctTotal + "; -fx-font-weight: bold;");
-
-        HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos, lblPuntoTotal, lblPctTotal);
+        HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos);
         caja.setAlignment(Pos.CENTER_LEFT);
         return caja;
     }
