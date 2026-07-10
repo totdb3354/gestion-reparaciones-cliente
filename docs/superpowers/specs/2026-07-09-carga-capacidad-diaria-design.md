@@ -62,6 +62,13 @@ ORDER BY r.ID_TEC, DIA;
 
 - Excluir del cálculo a los técnicos de solo-glass.
 
+**RESULTADO de la derivación (ejecutada con el usuario el 2026-07-09, sobre asignaciones cerradas por día — la query de arriba refinada a `A%` cerradas con split por `ES_CHASIS`):**
+- **Método corregido en vivo**: los topes 8/17 del usuario son TECHOS ("si solo haces eso"), no medianas — así que el tope de normales se fijó por el mejor día real escalado, no por la mediana (la mediana solo como referencia).
+- Glass validado como techo: javi (solo-glass), mediana ≈12/día-9h, **mejor día 16 en 8h → 18 escalado**, coherente con el techo 17.
+- Normales: mediana ≈9,5/día-9h; **mejor día: marcos, 18 asignaciones normales en jornada de 8h el 2026-07-08 (era del flag ES_CHASIS, ese día marcó 1 chasis aparte) → 20,25 escalado**; osorio 17 en 8h → 19,1. **El usuario fijó `TOPE_NORMALES_9H = 20`.**
+- Chasis: sin días puros suficientes para validar; se mantiene el 8 medido por el usuario (revisar con más datos).
+- Nota metodológica: la primera query (filas `R%`/`G%`) contaba COMPONENTES (una fila por pieza, javi salía a ~32 glass/día) — descartada; la unidad correcta es la asignación cerrada, la misma que usa el modelo.
+
 ## 6. Parámetros y datos
 
 - **Topes y jornadas = constantes en código** (D14), con **documentación obligatoria en el código de de dónde sale cada número y por qué** (8 chasis/día y 17 glass/día: medición del taller sobre jornada de 9h, 2026-07-09; X normales: derivación §5). **Futuro apuntado**: moverlos a tabla de BD configurable si hace falta ajustarlos sin release.
