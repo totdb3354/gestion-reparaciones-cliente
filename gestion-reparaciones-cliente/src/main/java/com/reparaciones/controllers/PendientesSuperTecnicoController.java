@@ -1097,23 +1097,33 @@ public class PendientesSuperTecnicoController {
      *  spec 2026-07-09-carga-capacidad-diaria — nunca cambian por nivel) + porcentaje teñido por
      *  SU nivel (mismos umbrales que la barra de {@link #colorNivelTexto}, tono oscuro de texto).
      *  Pedidos va primero (spec, "donde aparezcan ambos"). Para los puntos de render que solo
-     *  admiten texto (buttonCell del ComboBox) ver {@link #etiquetaConCarga}. */
-    private HBox etiquetaConCargaNodo(Tecnico t) {
+     *  admiten texto (buttonCell del ComboBox) ver {@link #etiquetaConCarga}.
+     *  <p>{@code resaltada} = fila seleccionada u hoveada en un popup de ListView (fondo azul
+     *  oscuro): todos los textos (nombre, puntos, porcentajes) pasan a #FAFAFA para no quedar
+     *  ilegibles — los estilos inline de esta etiqueta ganan a las reglas :selected/:hover del
+     *  stylesheet, así que el conmutado hay que hacerlo aquí, no por CSS. */
+    private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada) {
         double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
         double pctTotal   = diaDe(cargaDiaTotal, t.getIdTec()).pctTotal();
 
+        String colorNombre      = resaltada ? "#FAFAFA" : "#2C3B54";
+        String colorPuntoPedidos = resaltada ? "#FAFAFA" : "#7B1FA2";
+        String colorPuntoTotal   = resaltada ? "#FAFAFA" : "#1565C0";
+        String colorPctPedidos   = resaltada ? "#FAFAFA" : colorNivelTexto(pctPedidos);
+        String colorPctTotal     = resaltada ? "#FAFAFA" : colorNivelTexto(pctTotal);
+
         Label lblNombre = new Label(t.getNombre());
-        lblNombre.setStyle("-fx-text-fill: #2C3B54;");
+        lblNombre.setStyle("-fx-text-fill: " + colorNombre + ";");
 
         Label lblPuntoPedidos = new Label("●");
-        lblPuntoPedidos.setStyle("-fx-text-fill: #7B1FA2; -fx-font-size: 9px;");
+        lblPuntoPedidos.setStyle("-fx-text-fill: " + colorPuntoPedidos + "; -fx-font-size: 9px;");
         Label lblPctPedidos = new Label(CargaTecnicos.formatearPct(pctPedidos));
-        lblPctPedidos.setStyle("-fx-text-fill: " + colorNivelTexto(pctPedidos) + "; -fx-font-weight: bold;");
+        lblPctPedidos.setStyle("-fx-text-fill: " + colorPctPedidos + "; -fx-font-weight: bold;");
 
         Label lblPuntoTotal = new Label("●");
-        lblPuntoTotal.setStyle("-fx-text-fill: #1565C0; -fx-font-size: 9px;");
+        lblPuntoTotal.setStyle("-fx-text-fill: " + colorPuntoTotal + "; -fx-font-size: 9px;");
         Label lblPctTotal = new Label(CargaTecnicos.formatearPct(pctTotal));
-        lblPctTotal.setStyle("-fx-text-fill: " + colorNivelTexto(pctTotal) + "; -fx-font-weight: bold;");
+        lblPctTotal.setStyle("-fx-text-fill: " + colorPctTotal + "; -fx-font-weight: bold;");
 
         HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos, lblPuntoTotal, lblPctTotal);
         caja.setAlignment(Pos.CENTER_LEFT);
@@ -1262,11 +1272,19 @@ public class PendientesSuperTecnicoController {
         // cerrado) sigue el StringConverter de arriba — así el popup puede llevar los puntos de
         // color y el buttonCell se queda en texto plano.
         cbTecTop.setCellFactory(lv -> new ListCell<>() {
+            {
+                hoverProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+                selectedProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+            }
+            private void actualizarEstiloItem() {
+                if (isEmpty() || getItem() == null) { setGraphic(null); return; }
+                setGraphic(etiquetaConCargaNodo(getItem(), isSelected() || isHover()));
+            }
             @Override protected void updateItem(Tecnico t, boolean empty) {
                 super.updateItem(t, empty);
                 if (empty || t == null) { setGraphic(null); setText(null); return; }
                 setText(null);
-                setGraphic(etiquetaConCargaNodo(t));
+                actualizarEstiloItem();
             }
         });
 
@@ -1328,11 +1346,19 @@ public class PendientesSuperTecnicoController {
         });
         // Mismo criterio que cbTecTop: cellFactory solo para las filas del popup.
         cbTecDet.setCellFactory(lv -> new ListCell<>() {
+            {
+                hoverProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+                selectedProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+            }
+            private void actualizarEstiloItem() {
+                if (isEmpty() || getItem() == null) { setGraphic(null); return; }
+                setGraphic(etiquetaConCargaNodo(getItem(), isSelected() || isHover()));
+            }
             @Override protected void updateItem(Tecnico t, boolean empty) {
                 super.updateItem(t, empty);
                 if (empty || t == null) { setGraphic(null); setText(null); return; }
                 setText(null);
-                setGraphic(etiquetaConCargaNodo(t));
+                actualizarEstiloItem();
             }
         });
 
@@ -1848,7 +1874,7 @@ public class PendientesSuperTecnicoController {
         cbContainer.setStyle("-fx-background-color: white; -fx-padding: 8;");
         for (Tecnico t : tecnicosModal) {
             CheckBox cb = new CheckBox();
-            cb.setGraphic(etiquetaConCargaNodo(t));   // el CheckBox admite graphic: nodo con puntos de color
+            cb.setGraphic(etiquetaConCargaNodo(t, false));   // el CheckBox admite graphic: nodo con puntos de color
             cb.setStyle("-fx-font-size: 12px;");
             checkboxes.add(cb);
             cbContainer.getChildren().add(cb);
