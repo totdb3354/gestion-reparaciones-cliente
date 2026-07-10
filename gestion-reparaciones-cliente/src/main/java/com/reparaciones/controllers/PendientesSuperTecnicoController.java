@@ -971,10 +971,12 @@ public class PendientesSuperTecnicoController {
         return String.join(" — ", tramos);
     }
 
-    /** Una fila de la ventana "Carga de técnicos": nombre + barra de dos tramos
-     *  (hecho vivo + pendiente translúcido, ambos del color de nivel de {@code dt.pctTotal()})
-     *  + punto de identidad de la vista activa + cifra (% teñida por nivel, o "—" en tinta plana
-     *  si {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose.
+    /** Una fila de la ventana "Carga de técnicos": nombre + dos barras en la misma escala
+     *  (arriba el total del día en color de nivel de {@code dt.pctTotal()}, constante durante la
+     *  jornada; debajo, más fina y en verde, el progreso de lo completado hoy — cuando iguala a la
+     *  de arriba, el día está hecho) + punto de identidad de la vista activa + cifras (% total
+     *  teñido por nivel con el % hecho en verde debajo, o "—" en tinta plana si
+     *  {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose.
      *  <p>Click en la fila: cierra la ventana y aplica el filtro de técnico de la tabla de
      *  pendientes a únicamente {@code t}, igual que "Ir a pedidos" en el modal de notificaciones. */
     private javafx.scene.Node filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo,
@@ -991,37 +993,41 @@ public class PendientesSuperTecnicoController {
         lblNombre.setPrefWidth(110);
         lblNombre.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
 
-        // ── Barra de dos tramos: hecho (vivo) + pendiente (mismo color, 45% opacidad), saturada al 100% ──
+        // ── Dos barras, misma escala (fracción del día, saturadas al 100%): arriba el total
+        //    del día (color de nivel, constante durante la jornada), debajo el progreso de lo
+        //    completado hoy en verde — cuando la verde alcanza a la de arriba, día hecho ──
         javafx.scene.layout.Region track = new javafx.scene.layout.Region();
         track.setStyle("-fx-background-color: #E8EAF0; -fx-background-radius: 4;");
         track.setMaxHeight(10); track.setMinHeight(10); track.setPrefHeight(10);
 
+        javafx.scene.layout.Region fillTotal = new javafx.scene.layout.Region();
+        fillTotal.setMaxHeight(10); fillTotal.setMinHeight(10); fillTotal.setPrefHeight(10);
+        fillTotal.setMinWidth(0); fillTotal.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        fillTotal.setStyle("-fx-background-color: " + colorVivo + "; -fx-background-radius: 4;");
+
+        javafx.scene.layout.StackPane barraTotal = new javafx.scene.layout.StackPane(track, fillTotal);
+        barraTotal.setAlignment(Pos.CENTER_LEFT);
+
+        javafx.scene.layout.Region trackHecho = new javafx.scene.layout.Region();
+        trackHecho.setStyle("-fx-background-color: #E8EAF0; -fx-background-radius: 3;");
+        trackHecho.setMaxHeight(5); trackHecho.setMinHeight(5); trackHecho.setPrefHeight(5);
+
         javafx.scene.layout.Region fillHecho = new javafx.scene.layout.Region();
-        javafx.scene.layout.Region fillPendiente = new javafx.scene.layout.Region();
-        for (javafx.scene.layout.Region r : new javafx.scene.layout.Region[]{fillHecho, fillPendiente}) {
-            r.setMaxHeight(10); r.setMinHeight(10); r.setPrefHeight(10);
-            r.setMinWidth(0); r.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
-        }
-        fillHecho.setStyle("-fx-background-color: " + colorVivo + ";");
-        fillPendiente.setStyle("-fx-background-color: " + colorVivo + "73;");   // 73 hex ≈ 45% opacidad
+        fillHecho.setMaxHeight(5); fillHecho.setMinHeight(5); fillHecho.setPrefHeight(5);
+        fillHecho.setMinWidth(0); fillHecho.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        fillHecho.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.VERDE_OK + "; -fx-background-radius: 3;");
 
-        HBox tramos = new HBox(fillHecho, fillPendiente);
-        tramos.setAlignment(Pos.CENTER_LEFT);
-        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
-        clip.setArcWidth(8); clip.setArcHeight(8);
-        clip.widthProperty().bind(track.widthProperty());
-        clip.heightProperty().bind(track.heightProperty());
-        tramos.setClip(clip);
+        javafx.scene.layout.StackPane barraHecho = new javafx.scene.layout.StackPane(trackHecho, fillHecho);
+        barraHecho.setAlignment(Pos.CENTER_LEFT);
 
-        javafx.scene.layout.StackPane barra = new javafx.scene.layout.StackPane(track, tramos);
-        barra.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(barra, javafx.scene.layout.Priority.ALWAYS);
+        VBox barras = new VBox(3, barraTotal, barraHecho);
+        barras.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(barras, javafx.scene.layout.Priority.ALWAYS);
 
-        double anchoHecho     = sinJornada ? 0 : Math.min(pctHecho, 100);
-        double anchoTotal     = sinJornada ? 0 : Math.min(pctTotal, 100);
-        double anchoPendiente = Math.max(0, anchoTotal - anchoHecho);
-        fillHecho.prefWidthProperty().bind(track.widthProperty().multiply(anchoHecho / 100.0));
-        fillPendiente.prefWidthProperty().bind(track.widthProperty().multiply(anchoPendiente / 100.0));
+        double anchoHecho = sinJornada ? 0 : Math.min(pctHecho, 100);
+        double anchoTotal = sinJornada ? 0 : Math.min(pctTotal, 100);
+        fillTotal.prefWidthProperty().bind(track.widthProperty().multiply(anchoTotal / 100.0));
+        fillHecho.prefWidthProperty().bind(trackHecho.widthProperty().multiply(anchoHecho / 100.0));
 
         // ── Punto de identidad + cifra principal ──────────────────────────────────
         Label lblDot = new Label("●");
@@ -1040,21 +1046,25 @@ public class PendientesSuperTecnicoController {
         HBox lineaCifra = new HBox(4, lblDot, lblFigura);
         lineaCifra.setAlignment(Pos.CENTER_LEFT);
 
-        // Hueco fijo (dot + cifra, y "sin jornada hoy" apilado debajo si aplica): la barra no baila
-        // con el label de fin de semana.
+        // Hueco fijo (dot + cifra, con el % hecho en verde o "sin jornada hoy" apilado debajo):
+        // la barra no baila entre filas.
         javafx.scene.layout.Region colCifra;
+        Label lblLinea2;
         if (sinJornada) {
-            Label lblSinJornada = new Label("sin jornada hoy");
-            lblSinJornada.setStyle("-fx-font-size: 9px; -fx-text-fill: #8A94A6;");
-            VBox apilado = new VBox(0, lineaCifra, lblSinJornada);
-            apilado.setAlignment(Pos.CENTER_LEFT);
-            colCifra = apilado;
+            lblLinea2 = new Label("sin jornada hoy");
+            lblLinea2.setStyle("-fx-font-size: 9px; -fx-text-fill: #8A94A6;");
         } else {
-            colCifra = lineaCifra;
+            // % de lo completado hoy, siempre visible (decisión de usuario 2026-07-10): verde
+            // de la casa, mismo paso oscuro que los badges "Recibido"/glass.
+            lblLinea2 = new Label("✓ " + CargaTecnicos.formatearPct(pctHecho));
+            lblLinea2.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #2E7D32;");
         }
+        VBox apilado = new VBox(0, lineaCifra, lblLinea2);
+        apilado.setAlignment(Pos.CENTER_LEFT);
+        colCifra = apilado;
         colCifra.setMinWidth(140); colCifra.setPrefWidth(140); colCifra.setMaxWidth(140);
 
-        HBox fila = new HBox(8, lblNombre, barra, colCifra);
+        HBox fila = new HBox(8, lblNombre, barras, colCifra);
         fila.setAlignment(Pos.CENTER_LEFT);
         Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo) + "\nClick: ver sus asignaciones"));
 
