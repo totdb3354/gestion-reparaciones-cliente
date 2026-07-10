@@ -90,7 +90,6 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
-    private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
     private List<ReparacionResumen> cerradasHoy = List.of();
     private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaPedidos = Map.of();
     private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaTotal = Map.of();
@@ -808,24 +807,9 @@ public class PendientesSuperTecnicoController {
 
     /** Recalcula la carga vigente (la ventana y el modal la leen de aquí). */
     private void actualizarFranjaCarga() {
-        cargasActuales = CargaTecnicos.calcular(datos);   // unidades v1 (hover)
         java.time.DayOfWeek hoy = java.time.LocalDate.now().getDayOfWeek();
         cargaDiaPedidos = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, true);
         cargaDiaTotal   = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, false);
-    }
-
-    /** Pieza de la ventana "Carga de técnicos" necesaria para el highlighting al hover:
-     *  el contenedor a atenuar/restaurar, la etiqueta de la cifra principal (para
-     *  añadir/quitar "· N uds") y las unidades v1 (hover) para restaurarla. */
-    private static final class FilaCargaInfo {
-        final javafx.scene.Node contenedor;
-        final Label lblFigura;
-        final String textoBase;
-        final double unidades;
-        final boolean sinJornada;
-        FilaCargaInfo(javafx.scene.Node contenedor, Label lblFigura, String textoBase, double unidades, boolean sinJornada) {
-            this.contenedor = contenedor; this.lblFigura = lblFigura; this.textoBase = textoBase; this.unidades = unidades; this.sinJornada = sinJornada;
-        }
     }
 
     /** {@code dt.pctTotal()} >= 90 → rojo · >= 70 → ámbar · si no, azul (spec 2026-07-09-carga-capacidad-diaria). */
@@ -855,7 +839,8 @@ public class PendientesSuperTecnicoController {
 
     /** Abre la ventana "Carga de técnicos": toggle Pedidos|Total (Pedidos por defecto), una fila
      *  por técnico activo con barra hecho+pendiente y colores por nivel (spec
-     *  2026-07-09-carga-capacidad-diaria, ajuste 2026-07-10 — sustituye la versión en unidades v1). */
+     *  2026-07-09-carga-capacidad-diaria). El porcentaje es la única métrica: no hay cifra en
+     *  unidades (decisión 2026-07-09, "el fin de semana no medimos carga"). */
     @FXML
     private void abrirCargaTecnicos() {
         VBox contenido = new VBox(10);
@@ -882,7 +867,7 @@ public class PendientesSuperTecnicoController {
 
         VBox filas = new VBox(10);
         filas.setPadding(new Insets(0, 14, 0, 0));
-        List<FilaCargaInfo> filasInfo = new ArrayList<>();
+        List<javafx.scene.Node> filasInfo = new ArrayList<>();
 
         Runnable repintar = () -> {
             boolean pedidosActivo = tglPedidos.isSelected();
@@ -896,13 +881,13 @@ public class PendientesSuperTecnicoController {
                             .thenComparing(Tecnico::getNombre))
                     .forEach(t -> {
                         CargaTecnicos.DiaTecnico dt = diaDe(mapaActivo, t.getIdTec());
-                        FilaCargaInfo info = filaCargaTecnico(t, dt, pedidosActivo);
-                        filasInfo.add(info);
-                        filas.getChildren().add(info.contenedor);
+                        javafx.scene.Node fila = filaCargaTecnico(t, dt, pedidosActivo);
+                        filasInfo.add(fila);
+                        filas.getChildren().add(fila);
                     });
-            for (FilaCargaInfo info : filasInfo) {
-                info.contenedor.setOnMouseEntered(e -> resaltarFilaCarga(info, filasInfo));
-                info.contenedor.setOnMouseExited(e -> quitarResaltadoFilaCarga(filasInfo));
+            for (javafx.scene.Node fila : filasInfo) {
+                fila.setOnMouseEntered(e -> resaltarFilaCarga(fila, filasInfo));
+                fila.setOnMouseExited(e -> quitarResaltadoFilaCarga(filasInfo));
             }
         };
         tgCarga.selectedToggleProperty().addListener((obs, o, n) -> {
@@ -940,21 +925,17 @@ public class PendientesSuperTecnicoController {
         ventana.showAndWait();
     }
 
-    /** Atenúa (fundido rápido) todas las filas salvo la resaltada y le añade "· N uds" a su cifra (salvo en filas sin jornada). */
-    private void resaltarFilaCarga(FilaCargaInfo actual, List<FilaCargaInfo> todas) {
-        for (FilaCargaInfo info : todas) {
-            if (info != actual) fundirOpacidad(info.contenedor, 0.35);
-        }
-        if (!actual.sinJornada) {
-            actual.lblFigura.setText(actual.textoBase + " · " + CargaTecnicos.formatearCarga(actual.unidades) + " uds");
+    /** Atenúa (fundido rápido) todas las filas salvo la resaltada. */
+    private void resaltarFilaCarga(javafx.scene.Node actual, List<javafx.scene.Node> todas) {
+        for (javafx.scene.Node fila : todas) {
+            if (fila != actual) fundirOpacidad(fila, 0.35);
         }
     }
 
-    /** Restaura la opacidad de todas las filas y quita el "· N uds" añadido al hover. */
-    private void quitarResaltadoFilaCarga(List<FilaCargaInfo> todas) {
-        for (FilaCargaInfo info : todas) {
-            fundirOpacidad(info.contenedor, 1.0);
-            info.lblFigura.setText(info.textoBase);
+    /** Restaura la opacidad de todas las filas. */
+    private void quitarResaltadoFilaCarga(List<javafx.scene.Node> todas) {
+        for (javafx.scene.Node fila : todas) {
+            fundirOpacidad(fila, 1.0);
         }
     }
 
@@ -989,14 +970,11 @@ public class PendientesSuperTecnicoController {
         return String.join(" — ", tramos);
     }
 
-    /** Una fila de la ventana "Carga de técnicos" v2: nombre + barra de dos tramos
+    /** Una fila de la ventana "Carga de técnicos": nombre + barra de dos tramos
      *  (hecho vivo + pendiente translúcido, ambos del color de nivel de {@code dt.pctTotal()})
-     *  + punto de identidad de la vista activa + cifra (% teñida por nivel, o unidades v1 si
-     *  {@code dt.sinJornada()}) + tooltip con el desglose. */
-    private FilaCargaInfo filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo) {
-        CargaTecnicos.Desglose du = cargasActuales.get(t.getIdTec());
-        double unidades = du != null ? du.carga() : 0.0;
-
+     *  + punto de identidad de la vista activa + cifra (% teñida por nivel, o "—" en tinta plana
+     *  si {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose. */
+    private javafx.scene.Node filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo) {
         double pctHecho = dt.pctHecho();
         double pctTotal = dt.pctTotal();
         boolean sinJornada = dt.sinJornada();
@@ -1045,15 +1023,12 @@ public class PendientesSuperTecnicoController {
         Label lblDot = new Label("●");
         lblDot.setStyle("-fx-font-size: 11px; -fx-text-fill: " + colorDot + ";");
 
-        String textoBase;
         Label lblFigura;
         if (sinJornada) {
-            textoBase = CargaTecnicos.formatearCarga(unidades);
-            lblFigura = new Label(textoBase);
+            lblFigura = new Label("—");
             lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
         } else {
-            textoBase = CargaTecnicos.formatearPct(pctTotal);
-            lblFigura = new Label(textoBase);
+            lblFigura = new Label(CargaTecnicos.formatearPct(pctTotal));
             lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + colorTexto + ";");
         }
         lblFigura.setAlignment(Pos.CENTER_LEFT);
@@ -1062,7 +1037,7 @@ public class PendientesSuperTecnicoController {
         lineaCifra.setAlignment(Pos.CENTER_LEFT);
 
         // Hueco fijo (dot + cifra, y "sin jornada hoy" apilado debajo si aplica): la barra no baila
-        // ni con el "· N uds" del hover ni con el label de fin de semana.
+        // con el label de fin de semana.
         javafx.scene.layout.Region colCifra;
         if (sinJornada) {
             Label lblSinJornada = new Label("sin jornada hoy");
@@ -1079,7 +1054,7 @@ public class PendientesSuperTecnicoController {
         fila.setAlignment(Pos.CENTER_LEFT);
         Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo)));
 
-        return new FilaCargaInfo(fila, lblFigura, textoBase, unidades, sinJornada);
+        return fila;
     }
 
     /** "Nombre (P62% · T85%)" — texto plano, SIN color ni puntos de identidad. Es lo único que

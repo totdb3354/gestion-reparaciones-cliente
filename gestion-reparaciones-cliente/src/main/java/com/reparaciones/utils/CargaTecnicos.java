@@ -2,25 +2,23 @@ package com.reparaciones.utils;
 
 import com.reparaciones.models.ReparacionResumen;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Carga de trabajo por técnico (spec por-cerrar-carga §3). Cuentan solo las
- * asignaciones abiertas CON cliente, de reparación normal y glass (pulido no).
- * Pesos: normal 1 · chasis 2 · por cerrar 1/12 (manda sobre chasis) · glass 1,75.
- * Una asignación con solicitud de pieza activa y aún no recibida pesa 0 y se
- * cuenta aparte (enEsperaPieza), sea cual sea su tipo — "manda" sobre cualquier
- * otro peso. El porcentaje es relativo al total (entre todos suman ~100).
- * Cálculo puro: la UI lo repinta en cada carga de datos.
+ * Carga de trabajo por técnico, en % de capacidad diaria (spec
+ * 2026-07-09-carga-capacidad-diaria). Cuentan solo las asignaciones abiertas
+ * (o cerradas hoy) de reparación normal, chasis y glass (pulido no computa,
+ * decisión A5). Una asignación con solicitud de pieza activa y aún no
+ * recibida no consume capacidad y se cuenta aparte (enEsperaPieza) mientras
+ * esté abierta. El porcentaje es relativo al tope de jornada de 9h de cada
+ * tipo, escalado a las horas reales del día. Cálculo puro: la UI lo repinta
+ * en cada carga de datos.
  */
 public final class CargaTecnicos {
 
     private CargaTecnicos() {}
 
     public static final double PESO_POR_CERRAR = 1.0 / 12;   // ≈ 0,083
-    public static final double PESO_GLASS      = 1.5;   // estimación del usuario (2026-07-09); en la v2 de capacidad diaria pasa a derivarse de los topes por jornada (spec 2026-07-09-carga-capacidad-diaria)
 
     public record Desglose(int normales, int chasis, int porCerrar, int glass, int enEsperaPieza, double carga) {
         Desglose sumar(int n, int c, int p, int g, int e, double peso) {
@@ -37,40 +35,7 @@ public final class CargaTecnicos {
         return !recibido;
     }
 
-    /** Carga por idTec; solo técnicos con alguna asignación que cuente. */
-    public static Map<Integer, Desglose> calcular(List<ReparacionResumen> asignaciones) {
-        Map<Integer, Desglose> out = new HashMap<>();
-        for (ReparacionResumen r : asignaciones) {
-            if (r.getFechaFin() != null) continue;                       // solo abiertas
-            if (r.getCliente() == null || r.getCliente().isEmpty()) continue;   // solo con cliente
-            TipoTrabajo tipo = TipoTrabajo.desde(r.getIdRep());
-            if (tipo == TipoTrabajo.PULIDO) continue;                    // pulido no cuenta
-            Desglose base = out.getOrDefault(r.getIdTec(), new Desglose(0, 0, 0, 0, 0, 0));
-            Desglose nuevo = enEsperaDePieza(r)
-                    ? base.sumar(0, 0, 0, 0, 1, 0)                       // pieza pendiente: pesa 0
-                    : switch (tipo) {
-                        case GLASS      -> base.sumar(0, 0, 0, 1, 0, PESO_GLASS);
-                        case REPARACION -> r.isPorCerrar() ? base.sumar(0, 0, 1, 0, 0, PESO_POR_CERRAR)
-                                         : r.isEsChasis()  ? base.sumar(0, 1, 0, 0, 0, 2)
-                                         :                   base.sumar(1, 0, 0, 0, 0, 1);
-                        case PULIDO     -> base;                          // inalcanzable (filtrado arriba)
-                      };
-            out.put(r.getIdTec(), nuevo);
-        }
-        return out;
-    }
-
-    /** Formato español de la cifra de carga: un decimal con coma, sin decimal si es entero.
-     *  Determinista (no depende del Locale por defecto de la JVM). */
-    public static String formatearCarga(double carga) {
-        double redondeado = Math.round(carga * 10) / 10.0;
-        if (redondeado == Math.floor(redondeado)) {
-            return String.valueOf((long) redondeado);
-        }
-        return String.format(java.util.Locale.US, "%.1f", redondeado).replace('.', ',');
-    }
-
-    // ── Capacidad diaria (v2, spec 2026-07-09-carga-capacidad-diaria) ────────────
+    // ── Capacidad diaria (spec 2026-07-09-carga-capacidad-diaria) ────────────
     // Techo de jornada larga (9h) por tipo — el 100% del modelo (spec 2026-07-09-carga-capacidad-diaria).
     // chasis 8 y glass 17: medidos por el usuario en el taller (2026-07-09), "si SOLO haces eso en el día".
     // normales 25: fijado por el usuario por criterio de taller (2026-07-09). El dato de BD daba un
@@ -137,7 +102,7 @@ public final class CargaTecnicos {
         return out;
     }
 
-    /** Cuenta la asignación en el contador que le toca (mismos criterios que calcular v1). */
+    /** Cuenta la asignación en el contador que le toca (glass manda; si no, por cerrar; si no, chasis; si no, normal). */
     private static Desglose sumarDesglose(Desglose base, ReparacionResumen r, boolean esAbierta, double fraccion) {
         if (esAbierta && enEsperaDePieza(r)) return base.sumar(0, 0, 0, 0, 1, 0);
         TipoTrabajo tipo = TipoTrabajo.desde(r.getIdRep());
