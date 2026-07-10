@@ -1082,11 +1082,42 @@ public class PendientesSuperTecnicoController {
         return new FilaCargaInfo(fila, lblFigura, textoBase, unidades, sinJornada);
     }
 
-    /** "Nombre (N uds)" con la carga vigente; sin sufijo si el técnico no tiene carga. */
+    /** "Nombre (P62% · T85%)" — texto plano, SIN color ni puntos de identidad. Es lo único que
+     *  puede pintar el buttonCell del ComboBox: lo controla el {@code StringConverter}, que solo
+     *  admite texto (no nodos), así que aquí se degrada honestamente el diseño de
+     *  {@link #etiquetaConCargaNodo}. P = Pedidos, T = Total (Pedidos primero, spec). */
     private String etiquetaConCarga(Tecnico t) {
-        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
-        return d == null ? t.getNombre()
-                          : t.getNombre() + " (" + CargaTecnicos.formatearCarga(d.carga()) + " uds)";
+        double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
+        double pctTotal   = diaDe(cargaDiaTotal, t.getIdTec()).pctTotal();
+        return t.getNombre() + " (P" + CargaTecnicos.formatearPct(pctPedidos)
+                + " · T" + CargaTecnicos.formatearPct(pctTotal) + ")";
+    }
+
+    /** "Nombre ●62% ●85%" como nodos: punto de identidad FIJO (violeta = Pedidos, azul = Total,
+     *  spec 2026-07-09-carga-capacidad-diaria — nunca cambian por nivel) + porcentaje teñido por
+     *  SU nivel (mismos umbrales que la barra de {@link #colorNivelTexto}, tono oscuro de texto).
+     *  Pedidos va primero (spec, "donde aparezcan ambos"). Para los puntos de render que solo
+     *  admiten texto (buttonCell del ComboBox) ver {@link #etiquetaConCarga}. */
+    private HBox etiquetaConCargaNodo(Tecnico t) {
+        double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
+        double pctTotal   = diaDe(cargaDiaTotal, t.getIdTec()).pctTotal();
+
+        Label lblNombre = new Label(t.getNombre());
+        lblNombre.setStyle("-fx-text-fill: #2C3B54;");
+
+        Label lblPuntoPedidos = new Label("●");
+        lblPuntoPedidos.setStyle("-fx-text-fill: #7B1FA2; -fx-font-size: 9px;");
+        Label lblPctPedidos = new Label(CargaTecnicos.formatearPct(pctPedidos));
+        lblPctPedidos.setStyle("-fx-text-fill: " + colorNivelTexto(pctPedidos) + "; -fx-font-weight: bold;");
+
+        Label lblPuntoTotal = new Label("●");
+        lblPuntoTotal.setStyle("-fx-text-fill: #1565C0; -fx-font-size: 9px;");
+        Label lblPctTotal = new Label(CargaTecnicos.formatearPct(pctTotal));
+        lblPctTotal.setStyle("-fx-text-fill: " + colorNivelTexto(pctTotal) + "; -fx-font-weight: bold;");
+
+        HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos, lblPuntoTotal, lblPctTotal);
+        caja.setAlignment(Pos.CENTER_LEFT);
+        return caja;
     }
 
     public void cargar() {
@@ -1227,6 +1258,17 @@ public class PendientesSuperTecnicoController {
             @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
         });
+        // El cellFactory solo pinta las filas del desplegable (popup); el buttonCell (combo
+        // cerrado) sigue el StringConverter de arriba — así el popup puede llevar los puntos de
+        // color y el buttonCell se queda en texto plano.
+        cbTecTop.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                if (empty || t == null) { setGraphic(null); setText(null); return; }
+                setText(null);
+                setGraphic(etiquetaConCargaNodo(t));
+            }
+        });
 
         // ── Escaneo ─────────────────────────────────────────────────────────
         Label lblScan = new Label("Escanear IMEI → pulido");
@@ -1283,6 +1325,15 @@ public class PendientesSuperTecnicoController {
         cbTecDet.setConverter(new javafx.util.StringConverter<>() {
             @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
+        });
+        // Mismo criterio que cbTecTop: cellFactory solo para las filas del popup.
+        cbTecDet.setCellFactory(lv -> new ListCell<>() {
+            @Override protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                if (empty || t == null) { setGraphic(null); setText(null); return; }
+                setText(null);
+                setGraphic(etiquetaConCargaNodo(t));
+            }
         });
 
         // Cliente: autocompletado inline (replica del de rep/glass), sobre la fila seleccionada.
@@ -1796,7 +1847,8 @@ public class PendientesSuperTecnicoController {
         VBox cbContainer = new VBox(6);
         cbContainer.setStyle("-fx-background-color: white; -fx-padding: 8;");
         for (Tecnico t : tecnicosModal) {
-            CheckBox cb = new CheckBox(etiquetaConCarga(t));
+            CheckBox cb = new CheckBox();
+            cb.setGraphic(etiquetaConCargaNodo(t));   // el CheckBox admite graphic: nodo con puntos de color
             cb.setStyle("-fx-font-size: 12px;");
             checkboxes.add(cb);
             cbContainer.getChildren().add(cb);
