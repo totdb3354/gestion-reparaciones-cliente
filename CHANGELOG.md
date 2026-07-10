@@ -9,6 +9,23 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 _(cambios para la próxima versión)_
 
+## [0.16.0] - 2026-07-10
+
+### Added
+- **Carga por capacidad diaria (v2)**: el porcentaje de cada técnico ya no es la cuota del reparto, mide **cuánto de su jornada de HOY consume su trabajo** (lo completado hoy + lo pendiente asignado). Cada trabajo pesa una fracción del día según su tipo — **chasis 1/8, glass 1/17, normal 1/25** (topes de jornada de 9h; procedencia documentada en `CargaTecnicos` y en la spec) — escalada a las horas reales del día (**L-M 9h, X-J 8h, V 6h**; sábado/domingo "sin jornada", sin porcentaje). Puede superar el 100% (la barra satura, el número no: "112%"). Por cerrar = 8,3% del tiempo de su tipo; **la solicitud de pieza pendiente libera carga** hasta que llega el repuesto; pulido no computa (quien pule, ese día solo pule).
+- **Endpoint aditivo `GET /api/reparaciones/asignaciones/completadas-hoy`** (servidor): asignaciones de reparación y glass cerradas desde la medianoche de Madrid, para el tramo "hecho hoy". Sin migración SQL.
+- **Ventana Carga de técnicos v2**: toggle **Pedidos | Total** (Pedidos por defecto; puntos de identidad fijos violeta/azul), **colores por nivel** sincronizados entre barra y número (azul <70%, ámbar 70–89%, rojo ≥90%), y **dos barras por técnico en la misma escala**: arriba el total del día en color de nivel, debajo en verde el progreso de lo completado hoy con su % siempre visible — cuando la verde alcanza a la de arriba, día liquidado.
+- **Click en la fila de un técnico** en la ventana de carga: cierra la ventana y navega a Asignaciones con el filtro de técnico aplicado a él (mismo patrón que "Ir a pedidos" de notificaciones).
+- **CSV de Asignaciones espejo de la tabla**: ID, Tipo, Técnico, IMEI, Modelo, Fecha asignación, Comentario, Cliente, Asignado por, Urgente, Chasis, Por cerrar y En espera de pieza (antes exportaba las cabeceras genéricas del historial).
+
+### Changed
+- **Modal de asignación: solo el % de Pedidos** junto a cada técnico (punto violeta, teñido por nivel); el Total queda en la ventana de carga con su toggle.
+- **Ventana de carga redimensionable**, compatible con maximizar y algo más grande por defecto; el hover muestra el desglose en unidades y atenúa el resto de filas.
+- Retirados el porcentaje relativo (cuota del total) y el puntaje intermedio en unidades: sustituidos por el % de capacidad diaria.
+
+### Notas de despliegue
+- Requiere el **servidor** con el endpoint `completadas-hoy` (main `2b85e41`); **sin migración SQL**. Orden: **servidor → cliente**. Degradación amable en ambos sentidos: cliente 0.16.0 contra servidor viejo muestra la carga solo-pendiente (tramo verde vacío); clientes 0.15.0 contra servidor nuevo no se ven afectados.
+
 ## [0.15.0] - 2026-07-09
 
 ### Added
