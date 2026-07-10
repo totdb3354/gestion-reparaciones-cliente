@@ -4,7 +4,6 @@ import com.reparaciones.models.ReparacionResumen;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,46 +21,72 @@ class CargaTecnicosTest {
         return r;
     }
 
-    @Test void pesaNormalChasisPorCerrarYGlass() {
-        var cargas = CargaTecnicos.calcular(List.of(
-                asig("A20260708_1", 1, "WEB", false, false),   // 1
-                asig("A20260708_2", 1, "WEB", true,  false),   // 2
-                asig("A20260708_3", 1, "WEB", false, true),    // 0,083
-                asig("AG20260708_1", 1, "WEB", false, false)));// 1 (glass)
-        assertEquals(4.083, cargas.get(1).carga(), 0.001);
-        assertEquals(1, cargas.get(1).normales());
-        assertEquals(1, cargas.get(1).chasis());
-        assertEquals(1, cargas.get(1).porCerrar());
-        assertEquals(1, cargas.get(1).glass());
+    // Fracciones sobre jornada de 9h (lunes): 4 chasis + 5 glass = 4/8 + 5/17 = 79,4%
+    @Test void fraccionesSobreJornadaLarga() {
+        List<ReparacionResumen> abiertas = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) abiertas.add(asig("A_c" + i, 1, "WEB", true, false));
+        for (int i = 0; i < 5; i++) abiertas.add(asig("AG_g" + i, 1, "WEB", false, false));
+        var dia = CargaTecnicos.calcularDia(abiertas, List.of(), java.time.DayOfWeek.MONDAY, false);
+        assertEquals(0.0, dia.get(1).pctHecho(), 0.01);
+        assertEquals(79.41, dia.get(1).pctPendiente(), 0.05);
+        assertFalse(dia.get(1).sinJornada());
     }
 
-    @Test void porCerrarMandaSobreChasis() {
-        var cargas = CargaTecnicos.calcular(List.of(
-                asig("A20260708_1", 1, "WEB", true, true)));
-        assertEquals(CargaTecnicos.PESO_POR_CERRAR, cargas.get(1).carga(), 0.0001);
+    // El viernes (6h) la misma carga pesa 9/6 más: 79,4 × 1,5 = 119,1% (>100 permitido)
+    @Test void escaladoPorJornadaCorta() {
+        List<ReparacionResumen> abiertas = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) abiertas.add(asig("A_c" + i, 1, "WEB", true, false));
+        for (int i = 0; i < 5; i++) abiertas.add(asig("AG_g" + i, 1, "WEB", false, false));
+        var dia = CargaTecnicos.calcularDia(abiertas, List.of(), java.time.DayOfWeek.FRIDAY, false);
+        assertEquals(119.11, dia.get(1).pctPendiente(), 0.1);
     }
 
-    @Test void sinClienteNoCuentaYPulidoTampoco() {
-        var cargas = CargaTecnicos.calcular(List.of(
-                asig("A20260708_1", 1, null, false, false),
-                asig("A20260708_2", 1, "",   false, false),
-                asig("AP20260708_1", 1, "WEB", false, false)));
-        assertTrue(cargas.isEmpty());
+    // Hecho hoy (asignaciones cerradas) va al tramo hecho, con los mismos pesos
+    @Test void hechoHoySumaEnSuTramo() {
+        var cerrada = asig("A_done", 1, "WEB", true, false);
+        cerrada.setFechaFin(java.time.LocalDateTime.now());
+        var dia = CargaTecnicos.calcularDia(List.of(asig("A_p", 1, "WEB", false, false)),
+                List.of(cerrada), java.time.DayOfWeek.MONDAY, false);
+        assertEquals(100.0 / 8, dia.get(1).pctHecho(), 0.01);        // 1 chasis = 12,5%
+        assertEquals(100.0 / CargaTecnicos.TOPE_NORMALES_9H, dia.get(1).pctPendiente(), 0.01);
+        assertEquals(1, dia.get(1).hecho().chasis());
+        assertEquals(1, dia.get(1).pendiente().normales());
     }
 
-    @Test void porcentajesRelativosQueSumanCien() {
-        var cargas = CargaTecnicos.calcular(List.of(
-                asig("A1", 1, "WEB", false, false),
-                asig("A2", 1, "WEB", false, false),
-                asig("A3", 1, "WEB", false, false),
-                asig("A4", 2, "WEB", false, false)));
-        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargas);
-        assertEquals(75, pct.get(1));
-        assertEquals(25, pct.get(2));
+    // Vista Pedidos: sin cliente no cuenta; vista Total sí
+    @Test void vistaPedidosFiltraPorCliente() {
+        var conCliente = asig("A_1", 1, "WEB", false, false);
+        var sinCliente = asig("A_2", 1, null, false, false);
+        var pedidos = CargaTecnicos.calcularDia(List.of(conCliente, sinCliente), List.of(), java.time.DayOfWeek.MONDAY, true);
+        var total   = CargaTecnicos.calcularDia(List.of(conCliente, sinCliente), List.of(), java.time.DayOfWeek.MONDAY, false);
+        assertEquals(100.0 / CargaTecnicos.TOPE_NORMALES_9H,     pedidos.get(1).pctPendiente(), 0.01);
+        assertEquals(2 * 100.0 / CargaTecnicos.TOPE_NORMALES_9H, total.get(1).pctPendiente(), 0.01);
     }
 
-    @Test void listaVaciaDaMapasVacios() {
-        assertTrue(CargaTecnicos.calcular(List.of()).isEmpty());
-        assertTrue(CargaTecnicos.porcentajes(Map.of()).isEmpty());
+    // Por cerrar = 8,3% del tiempo de su tipo; solicitud pendiente libera (solo abiertas); pulido fuera
+    @Test void reglasDePesoSeMantienenEnFracciones() {
+        var porCerrarChasis = asig("A_pc", 1, "WEB", true, true);            // 0,083 × 1/8
+        var conSolicitud    = asig("A_sol", 1, "WEB", false, false);
+        conSolicitud.setEsSolicitud(1); conSolicitud.setEstadoSolicitud("PENDIENTE");
+        var pulido          = asig("AP_1", 1, "WEB", false, false);
+        var dia = CargaTecnicos.calcularDia(List.of(porCerrarChasis, conSolicitud, pulido),
+                List.of(), java.time.DayOfWeek.MONDAY, false);
+        assertEquals((1.0 / 12) * (100.0 / 8), dia.get(1).pctPendiente(), 0.01);
+        assertEquals(1, dia.get(1).pendiente().enEsperaPieza());
+        assertEquals(0, dia.get(1).pendiente().normales());
+    }
+
+    // Sábado/domingo: sin jornada
+    @Test void finDeSemanaSinJornada() {
+        var dia = CargaTecnicos.calcularDia(List.of(asig("A_1", 1, "WEB", false, false)),
+                List.of(), java.time.DayOfWeek.SATURDAY, false);
+        assertTrue(dia.get(1).sinJornada());
+        assertEquals(0.0, dia.get(1).pctTotal(), 0.001);
+    }
+
+    @Test void formateaPctEntero() {
+        assertEquals("79%", CargaTecnicos.formatearPct(79.41));
+        assertEquals("112%", CargaTecnicos.formatearPct(112.4));
+        assertEquals("0%", CargaTecnicos.formatearPct(0));
     }
 }

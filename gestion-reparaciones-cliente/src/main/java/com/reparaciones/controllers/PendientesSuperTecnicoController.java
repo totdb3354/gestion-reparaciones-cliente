@@ -90,7 +90,9 @@ public class PendientesSuperTecnicoController {
 
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
-    private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
+    private List<ReparacionResumen> cerradasHoy = List.of();
+    private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaPedidos = Map.of();
+    private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaTotal = Map.of();
 
     private CheckBox cbTipoReparacion;
     private CheckBox cbTipoGlass;
@@ -805,36 +807,103 @@ public class PendientesSuperTecnicoController {
 
     /** Recalcula la carga vigente (la ventana y el modal la leen de aquí). */
     private void actualizarFranjaCarga() {
-        cargasActuales = CargaTecnicos.calcular(datos);
+        java.time.DayOfWeek hoy = java.time.LocalDate.now().getDayOfWeek();
+        cargaDiaPedidos = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, true);
+        cargaDiaTotal   = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, false);
     }
 
-    /** Abre la ventana "Carga de técnicos": una barra horizontal por técnico activo,
-     *  ordenadas de más a menos carga (spec por-cerrar-carga §3, ajuste smoke 2026-07-08). */
+    /** {@code dt.pctTotal()} >= 90 → rojo · >= 70 → ámbar · si no, azul (spec 2026-07-09-carga-capacidad-diaria). */
+    private static String colorNivelVivo(double pctTotal) {
+        if (pctTotal >= 90) return "#E53935";
+        if (pctTotal >= 70) return "#F9A825";
+        return "#1565C0";
+    }
+
+    /** Mismo nivel que {@link #colorNivelVivo}, en el tono oscuro reservado al texto. */
+    private static String colorNivelTexto(double pctTotal) {
+        if (pctTotal >= 90) return "#C62828";
+        if (pctTotal >= 70) return "#B26A00";
+        return "#0D47A1";
+    }
+
+    /** Carga del día de un técnico ausente del mapa (sin asignaciones que cuenten): todo a 0,
+     *  con el mismo {@code sinJornada} que tendría cualquier otro técnico hoy. */
+    private CargaTecnicos.DiaTecnico diaDe(Map<Integer, CargaTecnicos.DiaTecnico> mapa, int idTec) {
+        CargaTecnicos.DiaTecnico dt = mapa.get(idTec);
+        if (dt != null) return dt;
+        boolean sinJornada = CargaTecnicos.JORNADA_HORAS
+                .getOrDefault(java.time.LocalDate.now().getDayOfWeek(), 0) == 0;
+        CargaTecnicos.Desglose vacio = new CargaTecnicos.Desglose(0, 0, 0, 0, 0, 0);
+        return new CargaTecnicos.DiaTecnico(0, 0, vacio, vacio, sinJornada);
+    }
+
+    /** Abre la ventana "Carga de técnicos": toggle Pedidos|Total (Pedidos por defecto), una fila
+     *  por técnico activo con barra hecho+pendiente y colores por nivel (spec
+     *  2026-07-09-carga-capacidad-diaria). El porcentaje es la única métrica: no hay cifra en
+     *  unidades (decisión 2026-07-09, "el fin de semana no medimos carga"). */
     @FXML
     private void abrirCargaTecnicos() {
-        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
-
         VBox contenido = new VBox(10);
         contenido.setPadding(new Insets(16));
         contenido.setStyle("-fx-background-color: white;");
-        contenido.setPrefWidth(480);
+        contenido.setPrefWidth(640);
 
-        Label titulo = new Label("Carga de técnicos (Pedidos)");
+        Label titulo = new Label("Carga de técnicos");
         titulo.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+
+        ToggleButton tglPedidos = new ToggleButton("Pedidos");
+        ToggleButton tglTotal   = new ToggleButton("Total");
+        tglPedidos.getStyleClass().add("toggle-pill-left");
+        tglTotal.getStyleClass().add("toggle-pill-right");
+        ToggleGroup tgCarga = new ToggleGroup();
+        tglPedidos.setToggleGroup(tgCarga);
+        tglTotal.setToggleGroup(tgCarga);
+        tglPedidos.setSelected(true);   // Pedidos es la vista por defecto
+        HBox toggleCarga = new HBox(tglPedidos, tglTotal);
+        toggleCarga.setAlignment(Pos.CENTER_LEFT);
+
+        HBox encabezado = new HBox(14, titulo, toggleCarga);
+        encabezado.setAlignment(Pos.CENTER_LEFT);
 
         VBox filas = new VBox(10);
         filas.setPadding(new Insets(0, 14, 0, 0));
-        tecnicos.stream()
-                .sorted(java.util.Comparator
-                        .comparingInt((Tecnico t) -> pct.getOrDefault(t.getIdTec(), 0)).reversed()
-                        .thenComparing(Tecnico::getNombre))
-                .forEach(t -> filas.getChildren().add(filaCargaTecnico(t, pct)));
+        List<javafx.scene.Node> filasInfo = new ArrayList<>();
+
+        Stage ventana = new Stage();
+
+        Runnable repintar = () -> {
+            boolean pedidosActivo = tglPedidos.isSelected();
+            Map<Integer, CargaTecnicos.DiaTecnico> mapaActivo = pedidosActivo ? cargaDiaPedidos : cargaDiaTotal;
+            filas.getChildren().clear();
+            filasInfo.clear();
+            tecnicos.stream()
+                    .sorted(java.util.Comparator
+                            .comparingDouble((Tecnico t) -> diaDe(mapaActivo, t.getIdTec()).pctTotal())
+                            .reversed()
+                            .thenComparing(Tecnico::getNombre))
+                    .forEach(t -> {
+                        CargaTecnicos.DiaTecnico dt = diaDe(mapaActivo, t.getIdTec());
+                        javafx.scene.Node fila = filaCargaTecnico(t, dt, pedidosActivo, ventana);
+                        filasInfo.add(fila);
+                        filas.getChildren().add(fila);
+                    });
+            for (javafx.scene.Node fila : filasInfo) {
+                fila.setOnMouseEntered(e -> resaltarFilaCarga(fila, filasInfo));
+                fila.setOnMouseExited(e -> quitarResaltadoFilaCarga(filasInfo));
+            }
+        };
+        tgCarga.selectedToggleProperty().addListener((obs, o, n) -> {
+            if (n == null) { (o != null ? (ToggleButton) o : tglPedidos).setSelected(true); return; }
+            repintar.run();
+        });
+        repintar.run();
 
         ScrollPane scroll = new ScrollPane(filas);
         scroll.setFitToWidth(true);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setMaxHeight(420);
+        scroll.setPrefHeight(460);
+        VBox.setVgrow(scroll, javafx.scene.layout.Priority.ALWAYS);   // crece con la ventana (maximizar incluido)
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
 
         Button btnCerrar = new Button("Cerrar");
@@ -842,72 +911,216 @@ public class PendientesSuperTecnicoController {
         HBox botones = new HBox(btnCerrar);
         botones.setAlignment(Pos.CENTER_RIGHT);
 
-        contenido.getChildren().addAll(titulo, scroll, botones);
+        contenido.getChildren().addAll(encabezado, scroll, botones);
 
-        Stage ventana = new Stage();
-        ventana.setTitle("Carga de técnicos (Pedidos)");
+        ventana.setTitle("Carga de técnicos");
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
+        ventana.setWidth(680);
+        ventana.setHeight(600);
+        ventana.setMinWidth(520);
+        ventana.setMinHeight(420);
         btnCerrar.setOnAction(e -> ventana.close());
         ventana.showAndWait();
     }
 
-    /** Una fila de la ventana "Carga de técnicos": nombre + barra + % + desglose. */
-    private VBox filaCargaTecnico(Tecnico t, Map<Integer, Integer> pct) {
-        int p = pct.getOrDefault(t.getIdTec(), 0);
+    /** Atenúa (fundido rápido) todas las filas salvo la resaltada. */
+    private void resaltarFilaCarga(javafx.scene.Node actual, List<javafx.scene.Node> todas) {
+        for (javafx.scene.Node fila : todas) {
+            if (fila != actual) fundirOpacidad(fila, 0.35);
+        }
+    }
+
+    /** Restaura la opacidad de todas las filas. */
+    private void quitarResaltadoFilaCarga(List<javafx.scene.Node> todas) {
+        for (javafx.scene.Node fila : todas) {
+            fundirOpacidad(fila, 1.0);
+        }
+    }
+
+    private void fundirOpacidad(javafx.scene.Node nodo, double opacidad) {
+        javafx.animation.FadeTransition ft =
+                new javafx.animation.FadeTransition(javafx.util.Duration.millis(120), nodo);
+        ft.setToValue(opacidad);
+        ft.play();
+    }
+
+    /** "3 normales · 1 chasis · 2 en espera de pieza" (ceros omitidos, "" si el tramo está vacío). */
+    private static String textoTramoDesglose(CargaTecnicos.Desglose d) {
+        return java.util.stream.Stream.of(
+                        d.normales()      > 0 ? d.normales()      + " normales"          : null,
+                        d.chasis()        > 0 ? d.chasis()        + " chasis"            : null,
+                        d.porCerrar()     > 0 ? d.porCerrar()     + " por cerrar"        : null,
+                        d.glass()         > 0 ? d.glass()         + " glass"             : null,
+                        d.enEsperaPieza() > 0 ? d.enEsperaPieza() + " en espera de pieza" : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.joining(" · "));
+    }
+
+    /** Tooltip de la fila: desglose de pendiente y hecho hoy (ceros omitidos); si ambos tramos
+     *  están vacíos, "sin carga de cliente" en Pedidos / "sin carga" en Total. */
+    private static String textoTooltipCarga(CargaTecnicos.DiaTecnico dt, boolean pedidosActivo) {
+        String pendiente = textoTramoDesglose(dt.pendiente());
+        String hecho     = textoTramoDesglose(dt.hecho());
+        List<String> tramos = new ArrayList<>();
+        if (!pendiente.isEmpty()) tramos.add("Pendiente: " + pendiente);
+        if (!hecho.isEmpty())     tramos.add("Hecho hoy: " + hecho);
+        if (tramos.isEmpty()) return pedidosActivo ? "sin carga de cliente" : "sin carga";
+        return String.join(" — ", tramos);
+    }
+
+    /** Una fila de la ventana "Carga de técnicos": nombre + dos barras en la misma escala
+     *  (arriba el total del día en color de nivel de {@code dt.pctTotal()}, constante durante la
+     *  jornada; debajo, más fina y en verde, el progreso de lo completado hoy — cuando iguala a la
+     *  de arriba, el día está hecho) + punto de identidad de la vista activa + cifras (% total
+     *  teñido por nivel con el % hecho en verde debajo, o "—" en tinta plana si
+     *  {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose.
+     *  <p>Click en la fila: cierra la ventana y aplica el filtro de técnico de la tabla de
+     *  pendientes a únicamente {@code t}, igual que "Ir a pedidos" en el modal de notificaciones. */
+    private javafx.scene.Node filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo,
+                                                Stage ventana) {
+        double pctHecho = dt.pctHecho();
+        double pctTotal = dt.pctTotal();
+        boolean sinJornada = dt.sinJornada();
+        String colorVivo  = colorNivelVivo(pctTotal);
+        String colorTexto = colorNivelTexto(pctTotal);
+        String colorDot   = pedidosActivo ? "#7B1FA2" : "#1565C0";   // identidad fija: violeta Pedidos / azul Total
 
         Label lblNombre = new Label(t.getNombre());
         lblNombre.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
         lblNombre.setPrefWidth(110);
         lblNombre.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
 
+        // ── Dos barras, misma escala (fracción del día, saturadas al 100%): arriba el total
+        //    del día (color de nivel, constante durante la jornada), debajo el progreso de lo
+        //    completado hoy en verde — cuando la verde alcanza a la de arriba, día hecho ──
         javafx.scene.layout.Region track = new javafx.scene.layout.Region();
         track.setStyle("-fx-background-color: #E8EAF0; -fx-background-radius: 4;");
         track.setMaxHeight(10); track.setMinHeight(10); track.setPrefHeight(10);
 
-        javafx.scene.layout.Region fill = new javafx.scene.layout.Region();
-        fill.setStyle("-fx-background-color: #1565C0; -fx-background-radius: 4;");
-        fill.setMaxHeight(10); fill.setMinHeight(10); fill.setPrefHeight(10);
+        javafx.scene.layout.Region fillTotal = new javafx.scene.layout.Region();
+        fillTotal.setMaxHeight(10); fillTotal.setMinHeight(10); fillTotal.setPrefHeight(10);
+        fillTotal.setMinWidth(0); fillTotal.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        fillTotal.setStyle("-fx-background-color: " + colorVivo + "; -fx-background-radius: 4;");
 
-        javafx.scene.layout.StackPane barra = new javafx.scene.layout.StackPane(track, fill);
-        barra.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(barra, javafx.scene.layout.Priority.ALWAYS);
-        fill.prefWidthProperty().bind(track.widthProperty().multiply(p / 100.0));
-        fill.setMinWidth(0);
-        fill.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        javafx.scene.layout.StackPane barraTotal = new javafx.scene.layout.StackPane(track, fillTotal);
+        barraTotal.setAlignment(Pos.CENTER_LEFT);
 
-        Label lblPct = new Label(p + "%");
-        lblPct.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
-        lblPct.setPrefWidth(44);
-        lblPct.setAlignment(Pos.CENTER_RIGHT);
+        javafx.scene.layout.Region trackHecho = new javafx.scene.layout.Region();
+        trackHecho.setStyle("-fx-background-color: #E8EAF0; -fx-background-radius: 3;");
+        trackHecho.setMaxHeight(5); trackHecho.setMinHeight(5); trackHecho.setPrefHeight(5);
 
-        HBox fila = new HBox(8, lblNombre, barra, lblPct);
+        javafx.scene.layout.Region fillHecho = new javafx.scene.layout.Region();
+        fillHecho.setMaxHeight(5); fillHecho.setMinHeight(5); fillHecho.setPrefHeight(5);
+        fillHecho.setMinWidth(0); fillHecho.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        fillHecho.setStyle("-fx-background-color: " + com.reparaciones.utils.Colores.VERDE_OK + "; -fx-background-radius: 3;");
+
+        javafx.scene.layout.StackPane barraHecho = new javafx.scene.layout.StackPane(trackHecho, fillHecho);
+        barraHecho.setAlignment(Pos.CENTER_LEFT);
+
+        VBox barras = new VBox(3, barraTotal, barraHecho);
+        barras.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(barras, javafx.scene.layout.Priority.ALWAYS);
+
+        double anchoHecho = sinJornada ? 0 : Math.min(pctHecho, 100);
+        double anchoTotal = sinJornada ? 0 : Math.min(pctTotal, 100);
+        fillTotal.prefWidthProperty().bind(track.widthProperty().multiply(anchoTotal / 100.0));
+        fillHecho.prefWidthProperty().bind(trackHecho.widthProperty().multiply(anchoHecho / 100.0));
+
+        // ── Punto de identidad + cifra principal ──────────────────────────────────
+        Label lblDot = new Label("●");
+        lblDot.setStyle("-fx-font-size: 11px; -fx-text-fill: " + colorDot + ";");
+
+        Label lblFigura;
+        if (sinJornada) {
+            lblFigura = new Label("—");
+            lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        } else {
+            lblFigura = new Label(CargaTecnicos.formatearPct(pctTotal));
+            lblFigura.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + colorTexto + ";");
+        }
+        lblFigura.setAlignment(Pos.CENTER_LEFT);
+
+        HBox lineaCifra = new HBox(4, lblDot, lblFigura);
+        lineaCifra.setAlignment(Pos.CENTER_LEFT);
+
+        // Hueco fijo (dot + cifra, con el % hecho en verde o "sin jornada hoy" apilado debajo):
+        // la barra no baila entre filas.
+        javafx.scene.layout.Region colCifra;
+        Label lblLinea2;
+        if (sinJornada) {
+            lblLinea2 = new Label("sin jornada hoy");
+            lblLinea2.setStyle("-fx-font-size: 9px; -fx-text-fill: #8A94A6;");
+        } else {
+            // % de lo completado hoy, siempre visible (decisión de usuario 2026-07-10): verde
+            // de la casa, mismo paso oscuro que los badges "Recibido"/glass.
+            lblLinea2 = new Label("✓ " + CargaTecnicos.formatearPct(pctHecho));
+            lblLinea2.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #2E7D32;");
+        }
+        VBox apilado = new VBox(0, lineaCifra, lblLinea2);
+        apilado.setAlignment(Pos.CENTER_LEFT);
+        colCifra = apilado;
+        colCifra.setMinWidth(140); colCifra.setPrefWidth(140); colCifra.setMaxWidth(140);
+
+        HBox fila = new HBox(8, lblNombre, barras, colCifra);
         fila.setAlignment(Pos.CENTER_LEFT);
+        Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo) + "\nClick: ver sus asignaciones"));
 
-        CargaTecnicos.Desglose d = cargasActuales.get(t.getIdTec());
-        String textoDesglose = (d != null)
-                ? java.util.stream.Stream.of(
-                        d.normales()  > 0 ? d.normales()  + " normales"   : null,
-                        d.chasis()    > 0 ? d.chasis()    + " chasis"     : null,
-                        d.porCerrar() > 0 ? d.porCerrar() + " por cerrar" : null,
-                        d.glass()     > 0 ? d.glass()     + " glass"      : null)
-                    .filter(java.util.Objects::nonNull)
-                    .collect(java.util.stream.Collectors.joining(" · "))
-                : "";
-        if (textoDesglose.isEmpty()) textoDesglose = "sin carga de cliente";
-        Label lblDesglose = new Label(textoDesglose);
-        lblDesglose.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6; -fx-padding: 0 0 0 118;");
+        // Click en la fila: cerrar la ventana y navegar a las asignaciones de este técnico
+        // (filtro de técnico aplicado a él en solitario), igual que "Ir a pedidos" en notificaciones.
+        fila.setCursor(javafx.scene.Cursor.HAND);
+        fila.setOnMouseClicked(e -> {
+            ventana.close();
+            idsTecFiltro.clear();
+            idsTecFiltro.add(t.getIdTec());
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoFiltroTecnico();
+            aplicarFiltros();
+        });
 
-        return new VBox(2, fila, lblDesglose);
+        return fila;
     }
 
-    /** "Nombre (42%)" con la carga vigente; sin % si el técnico no tiene carga. */
+    /** "Nombre (P62%)" — texto plano, SIN color ni punto de identidad. Es lo único que
+     *  puede pintar el buttonCell del ComboBox: lo controla el {@code StringConverter}, que solo
+     *  admite texto (no nodos), así que aquí se degrada honestamente el diseño de
+     *  {@link #etiquetaConCargaNodo}. P = Pedidos (en el modal solo se muestra Pedidos,
+     *  decisión del usuario 2026-07-10; el Total queda en la ventana de carga). */
     private String etiquetaConCarga(Tecnico t) {
-        Map<Integer, Integer> pct = CargaTecnicos.porcentajes(cargasActuales);
-        Integer p = pct.get(t.getIdTec());
-        return p == null ? t.getNombre() : t.getNombre() + " (" + p + "%)";
+        double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
+        return t.getNombre() + " (P" + CargaTecnicos.formatearPct(pctPedidos) + ")";
+    }
+
+    /** "Nombre ●62%" como nodos: punto de identidad FIJO de Pedidos (violeta,
+     *  spec 2026-07-09-carga-capacidad-diaria — nunca cambia por nivel) + porcentaje teñido por
+     *  SU nivel (mismos umbrales que la barra de {@link #colorNivelTexto}, tono oscuro de texto).
+     *  En el modal solo se muestra Pedidos (decisión del usuario 2026-07-10); el Total vive en la
+     *  ventana de carga con su toggle. Para los puntos de render que solo admiten texto
+     *  (buttonCell del ComboBox) ver {@link #etiquetaConCarga}.
+     *  <p>{@code resaltada} = fila seleccionada u hoveada en un popup de ListView (fondo azul
+     *  oscuro): todos los textos (nombre, punto, porcentaje) pasan a #FAFAFA para no quedar
+     *  ilegibles — los estilos inline de esta etiqueta ganan a las reglas :selected/:hover del
+     *  stylesheet, así que el conmutado hay que hacerlo aquí, no por CSS. */
+    private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada) {
+        double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
+
+        String colorNombre       = resaltada ? "#FAFAFA" : "#2C3B54";
+        String colorPuntoPedidos = resaltada ? "#FAFAFA" : "#7B1FA2";
+        String colorPctPedidos   = resaltada ? "#FAFAFA" : colorNivelTexto(pctPedidos);
+
+        Label lblNombre = new Label(t.getNombre());
+        lblNombre.setStyle("-fx-text-fill: " + colorNombre + ";");
+
+        Label lblPuntoPedidos = new Label("●");
+        lblPuntoPedidos.setStyle("-fx-text-fill: " + colorPuntoPedidos + "; -fx-font-size: 9px;");
+        Label lblPctPedidos = new Label(CargaTecnicos.formatearPct(pctPedidos));
+        lblPctPedidos.setStyle("-fx-text-fill: " + colorPctPedidos + "; -fx-font-weight: bold;");
+
+        HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos);
+        caja.setAlignment(Pos.CENTER_LEFT);
+        return caja;
     }
 
     public void cargar() {
@@ -918,6 +1131,13 @@ public class PendientesSuperTecnicoController {
             asignaciones.addAll(reparacionDAO.getAsignaciones());
             asignaciones.addAll(glassDAO.getAsignacionesGlass());
             asignaciones.addAll(pulidoDAO.getAsignacionesPulido());
+            try {
+                cerradasHoy = reparacionDAO.getAsignacionesCompletadasHoy();
+            } catch (SQLException e) {
+                // No crítico A PROPÓSITO (cubre servidor viejo sin el endpoint o caída puntual):
+                // la carga del día degrada a solo-pendiente (el tramo "hecho hoy" sale vacío).
+                cerradasHoy = List.of();
+            }
             conteoTecnicosPorImei = contarTecnicosPorImei(asignaciones);
             datos.setAll(asignaciones);
             // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
@@ -1043,6 +1263,25 @@ public class PendientesSuperTecnicoController {
             @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
         });
+        // El cellFactory solo pinta las filas del desplegable (popup); el buttonCell (combo
+        // cerrado) sigue el StringConverter de arriba — así el popup puede llevar los puntos de
+        // color y el buttonCell se queda en texto plano.
+        cbTecTop.setCellFactory(lv -> new ListCell<>() {
+            {
+                hoverProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+                selectedProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+            }
+            private void actualizarEstiloItem() {
+                if (isEmpty() || getItem() == null) { setGraphic(null); return; }
+                setGraphic(etiquetaConCargaNodo(getItem(), isSelected() || isHover()));
+            }
+            @Override protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                if (empty || t == null) { setGraphic(null); setText(null); return; }
+                setText(null);
+                actualizarEstiloItem();
+            }
+        });
 
         // ── Escaneo ─────────────────────────────────────────────────────────
         Label lblScan = new Label("Escanear IMEI → pulido");
@@ -1099,6 +1338,23 @@ public class PendientesSuperTecnicoController {
         cbTecDet.setConverter(new javafx.util.StringConverter<>() {
             @Override public String toString(Tecnico t) { return t == null ? "" : etiquetaConCarga(t); }
             @Override public Tecnico fromString(String s) { return null; }
+        });
+        // Mismo criterio que cbTecTop: cellFactory solo para las filas del popup.
+        cbTecDet.setCellFactory(lv -> new ListCell<>() {
+            {
+                hoverProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+                selectedProperty().addListener((obs, o, n) -> actualizarEstiloItem());
+            }
+            private void actualizarEstiloItem() {
+                if (isEmpty() || getItem() == null) { setGraphic(null); return; }
+                setGraphic(etiquetaConCargaNodo(getItem(), isSelected() || isHover()));
+            }
+            @Override protected void updateItem(Tecnico t, boolean empty) {
+                super.updateItem(t, empty);
+                if (empty || t == null) { setGraphic(null); setText(null); return; }
+                setText(null);
+                actualizarEstiloItem();
+            }
         });
 
         // Cliente: autocompletado inline (replica del de rep/glass), sobre la fila seleccionada.
@@ -1612,7 +1868,8 @@ public class PendientesSuperTecnicoController {
         VBox cbContainer = new VBox(6);
         cbContainer.setStyle("-fx-background-color: white; -fx-padding: 8;");
         for (Tecnico t : tecnicosModal) {
-            CheckBox cb = new CheckBox(etiquetaConCarga(t));
+            CheckBox cb = new CheckBox();
+            cb.setGraphic(etiquetaConCargaNodo(t, false));   // el CheckBox admite graphic: nodo con puntos de color
             cb.setStyle("-fx-font-size: 12px;");
             checkboxes.add(cb);
             cbContainer.getChildren().add(cb);

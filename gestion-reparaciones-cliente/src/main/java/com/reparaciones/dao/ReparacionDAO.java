@@ -116,6 +116,16 @@ public class ReparacionDAO {
     }
 
     /**
+     * Devuelve las asignaciones completadas hoy (corte de Madrid en servidor) — "hecho hoy" de la carga v2.
+     *
+     * @return lista de asignaciones completadas hoy
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public List<ReparacionResumen> getAsignacionesCompletadasHoy() throws SQLException {
+        return ApiClient.getList("/api/reparaciones/asignaciones/completadas-hoy", ReparacionResumen.class);
+    }
+
+    /**
      * Devuelve las asignaciones pendientes de un técnico concreto.
      *
      * @param idTec ID del técnico

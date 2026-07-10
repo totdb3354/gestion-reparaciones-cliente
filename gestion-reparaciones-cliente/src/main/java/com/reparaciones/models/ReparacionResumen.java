@@ -107,6 +107,9 @@ public class ReparacionResumen {
     /** @return fecha de finalización, o {@code null} si pendiente */
     public LocalDateTime getFechaFin() { return fechaFin; }
 
+    /** @param fechaFin fecha de finalización, o {@code null} si pendiente */
+    public void setFechaFin(LocalDateTime fechaFin) { this.fechaFin = fechaFin; }
+
     /**
      * Indica si la reparación está pendiente de finalizar.
      *
