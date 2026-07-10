@@ -91,6 +91,9 @@ public class PendientesSuperTecnicoController {
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
     private Map<Integer, CargaTecnicos.Desglose> cargasActuales = Map.of();
+    private List<ReparacionResumen> cerradasHoy = List.of();
+    private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaPedidos = Map.of();
+    private Map<Integer, CargaTecnicos.DiaTecnico> cargaDiaTotal = Map.of();
 
     private CheckBox cbTipoReparacion;
     private CheckBox cbTipoGlass;
@@ -805,7 +808,10 @@ public class PendientesSuperTecnicoController {
 
     /** Recalcula la carga vigente (la ventana y el modal la leen de aquí). */
     private void actualizarFranjaCarga() {
-        cargasActuales = CargaTecnicos.calcular(datos);
+        cargasActuales = CargaTecnicos.calcular(datos);   // unidades v1 (hover)
+        java.time.DayOfWeek hoy = java.time.LocalDate.now().getDayOfWeek();
+        cargaDiaPedidos = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, true);
+        cargaDiaTotal   = CargaTecnicos.calcularDia(datos, cerradasHoy, hoy, false);
     }
 
     /** Pieza de la ventana "Carga de técnicos" necesaria para el highlighting al hover:
@@ -982,6 +988,11 @@ public class PendientesSuperTecnicoController {
             asignaciones.addAll(reparacionDAO.getAsignaciones());
             asignaciones.addAll(glassDAO.getAsignacionesGlass());
             asignaciones.addAll(pulidoDAO.getAsignacionesPulido());
+            try {
+                cerradasHoy = reparacionDAO.getAsignacionesCompletadasHoy();
+            } catch (SQLException e) {
+                cerradasHoy = List.of();
+            }
             conteoTecnicosPorImei = contarTecnicosPorImei(asignaciones);
             datos.setAll(asignaciones);
             // Orden de prioridad: urgente (0) -> con cliente (1) -> normal (2). Estable dentro de cada grupo.
