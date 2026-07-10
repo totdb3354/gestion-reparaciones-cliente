@@ -869,6 +869,8 @@ public class PendientesSuperTecnicoController {
         filas.setPadding(new Insets(0, 14, 0, 0));
         List<javafx.scene.Node> filasInfo = new ArrayList<>();
 
+        Stage ventana = new Stage();
+
         Runnable repintar = () -> {
             boolean pedidosActivo = tglPedidos.isSelected();
             Map<Integer, CargaTecnicos.DiaTecnico> mapaActivo = pedidosActivo ? cargaDiaPedidos : cargaDiaTotal;
@@ -881,7 +883,7 @@ public class PendientesSuperTecnicoController {
                             .thenComparing(Tecnico::getNombre))
                     .forEach(t -> {
                         CargaTecnicos.DiaTecnico dt = diaDe(mapaActivo, t.getIdTec());
-                        javafx.scene.Node fila = filaCargaTecnico(t, dt, pedidosActivo);
+                        javafx.scene.Node fila = filaCargaTecnico(t, dt, pedidosActivo, ventana);
                         filasInfo.add(fila);
                         filas.getChildren().add(fila);
                     });
@@ -911,7 +913,6 @@ public class PendientesSuperTecnicoController {
 
         contenido.getChildren().addAll(encabezado, scroll, botones);
 
-        Stage ventana = new Stage();
         ventana.setTitle("Carga de técnicos");
         ventana.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
@@ -973,8 +974,11 @@ public class PendientesSuperTecnicoController {
     /** Una fila de la ventana "Carga de técnicos": nombre + barra de dos tramos
      *  (hecho vivo + pendiente translúcido, ambos del color de nivel de {@code dt.pctTotal()})
      *  + punto de identidad de la vista activa + cifra (% teñida por nivel, o "—" en tinta plana
-     *  si {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose. */
-    private javafx.scene.Node filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo) {
+     *  si {@code dt.sinJornada()} — no hay porcentaje sin jornada) + tooltip con el desglose.
+     *  <p>Click en la fila: cierra la ventana y aplica el filtro de técnico de la tabla de
+     *  pendientes a únicamente {@code t}, igual que "Ir a pedidos" en el modal de notificaciones. */
+    private javafx.scene.Node filaCargaTecnico(Tecnico t, CargaTecnicos.DiaTecnico dt, boolean pedidosActivo,
+                                                Stage ventana) {
         double pctHecho = dt.pctHecho();
         double pctTotal = dt.pctTotal();
         boolean sinJornada = dt.sinJornada();
@@ -1052,7 +1056,19 @@ public class PendientesSuperTecnicoController {
 
         HBox fila = new HBox(8, lblNombre, barra, colCifra);
         fila.setAlignment(Pos.CENTER_LEFT);
-        Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo)));
+        Tooltip.install(fila, new Tooltip(textoTooltipCarga(dt, pedidosActivo) + "\nClick: ver sus asignaciones"));
+
+        // Click en la fila: cerrar la ventana y navegar a las asignaciones de este técnico
+        // (filtro de técnico aplicado a él en solitario), igual que "Ir a pedidos" en notificaciones.
+        fila.setCursor(javafx.scene.Cursor.HAND);
+        fila.setOnMouseClicked(e -> {
+            ventana.close();
+            idsTecFiltro.clear();
+            idsTecFiltro.add(t.getIdTec());
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoFiltroTecnico();
+            aplicarFiltros();
+        });
 
         return fila;
     }
