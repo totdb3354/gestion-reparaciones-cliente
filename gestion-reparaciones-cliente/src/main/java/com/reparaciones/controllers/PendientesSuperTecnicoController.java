@@ -1141,6 +1141,8 @@ public class PendientesSuperTecnicoController {
             try {
                 cerradasHoy = reparacionDAO.getAsignacionesCompletadasHoy();
             } catch (SQLException e) {
+                // No crítico A PROPÓSITO (cubre servidor viejo sin el endpoint o caída puntual):
+                // la carga del día degrada a solo-pendiente (el tramo "hecho hoy" sale vacío).
                 cerradasHoy = List.of();
             }
             conteoTecnicosPorImei = contarTecnicosPorImei(asignaciones);

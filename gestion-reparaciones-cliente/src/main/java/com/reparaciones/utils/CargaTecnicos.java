@@ -73,13 +73,14 @@ public final class CargaTecnicos {
     // ── Capacidad diaria (v2, spec 2026-07-09-carga-capacidad-diaria) ────────────
     // Techo de jornada larga (9h) por tipo — el 100% del modelo (spec 2026-07-09-carga-capacidad-diaria).
     // chasis 8 y glass 17: medidos por el usuario en el taller (2026-07-09), "si SOLO haces eso en el día".
-    // normales 20: derivado de la BD el 2026-07-09 — mejor día real escalado a 9h = 20,3 (marcos, 18
-    // asignaciones normales en jornada de 8h del 2026-07-08, era del flag ES_CHASIS), redondeado a 20
-    // por el usuario. El glass validado igual: mejor día de javi = 18 escalado vs techo 17.
+    // normales 25: fijado por el usuario por criterio de taller (2026-07-09). El dato de BD daba un
+    // mejor día real escalado a 9h de 20,3 (marcos, 18 normales en jornada de 8h del 2026-07-08, era
+    // del flag ES_CHASIS), pero la ventana de datos era corta (~8 días laborables) y el usuario estima
+    // el techo real por encima. El glass validado: mejor día de javi = 18 escalado vs techo 17.
     // Futuro apuntado: tabla de BD configurable y topes por técnico (F4).
     public static final int TOPE_CHASIS_9H   = 8;
     public static final int TOPE_GLASS_9H    = 17;
-    public static final int TOPE_NORMALES_9H = 20;
+    public static final int TOPE_NORMALES_9H = 25;
 
     /** Horas de jornada por día de semana (dato del usuario, 2026-07-09). */
     public static final java.util.Map<java.time.DayOfWeek, Integer> JORNADA_HORAS = java.util.Map.of(
