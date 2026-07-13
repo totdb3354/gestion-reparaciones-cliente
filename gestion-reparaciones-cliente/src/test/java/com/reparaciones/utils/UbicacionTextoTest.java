@@ -35,4 +35,11 @@ class UbicacionTextoTest {
         assertEquals("En reparación", UbicacionTexto.estado(tel("EN_REPARACION", "REPARACIONES", List.of(), 0)));
         assertEquals("Histórico", UbicacionTexto.estado(tel(null, null, List.of(), 0)));
     }
+
+    @Test void padreSinSubsNiRelojDeSolicitudPendiente() {
+        assertEquals("Almacén", UbicacionTexto.padre(tel("RECIBIDO", "ALMACEN", List.of(), 0)));
+        assertEquals("Reparaciones",
+                UbicacionTexto.padre(tel("EN_REPARACION", "REPARACIONES", List.of("PULIDO", "NORMAL"), 2)));
+        assertEquals(UbicacionTexto.FUERA, UbicacionTexto.padre(tel(null, null, List.of(), 0)));
+    }
 }

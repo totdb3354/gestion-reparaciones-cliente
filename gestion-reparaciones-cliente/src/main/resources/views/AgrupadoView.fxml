@@ -33,6 +33,10 @@
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
         <MultiSelectComboBox fx:id="filtroCliente" prefWidth="150"/>
+        <MultiSelectComboBox fx:id="filtroEstado" prefWidth="130"/>
+        <MultiSelectComboBox fx:id="filtroUbicacion" prefWidth="140"/>
+        <MultiSelectComboBox fx:id="filtroLote" prefWidth="150"/>
+        <MultiSelectComboBox fx:id="filtroModelo" prefWidth="140"/>
         <Label text="Desde:" style="-fx-font-size: 12px;"/>
         <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
         <Label text="Hasta:" style="-fx-font-size: 12px;"/>

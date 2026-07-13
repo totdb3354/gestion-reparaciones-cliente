@@ -3,12 +3,14 @@ package com.reparaciones.controllers;
 import com.reparaciones.Sesion;
 import com.reparaciones.dao.ClienteDAO;
 import com.reparaciones.dao.GlassDAO;
+import com.reparaciones.dao.LoteDAO;
 import com.reparaciones.dao.PulidoDAO;
 import com.reparaciones.dao.ReparacionComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.Cliente;
+import com.reparaciones.models.Lote;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.models.TelefonoInventario;
@@ -66,6 +68,10 @@ public class AgrupadoController {
     @FXML private TextField filtroImei;
     @FXML private MultiSelectComboBox<Tecnico> filtroTecnico;
     @FXML private MultiSelectComboBox<String>  filtroCliente;
+    @FXML private MultiSelectComboBox<String>  filtroEstado;
+    @FXML private MultiSelectComboBox<String>  filtroUbicacion;
+    @FXML private MultiSelectComboBox<Lote>    filtroLote;
+    @FXML private MultiSelectComboBox<String>  filtroModelo;
     @FXML private DatePicker filtroFechaDesde;
     @FXML private DatePicker filtroFechaHasta;
     @FXML private MenuButton filtroIncidencias;
@@ -101,6 +107,7 @@ public class AgrupadoController {
     private final TelefonoDAO             telefonoDAO             = new TelefonoDAO();
     private final ClienteDAO              clienteDAO              = new ClienteDAO();
     private final TecnicoDAO              tecnicoDAO              = new TecnicoDAO();
+    private final LoteDAO                 loteDAO                 = new LoteDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
 
     // ── Config de rol ───────────────────────────────────────────────────────
@@ -133,6 +140,23 @@ public class AgrupadoController {
     private final Set<String>    clientesFiltro = new HashSet<>();
     private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
     private MultiSelectDropdown.Handle filtroCliHandle;
+
+    private final Set<String>    estadosFiltro   = new HashSet<>();
+    private final StringProperty etiquetaEstado  = new SimpleStringProperty("Estado");
+    private MultiSelectDropdown.Handle filtroEstadoHandle;
+
+    private final Set<String>    ubicacionesFiltro = new HashSet<>();
+    private final StringProperty etiquetaUbicacion = new SimpleStringProperty("Ubicación");
+    private MultiSelectDropdown.Handle filtroUbicacionHandle;
+
+    private final Set<Integer>   idsLoteFiltro  = new HashSet<>();
+    private final StringProperty etiquetaLote   = new SimpleStringProperty("Lote");
+    private MultiSelectDropdown.Handle filtroLoteHandle;
+    private final List<Lote>     lotesLista     = new ArrayList<>();
+
+    private final Set<String>    modelosFiltro  = new HashSet<>();
+    private final StringProperty etiquetaModelo = new SimpleStringProperty("Modelo");
+    private MultiSelectDropdown.Handle filtroModeloHandle;
 
     private CheckBox cbIncidenciasAbiertas;
     private CheckBox cbIncidenciasCerradas;
@@ -184,7 +208,15 @@ public class AgrupadoController {
             }
             datos.setAll(merge);
             inventario.setAll(telefonoDAO.getInventario());   // inventario completo, todos los roles (consulta)
-            poblarFiltroCliente();
+            lotesLista.clear();
+            lotesLista.addAll(loteDAO.getAll());
+            filtroLoteHandle = MultiSelectDropdown.setup(
+                filtroLote, lotesLista, Lote::toString,
+                l -> idsLoteFiltro.contains(l.getIdLote()),
+                (l, checked) -> { if (checked) idsLoteFiltro.add(l.getIdLote()); else idsLoteFiltro.remove(l.getIdLote());
+                                  actualizarTextoFiltroLote(); aplicarFiltros(); },
+                etiquetaLote);
+            poblarFiltrosMaestro();
             aplicarFiltros();
         } catch (SQLException e) {
             mostrarError(e);
@@ -977,9 +1009,23 @@ public class AgrupadoController {
             (cli, checked) -> { if (checked) clientesFiltro.add(cli); else clientesFiltro.remove(cli);
                                 actualizarTextoFiltroCliente(); aplicarFiltros(); },
             etiquetaCli);
+
+        filtroEstadoHandle = MultiSelectDropdown.setup(
+            filtroEstado, List.of("Recibido", "En reparación", "Histórico"), java.util.function.Function.identity(),
+            est -> estadosFiltro.contains(est),
+            (est, checked) -> { if (checked) estadosFiltro.add(est); else estadosFiltro.remove(est);
+                                actualizarTextoFiltroEstado(); aplicarFiltros(); },
+            etiquetaEstado);
+
+        filtroUbicacionHandle = MultiSelectDropdown.setup(
+            filtroUbicacion, List.of("Almacén", "Reparaciones", UbicacionTexto.FUERA), java.util.function.Function.identity(),
+            ub -> ubicacionesFiltro.contains(ub),
+            (ub, checked) -> { if (checked) ubicacionesFiltro.add(ub); else ubicacionesFiltro.remove(ub);
+                               actualizarTextoFiltroUbicacion(); aplicarFiltros(); },
+            etiquetaUbicacion);
     }
 
-    private void poblarFiltroCliente() {
+    private void poblarFiltrosMaestro() {
         List<String> clientes = inventario.stream()
             .map(t -> { String c = t.getCliente(); return (c == null || c.isEmpty()) ? SIN_CLIENTE : c; })
             .distinct().sorted().collect(Collectors.toList());
@@ -991,6 +1037,18 @@ public class AgrupadoController {
             (cli, checked) -> { if (checked) clientesFiltro.add(cli); else clientesFiltro.remove(cli);
                                 actualizarTextoFiltroCliente(); aplicarFiltros(); },
             etiquetaCli);
+
+        List<String> modelos = inventario.stream()
+            .map(TelefonoInventario::getModelo)
+            .filter(m -> m != null && !m.isEmpty())
+            .map(FormularioReparacionController::traducirModelo)
+            .distinct().sorted().collect(Collectors.toList());
+        filtroModeloHandle = MultiSelectDropdown.setup(
+            filtroModelo, modelos, java.util.function.Function.identity(),
+            m -> modelosFiltro.contains(m),
+            (m, checked) -> { if (checked) modelosFiltro.add(m); else modelosFiltro.remove(m);
+                              actualizarTextoFiltroModelo(); aplicarFiltros(); },
+            etiquetaModelo);
     }
 
     private void actualizarTextoFiltroTecnico() {
@@ -1009,6 +1067,36 @@ public class AgrupadoController {
         else etiquetaCli.set(sel + " clientes");
     }
 
+    private void actualizarTextoFiltroEstado() {
+        long sel = estadosFiltro.size();
+        if (sel == 0) etiquetaEstado.set("Estado");
+        else if (sel == 1) etiquetaEstado.set(estadosFiltro.iterator().next());
+        else etiquetaEstado.set(sel + " estados");
+    }
+
+    private void actualizarTextoFiltroUbicacion() {
+        long sel = ubicacionesFiltro.size();
+        if (sel == 0) etiquetaUbicacion.set("Ubicación");
+        else if (sel == 1) etiquetaUbicacion.set(ubicacionesFiltro.iterator().next());
+        else etiquetaUbicacion.set(sel + " ubicaciones");
+    }
+
+    private void actualizarTextoFiltroLote() {
+        long sel = idsLoteFiltro.size();
+        if (sel == 0) etiquetaLote.set("Lote");
+        else if (sel == 1) {
+            int id = idsLoteFiltro.iterator().next();
+            etiquetaLote.set(lotesLista.stream().filter(l -> l.getIdLote() == id).findFirst().map(Lote::toString).orElse("Lote"));
+        } else etiquetaLote.set(sel + " lotes");
+    }
+
+    private void actualizarTextoFiltroModelo() {
+        long sel = modelosFiltro.size();
+        if (sel == 0) etiquetaModelo.set("Modelo");
+        else if (sel == 1) etiquetaModelo.set(modelosFiltro.iterator().next());
+        else etiquetaModelo.set(sel + " modelos");
+    }
+
     private void actualizarTextoFiltroIncidencias() {
         boolean a = cbIncidenciasAbiertas.isSelected();
         boolean c = cbIncidenciasCerradas.isSelected();
@@ -1022,6 +1110,13 @@ public class AgrupadoController {
 
     private void adaptarFiltrosMaestro() {
         filtroCliente.setVisible(true); filtroCliente.setManaged(true);
+        filtroEstado.setVisible(true); filtroEstado.setManaged(true);
+        filtroUbicacion.setVisible(true); filtroUbicacion.setManaged(true);
+        filtroLote.setVisible(true); filtroLote.setManaged(true);
+        filtroModelo.setVisible(true); filtroModelo.setManaged(true);
+        // El técnico solo carga sus propios trabajos: el filtro por técnico no aporta nada en su perfil.
+        boolean ocultarTecnico = (rol == Rol.TECNICO);
+        filtroTecnico.setVisible(!ocultarTecnico); filtroTecnico.setManaged(!ocultarTecnico);
         actualizarTextoFiltroTecnico();
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         cbIncidenciasAbiertas.setText("Incidencia");
@@ -1033,6 +1128,10 @@ public class AgrupadoController {
 
     private void adaptarFiltrosDetalle() {
         filtroCliente.setVisible(false); filtroCliente.setManaged(false);
+        filtroEstado.setVisible(false); filtroEstado.setManaged(false);
+        filtroUbicacion.setVisible(false); filtroUbicacion.setManaged(false);
+        filtroLote.setVisible(false); filtroLote.setManaged(false);
+        filtroModelo.setVisible(false); filtroModelo.setManaged(false);
         cbIncidenciasAbiertas.setText("Abiertas");
         if (itemCerradas != null) itemCerradas.setVisible(true);
         cbNormales.setText("Sin incidencia");
@@ -1049,6 +1148,18 @@ public class AgrupadoController {
         clientesFiltro.clear();
         if (filtroCliHandle != null) filtroCliHandle.refresh();
         etiquetaCli.set("Cliente");
+        estadosFiltro.clear();
+        if (filtroEstadoHandle != null) filtroEstadoHandle.refresh();
+        etiquetaEstado.set("Estado");
+        ubicacionesFiltro.clear();
+        if (filtroUbicacionHandle != null) filtroUbicacionHandle.refresh();
+        etiquetaUbicacion.set("Ubicación");
+        idsLoteFiltro.clear();
+        if (filtroLoteHandle != null) filtroLoteHandle.refresh();
+        etiquetaLote.set("Lote");
+        modelosFiltro.clear();
+        if (filtroModeloHandle != null) filtroModeloHandle.refresh();
+        etiquetaModelo.set("Modelo");
         filtroFechaDesde.setValue(null);
         filtroFechaHasta.setValue(null);
         cbIncidenciasAbiertas.setSelected(false);
@@ -1124,6 +1235,14 @@ public class AgrupadoController {
                 String cli = t.getCliente();
                 boolean sin = (cli == null || cli.isEmpty());
                 if (!((sin && clientesFiltro.contains(SIN_CLIENTE)) || (!sin && clientesFiltro.contains(cli)))) return false;
+            }
+            if (!estadosFiltro.isEmpty() && !estadosFiltro.contains(UbicacionTexto.estado(t))) return false;
+            if (!ubicacionesFiltro.isEmpty() && !ubicacionesFiltro.contains(UbicacionTexto.padre(t))) return false;
+            if (!idsLoteFiltro.isEmpty() && !idsLoteFiltro.contains(t.getIdLote())) return false;
+            if (!modelosFiltro.isEmpty()) {
+                String m = t.getModelo();
+                String traducido = (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "";
+                if (!modelosFiltro.contains(traducido)) return false;
             }
             boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
             boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();

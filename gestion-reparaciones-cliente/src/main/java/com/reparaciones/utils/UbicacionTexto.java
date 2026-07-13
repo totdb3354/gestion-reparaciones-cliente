@@ -21,6 +21,9 @@ public final class UbicacionTexto {
             "RECIBIDO", "Recibido", "EN_REVISION", "En revisión", "BLOQUEADO", "Bloqueado",
             "EN_REPARACION", "En reparación", "OK", "OK", "ENVIADO", "Enviado", "DESGUACE", "Desguace");
 
+    /** Etiqueta del filtro de ubicación para teléfonos fuera del ciclo (sin ubicación). */
+    public static final String FUERA = "Fuera / —";
+
     public static String ubicacion(TelefonoInventario t) {
         if (t.getUbicacion() == null) return "—";
         String base = UBICACIONES.getOrDefault(t.getUbicacion(), t.getUbicacion());
@@ -34,5 +37,11 @@ public final class UbicacionTexto {
     public static String estado(TelefonoInventario t) {
         if (t.getEstadoEfectivo() == null) return "Histórico";
         return ESTADOS.getOrDefault(t.getEstadoEfectivo(), t.getEstadoEfectivo());
+    }
+
+    /** Ubicación padre (sin subs ni ⏳), para el filtro por Ubicación. Sin ubicación → {@link #FUERA}. */
+    public static String padre(TelefonoInventario t) {
+        if (t.getUbicacion() == null) return FUERA;
+        return UBICACIONES.getOrDefault(t.getUbicacion(), t.getUbicacion());
     }
 }
