@@ -257,6 +257,7 @@ public final class ImportadorLoteDialog {
             Scene scene = new Scene(raiz, 900, 640);
             scene.getStylesheets().add(ImportadorLoteDialog.class.getResource("/styles/app.css").toExternalForm());
             stage.setScene(scene);
+            stage.setOnCloseRequest(e -> { if (importando) e.consume(); });
 
             calcular();
             repintarContenido();

@@ -1476,15 +1476,17 @@ public class AgrupadoController {
         dialog.getDialogPane().setContent(form);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         btnGuardar.setOnAction(e -> {
-            Integer storage = tfStorage.getText().isBlank() ? null : Integer.valueOf(tfStorage.getText().trim());
-            String gradoPropio = "—".equals(cbGradoPropio.getValue()) ? null : cbGradoPropio.getValue();
             try {
+                Integer storage = tfStorage.getText().isBlank() ? null : Integer.valueOf(tfStorage.getText().trim());
+                String gradoPropio = "—".equals(cbGradoPropio.getValue()) ? null : cbGradoPropio.getValue();
                 telefonoDAO.actualizarAtributos(t.getImei(), modeloSel[0], storage,
                         tfColor.getText().isBlank() ? null : tfColor.getText().trim(),
                         tfGradoProv.getText().isBlank() ? null : tfGradoProv.getText().trim(),
                         gradoPropio, t.getTelefonoUpdatedAt());
                 dialog.close();
                 cargar();
+            } catch (NumberFormatException ex) {
+                Alertas.mostrarError("Storage no válido: " + tfStorage.getText());
             } catch (com.reparaciones.utils.StaleDataException ex) {
                 Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
                 dialog.close();
