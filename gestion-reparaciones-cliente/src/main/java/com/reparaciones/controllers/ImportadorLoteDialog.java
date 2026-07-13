@@ -169,7 +169,10 @@ public final class ImportadorLoteDialog {
         private TableView<FilaClasificada> tablaExcluidas;
         private TitledPane paneExcluidas;
         private CheckBox cbReentradas;
+        private Button btnCancelar;
         private Button btnImportar;
+        /** true mientras la importación está en vuelo: bloquea reimportar, cancelar y editar. */
+        private boolean importando;
 
         Sesion(Window owner, String nombreFichero, List<Fila> filas, Map<String, String> equivalencias,
                List<Proveedor> proveedores, List<VerificacionImei> verificaciones, Runnable onImportado) {
@@ -230,7 +233,7 @@ public final class ImportadorLoteDialog {
             cbReentradas.setSelected(true);
             cbReentradas.setOnAction(e -> actualizarBotonImportar());
 
-            Button btnCancelar = new Button("Cancelar");
+            btnCancelar = new Button("Cancelar");
             btnCancelar.setOnAction(e -> stage.close());
 
             btnImportar = new Button("Importar 0 teléfonos");
@@ -538,7 +541,18 @@ public final class ImportadorLoteDialog {
 
         // ─── Botón Importar ──────────────────────────────────────────────────────
 
+        /** Bloquea/desbloquea la edición del diálogo mientras la importación está en vuelo. */
+        private void setImportando(boolean enVuelo) {
+            importando = enVuelo;
+            btnCancelar.setDisable(enVuelo);
+            cbReentradas.setDisable(enVuelo);
+            contenedorLotes.setDisable(enVuelo);          // ComboBox de proveedor de cada lote
+            bloqueModelosSinMapear.setDisable(enVuelo);   // botones "Elegir modelo…"
+            actualizarBotonImportar();
+        }
+
         private void actualizarBotonImportar() {
+            if (importando) { btnImportar.setDisable(true); return; }
             boolean faltaProveedor = plan.lotes().stream()
                     .anyMatch(l -> seleccionProveedorPorLote.get(l.batchNumber()) == null);
             boolean incluirReentradas = cbReentradas.isSelected();
@@ -570,7 +584,7 @@ public final class ImportadorLoteDialog {
             }
             if (datosLotes.isEmpty()) return;
 
-            btnImportar.setDisable(true);
+            setImportando(true);
             new Thread(() -> {
                 try {
                     List<Importacion.LoteImport> loteImports = new ArrayList<>();
@@ -587,13 +601,14 @@ public final class ImportadorLoteDialog {
                     }
                     Importacion.Respuesta resp = loteDAO.importar(new Importacion.Request(loteImports));
                     Platform.runLater(() -> {
+                        importando = false;
                         stage.close();
                         mostrarResultado(resp);
                         onImportado.run();
                     });
                 } catch (SQLException e) {
                     Platform.runLater(() -> {
-                        btnImportar.setDisable(false);
+                        setImportando(false);
                         Alertas.mostrarError("No se pudo importar: " + e.getMessage());
                     });
                 }
