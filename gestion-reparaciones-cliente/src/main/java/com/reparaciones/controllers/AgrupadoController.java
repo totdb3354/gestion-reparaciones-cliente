@@ -9,9 +9,9 @@ import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.Cliente;
-import com.reparaciones.models.GrupoImei;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
+import com.reparaciones.models.TelefonoInventario;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ConfirmDialog;
@@ -21,6 +21,7 @@ import com.reparaciones.utils.MultiSelectComboBox;
 import com.reparaciones.utils.MultiSelectDropdown;
 import com.reparaciones.utils.SelectorClienteDialog;
 import com.reparaciones.utils.TipoTrabajo;
+import com.reparaciones.utils.UbicacionTexto;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -43,9 +44,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -76,17 +75,24 @@ public class AgrupadoController {
     @FXML private TableColumn<Object, String> colIdRep;
     @FXML private TableColumn<Object, String> colImei;
     @FXML private TableColumn<Object, String> colModelo;
+    @FXML private TableColumn<Object, String> colStorage;
+    @FXML private TableColumn<Object, String> colColor;
+    @FXML private TableColumn<Object, String> colGrado;
     @FXML private TableColumn<Object, String> colReparador;
     @FXML private TableColumn<Object, String> colAsignadoPor;
     @FXML private TableColumn<Object, String> colFecha;
     @FXML private TableColumn<Object, String> colComponente;
     @FXML private TableColumn<Object, String> colObservaciones;
     @FXML private TableColumn<Object, Void>   colEstado;
+    @FXML private TableColumn<Object, String> colUbicacion;
+    @FXML private TableColumn<Object, String> colLote;
     @FXML private TableColumn<Object, Void>   colIncidencia;
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TableColumn<Object, String> colCliente;
     @FXML private TableColumn<Object, Void>   colRevision;
+    @FXML private Button btnImportar;
+    @FXML private Button btnAltaManual;
 
     // ── DAOs ────────────────────────────────────────────────────────────────
     private final ReparacionDAO           reparacionDAO           = new ReparacionDAO();
@@ -103,7 +109,7 @@ public class AgrupadoController {
 
     // ── Datos ───────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
-    private List<ReparacionResumen> datosFiltrados = new ArrayList<>();
+    private final ObservableList<TelefonoInventario> inventario = FXCollections.observableArrayList();
     private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
 
     // ── Drill-down ──────────────────────────────────────────────────────────
@@ -155,6 +161,8 @@ public class AgrupadoController {
     public void configurar(Rol rol) {
         this.rol     = rol;
         this.esSuper = (rol == Rol.SUPERTECNICO);
+        btnImportar.setVisible(esSuper);   btnImportar.setManaged(esSuper);
+        btnAltaManual.setVisible(esSuper); btnAltaManual.setManaged(esSuper);
         resetarModo();
     }
 
@@ -175,12 +183,16 @@ public class AgrupadoController {
                 merge.addAll(pulidoDAO.getHistorialPulido());
             }
             datos.setAll(merge);
+            inventario.setAll(telefonoDAO.getInventario());   // inventario completo, todos los roles (consulta)
             poblarFiltroCliente();
             aplicarFiltros();
         } catch (SQLException e) {
             mostrarError(e);
         }
     }
+
+    @FXML private void importarLote()   { ImportadorLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
+    @FXML private void altaManualLote() { AltaManualLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
 
     /** Vuelve a modo maestro sin recargar (útil al ocultar el panel). */
     public void resetarModo() {
@@ -222,8 +234,11 @@ public class AgrupadoController {
         colTipo.setVisible(false);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
+        colStorage.setVisible(true); colColor.setVisible(true); colGrado.setVisible(true);
+        colUbicacion.setVisible(true); colLote.setVisible(true);
         colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
         colRevision.setVisible(true);   // visible para todos; solo el supertécnico puede editarla
+        colFecha.setText("Última actividad");
         colComponente.setText("Trabajos");
     }
 
@@ -231,8 +246,11 @@ public class AgrupadoController {
         colTipo.setVisible(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true); colIdAnterior.setVisible(true);
+        colStorage.setVisible(false); colColor.setVisible(false); colGrado.setVisible(false);
+        colUbicacion.setVisible(false); colLote.setVisible(false);
         colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
+        colFecha.setText("Fechas");
         colComponente.setText("Componente");
     }
 
@@ -287,13 +305,13 @@ public class AgrupadoController {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
+                if (row instanceof TelefonoInventario t) {
                     String baseStyle = "-fx-font-size: 12px; -fx-font-weight: bold; ";
                     lbl.setUserData(baseStyle);
-                    lbl.setText(grupo.getImei());
+                    lbl.setText(t.getImei());
                     lbl.setStyle(baseStyle + "-fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
                     ivHist.setVisible(true); ivHist.setManaged(true);
-                    ivHist.setOnMouseClicked(e -> { e.consume(); mostrarDetalle(grupo); });
+                    ivHist.setOnMouseClicked(e -> { e.consume(); mostrarDetalle(t.getImei()); });
                     setGraphic(contenedor);
                 } else if (row instanceof ReparacionResumen rep) {
                     String baseStyle = "-fx-font-size: 12px; ";
@@ -309,9 +327,56 @@ public class AgrupadoController {
         colModelo.setCellValueFactory(d -> {
             Object row = d.getValue();
             String m = null;
-            if (row instanceof GrupoImei grupo) m = grupo.getModelo();
+            if (row instanceof TelefonoInventario t) m = t.getModelo();
             else if (row instanceof ReparacionResumen rep) m = rep.getModelo();
             return new SimpleStringProperty((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
+        });
+
+        colStorage.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            if (row instanceof TelefonoInventario t)
+                return new SimpleStringProperty(t.getStorageGb() == null ? "" : t.getStorageGb() + " GB");
+            return new SimpleStringProperty("");
+        });
+
+        colColor.setCellValueFactory(d -> {
+            Object row = d.getValue();
+            if (row instanceof TelefonoInventario t)
+                return new SimpleStringProperty(t.getColor() != null ? t.getColor() : "");
+            return new SimpleStringProperty("");
+        });
+
+        colGrado.setCellFactory(col -> new TableCell<>() {
+            private final Label lblPropio = new Label();
+            private final Label lblProv   = new Label();
+            private final VBox  box       = new VBox(1, lblPropio, lblProv);
+            {
+                actualizarColores(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null)
+                        newRow.selectedProperty().addListener((o, wasSelected, isSelected) -> actualizarColores(isSelected));
+                });
+            }
+            private void actualizarColores(boolean selected) {
+                lblPropio.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (selected ? "white" : "#2C3B54") + ";");
+                lblProv.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (selected ? "white" : "#9AA0AA") + ";");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty); setText(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof TelefonoInventario t) {
+                    lblPropio.setText(t.getGradoPropio() != null && !t.getGradoPropio().isEmpty() ? t.getGradoPropio() : "—");
+                    boolean tieneProv = t.getGradoProveedor() != null && !t.getGradoProveedor().isEmpty();
+                    lblProv.setText(tieneProv ? "prov: " + t.getGradoProveedor() : "");
+                    lblProv.setVisible(tieneProv); lblProv.setManaged(tieneProv);
+                    actualizarColores(getTableRow() != null && getTableRow().isSelected());
+                    setGraphic(box);
+                } else {
+                    setGraphic(null);
+                }
+            }
         });
 
         colReparador.setCellValueFactory(d -> {
@@ -355,10 +420,11 @@ public class AgrupadoController {
                 super.updateItem(item, empty); setText(null);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    lblInicio.setText(grupo.getFechaMasAntigua()  != null ? FechaUtils.formatear(grupo.getFechaMasAntigua(), FORMATO_FECHA)  : "—");
-                    lblFin.setText("→ " + (grupo.getFechaMasReciente() != null ? FechaUtils.formatear(grupo.getFechaMasReciente(), FORMATO_FECHA) : "—"));
+                if (row instanceof TelefonoInventario t) {
+                    lblInicio.setVisible(false); lblInicio.setManaged(false);
+                    lblFin.setText(t.getUltimaActividad() != null ? FechaUtils.formatear(t.getUltimaActividad(), FORMATO_FECHA) : "—");
                 } else if (row instanceof ReparacionResumen rep) {
+                    lblInicio.setVisible(true); lblInicio.setManaged(true);
                     lblInicio.setText(rep.getFechaAsig() != null ? FechaUtils.formatear(rep.getFechaAsig(), FORMATO_FECHA) : "—");
                     lblFin.setText("→ " + (rep.getFechaFin() != null ? FechaUtils.formatear(rep.getFechaFin(), FORMATO_FECHA) : "—"));
                 } else { setGraphic(null); return; }
@@ -390,8 +456,10 @@ public class AgrupadoController {
                 setGraphic(null); setText(null);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    setText(grupo.getResumenTipos());
+                if (row instanceof TelefonoInventario t) {
+                    String txt = t.getResumenTipos();
+                    if (t.getTrabajosAbiertos() > 0) txt += " · " + t.getTrabajosAbiertos() + " abiertos";
+                    setText(txt);
                 } else if (row instanceof ReparacionResumen rep) {
                     lblTipo.setText(rep.getTipoComponente() != null ? rep.getTipoComponente() : "");
                     lblReut.setVisible(rep.isEsReutilizado()); lblReut.setManaged(rep.isEsReutilizado());
@@ -421,7 +489,7 @@ public class AgrupadoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 String obs = null;
-                if (row instanceof GrupoImei grupo) obs = grupo.getObservacion();
+                if (row instanceof TelefonoInventario t) obs = t.getObservacion();
                 else if (row instanceof ReparacionResumen rep) obs = rep.getObservacionTelefono();
                 setGraphic(labelExpandible("Observación", obs));
             }
@@ -434,9 +502,55 @@ public class AgrupadoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 String cli = null;
-                if (row instanceof GrupoImei grupo) cli = grupo.getCliente();
+                if (row instanceof TelefonoInventario t) cli = t.getCliente();
                 else if (row instanceof ReparacionResumen rep) cli = rep.getCliente();
                 setGraphic(labelExpandible("Cliente", cli));
+            }
+        });
+
+        colUbicacion.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof TelefonoInventario t)
+                    setGraphic(labelExpandible("Ubicación", UbicacionTexto.ubicacion(t)));
+                else
+                    setGraphic(null);
+            }
+        });
+
+        colLote.setCellFactory(col -> new TableCell<>() {
+            private final Label lblBatch = new Label();
+            private final Label lblProv  = new Label();
+            private final VBox  box      = new VBox(1, lblBatch, lblProv);
+            {
+                actualizarColores(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (newRow != null)
+                        newRow.selectedProperty().addListener((o, wasSelected, isSelected) -> actualizarColores(isSelected));
+                });
+            }
+            private void actualizarColores(boolean selected) {
+                lblBatch.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (selected ? "white" : "#2C3B54") + ";");
+                lblProv.setStyle("-fx-font-size: 10px; -fx-text-fill: " + (selected ? "white" : "#9AA0AA") + ";");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty); setText(null);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (row instanceof TelefonoInventario t) {
+                    lblBatch.setText(t.getBatchNumber() != null && !t.getBatchNumber().isEmpty() ? t.getBatchNumber() : "—");
+                    boolean tieneProv = t.getProveedor() != null && !t.getProveedor().isEmpty();
+                    lblProv.setText(tieneProv ? t.getProveedor() : "");
+                    lblProv.setVisible(tieneProv); lblProv.setManaged(tieneProv);
+                    actualizarColores(getTableRow() != null && getTableRow().isSelected());
+                    setGraphic(box);
+                } else {
+                    setGraphic(null);
+                }
             }
         });
 
@@ -495,13 +609,13 @@ public class AgrupadoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
                 String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold;";
-                if (row instanceof GrupoImei grupo) {
-                    if (grupo.getCountIncAbiertas() > 0) {
-                        badge.setText("Incidencia");
-                        badge.setStyle(base + "-fx-background-color: " + Colores.FILA_INCIDENCIA_BG + "; -fx-text-fill: " + Colores.FILA_INCIDENCIA_BRD + ";");
-                    } else {
-                        badge.setText("Normal");
-                        badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
+                if (row instanceof TelefonoInventario t) {
+                    String est = UbicacionTexto.estado(t);
+                    badge.setText(est);
+                    switch (est) {
+                        case "Recibido"      -> badge.setStyle(base + "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
+                        case "En reparación" -> badge.setStyle(base + "-fx-background-color: " + Colores.FILA_INCIDENCIA_BG + "; -fx-text-fill: " + Colores.FILA_INCIDENCIA_BRD + ";");
+                        default              -> badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
                     setGraphic(badge);
                 } else if (row instanceof ReparacionResumen rep) {
@@ -568,13 +682,13 @@ public class AgrupadoController {
                     if (!esSuper) return;
                     if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
                     Object row = getTableView().getItems().get(getIndex());
-                    if (!(row instanceof GrupoImei grupo)) return;
-                    if (grupo.isTieneAsignaciones()) { toggle.setSelected(false); return; }
+                    if (!(row instanceof TelefonoInventario t)) return;
+                    if (t.isTieneAsignaciones()) { toggle.setSelected(false); return; }
                     boolean nuevoValor = toggle.isSelected();
                     boolean estadoAnterior = !nuevoValor;
                     new Thread(() -> {
                         try {
-                            telefonoDAO.actualizarRevisionLogistica(grupo.getImei(), nuevoValor, grupo.getTelefonoUpdatedAt());
+                            telefonoDAO.actualizarRevisionLogistica(t.getImei(), nuevoValor, t.getTelefonoUpdatedAt());
                             javafx.application.Platform.runLater(AgrupadoController.this::cargar);
                         } catch (com.reparaciones.utils.StaleDataException ex) {
                             javafx.application.Platform.runLater(() -> {
@@ -608,11 +722,11 @@ public class AgrupadoController {
                 super.updateItem(item, empty);
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
                 Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof GrupoImei grupo) {
-                    boolean efectivo = grupo.isRevisionLogistica() && !grupo.isTieneAsignaciones();
+                if (row instanceof TelefonoInventario t) {
+                    boolean efectivo = t.isRevisionLogistica() && !t.isTieneAsignaciones();
                     toggle.setSelected(efectivo);
                     aplicarEstiloToggle(efectivo);
-                    if (grupo.isTieneAsignaciones()) {
+                    if (t.isTieneAsignaciones()) {
                         toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") + " -fx-opacity: 0.5;");
                     }
                     setGraphic(toggle);
@@ -667,18 +781,18 @@ public class AgrupadoController {
                 borrar     .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarReparacion(rep); });
                 aniadirInc .setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) abrirDialogoIncidencia(rep); });
                 cancelarInc.setOnAction(e -> { if (getItem() instanceof ReparacionResumen rep) borrarIncidencia(rep); });
-                editarObs  .setOnAction(e -> { if (getItem() instanceof GrupoImei grupo) abrirDialogoObservacionTelefono(grupo); });
+                editarObs  .setOnAction(e -> { if (getItem() instanceof TelefonoInventario t) abrirDialogoObservacionTelefono(t); });
                 editarCli  .setOnAction(e -> {
-                    if (!(getItem() instanceof GrupoImei grupo)) return;
+                    if (!(getItem() instanceof TelefonoInventario t)) return;
                     try {
                         List<Cliente> activos = clienteDAO.getActivos();
                         Integer idActual = activos.stream()
-                                .filter(c -> c.getNombre().equals(grupo.getCliente()))
+                                .filter(c -> c.getNombre().equals(t.getCliente()))
                                 .map(Cliente::getIdCli).findFirst().orElse(null);
                         java.util.Optional<Integer> sel = SelectorClienteDialog.elegir(activos, idActual);
                         if (sel.isEmpty()) return;
                         Integer idCli = (sel.get() == -1) ? null : sel.get();
-                        telefonoDAO.actualizarCliente(grupo.getImei(), idCli, grupo.getTelefonoUpdatedAt());
+                        telefonoDAO.actualizarCliente(t.getImei(), idCli, t.getTelefonoUpdatedAt());
                         cargar();
                     } catch (com.reparaciones.utils.StaleDataException ex) {
                         Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
@@ -688,7 +802,7 @@ public class AgrupadoController {
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
                         aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
                 menu.setOnShowing(e -> {
-                    boolean esGrupo = getItem() instanceof GrupoImei;
+                    boolean esGrupo = getItem() instanceof TelefonoInventario;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
                         editar.setVisible(false); borrar.setVisible(false);
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
@@ -714,10 +828,10 @@ public class AgrupadoController {
                 });
 
                 setOnMouseClicked(e -> {
-                    if (!isEmpty() && getItem() instanceof GrupoImei grupo
+                    if (!isEmpty() && getItem() instanceof TelefonoInventario t
                             && e.getButton() == javafx.scene.input.MouseButton.PRIMARY
                             && e.getClickCount() == 2) {
-                        mostrarDetalle(grupo);
+                        mostrarDetalle(t.getImei());
                     }
                 });
 
@@ -726,13 +840,13 @@ public class AgrupadoController {
 
             private void aplicarEstilo(Object item, boolean empty) {
                 if (empty || item == null) { setStyle("-fx-border-width: 0 0 0 8; -fx-border-color: transparent;"); return; }
-                if (item instanceof GrupoImei g) {
+                if (item instanceof TelefonoInventario t) {
                     if (isSelected()) {
                         setStyle("-fx-background-color: " + Colores.AZUL_MEDIO + ";" +
                                 "-fx-border-color: transparent transparent " + Colores.FILA_SELECTED_BRD + " transparent;" +
                                 "-fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0;");
                     } else {
-                        String brd = g.getCountIncAbiertas() > 0 ? Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
+                        String brd = t.getIncAbiertas() > 0 ? Colores.FILA_INCIDENCIA_BRD : "#2C3B54";
                         setStyle("-fx-background-color: #EEF0F5;" +
                                 "-fx-border-width: 0 0 1 4; -fx-border-insets: 1 0 0 0;" +
                                 "-fx-border-color: transparent transparent " + Colores.FILA_SEP + " " + brd + ";" +
@@ -765,14 +879,18 @@ public class AgrupadoController {
     }
 
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
-        if (row instanceof GrupoImei g) {
-            if (col == colImei)       return g.getImei();
-            if (col == colModelo)     { String m = g.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
-            if (col == colFecha)      return (g.getFechaMasAntigua() != null ? FechaUtils.formatear(g.getFechaMasAntigua(), FORMATO_FECHA) : "—")
-                                            + " → " + (g.getFechaMasReciente() != null ? FechaUtils.formatear(g.getFechaMasReciente(), FORMATO_FECHA) : "—");
-            if (col == colComponente) return g.getResumenTipos();
-            if (col == colObservacionTelefono) return g.getObservacion();
-            if (col == colCliente)    return g.getCliente();
+        if (row instanceof TelefonoInventario t) {
+            if (col == colImei)       return t.getImei();
+            if (col == colModelo)     { String m = t.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+            if (col == colStorage)    return t.getStorageGb() == null ? "" : t.getStorageGb() + " GB";
+            if (col == colColor)      return t.getColor() != null ? t.getColor() : "";
+            if (col == colGrado)      return t.getGradoPropio() != null ? t.getGradoPropio() : "";
+            if (col == colFecha)      return t.getUltimaActividad() != null ? FechaUtils.formatear(t.getUltimaActividad(), FORMATO_FECHA) : "—";
+            if (col == colComponente) { String txt = t.getResumenTipos(); if (t.getTrabajosAbiertos() > 0) txt += " · " + t.getTrabajosAbiertos() + " abiertos"; return txt; }
+            if (col == colUbicacion)  return UbicacionTexto.ubicacion(t);
+            if (col == colLote)       return t.getBatchNumber() != null ? t.getBatchNumber() : "";
+            if (col == colObservacionTelefono) return t.getObservacion();
+            if (col == colCliente)    return t.getCliente();
             return null;
         }
         if (!(row instanceof ReparacionResumen rep)) return null;
@@ -862,10 +980,10 @@ public class AgrupadoController {
     }
 
     private void poblarFiltroCliente() {
-        List<String> clientes = datos.stream()
-            .map(r -> { String c = r.getCliente(); return (c == null || c.isEmpty()) ? SIN_CLIENTE : c; })
+        List<String> clientes = inventario.stream()
+            .map(t -> { String c = t.getCliente(); return (c == null || c.isEmpty()) ? SIN_CLIENTE : c; })
             .distinct().sorted().collect(Collectors.toList());
-        if (!clientes.contains(SIN_CLIENTE) && datos.stream().anyMatch(r -> r.getCliente() == null || r.getCliente().isEmpty()))
+        if (!clientes.contains(SIN_CLIENTE) && inventario.stream().anyMatch(t -> t.getCliente() == null || t.getCliente().isEmpty()))
             clientes.add(0, SIN_CLIENTE);
         filtroCliHandle = MultiSelectDropdown.setup(
             filtroCliente, clientes, java.util.function.Function.identity(),
@@ -988,61 +1106,45 @@ public class AgrupadoController {
         }
 
         String imeiStr = filtroImei.getText().trim();
-        datosFiltrados = datos.stream().filter(rep -> {
-            Set<String> imeisFiltro = FiltroImei.imeisValidos(imeiStr);
-            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(rep.getImei())) return false;
+        Set<String> imeisFiltro = FiltroImei.imeisValidos(imeiStr);
+        // Filtro por técnico: IMEIs con algún trabajo de los técnicos marcados (los datos ya están cargados)
+        Set<String> imeisDeTecnicos = idsTecFiltro.isEmpty() ? null
+                : datos.stream().filter(r -> idsTecFiltro.contains(r.getIdTec()))
+                       .map(ReparacionResumen::getImei).collect(Collectors.toSet());
+        List<TelefonoInventario> filtrados = inventario.stream().filter(t -> {
+            if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(t.getImei())) return false;
+            if (imeisDeTecnicos != null && !imeisDeTecnicos.contains(t.getImei())) return false;
             if (desde != null || hasta != null) {
-                if (rep.getFechaFin() == null) return false;
-                LocalDate fechaFin = FechaUtils.toLocalDate(rep.getFechaFin());
-                if (desde != null && fechaFin.isBefore(desde)) return false;
-                if (hasta != null && fechaFin.isAfter(hasta))  return false;
+                if (t.getUltimaActividad() == null) return false;
+                LocalDate f = FechaUtils.toLocalDate(t.getUltimaActividad());
+                if (desde != null && f.isBefore(desde)) return false;
+                if (hasta != null && f.isAfter(hasta))  return false;
             }
             if (!clientesFiltro.isEmpty()) {
-                String cli = rep.getCliente();
+                String cli = t.getCliente();
                 boolean sin = (cli == null || cli.isEmpty());
-                boolean coincide = (sin && clientesFiltro.contains(SIN_CLIENTE)) || (!sin && clientesFiltro.contains(cli));
-                if (!coincide) return false;
+                if (!((sin && clientesFiltro.contains(SIN_CLIENTE)) || (!sin && clientesFiltro.contains(cli)))) return false;
+            }
+            boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
+            boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
+            if (filtrarInc || filtrarNormal) {
+                boolean tieneInc = t.getIncAbiertas() > 0;
+                if (!((filtrarInc && tieneInc) || (filtrarNormal && !tieneInc))) return false;
             }
             return true;
-        }).collect(Collectors.toList());
-        buildTablaItems();
-        int nImeis = tablaItems.size();
-        lblContador.setText(nImeis + (nImeis == 1 ? " IMEI" : " IMEIs"));
+        }).sorted(Comparator.comparing(TelefonoInventario::getUltimaActividad,
+                Comparator.nullsLast(Comparator.reverseOrder()))).collect(Collectors.toList());
+        tablaItems.setAll(filtrados);
+        restaurarSeleccion();
+        int n = tablaItems.size();
+        lblContador.setText(n + (n == 1 ? " teléfono" : " teléfonos"));
         lblContador.setVisible(true); lblContador.setManaged(true);
     }
 
-    private void buildTablaItems() {
-        LinkedHashMap<String, List<ReparacionResumen>> porImei = new LinkedHashMap<>();
-        for (ReparacionResumen rep : datosFiltrados)
-            porImei.computeIfAbsent(rep.getImei(), k -> new ArrayList<>()).add(rep);
-
-        boolean filtrarInc    = cbIncidenciasAbiertas != null && cbIncidenciasAbiertas.isSelected();
-        boolean filtrarNormal = cbNormales != null && cbNormales.isSelected();
-
-        List<GrupoImei> grupos = new ArrayList<>();
-        for (Map.Entry<String, List<ReparacionResumen>> e : porImei.entrySet()) {
-            GrupoImei grupo = new GrupoImei(e.getKey(), e.getValue());
-            if (!idsTecFiltro.isEmpty() && e.getValue().stream().noneMatch(r -> idsTecFiltro.contains(r.getIdTec())))
-                continue;
-            if (filtrarInc || filtrarNormal) {
-                boolean tieneInc = grupo.getCountIncAbiertas() > 0;
-                boolean ok = (filtrarInc && tieneInc) || (filtrarNormal && !tieneInc);
-                if (!ok) continue;
-            }
-            grupos.add(grupo);
-        }
-        // Actividad más reciente arriba, cuente la categoría que cuente (rep, glass o pulido).
-        // Sin esto, el orden era el del merge (todas las R primero) y un IMEI solo-glass caía al fondo.
-        grupos.sort(Comparator.comparing(GrupoImei::getFechaMasReciente,
-                Comparator.nullsLast(Comparator.reverseOrder())));
-        tablaItems.setAll(grupos);
-        restaurarSeleccion();
-    }
-
-    /** Si venimos de un detalle, re-selecciona el grupo y hace scroll hasta él. */
+    /** Si venimos de un detalle, re-selecciona el teléfono y hace scroll hasta él. */
     private void restaurarSeleccion() {
         if (imeiARestaurar == null) return;
-        int idx = GrupoImei.indiceDe(tablaItems, imeiARestaurar);
+        int idx = TelefonoInventario.indiceDe(tablaItems, imeiARestaurar);
         imeiARestaurar = null;
         if (idx < 0) return;
         tabla.getSelectionModel().clearAndSelect(idx);
@@ -1074,9 +1176,9 @@ public class AgrupadoController {
         raiz.getChildren().add(idxTabla, barraNavegacion);
     }
 
-    private void mostrarDetalle(GrupoImei grupo) {
+    private void mostrarDetalle(String imei) {
         modoActual  = Modo.DETALLE;
-        imeiDetalle = grupo.getImei();
+        imeiDetalle = imei;
 
         String modelo = datos.stream()
                 .filter(r -> r.getImei().equals(imeiDetalle))
@@ -1174,8 +1276,8 @@ public class AgrupadoController {
         dialog.showAndWait();
     }
 
-    private void abrirDialogoObservacionTelefono(GrupoImei grupo) {
-        TextArea tfObs = new TextArea(grupo.getObservacion() != null ? grupo.getObservacion() : "");
+    private void abrirDialogoObservacionTelefono(TelefonoInventario t) {
+        TextArea tfObs = new TextArea(t.getObservacion() != null ? t.getObservacion() : "");
         tfObs.setPromptText("Observación del teléfono...");
         tfObs.setWrapText(true);
         tfObs.setPrefRowCount(4);
@@ -1185,7 +1287,7 @@ public class AgrupadoController {
         btnConfirmar.setMaxWidth(Double.MAX_VALUE);
         btnConfirmar.setStyle("-fx-background-color: " + Colores.FILA_REPARADO_ICO + "; -fx-text-fill: white; -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
 
-        VBox form = new VBox(8, new Label("Observación — IMEI " + grupo.getImei()), tfObs, btnConfirmar);
+        VBox form = new VBox(8, new Label("Observación — IMEI " + t.getImei()), tfObs, btnConfirmar);
         form.setPadding(new Insets(16));
         form.setStyle("-fx-background-color: " + Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
         form.setPrefWidth(480);
@@ -1197,7 +1299,7 @@ public class AgrupadoController {
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         btnConfirmar.setOnAction(e -> {
             try {
-                telefonoDAO.actualizarObservacion(grupo.getImei(), tfObs.getText().trim(), grupo.getTelefonoUpdatedAt());
+                telefonoDAO.actualizarObservacion(t.getImei(), tfObs.getText().trim(), t.getTelefonoUpdatedAt());
                 dialog.close();
                 cargar();
             } catch (com.reparaciones.utils.StaleDataException ex) {
@@ -1257,25 +1359,34 @@ public class AgrupadoController {
 
         if (modoActual == Modo.MAESTRO) {
             List<String> cab = List.of(
-                    "IMEI", "Modelo", "Primera", "Última",
-                    "Reparaciones", "Glass", "Pulidos", "Inc. abiertas",
+                    "IMEI", "Modelo", "Storage", "Color", "Grado propio", "Grado proveedor",
+                    "Estado", "Ubicación", "Lote", "Proveedor", "Última actividad",
+                    "Reparaciones", "Glass", "Pulidos", "Abiertos", "Inc. abiertas",
                     "Observación", "Cliente", "Revisión logística");
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
-                if (!(o instanceof GrupoImei g)) continue;
-                String modelo = g.getModelo();
+                if (!(o instanceof TelefonoInventario t)) continue;
+                String modelo = t.getModelo();
                 filas.add(java.util.Arrays.asList(
-                        com.reparaciones.utils.CsvExporter.textoForzado(g.getImei()),
+                        com.reparaciones.utils.CsvExporter.textoForzado(t.getImei()),
                         (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
-                        FechaUtils.formatear(g.getFechaMasAntigua(), fmt),
-                        FechaUtils.formatear(g.getFechaMasReciente(), fmt),
-                        String.valueOf(g.getCountRep()),
-                        String.valueOf(g.getCountGlass()),
-                        String.valueOf(g.getCountPul()),
-                        String.valueOf(g.getCountIncAbiertas()),
-                        g.getObservacion() != null ? g.getObservacion() : "",
-                        g.getCliente() != null ? g.getCliente() : "",
-                        (g.isRevisionLogistica() && !g.isTieneAsignaciones()) ? "Sí" : "No"));
+                        t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()),
+                        t.getColor() != null ? t.getColor() : "",
+                        t.getGradoPropio() != null ? t.getGradoPropio() : "",
+                        t.getGradoProveedor() != null ? t.getGradoProveedor() : "",
+                        UbicacionTexto.estado(t),
+                        UbicacionTexto.ubicacion(t),
+                        t.getBatchNumber() != null ? t.getBatchNumber() : "",
+                        t.getProveedor() != null ? t.getProveedor() : "",
+                        FechaUtils.formatear(t.getUltimaActividad(), fmt),
+                        String.valueOf(t.getRepHechas()),
+                        String.valueOf(t.getGlassHechas()),
+                        String.valueOf(t.getPulHechos()),
+                        String.valueOf(t.getTrabajosAbiertos()),
+                        String.valueOf(t.getIncAbiertas()),
+                        t.getObservacion() != null ? t.getObservacion() : "",
+                        t.getCliente() != null ? t.getCliente() : "",
+                        (t.isRevisionLogistica() && !t.isTieneAsignaciones()) ? "Sí" : "No"));
             }
             com.reparaciones.utils.CsvExporter.exportar(owner, "agrupado_resumen", cab, filas);
             return;
