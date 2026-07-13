@@ -781,6 +781,7 @@ public class AgrupadoController {
                 MenuItem cancelarInc = new MenuItem("Cancelar incidencia");
                 MenuItem editarObs   = new MenuItem("Editar observación");
                 MenuItem editarCli   = new MenuItem("Editar cliente");
+                MenuItem editarAtr   = new MenuItem("Editar atributos");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -831,8 +832,9 @@ public class AgrupadoController {
                         cargar();
                     } catch (SQLException ex) { mostrarError(ex); }
                 });
+                editarAtr  .setOnAction(e -> { if (getItem() instanceof TelefonoInventario t) abrirDialogoAtributos(t); });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
-                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli);
+                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof TelefonoInventario;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
@@ -840,6 +842,7 @@ public class AgrupadoController {
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
                         editarObs.setVisible(esSuper && esGrupo);
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
+                        editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -849,6 +852,7 @@ public class AgrupadoController {
                     cancelarInc .setVisible(esSuper && tieneInc);
                     editarObs   .setVisible(false);
                     editarCli   .setVisible(false);
+                    editarAtr   .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(ev -> {
@@ -1419,6 +1423,66 @@ public class AgrupadoController {
         btnConfirmar.setOnAction(e -> {
             try {
                 telefonoDAO.actualizarObservacion(t.getImei(), tfObs.getText().trim(), t.getTelefonoUpdatedAt());
+                dialog.close();
+                cargar();
+            } catch (com.reparaciones.utils.StaleDataException ex) {
+                Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
+                dialog.close();
+                cargar();
+            } catch (SQLException ex) {
+                Alertas.mostrarError("No se pudo guardar: " + ex.getMessage());
+            }
+        });
+        dialog.showAndWait();
+    }
+
+    private void abrirDialogoAtributos(TelefonoInventario t) {
+        final String[] modeloSel = { t.getModelo() };
+        Label lblModelo = new Label(t.getModelo() != null && !t.getModelo().isEmpty()
+                ? FormularioReparacionController.traducirModelo(t.getModelo()) : "—");
+        Button btnModelo = new Button("Cambiar…");
+        btnModelo.setOnAction(e -> SelectorModeloDialog.elegir(modeloSel[0]).ifPresent(m -> {
+            modeloSel[0] = m;
+            lblModelo.setText(FormularioReparacionController.traducirModelo(m));
+        }));
+        HBox filaModelo = new HBox(8, new Label("Modelo:"), lblModelo, btnModelo);
+        filaModelo.setAlignment(Pos.CENTER_LEFT);
+
+        TextField tfStorage = new TextField(t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()));
+        tfStorage.setPromptText("GB (vacío = sin dato)");
+        tfStorage.textProperty().addListener((obs, o, n) -> { if (!n.matches("\\d*")) tfStorage.setText(o); });
+        TextField tfColor = new TextField(t.getColor() != null ? t.getColor() : "");
+        TextField tfGradoProv = new TextField(t.getGradoProveedor() != null ? t.getGradoProveedor() : "");
+        ComboBox<String> cbGradoPropio = new ComboBox<>(FXCollections.observableArrayList("—", "C", "B", "A-", "A", "A+"));
+        cbGradoPropio.setValue(t.getGradoPropio() != null ? t.getGradoPropio() : "—");
+
+        Button btnGuardar = new Button("Guardar");
+        btnGuardar.setMaxWidth(Double.MAX_VALUE);
+        btnGuardar.setStyle("-fx-background-color: " + Colores.FILA_REPARADO_ICO +
+                "; -fx-text-fill: white; -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
+
+        VBox form = new VBox(8, filaModelo,
+                new Label("Storage (GB)"), tfStorage,
+                new Label("Color"), tfColor,
+                new Label("Grado proveedor"), tfGradoProv,
+                new Label("Grado propio (chasis)"), cbGradoPropio,
+                btnGuardar);
+        form.setPadding(new Insets(16));
+        form.setStyle("-fx-background-color: " + Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
+        form.setPrefWidth(420);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Editar atributos — IMEI " + t.getImei());
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        btnGuardar.setOnAction(e -> {
+            Integer storage = tfStorage.getText().isBlank() ? null : Integer.valueOf(tfStorage.getText().trim());
+            String gradoPropio = "—".equals(cbGradoPropio.getValue()) ? null : cbGradoPropio.getValue();
+            try {
+                telefonoDAO.actualizarAtributos(t.getImei(), modeloSel[0], storage,
+                        tfColor.getText().isBlank() ? null : tfColor.getText().trim(),
+                        tfGradoProv.getText().isBlank() ? null : tfGradoProv.getText().trim(),
+                        gradoPropio, t.getTelefonoUpdatedAt());
                 dialog.close();
                 cargar();
             } catch (com.reparaciones.utils.StaleDataException ex) {
