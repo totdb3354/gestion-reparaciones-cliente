@@ -444,8 +444,12 @@ public final class AltaManualLoteDialog {
                             mostrarAvisoActivos(activos);
                         }
                         stage.close();
-                        mostrarResultado(resp);
-                        onImportado.run();
+                        // Diferir un pulso: mostrar el alert en el mismo pulso en que se cierra
+                        // el stage modal lo deja en blanco en Windows (sin pase de render).
+                        Platform.runLater(() -> {
+                            mostrarResultado(resp);
+                            onImportado.run();
+                        });
                     });
                 } catch (SQLException e) {
                     Platform.runLater(() -> {
