@@ -147,7 +147,7 @@ public class TelefonoDAO {
 
     /** Edición de atributos (modelo/storage/color/grados) con lock optimista. */
     public void actualizarAtributos(String imei, String modelo, Integer storageGb, String color,
-                                    String gradoProveedor, String gradoPropio,
+                                    String gradoProveedor, String gradoPropio, Boolean esEsim,
                                     java.time.LocalDateTime updatedAt) throws SQLException {
         java.util.Map<String, Object> body = new java.util.HashMap<>();
         body.put("modelo", modelo);
@@ -155,6 +155,7 @@ public class TelefonoDAO {
         body.put("color", color);
         body.put("gradoProveedor", gradoProveedor);
         body.put("gradoPropio", gradoPropio);
+        body.put("esEsim", esEsim);
         body.put("updatedAt", updatedAt);
         ApiClient.patch("/api/telefonos/" + imei + "/atributos", body);
     }

@@ -1482,7 +1482,7 @@ public class AgrupadoController {
                 telefonoDAO.actualizarAtributos(t.getImei(), modeloSel[0], storage,
                         tfColor.getText().isBlank() ? null : tfColor.getText().trim(),
                         tfGradoProv.getText().isBlank() ? null : tfGradoProv.getText().trim(),
-                        gradoPropio, t.getTelefonoUpdatedAt());
+                        gradoPropio, null, t.getTelefonoUpdatedAt());
                 dialog.close();
                 cargar();
             } catch (NumberFormatException ex) {

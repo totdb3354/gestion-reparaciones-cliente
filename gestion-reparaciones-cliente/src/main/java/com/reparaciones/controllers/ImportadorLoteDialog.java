@@ -596,7 +596,7 @@ public final class ImportadorLoteDialog {
                             BigDecimal precioEur = fl.precioCompra() == null ? null
                                     : fl.precioCompra().multiply(BigDecimal.valueOf(tasa)).setScale(2, RoundingMode.HALF_UP);
                             telefonos.add(new Importacion.TelefonoImport(fl.imei(), fl.modeloInterno(), fl.storageGb(),
-                                    fl.color(), fl.grado(), fl.precioCompra(), dl.proveedor().getDivisa(), precioEur));
+                                    fl.color(), fl.grado(), fl.precioCompra(), dl.proveedor().getDivisa(), precioEur, false));
                         }
                         loteImports.add(new Importacion.LoteImport(dl.batchNumber(), dl.proveedor().getIdProv(), null, telefonos));
                     }

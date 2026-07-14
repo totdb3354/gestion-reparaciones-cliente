@@ -432,7 +432,7 @@ public final class AltaManualLoteDialog {
                     List<Importacion.TelefonoImport> telefonos = new ArrayList<>();
                     for (String imei : imeisFinal) {
                         telefonos.add(new Importacion.TelefonoImport(imei, modelo, storageGb, color, grado,
-                                precio, divisa, precioEur));
+                                precio, divisa, precioEur, false));
                     }
                     Importacion.LoteImport loteImport = new Importacion.LoteImport(batch, idProv, null, telefonos);
                     Importacion.Respuesta resp = loteDAO.importar(new Importacion.Request(List.of(loteImport)));
