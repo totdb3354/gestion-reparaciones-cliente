@@ -12,7 +12,7 @@ del SKU de componentes — que codifica la configuración completa del terminal:
 ```
 i 15 ProMax esim 256 Black A 100
 │  │    │     │    │    │   │  └─ % batería: SOLO si es 100 (opcional)
-│  │    │     │    │    │   └─ grado estético PROPIO (escala C/B/A-/A/A+)
+│  │    │     │    │    │   └─ grado estético PROPIO — nunca el del proveedor (escala C/B/A-/A; A = máximo)
 │  │    │     │    │    └─ color OFICIAL de Apple (inglés)
 │  │    │     │    └─ capacidad GB
 │  │    │     └─ "esim" si es la variante eSIM (opcional)
