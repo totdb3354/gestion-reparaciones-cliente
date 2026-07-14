@@ -23,6 +23,8 @@
         <Label styleClass="vista-titulo" text="Agrupado por IMEI"/>
         <Label fx:id="lblContador" visible="false" managed="false"
                style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
+        <Button fx:id="btnImportar" text="Importar lote" styleClass="btn-secondary" onAction="#importarLote" visible="false" managed="false"/>
+        <Button fx:id="btnAltaManual" text="Alta manual" styleClass="btn-secondary" onAction="#altaManualLote" visible="false" managed="false"/>
         <Region HBox.hgrow="ALWAYS"/>
     </HBox>
 
@@ -31,6 +33,10 @@
         <TextField fx:id="filtroImei" promptText="Filtrar por IMEI" prefWidth="160" styleClass="buscador"/>
         <MultiSelectComboBox fx:id="filtroTecnico" prefWidth="130"/>
         <MultiSelectComboBox fx:id="filtroCliente" prefWidth="150"/>
+        <MultiSelectComboBox fx:id="filtroEstado" prefWidth="130"/>
+        <MultiSelectComboBox fx:id="filtroUbicacion" prefWidth="140"/>
+        <MultiSelectComboBox fx:id="filtroLote" prefWidth="150"/>
+        <MultiSelectComboBox fx:id="filtroModelo" prefWidth="140"/>
         <Label text="Desde:" style="-fx-font-size: 12px;"/>
         <DatePicker fx:id="filtroFechaDesde" prefWidth="130"/>
         <Label text="Hasta:" style="-fx-font-size: 12px;"/>
@@ -45,12 +51,17 @@
             <TableColumn fx:id="colIdRep" minWidth="110" text="Id"/>
             <TableColumn fx:id="colImei" minWidth="130" text="IMEI teléfono"/>
             <TableColumn fx:id="colModelo" minWidth="100" text="Modelo"/>
+            <TableColumn fx:id="colStorage" minWidth="70" maxWidth="90" text="GB"/>
+            <TableColumn fx:id="colColor" minWidth="80" maxWidth="110" text="Color"/>
+            <TableColumn fx:id="colGrado" minWidth="80" maxWidth="100" text="Grado"/>
             <TableColumn fx:id="colReparador" minWidth="100" text="Reparador"/>
             <TableColumn fx:id="colAsignadoPor" minWidth="100" text="Asignado por"/>
             <TableColumn fx:id="colFecha" minWidth="110" text="Fechas"/>
             <TableColumn fx:id="colComponente" minWidth="150" text="Trabajos"/>
             <TableColumn fx:id="colObservaciones" minWidth="200" maxWidth="320" text="Observaciones"/>
             <TableColumn fx:id="colEstado" minWidth="110" prefWidth="120" maxWidth="150" text="Estado"/>
+            <TableColumn fx:id="colUbicacion" minWidth="150" text="Ubicación"/>
+            <TableColumn fx:id="colLote" minWidth="110" text="Lote"/>
             <TableColumn fx:id="colIncidencia" minWidth="200" maxWidth="360" text="Incidencia"/>
             <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
             <TableColumn fx:id="colObservacionTelefono" minWidth="150" maxWidth="300" text="Observación"/>

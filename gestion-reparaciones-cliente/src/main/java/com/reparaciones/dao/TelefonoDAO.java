@@ -139,4 +139,23 @@ public class TelefonoDAO {
         body.put("updatedAt", updatedAt);
         ApiClient.patch("/api/telefonos/" + imei + "/cliente", body);
     }
+
+    /** Inventario completo para la vista IMEIs evolucionada (F2a). */
+    public List<com.reparaciones.models.TelefonoInventario> getInventario() throws SQLException {
+        return ApiClient.getList("/api/telefonos/inventario", com.reparaciones.models.TelefonoInventario.class);
+    }
+
+    /** Edición de atributos (modelo/storage/color/grados) con lock optimista. */
+    public void actualizarAtributos(String imei, String modelo, Integer storageGb, String color,
+                                    String gradoProveedor, String gradoPropio,
+                                    java.time.LocalDateTime updatedAt) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("modelo", modelo);
+        body.put("storageGb", storageGb);
+        body.put("color", color);
+        body.put("gradoProveedor", gradoProveedor);
+        body.put("gradoPropio", gradoPropio);
+        body.put("updatedAt", updatedAt);
+        ApiClient.patch("/api/telefonos/" + imei + "/atributos", body);
+    }
 }
