@@ -56,6 +56,14 @@ lo que el SKU necesita:
    atributos, alta manual) se filtran por el modelo del teléfono, y el importador
    valida el color contra la paleta del modelo; un color fuera de paleta sigue el
    flujo "sin mapear" (el usuario elige de la paleta y la equivalencia se recuerda).
+   **La matriz incluye también las CAPACIDADES oficiales de cada modelo**
+   (refinamiento del usuario, 2026-07-14: no existe un iPhone de 276 GB): el
+   Storage de editar atributos y alta manual pasa de campo numérico libre a
+   selector filtrado por modelo; el importador valida el storage del fichero
+   contra las capacidades del modelo y, si no casa, lo marca como AVISO en el
+   Detalle de la vista previa (no bloquea: un storage raro no impide identificar
+   el teléfono; se corrige luego con el selector). Con esto, todo componente del
+   SKU tiene vocabulario controlado salvo la batería, que es medición (0-100).
 4. **Vocabulario único en todo el sistema**: los TIPO de chasis del catálogo de
    componentes se renombran al mismo color oficial ("…negro" → "…Black"). Cambio de
    DATOS (UPDATE de strings; las referencias van por ID_COM y no se rompen); habilita
