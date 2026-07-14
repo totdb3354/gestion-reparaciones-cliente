@@ -195,7 +195,7 @@ public final class ImportadorLoteDialog {
         private void calcular() {
             List<String> textosModelo = filas.stream().map(Fila::modeloTexto).distinct().toList();
             Map<String, String> mapeoModelos = ModeloMapper.mapear(textosModelo, equivalencias);
-            plan = ClasificadorImportacion.clasificar(filas, mapeoModelos, existentesPorImei);
+            plan = ClasificadorImportacion.clasificar(filas, mapeoModelos, Map.of(), existentesPorImei);
         }
 
         /** Re-mapea y re-clasifica TODO tras resolver un modelo sin mapear, y repinta el diálogo. */
