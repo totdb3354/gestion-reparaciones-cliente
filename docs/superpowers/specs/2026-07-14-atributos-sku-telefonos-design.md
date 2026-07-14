@@ -47,9 +47,15 @@ lo que el SKU necesita:
    escriben así; los SKUs del usuario usan el oficial (no castellano). Las
    equivalencias quedan solo para erratas/variantes ("Product Red" → "(PRODUCT)RED";
    casos con trampa los decide el usuario la primera vez, como con los modelos).
-3. **Catálogo de colores en CÓDIGO** (lista cerrada estilo `MODELOS_ORDENADOS`), no
-   tabla con gestión UI: los colores nuevos llegan con las series nuevas de iPhone,
-   que ya exigen release para ampliar el catálogo de modelos — se actualizan juntos.
+3. **Catálogo de colores en CÓDIGO** (estilo `MODELOS_ORDENADOS`), no tabla con
+   gestión UI: los colores nuevos llegan con las series nuevas de iPhone, que ya
+   exigen release para ampliar el catálogo de modelos — se actualizan juntos.
+   **Es una matriz modelo→colores** (paleta oficial de cada modelo: Starlight
+   existe en 14/15, Black Titanium solo en 16 Pro…), no una lista plana
+   (refinamiento del usuario, 2026-07-14): los selectores de color (editar
+   atributos, alta manual) se filtran por el modelo del teléfono, y el importador
+   valida el color contra la paleta del modelo; un color fuera de paleta sigue el
+   flujo "sin mapear" (el usuario elige de la paleta y la equivalencia se recuerda).
 4. **Vocabulario único en todo el sistema**: los TIPO de chasis del catálogo de
    componentes se renombran al mismo color oficial ("…negro" → "…Black"). Cambio de
    DATOS (UPDATE de strings; las referencias van por ID_COM y no se rompen); habilita
@@ -63,10 +69,17 @@ lo que el SKU necesita:
    casos raros ⇒ edición manual del ATRIBUTO batería (no del SKU). En el SKU solo
    aparece el sufijo `100` cuando vale exactamente 100.
 7. **SKU dinámico**: cambia cuando cambian los atributos (chasis de otro color ⇒
-   color nuevo ⇒ SKU nuevo; batería cambiada ⇒ sufijo 100). Consecuencia directa
-   de derivar en vez de almacenar.
+   color nuevo ⇒ SKU nuevo; batería cambiada ⇒ sufijo 100; chasis nuevo ⇒ grado
+   al máximo ⇒ SKU nuevo — confirmado por el usuario 2026-07-14). Consecuencia
+   directa de derivar en vez de almacenar.
 8. **Grado del SKU = grado PROPIO** (C/B/A-/A/A+). El del proveedor no se pierde:
    columna aparte ya existente, visible en inventario ("prov: X").
+   **Regla de reparación de chasis** (para la automatización de F2b/F2c): poner
+   chasis nuevo sube el grado al máximo de la escala.
+   **DECISIÓN PENDIENTE del usuario**: ¿A+ es un grado real distinto de A, o
+   equivalen? Si se elimina A+, la escala queda C/B/A-/A (con migración de los
+   A+ existentes a A y ajuste del ENUM `GRADO_PROPIO`). Afecta al valor "máximo"
+   de la regla anterior y al render del SKU.
 
 ## 3. Alcance por fases
 
