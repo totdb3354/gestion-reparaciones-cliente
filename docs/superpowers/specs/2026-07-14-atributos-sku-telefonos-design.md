@@ -72,14 +72,15 @@ lo que el SKU necesita:
    color nuevo ⇒ SKU nuevo; batería cambiada ⇒ sufijo 100; chasis nuevo ⇒ grado
    al máximo ⇒ SKU nuevo — confirmado por el usuario 2026-07-14). Consecuencia
    directa de derivar en vez de almacenar.
-8. **Grado del SKU = grado PROPIO** (C/B/A-/A/A+). El del proveedor no se pierde:
-   columna aparte ya existente, visible en inventario ("prov: X").
+8. **Grado del SKU = grado PROPIO**, escala **C / B / A- / A** (decisión del
+   usuario 2026-07-14: A+ se elimina, **A es el máximo**; el combo del cliente ya
+   se ajustó en la rama F2a). El grado del PROVEEDOR es texto libre y puede ser
+   cualquier cosa — columna aparte, visible en inventario ("prov: X"), nunca
+   restringido. Pendiente en la mini-fase: `ALTER ... MODIFY GRADO_PROPIO
+   ENUM('C','B','A-','A')` + `UPDATE` de posibles 'A+' existentes a 'A' + sync
+   crear_bd.sql.
    **Regla de reparación de chasis** (para la automatización de F2b/F2c): poner
-   chasis nuevo sube el grado al máximo de la escala.
-   **DECISIÓN PENDIENTE del usuario**: ¿A+ es un grado real distinto de A, o
-   equivalen? Si se elimina A+, la escala queda C/B/A-/A (con migración de los
-   A+ existentes a A y ajuste del ENUM `GRADO_PROPIO`). Afecta al valor "máximo"
-   de la regla anterior y al render del SKU.
+   chasis nuevo sube el grado al máximo de la escala (= A).
 
 ## 3. Alcance por fases
 
