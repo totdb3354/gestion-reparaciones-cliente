@@ -1453,7 +1453,7 @@ public class AgrupadoController {
         tfStorage.textProperty().addListener((obs, o, n) -> { if (!n.matches("\\d*")) tfStorage.setText(o); });
         TextField tfColor = new TextField(t.getColor() != null ? t.getColor() : "");
         TextField tfGradoProv = new TextField(t.getGradoProveedor() != null ? t.getGradoProveedor() : "");
-        ComboBox<String> cbGradoPropio = new ComboBox<>(FXCollections.observableArrayList("—", "C", "B", "A-", "A", "A+"));
+        ComboBox<String> cbGradoPropio = new ComboBox<>(FXCollections.observableArrayList("—", "C", "B", "A-", "A"));
         cbGradoPropio.setValue(t.getGradoPropio() != null ? t.getGradoPropio() : "—");
 
         Button btnGuardar = new Button("Guardar");
