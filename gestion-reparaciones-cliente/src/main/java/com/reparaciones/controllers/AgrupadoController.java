@@ -1561,7 +1561,7 @@ public class AgrupadoController {
             @Override
             protected void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty ? null : (item == null ? "" : item + " GB"));
+                setText(empty ? null : (item == null ? "—" : item + " GB"));
             }
         };
     }
@@ -1571,7 +1571,7 @@ public class AgrupadoController {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty ? null : (item == null ? "" : item));
+                setText(empty ? null : (item == null ? "—" : item));
             }
         };
     }
