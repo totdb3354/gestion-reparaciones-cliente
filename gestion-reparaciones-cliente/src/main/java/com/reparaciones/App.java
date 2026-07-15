@@ -33,6 +33,11 @@ public class App extends Application {
 
     /** Lanza la aplicación JavaFX. */
     public static void main(String[] args) {
+        // El pool de conexiones keep-alive del HttpClient (ApiClient) debe cerrar los sockets
+        // inactivos ANTES de que lo haga el servidor/firewall (~1 min), o el login reutilizará
+        // un socket muerto y fallará. Debe fijarse antes de que se cargue la clase HttpClient
+        // (ApiClient), que lee esta propiedad al crear el pool.
+        System.setProperty("jdk.httpclient.keepalive.timeout", "10");
         launch(args);
     }
 }
