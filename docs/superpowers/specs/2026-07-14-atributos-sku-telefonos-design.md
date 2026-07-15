@@ -72,10 +72,14 @@ lo que el SKU necesita:
    teléfono, y el chasis usa el COLOR BASE simplificado.** El teléfono lleva el
    oficial completo ("(PRODUCT)RED", "Blue Titanium", "Midnight"…); el chasis se
    nombra con el color base ("Red", "Blue"… — teléfono White ⇒ chasis "…White",
-   teléfono Blue Titanium ⇒ chasis "…Blue"). NO se deriva el color del teléfono
-   desde el chasis: lo que habrá (post-F2b) es una **comprobación de consistencia**
-   comparando en BD el color del teléfono con el del chasis montado, vía un **mapa
-   oficial→base** (muchos-a-uno: (PRODUCT)RED→Red, Blue/Pacific/Sierra Blue→Blue,
+   teléfono Blue Titanium ⇒ chasis "…Blue"). Un cambio de chasis en una reparación
+   cambia el color REAL del teléfono (enlaza con la decisión 7: color nuevo ⇒ SKU
+   nuevo): el requisito es que **al cierre ambos colores COINCIDAN**. El color del
+   teléfono no se deriva en silencio desde el chasis: habrá (post-F2b) una
+   **comprobación de consistencia** comparando en BD el color del teléfono con el
+   del chasis montado — que avisa y la actualización del atributo la confirma el
+   usuario (mecanismo exacto a diseñar en esa fase) — vía un **mapa oficial→base**
+   (muchos-a-uno: (PRODUCT)RED→Red, Blue/Pacific/Sierra Blue→Blue,
    Midnight/Starlight/Titaniums/etc. → su base; dato de negocio del usuario,
    candidato a tabla en BD — se define al construir esa comprobación). Regla
    anti-substring para cualquier parseo del TIPO: matching por token exacto, nunca
