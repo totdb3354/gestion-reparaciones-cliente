@@ -121,6 +121,19 @@ public final class ImportadorLoteDialog {
         return f.imei() == null ? "" : f.imei().replaceAll("\\D", "");
     }
 
+    /**
+     * Modelo mostrado en las tablas: nombre del catálogo con sufijo eSIM si procede, o el
+     * texto crudo del fichero si no hay modelo interno (el crudo ya trae su propia marca eSIM).
+     */
+    private static String modeloMostrado(FilaClasificada fc) {
+        if (fc.modeloInterno() == null) {
+            return fc.fila().modeloTexto() == null ? "" : fc.fila().modeloTexto();
+        }
+        String modelo = FormularioReparacionController.traducirModelo(fc.modeloInterno());
+        if (ModeloMapper.esEsim(fc.fila().modeloTexto())) modelo += " eSIM";
+        return modelo;
+    }
+
     /** "Nuevo" verde / "Re-entrada" azul — únicos destinos que llegan a las tablas de lote. */
     private static String etiquetaDestinoImportable(Destino d) {
         return d == Destino.NUEVO ? "Nuevo" : "Re-entrada";
@@ -531,11 +544,7 @@ public final class ImportadorLoteDialog {
             cImei.setCellValueFactory(d -> new SimpleStringProperty(imeiLimpio(d.getValue().fila())));
 
             TableColumn<FilaClasificada, String> cModelo = new TableColumn<>("Modelo");
-            cModelo.setCellValueFactory(d -> {
-                String modelo = FormularioReparacionController.traducirModelo(d.getValue().modeloInterno());
-                if (ModeloMapper.esEsim(d.getValue().fila().modeloTexto())) modelo += " eSIM";
-                return new SimpleStringProperty(modelo);
-            });
+            cModelo.setCellValueFactory(d -> new SimpleStringProperty(modeloMostrado(d.getValue())));
 
             TableColumn<FilaClasificada, String> cStorage = new TableColumn<>("Storage");
             cStorage.setCellValueFactory(d -> {
@@ -603,13 +612,7 @@ public final class ImportadorLoteDialog {
                     d.getValue().fila().imei() == null ? "" : d.getValue().fila().imei()));
 
             TableColumn<FilaClasificada, String> cModelo = new TableColumn<>("Modelo");
-            cModelo.setCellValueFactory(d -> {
-                FilaClasificada fc = d.getValue();
-                String texto = fc.modeloInterno() != null
-                        ? FormularioReparacionController.traducirModelo(fc.modeloInterno())
-                        : (fc.fila().modeloTexto() == null ? "" : fc.fila().modeloTexto());
-                return new SimpleStringProperty(texto);
-            });
+            cModelo.setCellValueFactory(d -> new SimpleStringProperty(modeloMostrado(d.getValue())));
 
             TableColumn<FilaClasificada, String> cDestino = new TableColumn<>("Destino");
             cDestino.setCellValueFactory(d -> new SimpleStringProperty(etiquetaDestino(d.getValue().destino())));
