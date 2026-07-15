@@ -13,6 +13,7 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.*;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,7 +38,9 @@ import java.util.Properties;
  */
 public class ApiClient {
 
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
@@ -291,7 +294,8 @@ public class ApiClient {
         HttpRequest.Builder b = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + path))
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(15));
         if (token != null) b.header("Authorization", "Bearer " + token);
         return b;
     }

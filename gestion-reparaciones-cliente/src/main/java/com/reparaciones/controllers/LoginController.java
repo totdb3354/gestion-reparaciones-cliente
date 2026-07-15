@@ -3,6 +3,7 @@ package com.reparaciones.controllers;
 import com.reparaciones.Sesion;
 import com.reparaciones.dao.UsuarioDAO;
 import com.reparaciones.models.Usuario;
+import com.reparaciones.utils.ConexionException;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -106,6 +107,8 @@ public class LoginController {
             }
             Sesion.iniciar(u);
             cargarMainView();
+        } catch (ConexionException e) {
+            mostrarError("No se pudo conectar con el servidor. Comprueba la conexión e inténtalo de nuevo.");
         } catch (SQLException e) {
             mostrarError("Error de conexión con la base de datos.");
         }
