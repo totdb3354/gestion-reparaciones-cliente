@@ -388,9 +388,9 @@ public final class ImportadorLoteDialog {
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Colores.AZUL_MEDIO + ";");
                 HBox fila = new HBox(10, lbl);
                 fila.setAlignment(Pos.CENTER_LEFT);
-                if (!texto.isEmpty()) {
+                if (!ColorMapper.normalizar(texto).isEmpty()) {
                     // Guard de texto vacío: no ofrecer resolver (lección F2a: nunca guardar una
-                    // equivalencia para un texto en blanco, aplicaría a cualquier fila sin color).
+                    // equivalencia para un texto que normaliza a vacío, aplicaría a cualquier fila sin color).
                     String modeloInterno = afectadas.get(0).modeloInterno();
                     Button btnElegir = new Button("Elegir color…");
                     btnElegir.setOnAction(e -> resolverColorSinMapear(texto, modeloInterno));
