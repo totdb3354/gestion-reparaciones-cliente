@@ -21,6 +21,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -95,9 +96,10 @@ public final class AltaManualLoteDialog {
         private ComboBox<Proveedor> comboProveedor;
         private Button btnModelo;
         private Label lblModelo;
-        private TextField tfStorage;
-        private TextField tfColor;
+        private ComboBox<Integer> comboStorage;
+        private ComboBox<String> comboColor;
         private TextField tfGrado;
+        private CheckBox cbEsim;
         private TextField tfPrecio;
         private Label lblDivisaPrecio;
         private Label lblPrecioEur;
@@ -153,24 +155,31 @@ public final class AltaManualLoteDialog {
             btnModelo.setOnAction(e -> SelectorModeloDialog.elegir(null).ifPresent(interno -> {
                 modeloInterno = interno;
                 lblModelo.setText(FormularioReparacionController.traducirModelo(interno));
+                repoblarStorage(comboStorage.getValue());
+                repoblarColor(comboColor.getValue());
             }));
             HBox filaModelo = new HBox(10, btnModelo, lblModelo);
             filaModelo.setAlignment(Pos.CENTER_LEFT);
 
-            tfStorage = new TextField();
-            tfStorage.setPromptText("Storage GB");
-            tfStorage.textProperty().addListener((obs, o, n) -> {
-                if (!n.matches("\\d*")) {
-                    String solo = n.replaceAll("\\D", "");
-                    Platform.runLater(() -> tfStorage.setText(solo));
-                }
-            });
+            comboStorage = new ComboBox<>();
+            comboStorage.setEditable(false);
+            comboStorage.setMaxWidth(Double.MAX_VALUE);
+            comboStorage.setButtonCell(celdaStorage());
+            comboStorage.setCellFactory(lv -> celdaStorage());
+            repoblarStorage(null);
 
-            tfColor = new TextField();
-            tfColor.setPromptText("Color");
+            comboColor = new ComboBox<>();
+            comboColor.setEditable(false);
+            comboColor.setMaxWidth(Double.MAX_VALUE);
+            comboColor.setButtonCell(celdaColor());
+            comboColor.setCellFactory(lv -> celdaColor());
+            repoblarColor(null);
 
             tfGrado = new TextField();
             tfGrado.setPromptText("Grado proveedor");
+            cbEsim = new CheckBox("eSIM");
+            HBox filaGrado = new HBox(10, tfGrado, cbEsim);
+            filaGrado.setAlignment(Pos.CENTER_LEFT);
 
             tfPrecio = new TextField();
             tfPrecio.setPromptText("Precio/unidad");
@@ -183,9 +192,9 @@ public final class AltaManualLoteDialog {
             filaPrecio.setAlignment(Pos.CENTER_LEFT);
 
             VBox boxAtributos = new VBox(6, lblAtributos, filaModelo,
-                    new Label("Storage GB:"), tfStorage,
-                    new Label("Color:"), tfColor,
-                    new Label("Grado proveedor:"), tfGrado,
+                    new Label("Storage GB:"), comboStorage,
+                    new Label("Color:"), comboColor,
+                    new Label("Grado proveedor:"), filaGrado,
                     new Label("Precio/unidad:"), filaPrecio);
 
             VBox contenidoScroll = new VBox(14, boxBatch, boxProveedor, boxAtributos);
@@ -351,13 +360,55 @@ public final class AltaManualLoteDialog {
             return t;
         }
 
-        // ─── Parseo de atributos opcionales ──────────────────────────────────────
+        // ─── Selectores por modelo (storage / color) ─────────────────────────────
 
-        private Integer parseStorageGb() {
-            String texto = tfStorage.getText() == null ? "" : tfStorage.getText().trim();
-            if (texto.isEmpty()) return null;
-            try { return Integer.valueOf(texto); } catch (NumberFormatException e) { return null; }
+        /** Repuebla el combo de storage según el modelo común; conserva la selección si sigue siendo válida. */
+        private void repoblarStorage(Integer seleccionActual) {
+            List<Integer> capacidades = modeloInterno == null
+                    ? CatalogoAtributos.CAPACIDADES_TODAS
+                    : CatalogoAtributos.capacidadesDe(modeloInterno);
+            if (capacidades.isEmpty()) capacidades = CatalogoAtributos.CAPACIDADES_TODAS;
+            List<Integer> items = new ArrayList<>();
+            items.add(null);
+            items.addAll(capacidades);
+            comboStorage.setItems(FXCollections.observableArrayList(items));
+            comboStorage.setValue(items.contains(seleccionActual) ? seleccionActual : null);
         }
+
+        /** Repuebla el combo de color según el modelo común; conserva la selección si sigue siendo válida. */
+        private void repoblarColor(String seleccionActual) {
+            List<String> colores = modeloInterno == null
+                    ? CatalogoAtributos.COLORES_TODOS
+                    : CatalogoAtributos.coloresDe(modeloInterno);
+            if (colores.isEmpty()) colores = CatalogoAtributos.COLORES_TODOS;
+            List<String> items = new ArrayList<>();
+            items.add(null);
+            items.addAll(colores);
+            comboColor.setItems(FXCollections.observableArrayList(items));
+            comboColor.setValue(items.contains(seleccionActual) ? seleccionActual : null);
+        }
+
+        private static ListCell<Integer> celdaStorage() {
+            return new ListCell<>() {
+                @Override
+                protected void updateItem(Integer item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty ? null : (item == null ? "" : item + " GB"));
+                }
+            };
+        }
+
+        private static ListCell<String> celdaColor() {
+            return new ListCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty ? null : (item == null ? "" : item));
+                }
+            };
+        }
+
+        // ─── Parseo de atributos opcionales ──────────────────────────────────────
 
         private BigDecimal parsePrecio() {
             String texto = tfPrecio.getText() == null ? "" : tfPrecio.getText().trim();
@@ -380,9 +431,10 @@ public final class AltaManualLoteDialog {
             tfBatch.setDisable(enVuelo);
             comboProveedor.setDisable(enVuelo);
             btnModelo.setDisable(enVuelo);
-            tfStorage.setDisable(enVuelo);
-            tfColor.setDisable(enVuelo);
+            comboStorage.setDisable(enVuelo);
+            comboColor.setDisable(enVuelo);
             tfGrado.setDisable(enVuelo);
+            cbEsim.setDisable(enVuelo);
             tfPrecio.setDisable(enVuelo);
             tfScan.setDisable(enVuelo);
             listaImeis.setDisable(enVuelo);
@@ -398,12 +450,13 @@ public final class AltaManualLoteDialog {
             if (batch.isEmpty() || proveedor == null || imeisSnapshot.isEmpty()) return;
 
             String modelo = modeloInterno;
-            Integer storageGb = parseStorageGb();
-            String color = textoOrNull(tfColor.getText());
+            Integer storageGb = comboStorage.getValue();
+            String color = comboColor.getValue();
             String grado = textoOrNull(tfGrado.getText());
             BigDecimal precio = parsePrecio();
             String divisa = proveedor.getDivisa();
             int idProv = proveedor.getIdProv();
+            boolean esEsim = cbEsim.isSelected();
 
             setImportando(true);
             new Thread(() -> {
@@ -432,7 +485,7 @@ public final class AltaManualLoteDialog {
                     List<Importacion.TelefonoImport> telefonos = new ArrayList<>();
                     for (String imei : imeisFinal) {
                         telefonos.add(new Importacion.TelefonoImport(imei, modelo, storageGb, color, grado,
-                                precio, divisa, precioEur, false));
+                                precio, divisa, precioEur, esEsim));
                     }
                     Importacion.LoteImport loteImport = new Importacion.LoteImport(batch, idProv, null, telefonos);
                     Importacion.Respuesta resp = loteDAO.importar(new Importacion.Request(List.of(loteImport)));
