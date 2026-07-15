@@ -1,5 +1,6 @@
 package com.reparaciones.controllers;
 
+import com.reparaciones.dao.ColorEquivalenciaDAO;
 import com.reparaciones.dao.EquivalenciaModeloDAO;
 import com.reparaciones.dao.LoteDAO;
 import com.reparaciones.dao.ProveedorDAO;
@@ -13,6 +14,7 @@ import com.reparaciones.utils.ClasificadorImportacion.Destino;
 import com.reparaciones.utils.ClasificadorImportacion.FilaClasificada;
 import com.reparaciones.utils.ClasificadorImportacion.LotePlan;
 import com.reparaciones.utils.ClasificadorImportacion.Plan;
+import com.reparaciones.utils.ColorMapper;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.LoteXlsxParser;
 import com.reparaciones.utils.LoteXlsxParser.Fila;
@@ -28,6 +30,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -91,6 +94,8 @@ public final class ImportadorLoteDialog {
                 }
                 EquivalenciaModeloDAO equivalenciaDAO = new EquivalenciaModeloDAO();
                 Map<String, String> equivalencias = equivalenciaDAO.getAll();
+                ColorEquivalenciaDAO colorEquivalenciaDAO = new ColorEquivalenciaDAO();
+                Map<String, String> equivalenciasColor = colorEquivalenciaDAO.getAll();
                 ProveedorDAO proveedorDAO = new ProveedorDAO();
                 List<Proveedor> proveedores = proveedorDAO.getActivos();
 
@@ -103,7 +108,7 @@ public final class ImportadorLoteDialog {
                 List<VerificacionImei> verificaciones = imeis.isEmpty() ? List.of() : loteDAO.verificar(imeis);
 
                 List<Fila> filas = resultado.filas();
-                Platform.runLater(() -> new Sesion(owner, archivo.getName(), filas, equivalencias,
+                Platform.runLater(() -> new Sesion(owner, archivo.getName(), filas, equivalencias, equivalenciasColor,
                         proveedores, verificaciones, onImportado).mostrar());
             } catch (Exception e) {
                 Platform.runLater(() -> Alertas.mostrarError("No se pudo leer el fichero: " + e.getMessage()));
@@ -131,6 +136,7 @@ public final class ImportadorLoteDialog {
             case INVALIDO -> "Inválido";
             case DUPLICADO_FICHERO -> "Duplicado en fichero";
             case MODELO_SIN_MAPEAR -> "Modelo sin mapear";
+            case COLOR_SIN_MAPEAR -> "Color sin mapear";
         };
     }
 
@@ -142,7 +148,7 @@ public final class ImportadorLoteDialog {
     private static final class Sesion {
 
         private record FilaLote(String imei, String modeloInterno, Integer storageGb, String color,
-                                 String grado, BigDecimal precioCompra) {}
+                                 String grado, BigDecimal precioCompra, boolean esEsim) {}
 
         private record DatosLote(String batchNumber, Proveedor proveedor, List<FilaLote> filas) {}
 
@@ -154,10 +160,12 @@ public final class ImportadorLoteDialog {
         private final Runnable onImportado;
 
         private final EquivalenciaModeloDAO equivalenciaDAO = new EquivalenciaModeloDAO();
+        private final ColorEquivalenciaDAO colorEquivalenciaDAO = new ColorEquivalenciaDAO();
         private final LoteDAO loteDAO = new LoteDAO();
         private final TipoCambioDAO tipoCambioDAO = new TipoCambioDAO();
 
         private Map<String, String> equivalencias;
+        private Map<String, String> equivalenciasColor;
         private Plan plan;
         private final Map<String, Proveedor> seleccionProveedorPorLote = new HashMap<>();
         private final Map<String, Double> tasasCache = new ConcurrentHashMap<>();
@@ -165,6 +173,7 @@ public final class ImportadorLoteDialog {
         private Stage stage;
         private Label lblBadges;
         private VBox bloqueModelosSinMapear;
+        private VBox bloqueColoresSinMapear;
         private VBox contenedorLotes;
         private TableView<FilaClasificada> tablaExcluidas;
         private TitledPane paneExcluidas;
@@ -175,11 +184,13 @@ public final class ImportadorLoteDialog {
         private boolean importando;
 
         Sesion(Window owner, String nombreFichero, List<Fila> filas, Map<String, String> equivalencias,
-               List<Proveedor> proveedores, List<VerificacionImei> verificaciones, Runnable onImportado) {
+               Map<String, String> equivalenciasColor, List<Proveedor> proveedores,
+               List<VerificacionImei> verificaciones, Runnable onImportado) {
             this.owner = owner;
             this.nombreFichero = nombreFichero;
             this.filas = filas;
             this.equivalencias = new HashMap<>(equivalencias);
+            this.equivalenciasColor = new HashMap<>(equivalenciasColor);
             this.proveedores = proveedores;
             this.onImportado = onImportado;
             for (VerificacionImei v : verificaciones) existentesPorImei.put(v.getImei(), v);
@@ -195,7 +206,7 @@ public final class ImportadorLoteDialog {
         private void calcular() {
             List<String> textosModelo = filas.stream().map(Fila::modeloTexto).distinct().toList();
             Map<String, String> mapeoModelos = ModeloMapper.mapear(textosModelo, equivalencias);
-            plan = ClasificadorImportacion.clasificar(filas, mapeoModelos, Map.of(), existentesPorImei);
+            plan = ClasificadorImportacion.clasificar(filas, mapeoModelos, equivalenciasColor, existentesPorImei);
         }
 
         /** Re-mapea y re-clasifica TODO tras resolver un modelo sin mapear, y repinta el diálogo. */
@@ -222,6 +233,10 @@ public final class ImportadorLoteDialog {
             bloqueModelosSinMapear.setPadding(new Insets(10));
             bloqueModelosSinMapear.setStyle("-fx-background-color: " + Colores.FILA_SOLICITUD_BG + "; -fx-background-radius: 6;");
 
+            bloqueColoresSinMapear = new VBox(6);
+            bloqueColoresSinMapear.setPadding(new Insets(10));
+            bloqueColoresSinMapear.setStyle("-fx-background-color: " + Colores.FILA_SOLICITUD_BG + "; -fx-background-radius: 6;");
+
             contenedorLotes = new VBox(10);
 
             tablaExcluidas = crearTablaExcluidas();
@@ -242,7 +257,7 @@ public final class ImportadorLoteDialog {
             HBox botones = new HBox(10, btnCancelar, btnImportar);
             botones.setAlignment(Pos.CENTER_RIGHT);
 
-            VBox contenidoScroll = new VBox(14, bloqueModelosSinMapear, contenedorLotes, paneExcluidas);
+            VBox contenidoScroll = new VBox(14, bloqueModelosSinMapear, bloqueColoresSinMapear, contenedorLotes, paneExcluidas);
             ScrollPane scroll = new ScrollPane(contenidoScroll);
             scroll.setFitToWidth(true);
             VBox.setVgrow(scroll, Priority.ALWAYS);
@@ -274,6 +289,7 @@ public final class ImportadorLoteDialog {
             lblBadges.setText(nuevos + " nuevos · " + reentradas + " re-entradas · " + conflictos + " conflictos · " + avisos + " avisos");
 
             actualizarBloqueModelosSinMapear();
+            actualizarBloqueColoresSinMapear();
 
             contenedorLotes.getChildren().clear();
             for (LotePlan lote : plan.lotes()) contenedorLotes.getChildren().add(crearPaneLote(lote));
@@ -338,6 +354,75 @@ public final class ImportadorLoteDialog {
                         reclasificar();
                     });
                 }, "guardar-equivalencia-modelo").start();
+            });
+        }
+
+        // ─── Bloque "Colores sin mapear" ────────────────────────────────────────
+
+        private void actualizarBloqueColoresSinMapear() {
+            Map<String, List<FilaClasificada>> filasPorTexto = plan.excluidas().stream()
+                    .filter(fc -> fc.destino() == Destino.COLOR_SIN_MAPEAR)
+                    .collect(Collectors.groupingBy(
+                            fc -> fc.fila().color() == null ? "" : fc.fila().color(),
+                            LinkedHashMap::new, Collectors.toList()));
+
+            bloqueColoresSinMapear.getChildren().clear();
+            if (filasPorTexto.isEmpty()) {
+                bloqueColoresSinMapear.setVisible(false);
+                bloqueColoresSinMapear.setManaged(false);
+                return;
+            }
+            bloqueColoresSinMapear.setVisible(true);
+            bloqueColoresSinMapear.setManaged(true);
+
+            Label titulo = new Label("Colores sin mapear");
+            titulo.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + Colores.TEXTO_ERROR + ";");
+            bloqueColoresSinMapear.getChildren().add(titulo);
+
+            for (Map.Entry<String, List<FilaClasificada>> entry : filasPorTexto.entrySet()) {
+                String texto = entry.getKey();
+                List<FilaClasificada> afectadas = entry.getValue();
+                int n = afectadas.size();
+                String textoMostrado = texto.isEmpty() ? "(vacío)" : texto;
+                Label lbl = new Label("\"" + textoMostrado + "\" (" + n + (n == 1 ? " fila)" : " filas)"));
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Colores.AZUL_MEDIO + ";");
+                HBox fila = new HBox(10, lbl);
+                fila.setAlignment(Pos.CENTER_LEFT);
+                if (!texto.isEmpty()) {
+                    // Guard de texto vacío: no ofrecer resolver (lección F2a: nunca guardar una
+                    // equivalencia para un texto en blanco, aplicaría a cualquier fila sin color).
+                    String modeloInterno = afectadas.get(0).modeloInterno();
+                    Button btnElegir = new Button("Elegir color…");
+                    btnElegir.setOnAction(e -> resolverColorSinMapear(texto, modeloInterno));
+                    fila.getChildren().add(btnElegir);
+                }
+                bloqueColoresSinMapear.getChildren().add(fila);
+            }
+        }
+
+        private void resolverColorSinMapear(String texto, String modeloInterno) {
+            if (texto == null || texto.isBlank()) return;
+            List<String> paleta = CatalogoAtributos.coloresDe(modeloInterno);
+            if (paleta.isEmpty()) paleta = CatalogoAtributos.COLORES_TODOS;
+            ChoiceDialog<String> dialogo = new ChoiceDialog<>(null, paleta);
+            dialogo.setTitle("Elegir color");
+            dialogo.setHeaderText(null);
+            dialogo.setContentText("Color oficial para \"" + texto + "\":");
+            dialogo.showAndWait().ifPresent(oficial -> {
+                String normalizado = ColorMapper.normalizar(texto);
+                if (normalizado.isEmpty()) return;
+                new Thread(() -> {
+                    try {
+                        colorEquivalenciaDAO.guardar(normalizado, oficial);
+                    } catch (SQLException ex) {
+                        Platform.runLater(() -> Alertas.mostrarError("No se pudo guardar la equivalencia: " + ex.getMessage()));
+                        return;
+                    }
+                    Platform.runLater(() -> {
+                        equivalenciasColor.put(normalizado, oficial);
+                        reclasificar();
+                    });
+                }, "guardar-equivalencia-color").start();
             });
         }
 
@@ -457,7 +542,7 @@ public final class ImportadorLoteDialog {
 
             TableColumn<FilaClasificada, String> cColor = new TableColumn<>("Color");
             cColor.setCellValueFactory(d -> new SimpleStringProperty(
-                    d.getValue().fila().color() == null ? "" : d.getValue().fila().color()));
+                    d.getValue().colorOficial() == null ? "" : d.getValue().colorOficial()));
 
             TableColumn<FilaClasificada, String> cGrado = new TableColumn<>("Grado");
             cGrado.setCellValueFactory(d -> new SimpleStringProperty(
@@ -549,6 +634,7 @@ public final class ImportadorLoteDialog {
             cbReentradas.setDisable(enVuelo);
             contenedorLotes.setDisable(enVuelo);          // ComboBox de proveedor de cada lote
             bloqueModelosSinMapear.setDisable(enVuelo);   // botones "Elegir modelo…"
+            bloqueColoresSinMapear.setDisable(enVuelo);   // botones "Elegir color…"
             actualizarBotonImportar();
         }
 
@@ -578,8 +664,8 @@ public final class ImportadorLoteDialog {
                 for (FilaClasificada fc : lote.filas()) {
                     if (fc.destino() == Destino.REENTRADA && !incluirReentradas) continue;
                     Fila f = fc.fila();
-                    filasLote.add(new FilaLote(imeiLimpio(f), fc.modeloInterno(), f.storageGb(), f.color(),
-                            f.grado(), f.precioCompra()));
+                    filasLote.add(new FilaLote(imeiLimpio(f), fc.modeloInterno(), f.storageGb(), fc.colorOficial(),
+                            f.grado(), f.precioCompra(), ModeloMapper.esEsim(f.modeloTexto())));
                 }
                 if (!filasLote.isEmpty()) datosLotes.add(new DatosLote(lote.batchNumber(), proveedor, filasLote));
             }
@@ -596,7 +682,7 @@ public final class ImportadorLoteDialog {
                             BigDecimal precioEur = fl.precioCompra() == null ? null
                                     : fl.precioCompra().multiply(BigDecimal.valueOf(tasa)).setScale(2, RoundingMode.HALF_UP);
                             telefonos.add(new Importacion.TelefonoImport(fl.imei(), fl.modeloInterno(), fl.storageGb(),
-                                    fl.color(), fl.grado(), fl.precioCompra(), dl.proveedor().getDivisa(), precioEur, false));
+                                    fl.color(), fl.grado(), fl.precioCompra(), dl.proveedor().getDivisa(), precioEur, fl.esEsim()));
                         }
                         loteImports.add(new Importacion.LoteImport(dl.batchNumber(), dl.proveedor().getIdProv(), null, telefonos));
                     }
