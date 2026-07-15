@@ -55,7 +55,7 @@ public class ComponenteDAO {
     /**
      * Devuelve los chasis disponibles (stock {@literal >} 0) del color dado.
      *
-     * @param color sufijo de color del chasis (p. ej. {@code "negro"}, {@code "blanco"})
+     * @param color sufijo de color del chasis (p. ej. {@code "Black"}, {@code "White"})
      * @return lista de chasis con stock disponible del color indicado
      * @throws SQLException si falla la llamada al servidor
      */
