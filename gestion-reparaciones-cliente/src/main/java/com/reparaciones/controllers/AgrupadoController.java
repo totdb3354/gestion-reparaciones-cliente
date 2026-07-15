@@ -358,9 +358,8 @@ public class AgrupadoController {
 
         colModelo.setCellValueFactory(d -> {
             Object row = d.getValue();
-            String m = null;
-            if (row instanceof TelefonoInventario t) m = t.getModelo();
-            else if (row instanceof ReparacionResumen rep) m = rep.getModelo();
+            if (row instanceof TelefonoInventario t) return new SimpleStringProperty(modeloVisibleMaestro(t));
+            String m = (row instanceof ReparacionResumen rep) ? rep.getModelo() : null;
             return new SimpleStringProperty((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
 
@@ -914,10 +913,21 @@ public class AgrupadoController {
         });
     }
 
+    /**
+     * Nombre visible del modelo de un teléfono en la vista maestro de IMEIs, con sufijo " eSIM"
+     * cuando el teléfono es eSIM. Fuente única para mantener el espejo tabla ↔ copiar ↔ CSV.
+     */
+    private static String modeloVisibleMaestro(TelefonoInventario t) {
+        String m = t.getModelo();
+        if (m == null || m.isEmpty()) return "";
+        String base = FormularioReparacionController.traducirModelo(m);
+        return t.isEsEsim() ? base + " eSIM" : base;
+    }
+
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
         if (row instanceof TelefonoInventario t) {
             if (col == colImei)       return t.getImei();
-            if (col == colModelo)     { String m = t.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+            if (col == colModelo)     return modeloVisibleMaestro(t);
             if (col == colStorage)    return t.getStorageGb() == null ? "" : t.getStorageGb() + " GB";
             if (col == colColor)      return t.getColor() != null ? t.getColor() : "";
             if (col == colGrado)      return t.getGradoPropio() != null ? t.getGradoPropio() : "";
@@ -1619,10 +1629,9 @@ public class AgrupadoController {
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
                 if (!(o instanceof TelefonoInventario t)) continue;
-                String modelo = t.getModelo();
                 filas.add(java.util.Arrays.asList(
                         com.reparaciones.utils.CsvExporter.textoForzado(t.getImei()),
-                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        modeloVisibleMaestro(t),
                         t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()),
                         t.getColor() != null ? t.getColor() : "",
                         t.getGradoPropio() != null ? t.getGradoPropio() : "",
