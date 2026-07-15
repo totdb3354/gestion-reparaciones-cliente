@@ -1520,9 +1520,11 @@ public class AgrupadoController {
      * se añade como item extra para no perder un dato legacy al abrir el diálogo.
      */
     private void repoblarAtributoStorage(ComboBox<Integer> combo, String modelo, Integer seleccion, boolean permitirLegacy) {
+        List<Integer> capacidades = CatalogoAtributos.capacidadesDe(modelo);
+        if (capacidades.isEmpty()) capacidades = CatalogoAtributos.CAPACIDADES_TODAS;
         List<Integer> items = new ArrayList<>();
         items.add(null);
-        items.addAll(CatalogoAtributos.capacidadesDe(modelo));
+        items.addAll(capacidades);
         if (permitirLegacy && seleccion != null && !items.contains(seleccion)) items.add(seleccion);
         combo.setItems(FXCollections.observableArrayList(items));
         combo.setValue(items.contains(seleccion) ? seleccion : null);
@@ -1534,9 +1536,11 @@ public class AgrupadoController {
      * se añade como item extra para no perder un dato legacy al abrir el diálogo.
      */
     private void repoblarAtributoColor(ComboBox<String> combo, String modelo, String seleccion, boolean permitirLegacy) {
+        List<String> colores = CatalogoAtributos.coloresDe(modelo);
+        if (colores.isEmpty()) colores = CatalogoAtributos.COLORES_TODOS;
         List<String> items = new ArrayList<>();
         items.add(null);
-        items.addAll(CatalogoAtributos.coloresDe(modelo));
+        items.addAll(colores);
         if (permitirLegacy && seleccion != null && !items.contains(seleccion)) items.add(seleccion);
         combo.setItems(FXCollections.observableArrayList(items));
         combo.setValue(items.contains(seleccion) ? seleccion : null);
