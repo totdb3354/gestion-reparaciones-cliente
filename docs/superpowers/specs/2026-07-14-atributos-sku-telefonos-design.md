@@ -68,6 +68,18 @@ lo que el SKU necesita:
    componentes se renombran al mismo color oficial ("…negro" → "…Black"). Cambio de
    DATOS (UPDATE de strings; las referencias van por ID_COM y no se rompen); habilita
    a futuro "reparación con chasis Blue ⇒ teléfono pasa a Blue" parseando el TIPO.
+   **Jerarquía y vocabularios (decisión usuario 2026-07-15): manda el SKU del
+   teléfono, y el chasis usa el COLOR BASE simplificado.** El teléfono lleva el
+   oficial completo ("(PRODUCT)RED", "Blue Titanium", "Midnight"…); el chasis se
+   nombra con el color base ("Red", "Blue"… — teléfono White ⇒ chasis "…White",
+   teléfono Blue Titanium ⇒ chasis "…Blue"). NO se deriva el color del teléfono
+   desde el chasis: lo que habrá (post-F2b) es una **comprobación de consistencia**
+   comparando en BD el color del teléfono con el del chasis montado, vía un **mapa
+   oficial→base** (muchos-a-uno: (PRODUCT)RED→Red, Blue/Pacific/Sierra Blue→Blue,
+   Midnight/Starlight/Titaniums/etc. → su base; dato de negocio del usuario,
+   candidato a tabla en BD — se define al construir esa comprobación). Regla
+   anti-substring para cualquier parseo del TIPO: matching por token exacto, nunca
+   contains/startsWith (normalizado, "productred" contiene "pro" y daría falsos Pro).
 5. **eSIM automático en el importador**: si el texto de modelo del proveedor contiene
    "esim" (normalizado, case-insensitive), `ES_ESIM = true` — sin preguntar y sin
    depender del mapeo de modelo elegido. El mapeo "iPhone 15 eSIM" → `15` deja de
