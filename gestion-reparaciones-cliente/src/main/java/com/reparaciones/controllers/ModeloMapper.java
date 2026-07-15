@@ -36,4 +36,9 @@ public final class ModeloMapper {
         }
         return out;
     }
+
+    /** true si el texto de modelo del proveedor indica variante eSIM (regla spec atributos SKU). */
+    public static boolean esEsim(String textoModelo) {
+        return textoModelo != null && normalizar(textoModelo).contains("esim");
+    }
 }

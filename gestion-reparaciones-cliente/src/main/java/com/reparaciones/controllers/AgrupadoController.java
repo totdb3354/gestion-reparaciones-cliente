@@ -358,9 +358,8 @@ public class AgrupadoController {
 
         colModelo.setCellValueFactory(d -> {
             Object row = d.getValue();
-            String m = null;
-            if (row instanceof TelefonoInventario t) m = t.getModelo();
-            else if (row instanceof ReparacionResumen rep) m = rep.getModelo();
+            if (row instanceof TelefonoInventario t) return new SimpleStringProperty(modeloVisibleMaestro(t));
+            String m = (row instanceof ReparacionResumen rep) ? rep.getModelo() : null;
             return new SimpleStringProperty((m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : "");
         });
 
@@ -914,10 +913,21 @@ public class AgrupadoController {
         });
     }
 
+    /**
+     * Nombre visible del modelo de un teléfono en la vista maestro de IMEIs, con sufijo " eSIM"
+     * cuando el teléfono es eSIM. Fuente única para mantener el espejo tabla ↔ copiar ↔ CSV.
+     */
+    private static String modeloVisibleMaestro(TelefonoInventario t) {
+        String m = t.getModelo();
+        if (m == null || m.isEmpty()) return "";
+        String base = FormularioReparacionController.traducirModelo(m);
+        return t.isEsEsim() ? base + " eSIM" : base;
+    }
+
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
         if (row instanceof TelefonoInventario t) {
             if (col == colImei)       return t.getImei();
-            if (col == colModelo)     { String m = t.getModelo(); return (m != null && !m.isEmpty()) ? FormularioReparacionController.traducirModelo(m) : ""; }
+            if (col == colModelo)     return modeloVisibleMaestro(t);
             if (col == colStorage)    return t.getStorageGb() == null ? "" : t.getStorageGb() + " GB";
             if (col == colColor)      return t.getColor() != null ? t.getColor() : "";
             if (col == colGrado)      return t.getGradoPropio() != null ? t.getGradoPropio() : "";
@@ -1440,21 +1450,36 @@ public class AgrupadoController {
         final String[] modeloSel = { t.getModelo() };
         Label lblModelo = new Label(t.getModelo() != null && !t.getModelo().isEmpty()
                 ? FormularioReparacionController.traducirModelo(t.getModelo()) : "—");
+
+        ComboBox<Integer> cbStorage = new ComboBox<>();
+        cbStorage.setEditable(false);
+        cbStorage.setMaxWidth(Double.MAX_VALUE);
+        cbStorage.setButtonCell(celdaAtributoStorage());
+        cbStorage.setCellFactory(lv -> celdaAtributoStorage());
+        repoblarAtributoStorage(cbStorage, modeloSel[0], t.getStorageGb(), true);
+
+        ComboBox<String> cbColor = new ComboBox<>();
+        cbColor.setEditable(false);
+        cbColor.setMaxWidth(Double.MAX_VALUE);
+        cbColor.setButtonCell(celdaAtributoColor());
+        cbColor.setCellFactory(lv -> celdaAtributoColor());
+        repoblarAtributoColor(cbColor, modeloSel[0], t.getColor(), true);
+
         Button btnModelo = new Button("Cambiar…");
         btnModelo.setOnAction(e -> SelectorModeloDialog.elegir(modeloSel[0]).ifPresent(m -> {
             modeloSel[0] = m;
             lblModelo.setText(FormularioReparacionController.traducirModelo(m));
+            repoblarAtributoStorage(cbStorage, modeloSel[0], cbStorage.getValue(), false);
+            repoblarAtributoColor(cbColor, modeloSel[0], cbColor.getValue(), false);
         }));
         HBox filaModelo = new HBox(8, new Label("Modelo:"), lblModelo, btnModelo);
         filaModelo.setAlignment(Pos.CENTER_LEFT);
 
-        TextField tfStorage = new TextField(t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()));
-        tfStorage.setPromptText("GB (vacío = sin dato)");
-        tfStorage.textProperty().addListener((obs, o, n) -> { if (!n.matches("\\d*")) tfStorage.setText(o); });
-        TextField tfColor = new TextField(t.getColor() != null ? t.getColor() : "");
         TextField tfGradoProv = new TextField(t.getGradoProveedor() != null ? t.getGradoProveedor() : "");
         ComboBox<String> cbGradoPropio = new ComboBox<>(FXCollections.observableArrayList("—", "C", "B", "A-", "A"));
         cbGradoPropio.setValue(t.getGradoPropio() != null ? t.getGradoPropio() : "—");
+        CheckBox cbEsim = new CheckBox("eSIM");
+        cbEsim.setSelected(t.isEsEsim());
 
         Button btnGuardar = new Button("Guardar");
         btnGuardar.setMaxWidth(Double.MAX_VALUE);
@@ -1462,10 +1487,11 @@ public class AgrupadoController {
                 "; -fx-text-fill: white; -fx-font-size: 12px; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;");
 
         VBox form = new VBox(8, filaModelo,
-                new Label("Storage (GB)"), tfStorage,
-                new Label("Color"), tfColor,
+                new Label("Storage (GB)"), cbStorage,
+                new Label("Color"), cbColor,
                 new Label("Grado proveedor"), tfGradoProv,
                 new Label("Grado propio (chasis)"), cbGradoPropio,
+                cbEsim,
                 btnGuardar);
         form.setPadding(new Insets(16));
         form.setStyle("-fx-background-color: " + Colores.FONDO_INPUT + "; -fx-background-radius: 8;");
@@ -1477,16 +1503,16 @@ public class AgrupadoController {
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         btnGuardar.setOnAction(e -> {
             try {
-                Integer storage = tfStorage.getText().isBlank() ? null : Integer.valueOf(tfStorage.getText().trim());
+                Integer storage = cbStorage.getValue();
                 String gradoPropio = "—".equals(cbGradoPropio.getValue()) ? null : cbGradoPropio.getValue();
                 telefonoDAO.actualizarAtributos(t.getImei(), modeloSel[0], storage,
-                        tfColor.getText().isBlank() ? null : tfColor.getText().trim(),
+                        cbColor.getValue(),
                         tfGradoProv.getText().isBlank() ? null : tfGradoProv.getText().trim(),
-                        gradoPropio, t.getTelefonoUpdatedAt());
+                        gradoPropio, cbEsim.isSelected(), t.getTelefonoUpdatedAt());
                 dialog.close();
                 cargar();
             } catch (NumberFormatException ex) {
-                Alertas.mostrarError("Storage no válido: " + tfStorage.getText());
+                Alertas.mostrarError("Storage no válido: " + cbStorage.getValue());
             } catch (com.reparaciones.utils.StaleDataException ex) {
                 Alertas.mostrarError("El teléfono fue modificado por otro usuario. Se recargan los datos.");
                 dialog.close();
@@ -1496,6 +1522,58 @@ public class AgrupadoController {
             }
         });
         dialog.showAndWait();
+    }
+
+    /**
+     * Repuebla el combo de storage según el modelo; conserva la selección si sigue siendo válida.
+     * Si {@code permitirLegacy} es true y la selección actual no está en la paleta del modelo,
+     * se añade como item extra para no perder un dato legacy al abrir el diálogo.
+     */
+    private void repoblarAtributoStorage(ComboBox<Integer> combo, String modelo, Integer seleccion, boolean permitirLegacy) {
+        List<Integer> capacidades = CatalogoAtributos.capacidadesDe(modelo);
+        if (capacidades.isEmpty()) capacidades = CatalogoAtributos.CAPACIDADES_TODAS;
+        List<Integer> items = new ArrayList<>();
+        items.add(null);
+        items.addAll(capacidades);
+        if (permitirLegacy && seleccion != null && !items.contains(seleccion)) items.add(seleccion);
+        combo.setItems(FXCollections.observableArrayList(items));
+        combo.setValue(items.contains(seleccion) ? seleccion : null);
+    }
+
+    /**
+     * Repuebla el combo de color según el modelo; conserva la selección si sigue siendo válida.
+     * Si {@code permitirLegacy} es true y la selección actual no está en la paleta del modelo,
+     * se añade como item extra para no perder un dato legacy al abrir el diálogo.
+     */
+    private void repoblarAtributoColor(ComboBox<String> combo, String modelo, String seleccion, boolean permitirLegacy) {
+        List<String> colores = CatalogoAtributos.coloresDe(modelo);
+        if (colores.isEmpty()) colores = CatalogoAtributos.COLORES_TODOS;
+        List<String> items = new ArrayList<>();
+        items.add(null);
+        items.addAll(colores);
+        if (permitirLegacy && seleccion != null && !items.contains(seleccion)) items.add(seleccion);
+        combo.setItems(FXCollections.observableArrayList(items));
+        combo.setValue(items.contains(seleccion) ? seleccion : null);
+    }
+
+    private static ListCell<Integer> celdaAtributoStorage() {
+        return new ListCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : (item == null ? "—" : item + " GB"));
+            }
+        };
+    }
+
+    private static ListCell<String> celdaAtributoColor() {
+        return new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : (item == null ? "—" : item));
+            }
+        };
     }
 
     private void borrarIncidencia(ReparacionResumen rep) {
@@ -1551,10 +1629,9 @@ public class AgrupadoController {
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
                 if (!(o instanceof TelefonoInventario t)) continue;
-                String modelo = t.getModelo();
                 filas.add(java.util.Arrays.asList(
                         com.reparaciones.utils.CsvExporter.textoForzado(t.getImei()),
-                        (modelo != null && !modelo.isEmpty()) ? FormularioReparacionController.traducirModelo(modelo) : "",
+                        modeloVisibleMaestro(t),
                         t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()),
                         t.getColor() != null ? t.getColor() : "",
                         t.getGradoPropio() != null ? t.getGradoPropio() : "",

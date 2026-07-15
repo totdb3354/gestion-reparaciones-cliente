@@ -37,4 +37,11 @@ class ModeloMapperTest {
         Map<String, String> m = ModeloMapper.mapear(List.of("iPhone 12"), Map.of("12", "12pro"));
         assertEquals("12pro", m.get("iPhone 12"));
     }
+
+    @Test void detectaEsimEnElTextoDelProveedor() {
+        assertTrue(ModeloMapper.esEsim("iPhone 15 eSIM"));
+        assertTrue(ModeloMapper.esEsim("iphone 16 Pro ESIM"));
+        assertFalse(ModeloMapper.esEsim("iPhone 15"));
+        assertFalse(ModeloMapper.esEsim(null));
+    }
 }

@@ -10,7 +10,7 @@ public final class Importacion {
 
     public record TelefonoImport(String imei, String modelo, Integer storageGb, String color,
                                  String gradoProveedor, BigDecimal precioCompra, String divisa,
-                                 BigDecimal precioCompraEur) {}
+                                 BigDecimal precioCompraEur, boolean esEsim) {}
 
     public record LoteImport(String batchNumber, int idProv, String nota, List<TelefonoImport> telefonos) {}
 
