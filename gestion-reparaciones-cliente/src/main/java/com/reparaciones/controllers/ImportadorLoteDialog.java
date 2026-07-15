@@ -544,6 +544,12 @@ public final class ImportadorLoteDialog {
             cColor.setCellValueFactory(d -> new SimpleStringProperty(
                     d.getValue().colorOficial() == null ? "" : d.getValue().colorOficial()));
 
+            TableColumn<FilaClasificada, String> cEsim = new TableColumn<>("eSIM");
+            cEsim.setCellValueFactory(d -> new SimpleStringProperty(
+                    ModeloMapper.esEsim(d.getValue().fila().modeloTexto()) ? "Sí" : ""));
+            cEsim.setMinWidth(50);
+            cEsim.setMaxWidth(60);
+
             TableColumn<FilaClasificada, String> cGrado = new TableColumn<>("Grado");
             cGrado.setCellValueFactory(d -> new SimpleStringProperty(
                     d.getValue().fila().grado() == null ? "" : d.getValue().fila().grado()));
@@ -580,6 +586,7 @@ public final class ImportadorLoteDialog {
             tabla.getColumns().add(cModelo);
             tabla.getColumns().add(cStorage);
             tabla.getColumns().add(cColor);
+            tabla.getColumns().add(cEsim);
             tabla.getColumns().add(cGrado);
             tabla.getColumns().add(cPrecio);
             tabla.getColumns().add(cDestino);
