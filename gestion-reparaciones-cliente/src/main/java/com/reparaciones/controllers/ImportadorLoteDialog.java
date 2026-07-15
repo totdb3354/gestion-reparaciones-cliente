@@ -531,8 +531,11 @@ public final class ImportadorLoteDialog {
             cImei.setCellValueFactory(d -> new SimpleStringProperty(imeiLimpio(d.getValue().fila())));
 
             TableColumn<FilaClasificada, String> cModelo = new TableColumn<>("Modelo");
-            cModelo.setCellValueFactory(d -> new SimpleStringProperty(
-                    FormularioReparacionController.traducirModelo(d.getValue().modeloInterno())));
+            cModelo.setCellValueFactory(d -> {
+                String modelo = FormularioReparacionController.traducirModelo(d.getValue().modeloInterno());
+                if (ModeloMapper.esEsim(d.getValue().fila().modeloTexto())) modelo += " eSIM";
+                return new SimpleStringProperty(modelo);
+            });
 
             TableColumn<FilaClasificada, String> cStorage = new TableColumn<>("Storage");
             cStorage.setCellValueFactory(d -> {
@@ -543,12 +546,6 @@ public final class ImportadorLoteDialog {
             TableColumn<FilaClasificada, String> cColor = new TableColumn<>("Color");
             cColor.setCellValueFactory(d -> new SimpleStringProperty(
                     d.getValue().colorOficial() == null ? "" : d.getValue().colorOficial()));
-
-            TableColumn<FilaClasificada, String> cEsim = new TableColumn<>("eSIM");
-            cEsim.setCellValueFactory(d -> new SimpleStringProperty(
-                    ModeloMapper.esEsim(d.getValue().fila().modeloTexto()) ? "Sí" : ""));
-            cEsim.setMinWidth(50);
-            cEsim.setMaxWidth(60);
 
             TableColumn<FilaClasificada, String> cGrado = new TableColumn<>("Grado");
             cGrado.setCellValueFactory(d -> new SimpleStringProperty(
@@ -586,7 +583,6 @@ public final class ImportadorLoteDialog {
             tabla.getColumns().add(cModelo);
             tabla.getColumns().add(cStorage);
             tabla.getColumns().add(cColor);
-            tabla.getColumns().add(cEsim);
             tabla.getColumns().add(cGrado);
             tabla.getColumns().add(cPrecio);
             tabla.getColumns().add(cDestino);
