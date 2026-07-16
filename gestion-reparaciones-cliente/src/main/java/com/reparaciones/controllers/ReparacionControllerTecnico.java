@@ -194,7 +194,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         misPendientesGlassController.cargar();   // para el badge y toggles (suma rep + glass + pulido)
         pulidoTecnicoController.cargar();
 
-        agrupadoController.configurar(AgrupadoController.Rol.TECNICO);
+        agrupadoController.configurar(AgrupadoController.Rol.TECNICO, ConfigVistaAgrupado.Vista.TALLER);
 
         com.reparaciones.utils.Poller.programarSiguiente(poller, this::recargar);
         if (lblUltimaActualizacion != null) {

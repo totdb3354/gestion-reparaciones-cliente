@@ -156,7 +156,7 @@ public class ReparacionControllerAdmin implements com.reparaciones.utils.Recarga
         // Modo solo lectura para el admin en la tabla unificada de asignaciones
         pendientesSuperTecnicoController.setSoloLectura(true);
 
-        agrupadoController.configurar(AgrupadoController.Rol.ADMIN);
+        agrupadoController.configurar(AgrupadoController.Rol.ADMIN, ConfigVistaAgrupado.Vista.TALLER);
     }
 
     @FXML

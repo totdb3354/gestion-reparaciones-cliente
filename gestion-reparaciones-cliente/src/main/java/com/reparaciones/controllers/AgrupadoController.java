@@ -46,7 +46,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -110,9 +112,15 @@ public class AgrupadoController {
     private final LoteDAO                 loteDAO                 = new LoteDAO();
     private final ReparacionComponenteDAO reparacionComponenteDAO = new ReparacionComponenteDAO();
 
-    // ── Config de rol ───────────────────────────────────────────────────────
+    // ── Config de rol / vista ───────────────────────────────────────────────
     private Rol rol = Rol.SUPERTECNICO;
     private boolean esSuper = true;
+    private ConfigVistaAgrupado.Vista vista = ConfigVistaAgrupado.Vista.INVENTARIO;
+
+    /** Columnas de la tabla maestro indexadas por la clave del descriptor {@link ConfigVistaAgrupado}. */
+    private Map<String, TableColumn<Object, ?>> columnaPorClave;
+    /** Controles de filtro indexados por la clave del descriptor (varios nodos para "fechas"). */
+    private Map<String, List<javafx.scene.Node>> filtrosPorClave;
 
     // ── Datos ───────────────────────────────────────────────────────────────
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
@@ -174,6 +182,7 @@ public class AgrupadoController {
         tabla.getColumns().forEach(c -> c.setSortable(false));
         tabla.getColumns().forEach(c -> c.setReorderable(false));
 
+        construirMapasClave();
         configurarColumnas();
         configurarFilas();
         configurarFiltros();
@@ -181,12 +190,46 @@ public class AgrupadoController {
         tabla.setItems(tablaItems);
     }
 
-    /** Configura el componente para el rol anfitrión. Debe llamarse tras cargar el FXML. */
-    public void configurar(Rol rol) {
+    /**
+     * Mapas clave→control usados por {@link ConfigVistaAgrupado} para decidir qué columnas
+     * y filtros muestra cada vista, sin ifs sueltos repartidos por el controller.
+     */
+    private void construirMapasClave() {
+        columnaPorClave = new LinkedHashMap<>();
+        columnaPorClave.put("imei", colImei);
+        columnaPorClave.put("modelo", colModelo);
+        columnaPorClave.put("storage", colStorage);
+        columnaPorClave.put("color", colColor);
+        columnaPorClave.put("grado", colGrado);
+        columnaPorClave.put("ultimaActividad", colFecha);
+        columnaPorClave.put("trabajos", colComponente);
+        columnaPorClave.put("estado", colEstado);
+        columnaPorClave.put("ubicacion", colUbicacion);
+        columnaPorClave.put("lote", colLote);
+        columnaPorClave.put("observacionTelefono", colObservacionTelefono);
+        columnaPorClave.put("cliente", colCliente);
+        columnaPorClave.put("revision", colRevision);
+
+        filtrosPorClave = new LinkedHashMap<>();
+        filtrosPorClave.put("imei", List.of(filtroImei));
+        filtrosPorClave.put("tecnico", List.of(filtroTecnico));
+        filtrosPorClave.put("cliente", List.of(filtroCliente));
+        filtrosPorClave.put("estado", List.of(filtroEstado));
+        filtrosPorClave.put("ubicacion", List.of(filtroUbicacion));
+        filtrosPorClave.put("lote", List.of(filtroLote));
+        filtrosPorClave.put("modelo", List.of(filtroModelo));
+        filtrosPorClave.put("fechas", List.of(filtroFechaDesde, filtroFechaHasta));
+        filtrosPorClave.put("incidencias", List.of(filtroIncidencias));
+    }
+
+    /** Configura el componente para el rol y vista anfitriones. Debe llamarse tras cargar el FXML. */
+    public void configurar(Rol rol, ConfigVistaAgrupado.Vista vista) {
         this.rol     = rol;
+        this.vista   = vista;
         this.esSuper = (rol == Rol.SUPERTECNICO);
-        btnImportar.setVisible(esSuper);   btnImportar.setManaged(esSuper);
-        btnAltaManual.setVisible(esSuper); btnAltaManual.setManaged(esSuper);
+        boolean mostrarBotones = ConfigVistaAgrupado.botonesImportacion(vista) && esSuper;
+        btnImportar.setVisible(mostrarBotones);   btnImportar.setManaged(mostrarBotones);
+        btnAltaManual.setVisible(mostrarBotones); btnAltaManual.setManaged(mostrarBotones);
         resetarModo();
     }
 
@@ -266,10 +309,10 @@ public class AgrupadoController {
         colTipo.setVisible(false);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
-        colStorage.setVisible(true); colColor.setVisible(true); colGrado.setVisible(true);
-        colUbicacion.setVisible(true); colLote.setVisible(true);
-        colObservacionTelefono.setVisible(true); colCliente.setVisible(true);
-        colRevision.setVisible(true);   // visible para todos; solo el supertécnico puede editarla
+        // Columnas de la vista activa (ver ConfigVistaAgrupado); revision, si aparece, queda
+        // visible para todos — solo el supertécnico puede editarla (ver configurarColRevision).
+        List<String> visibles = ConfigVistaAgrupado.columnasMaestro(vista);
+        columnaPorClave.forEach((clave, col) -> col.setVisible(visibles.contains(clave)));
         colFecha.setText("Última actividad");
         colComponente.setText("Trabajos");
     }
@@ -924,6 +967,20 @@ public class AgrupadoController {
         return t.isEsEsim() ? base + " eSIM" : base;
     }
 
+    /**
+     * true si el teléfono no tiene ningún trabajo, ni hecho ni abierto, de rep/glass/pulido —
+     * criterio de exclusión del modo TALLER ({@link ConfigVistaAgrupado#soloConTrabajos}).
+     * No se usa {@link TelefonoInventario#isTieneAsignaciones()}: esa es paridad con
+     * {@code tieneAsignacionesActivas} del servidor (solo glass+normal ABIERTOS, sin pulido y
+     * sin contar trabajos ya HECHOS), pensada para gatear la revisión logística — no cubre
+     * "sin trabajos" en general. Aquí se comprueban directamente los contadores base en vez de
+     * comparar contra el guion "—" de {@link TelefonoInventario#getResumenTipos()}.
+     */
+    private static boolean sinTrabajos(TelefonoInventario t) {
+        boolean sinHechos = t.getRepHechas() == 0 && t.getGlassHechas() == 0 && t.getPulHechos() == 0;
+        return sinHechos && t.getTrabajosAbiertos() == 0;
+    }
+
     private String textoDeCelda(Object row, TableColumn<?, ?> col) {
         if (row instanceof TelefonoInventario t) {
             if (col == colImei)       return t.getImei();
@@ -1037,6 +1094,22 @@ public class AgrupadoController {
             (ub, checked) -> { if (checked) ubicacionesFiltro.add(ub); else ubicacionesFiltro.remove(ub);
                                actualizarTextoFiltroUbicacion(); aplicarFiltros(); },
             etiquetaUbicacion);
+
+        aplicarFiltrosVisiblesVista();
+    }
+
+    /**
+     * Oculta (visible+managed=false, patrón {@code ocultarTecnico}) los controles de filtro cuya
+     * clave no forme parte de {@link ConfigVistaAgrupado#filtrosVisibles(ConfigVistaAgrupado.Vista)}.
+     * Único punto que decide visibilidad por vista; {@link #adaptarFiltrosMaestro()} la reaplica
+     * antes de restringir por rol, para no perder nunca esta base.
+     */
+    private void aplicarFiltrosVisiblesVista() {
+        Set<String> visibles = ConfigVistaAgrupado.filtrosVisibles(vista);
+        filtrosPorClave.forEach((clave, nodos) -> {
+            boolean mostrar = visibles.contains(clave);
+            for (javafx.scene.Node n : nodos) { n.setVisible(mostrar); n.setManaged(mostrar); }
+        });
     }
 
     private void poblarFiltrosMaestro() {
@@ -1063,6 +1136,8 @@ public class AgrupadoController {
             (m, checked) -> { if (checked) modelosFiltro.add(m); else modelosFiltro.remove(m);
                               actualizarTextoFiltroModelo(); aplicarFiltros(); },
             etiquetaModelo);
+
+        aplicarFiltrosVisiblesVista();
     }
 
     private void actualizarTextoFiltroTecnico() {
@@ -1123,11 +1198,8 @@ public class AgrupadoController {
     }
 
     private void adaptarFiltrosMaestro() {
-        filtroCliente.setVisible(true); filtroCliente.setManaged(true);
-        filtroEstado.setVisible(true); filtroEstado.setManaged(true);
-        filtroUbicacion.setVisible(true); filtroUbicacion.setManaged(true);
-        filtroLote.setVisible(true); filtroLote.setManaged(true);
-        filtroModelo.setVisible(true); filtroModelo.setManaged(true);
+        // Base por vista primero (puede ocultar); el rol, debajo, solo puede ocultar más — nunca re-mostrar.
+        aplicarFiltrosVisiblesVista();
         // El técnico solo carga sus propios trabajos: el filtro por técnico no aporta nada en su perfil.
         boolean ocultarTecnico = (rol == Rol.TECNICO);
         filtroTecnico.setVisible(!ocultarTecnico); filtroTecnico.setManaged(!ocultarTecnico);
@@ -1236,7 +1308,9 @@ public class AgrupadoController {
         Set<String> imeisDeTecnicos = idsTecFiltro.isEmpty() ? null
                 : datos.stream().filter(r -> idsTecFiltro.contains(r.getIdTec()))
                        .map(ReparacionResumen::getImei).collect(Collectors.toSet());
+        boolean soloConTrabajos = ConfigVistaAgrupado.soloConTrabajos(vista);
         List<TelefonoInventario> filtrados = inventario.stream().filter(t -> {
+            if (soloConTrabajos && sinTrabajos(t)) return false;
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(t.getImei())) return false;
             if (imeisDeTecnicos != null && !imeisDeTecnicos.contains(t.getImei())) return false;
             if (desde != null || hasta != null) {
@@ -1615,40 +1689,48 @@ public class AgrupadoController {
 
     // ── Exportación CSV ─────────────────────────────────────────────────────
 
+    /**
+     * Valores de un teléfono para el CSV maestro, indexados por el mismo texto de cabecera que
+     * {@link ConfigVistaAgrupado#cabeceraCsvMaestro}. Cubre la unión de columnas de ambas vistas;
+     * {@code exportarCSV} solo toma, en orden, las que la vista activa pide en su cabecera — así
+     * TALLER e INVENTARIO comparten una única fuente de valores y no hay ifs de vista en el CSV.
+     */
+    private Map<String, String> valoresCsvMaestro(TelefonoInventario t, DateTimeFormatter fmt) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("IMEI", com.reparaciones.utils.CsvExporter.textoForzado(t.getImei()));
+        m.put("Modelo", modeloVisibleMaestro(t));
+        m.put("Storage", t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()));
+        m.put("Color", t.getColor() != null ? t.getColor() : "");
+        m.put("Grado propio", t.getGradoPropio() != null ? t.getGradoPropio() : "");
+        m.put("Grado proveedor", t.getGradoProveedor() != null ? t.getGradoProveedor() : "");
+        m.put("Estado", UbicacionTexto.estado(t));
+        m.put("Ubicación", UbicacionTexto.ubicacion(t));
+        m.put("Lote", t.getBatchNumber() != null ? t.getBatchNumber() : "");
+        m.put("Proveedor", t.getProveedor() != null ? t.getProveedor() : "");
+        m.put("Última actividad", FechaUtils.formatear(t.getUltimaActividad(), fmt));
+        m.put("Reparaciones", String.valueOf(t.getRepHechas()));
+        m.put("Glass", String.valueOf(t.getGlassHechas()));
+        m.put("Pulidos", String.valueOf(t.getPulHechos()));
+        m.put("Abiertos", String.valueOf(t.getTrabajosAbiertos()));
+        m.put("Inc. abiertas", String.valueOf(t.getIncAbiertas()));
+        m.put("Observación", t.getObservacion() != null ? t.getObservacion() : "");
+        m.put("Cliente", t.getCliente() != null ? t.getCliente() : "");
+        m.put("Revisión logística", (t.isRevisionLogistica() && !t.isTieneAsignaciones()) ? "Sí" : "No");
+        return m;
+    }
+
     /** Exporta el contenido visible del apartado (maestro por IMEI o detalle de un IMEI). */
     public void exportarCSV(javafx.stage.Stage owner) {
         DateTimeFormatter fmt     = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter fmtHora = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         if (modoActual == Modo.MAESTRO) {
-            List<String> cab = List.of(
-                    "IMEI", "Modelo", "Storage", "Color", "Grado propio", "Grado proveedor",
-                    "Estado", "Ubicación", "Lote", "Proveedor", "Última actividad",
-                    "Reparaciones", "Glass", "Pulidos", "Abiertos", "Inc. abiertas",
-                    "Observación", "Cliente", "Revisión logística");
+            List<String> cab = ConfigVistaAgrupado.cabeceraCsvMaestro(vista);
             List<List<String>> filas = new ArrayList<>();
             for (Object o : tablaItems) {
                 if (!(o instanceof TelefonoInventario t)) continue;
-                filas.add(java.util.Arrays.asList(
-                        com.reparaciones.utils.CsvExporter.textoForzado(t.getImei()),
-                        modeloVisibleMaestro(t),
-                        t.getStorageGb() == null ? "" : String.valueOf(t.getStorageGb()),
-                        t.getColor() != null ? t.getColor() : "",
-                        t.getGradoPropio() != null ? t.getGradoPropio() : "",
-                        t.getGradoProveedor() != null ? t.getGradoProveedor() : "",
-                        UbicacionTexto.estado(t),
-                        UbicacionTexto.ubicacion(t),
-                        t.getBatchNumber() != null ? t.getBatchNumber() : "",
-                        t.getProveedor() != null ? t.getProveedor() : "",
-                        FechaUtils.formatear(t.getUltimaActividad(), fmt),
-                        String.valueOf(t.getRepHechas()),
-                        String.valueOf(t.getGlassHechas()),
-                        String.valueOf(t.getPulHechos()),
-                        String.valueOf(t.getTrabajosAbiertos()),
-                        String.valueOf(t.getIncAbiertas()),
-                        t.getObservacion() != null ? t.getObservacion() : "",
-                        t.getCliente() != null ? t.getCliente() : "",
-                        (t.isRevisionLogistica() && !t.isTieneAsignaciones()) ? "Sí" : "No"));
+                Map<String, String> valores = valoresCsvMaestro(t, fmt);
+                filas.add(cab.stream().map(valores::get).collect(Collectors.toList()));
             }
             com.reparaciones.utils.CsvExporter.exportar(owner, "agrupado_resumen", cab, filas);
             return;
