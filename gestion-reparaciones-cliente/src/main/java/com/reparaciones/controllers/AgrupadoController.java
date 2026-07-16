@@ -1320,8 +1320,15 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 : datos.stream().filter(r -> idsTecFiltro.contains(r.getIdTec()))
                        .map(ReparacionResumen::getImei).collect(Collectors.toSet());
         boolean soloConTrabajos = ConfigVistaAgrupado.soloConTrabajos(vista);
+        // TALLER de TECNICO (paridad pre-F2a): solo los teléfonos en los que ha trabajado él.
+        // Para TECNICO, cargar() solo mete en `datos` sus propios trabajos, así que sus IMEIs
+        // son exactamente sus teléfonos; para SUPERTECNICO/ADMIN no aplica (datos ya lo trae todo).
+        Set<String> imeisPropios = (soloConTrabajos && rol == Rol.TECNICO)
+                ? datos.stream().map(ReparacionResumen::getImei).collect(Collectors.toSet())
+                : null;
         List<TelefonoInventario> filtrados = inventario.stream().filter(t -> {
             if (soloConTrabajos && sinTrabajos(t)) return false;
+            if (imeisPropios != null && !imeisPropios.contains(t.getImei())) return false;
             if (!imeisFiltro.isEmpty() && !imeisFiltro.contains(t.getImei())) return false;
             if (imeisDeTecnicos != null && !imeisDeTecnicos.contains(t.getImei())) return false;
             if (desde != null || hasta != null) {
