@@ -34,6 +34,10 @@
                     <Button fx:id="btnStock" text="Stock"
                             styleClass="nav-btn"
                             onAction="#mostrarStock"/>
+                    <Button fx:id="btnInventario" text="Inventario"
+                            styleClass="nav-btn"
+                            onAction="#mostrarInventario"
+                            visible="false" managed="false"/>
                     <Button fx:id="btnEstadisticas" text="Estadísticas"
                             styleClass="nav-btn"
                             onAction="#mostrarEstadisticas"/>

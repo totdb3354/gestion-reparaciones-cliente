@@ -70,6 +70,7 @@ public class MainController {
     @FXML private StackPane contenedor;
     @FXML private Button    btnReparaciones;
     @FXML private Button    btnStock;
+    @FXML private Button    btnInventario;
     @FXML private Button    btnEstadisticas;
     @FXML private Button    btnClientes;
     @FXML private Button    btnUsuario;
@@ -113,6 +114,10 @@ public class MainController {
             campanaPane.setManaged(true);
             actualizarBadge();
             verificarStockAlertas();
+        }
+        if (Sesion.esAdminOSuperTecnico()) {
+            btnInventario.setVisible(true);
+            btnInventario.setManaged(true);
         }
         // Recargar al recuperar el foco; abrir alertas la primera vez que la ventana se muestra
         contenedor.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -756,14 +761,26 @@ public class MainController {
         if (Sesion.esSuperTecnico())  vista = "/views/ReparacionViewSuperTecnico.fxml";
         else if (Sesion.esAdmin())    vista = "/views/ReparacionViewAdmin.fxml";
         else                          vista = "/views/ReparacionViewTecnico.fxml";
-        mostrarVista(vista, btnReparaciones, btnStock, btnEstadisticas, btnClientes);
+        mostrarVista(vista, btnReparaciones, btnStock, btnInventario, btnEstadisticas, btnClientes);
     }
 
     /** Navega a la vista de stock. */
     @FXML
     private void mostrarStock() {
         accionVistaActual = this::mostrarStock;
-        mostrarVista("/views/StockView.fxml", btnStock, btnReparaciones, btnEstadisticas, btnClientes);
+        mostrarVista("/views/StockView.fxml", btnStock, btnReparaciones, btnInventario, btnEstadisticas, btnClientes);
+    }
+
+    /**
+     * Navega a la vista de inventario (agrupado por IMEI, vista completa) — solo SUPERTECNICO/ADMIN.
+     * El controlador se configura para {@link ConfigVistaAgrupado.Vista#INVENTARIO} la primera vez
+     * que se carga (patrón de {@code mostrarVista} en el miss de caché); en cada visualización
+     * posterior los datos se refrescan vía {@link com.reparaciones.utils.Recargable#recargar()}.
+     */
+    @FXML
+    private void mostrarInventario() {
+        accionVistaActual = this::mostrarInventario;
+        mostrarVista("/views/AgrupadoView.fxml", btnInventario, btnReparaciones, btnStock, btnEstadisticas, btnClientes);
     }
 
     /** Navega a la vista de stock y abre directamente la sección de pedidos. */
@@ -786,14 +803,14 @@ public class MainController {
     @FXML
     private void mostrarEstadisticas() {
         accionVistaActual = this::mostrarEstadisticas;
-        mostrarVista("/views/EstadisticasView.fxml", btnEstadisticas, btnReparaciones, btnStock, btnClientes);
+        mostrarVista("/views/EstadisticasView.fxml", btnEstadisticas, btnReparaciones, btnStock, btnInventario, btnClientes);
     }
 
     /** Navega a la vista de clientes. */
     @FXML
     private void mostrarClientes() {
         accionVistaActual = this::mostrarClientes;
-        mostrarVista("/views/ClientesView.fxml", btnClientes, btnReparaciones, btnStock, btnEstadisticas);
+        mostrarVista("/views/ClientesView.fxml", btnClientes, btnReparaciones, btnStock, btnInventario, btnEstadisticas);
     }
 
     /**
@@ -942,6 +959,7 @@ public class MainController {
     private void mostrarVista(String ruta, Button activo, Button... inactivos) {
         btnReparaciones.setDisable(true);
         btnStock.setDisable(true);
+        btnInventario.setDisable(true);
         btnEstadisticas.setDisable(true);
         btnClientes.setDisable(true);
 
@@ -966,6 +984,15 @@ public class MainController {
                         filtroNavTecnico = tecnico;
                         mostrarReparaciones();
                     });
+                }
+
+                // Configurar el Agrupado (Inventario) para el rol anfitrión y cargar los datos
+                // iniciales (solo primera carga; en visitas posteriores refresca el bloque de
+                // recargar() de más abajo vía Recargable).
+                if (ctrl instanceof AgrupadoController ac) {
+                    ac.configurar(Sesion.esSuperTecnico() ? AgrupadoController.Rol.SUPERTECNICO : AgrupadoController.Rol.ADMIN,
+                                  ConfigVistaAgrupado.Vista.INVENTARIO);
+                    ac.cargar();
                 }
 
                 vistaCache.put(ruta, new Object[]{vista, ctrl});
@@ -997,6 +1024,7 @@ public class MainController {
         } finally {
             btnReparaciones.setDisable(false);
             btnStock.setDisable(false);
+            btnInventario.setDisable(false);
             btnEstadisticas.setDisable(false);
             btnClientes.setDisable(false);
         }

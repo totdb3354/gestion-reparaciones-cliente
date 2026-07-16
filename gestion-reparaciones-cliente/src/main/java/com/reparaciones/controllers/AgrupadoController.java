@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
  * logística y el menú de edición; admin y técnico son de solo lectura (el técnico solo
  * ve sus propios trabajos).
  */
-public class AgrupadoController {
+public class AgrupadoController implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
     /** Rol que hospeda el componente: define origen de datos y acciones disponibles. */
     public enum Rol { SUPERTECNICO, ADMIN, TECNICO }
@@ -265,6 +265,14 @@ public class AgrupadoController {
             mostrarError(e);
         }
     }
+
+    /** {@link com.reparaciones.utils.Recargable}: recarga los datos al recuperar el foco o revisitar la pestaña. */
+    @Override
+    public void recargar() { cargar(); }
+
+    /** Sin polling propio: no hay nada que detener. */
+    @Override
+    public void detenerPolling() { /* sin poller */ }
 
     @FXML private void importarLote()   { ImportadorLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
     @FXML private void altaManualLote() { AltaManualLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
