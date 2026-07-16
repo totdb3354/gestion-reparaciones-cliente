@@ -44,4 +44,31 @@ class LookupModelosImeisTest {
         cola.procesarPendientes();
         assertEquals(List.of("111"), consultados);
     }
+
+    @Test void descartarLiberaParaReEncolar() {
+        List<String> consultados = new ArrayList<>();
+        List<LookupModelosImeis.Resultado> resultados = new ArrayList<>();
+        var cola = new LookupModelosImeis(i -> { consultados.add(i); return "12"; }, e -> {}, resultados::add);
+        cola.encolar(List.of("111"));
+        cola.descartar("111");
+        cola.procesarPendientes();
+        assertEquals(List.of(), consultados); // descartado antes de procesar: no se consulta
+
+        cola.encolar(List.of("111")); // re-añadido tras quitarlo de la lista: debe volver a considerarse
+        cola.procesarPendientes();
+        assertEquals(List.of("111"), consultados);
+        assertEquals(1, resultados.size());
+        assertEquals("12", resultados.get(0).modelo());
+    }
+
+    @Test void detenerCortaLaColaSinConsultarElResto() {
+        List<String> consultados = new ArrayList<>();
+        final LookupModelosImeis[] ref = new LookupModelosImeis[1];
+        var cola = new LookupModelosImeis(i -> { consultados.add(i); return null; }, e -> {},
+                r -> ref[0].detener());
+        ref[0] = cola;
+        cola.encolar(List.of("111", "222", "333"));
+        cola.procesarPendientes();
+        assertEquals(List.of("111"), consultados); // se detiene tras el primer callback: el resto no se consulta
+    }
 }

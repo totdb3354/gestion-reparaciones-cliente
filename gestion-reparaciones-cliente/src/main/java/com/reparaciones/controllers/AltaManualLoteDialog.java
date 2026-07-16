@@ -289,8 +289,9 @@ public final class AltaManualLoteDialog {
             scene.getStylesheets().add(AltaManualLoteDialog.class.getResource("/styles/app.css").toExternalForm());
             stage.setScene(scene);
             stage.setOnCloseRequest(e -> { if (importando) e.consume(); });
-            // Cierre (cancelar o X, o tras crear el lote): los callbacks de red en vuelo pasan a no-op.
-            stage.setOnHidden(e -> cerrado = true);
+            // Cierre (cancelar o X, o tras crear el lote): los callbacks de red en vuelo pasan a no-op
+            // y la cola de lookup deja de encadenar peticiones (no seguir gastando cupo de API por un diálogo cerrado).
+            stage.setOnHidden(e -> { cerrado = true; colaLookup.detener(); });
 
             // ── Escaneo (patrón EXACTO de PendientesSuperTecnicoController: pegado masivo) ──
             Runnable intentarAnadir = () -> {

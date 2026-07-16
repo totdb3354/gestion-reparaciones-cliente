@@ -27,6 +27,8 @@ public class LookupModelosImeis {
     private final Set<String> vistos = new HashSet<>();
     private final Set<String> descartados = new HashSet<>();
     private boolean primero = true;
+    /** Señal de parada cooperativa (spec: cerrar el diálogo debe frenar la cola sin interrumpir el hilo). */
+    private volatile boolean detenida;
 
     public LookupModelosImeis(Function<String, String> lookup, LongConsumer espera, Consumer<Resultado> callback) {
         this.lookup = lookup;
@@ -43,14 +45,25 @@ public class LookupModelosImeis {
 
     public synchronized void encolar(Collection<String> imeis) {
         for (String imei : imeis) {
-            if (vistos.add(imei)) pendientes.addLast(imei);
+            if (vistos.add(imei)) {
+                descartados.remove(imei); // re-encolado tras un descarte anterior: ya no cuenta como descartado
+                pendientes.addLast(imei);
+            }
         }
     }
 
-    public synchronized void descartar(String imei) { descartados.add(imei); }
+    /** Descarta el IMEI (p. ej. quitado de la lista) y lo libera de {@code vistos} para permitir un futuro re-encolar. */
+    public synchronized void descartar(String imei) {
+        descartados.add(imei);
+        vistos.remove(imei);
+    }
+
+    /** Detiene la cola: {@link #procesarPendientes()} corta en el siguiente ciclo sin interrumpir el hilo. */
+    public void detener() { detenida = true; }
 
     public void procesarPendientes() {
         while (true) {
+            if (detenida) return;
             String imei;
             boolean descartado;
             synchronized (this) {

@@ -45,6 +45,9 @@ public final class ConfigVistaAgrupado {
 
     public static boolean soloConTrabajos(Vista v) { return v == Vista.TALLER; }
 
+    /** §2.1: TALLER no ofrece "Editar atributos" (solo lectura del historial). */
+    public static boolean edicionAtributos(Vista v) { return v == Vista.INVENTARIO; }
+
     public static List<String> cabeceraCsvMaestro(Vista v) {
         return v == Vista.TALLER ? CSV_TALLER : CSV_INVENTARIO;
     }

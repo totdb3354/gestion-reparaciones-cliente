@@ -19,6 +19,7 @@ class ConfigVistaAgrupadoTest {
         assertTrue(ConfigVistaAgrupado.botonesImportacion(INVENTARIO));
         assertFalse(ConfigVistaAgrupado.soloConTrabajos(INVENTARIO));
         assertEquals(19, ConfigVistaAgrupado.cabeceraCsvMaestro(INVENTARIO).size());
+        assertTrue(ConfigVistaAgrupado.edicionAtributos(INVENTARIO));
     }
 
     @Test void tallerEsElHistorialPreF2aSinOkConEsim() {
@@ -28,6 +29,7 @@ class ConfigVistaAgrupadoTest {
                 ConfigVistaAgrupado.filtrosVisibles(TALLER));
         assertFalse(ConfigVistaAgrupado.botonesImportacion(TALLER));
         assertTrue(ConfigVistaAgrupado.soloConTrabajos(TALLER));
+        assertFalse(ConfigVistaAgrupado.edicionAtributos(TALLER));
     }
 
     @Test void csvTallerEsEspejoSinRevision() {

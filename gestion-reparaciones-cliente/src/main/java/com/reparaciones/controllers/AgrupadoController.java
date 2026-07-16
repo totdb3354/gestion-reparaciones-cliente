@@ -333,6 +333,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         colUbicacion.setVisible(false); colLote.setVisible(false);
         colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
         colRevision.setVisible(false);
+        // Estado del trabajo (Incidencia/Resuelta/Normal): en TALLER la queda oculta en modo
+        // maestro (no está en COLS_TALLER), pero el detalle la necesita en ambas vistas.
+        colEstado.setVisible(true);
         colFecha.setText("Fechas");
         colComponente.setText("Componente");
     }
@@ -892,7 +895,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         aniadirInc.setVisible(false); cancelarInc.setVisible(false);
                         editarObs.setVisible(esSuper && esGrupo);
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
-                        editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
+                        editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
