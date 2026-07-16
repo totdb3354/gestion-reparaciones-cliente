@@ -224,7 +224,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         tablaReparaciones.setItems(tablaItems);
         entrarModoPlano();   // el Historial es siempre plano; el agrupado vive en su apartado
 
-        agrupadoController.configurar(AgrupadoController.Rol.SUPERTECNICO);
+        agrupadoController.configurar(AgrupadoController.Rol.SUPERTECNICO, ConfigVistaAgrupado.Vista.TALLER);
 
         mostrarPanel(pnlPendientes, btnTabPendientes);
 
