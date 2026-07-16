@@ -2,6 +2,7 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.dao.LoteDAO;
 import com.reparaciones.dao.ProveedorDAO;
+import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.dao.TipoCambioDAO;
 import com.reparaciones.models.Importacion;
 import com.reparaciones.models.Proveedor;
@@ -11,6 +12,7 @@ import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ImeiUtils;
 import com.reparaciones.utils.ImeiUtils.ResultadoPegado;
 import com.reparaciones.utils.ImeiUtils.TipoPegado;
+import com.reparaciones.utils.LookupModelosImeis;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -23,9 +25,11 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
@@ -42,9 +46,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -90,6 +97,20 @@ public final class AltaManualLoteDialog {
 
         private final ObservableList<String> imeis = FXCollections.observableArrayList();
         private String modeloInterno;   // puede quedar null: el alta manual permite teléfono sin modelo
+
+        /** Modelo detectado por fila (BD vía loteDAO.verificar o API vía colaLookup), IMEI → modelo interno. */
+        private final Map<String, String> modelosDetectados = new ConcurrentHashMap<>();
+        /** Modelo editado a mano por fila (menú contextual "Editar modelo…"), IMEI → modelo interno. */
+        private final Map<String, String> modelosManuales = new ConcurrentHashMap<>();
+        /** IMEIs con lookup de API en curso; solo se toca desde el hilo de JavaFX. */
+        private final Set<String> lookupsPendientes = new HashSet<>();
+        private final TelefonoDAO telefonoDAO = new TelefonoDAO();
+        private final LookupModelosImeis colaLookup =
+                new LookupModelosImeis(this::lookupModelo, this::esperar, this::onModeloDetectado);
+        /** Hilo actual de {@link LookupModelosImeis#procesarPendientes()}; se relanza si no está vivo. */
+        private Thread hiloLookup;
+        /** true tras cerrar el diálogo: los callbacks de red en vuelo se vuelven no-op. */
+        private boolean cerrado;
 
         private Stage stage;
         private TextField tfBatch;
@@ -218,19 +239,30 @@ public final class AltaManualLoteDialog {
                 @Override
                 protected void updateItem(String imei, boolean empty) {
                     super.updateItem(imei, empty);
-                    if (empty || imei == null) { setText(null); setGraphic(null); return; }
+                    if (empty || imei == null) { setText(null); setGraphic(null); setContextMenu(null); return; }
                     Label lbl = new Label(imei);
                     lbl.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
+                    String manualActual = modelosManuales.get(imei);
+                    boolean manual = manualActual != null && !manualActual.isBlank();
+                    Label lblModeloFila = new Label(textoModeloFila(imei));
+                    lblModeloFila.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Colores.AZUL_GRIS
+                            + (manual ? "; -fx-font-weight: bold;" : ";"));
                     Region spacer = new Region();
                     HBox.setHgrow(spacer, Priority.ALWAYS);
                     Button btnQuitar = new Button("✕");
                     btnQuitar.setStyle("-fx-background-color: transparent; -fx-text-fill: " + Colores.AZUL_GRIS
                             + "; -fx-cursor: hand; -fx-font-size: 12px;");
-                    btnQuitar.setOnAction(e -> imeis.remove(imei));
-                    HBox fila = new HBox(8, lbl, spacer, btnQuitar);
+                    btnQuitar.setOnAction(e -> quitarFila(imei));
+                    HBox fila = new HBox(8, lbl, lblModeloFila, spacer, btnQuitar);
                     fila.setAlignment(Pos.CENTER_LEFT);
                     setText(null);
                     setGraphic(fila);
+
+                    ContextMenu menu = new ContextMenu();
+                    MenuItem editarModelo = new MenuItem("Editar modelo…");
+                    editarModelo.setOnAction(e -> editarModeloFila(imei));
+                    menu.getItems().add(editarModelo);
+                    setContextMenu(menu);
                 }
             });
             imeis.addListener((ListChangeListener<String>) c -> actualizarContadorImeis());
@@ -257,6 +289,8 @@ public final class AltaManualLoteDialog {
             scene.getStylesheets().add(AltaManualLoteDialog.class.getResource("/styles/app.css").toExternalForm());
             stage.setScene(scene);
             stage.setOnCloseRequest(e -> { if (importando) e.consume(); });
+            // Cierre (cancelar o X, o tras crear el lote): los callbacks de red en vuelo pasan a no-op.
+            stage.setOnHidden(e -> cerrado = true);
 
             // ── Escaneo (patrón EXACTO de PendientesSuperTecnicoController: pegado masivo) ──
             Runnable intentarAnadir = () -> {
@@ -265,6 +299,7 @@ public final class AltaManualLoteDialog {
                 if (imeis.contains(imei)) { lblErrorScan.setStyle(ESTILO_ERROR); lblErrorScan.setText("Ese IMEI ya está en la lista."); return; }
                 lblErrorScan.setText("");
                 imeis.add(imei);
+                verificarNuevos(List.of(imei));
                 Platform.runLater(() -> { tfScan.clear(); tfScan.requestFocus(); });
             };
             tfScan.textProperty().addListener((obs, o, n) -> {
@@ -284,11 +319,14 @@ public final class AltaManualLoteDialog {
                         return;
                     }
                     int anadidos = 0, duplicados = 0;
+                    List<String> nuevosPegado = new ArrayList<>();
                     for (String im : res.imeis()) {
                         if (imeis.contains(im)) { duplicados++; continue; }
                         imeis.add(im);
+                        nuevosPegado.add(im);
                         anadidos++;
                     }
+                    verificarNuevos(nuevosPegado);
                     final String resumen = anadidos + " IMEIs añadidos"
                             + (duplicados > 0 ? " · " + duplicados + " ya estaban en la lista." : ".");
                     Platform.runLater(() -> {
@@ -322,6 +360,123 @@ public final class AltaManualLoteDialog {
             int n = imeis.size();
             btnCrear.setText("Crear lote (" + n + " teléfonos)");
             btnCrear.setDisable(batchVacio || sinProveedor || n == 0);
+        }
+
+        // ─── Detección de modelo por fila (BD vía verificar + API en cola) ───────
+
+        /**
+         * Verifica los IMEIs recién añadidos contra la BD (una llamada por evento de alta: scan
+         * único o pegado masivo). Los que la BD ya conoce con modelo se resuelven al momento;
+         * el resto se encola para lookup por API. Si la verificación falla por red, se encolan
+         * todos los nuevos igualmente (la cola tolera fallos por fila, spec §6).
+         */
+        private void verificarNuevos(List<String> nuevos) {
+            if (nuevos.isEmpty()) return;
+            new Thread(() -> {
+                List<VerificacionImei> verificaciones;
+                boolean falloRed;
+                try {
+                    verificaciones = loteDAO.verificar(nuevos);
+                    falloRed = false;
+                } catch (SQLException e) {
+                    verificaciones = List.of();
+                    falloRed = true;
+                }
+                List<VerificacionImei> resultado = verificaciones;
+                boolean fallo = falloRed;
+                Platform.runLater(() -> procesarVerificacion(nuevos, resultado, fallo));
+            }, "alta-manual-lote-verificar").start();
+        }
+
+        private void procesarVerificacion(List<String> nuevos, List<VerificacionImei> verificaciones, boolean falloRed) {
+            if (cerrado) return;
+            List<String> paraLookup = new ArrayList<>();
+            if (falloRed) {
+                for (String imei : nuevos) if (imeis.contains(imei)) paraLookup.add(imei);
+            } else {
+                Map<String, VerificacionImei> porImei = new HashMap<>();
+                for (VerificacionImei v : verificaciones) porImei.put(v.getImei(), v);
+                for (String imei : nuevos) {
+                    if (!imeis.contains(imei)) continue;   // fila ya quitada mientras se verificaba
+                    VerificacionImei v = porImei.get(imei);
+                    if (v != null && v.getModelo() != null && !v.getModelo().isBlank()) {
+                        modelosDetectados.put(imei, v.getModelo());
+                    } else {
+                        paraLookup.add(imei);
+                    }
+                }
+            }
+            if (!paraLookup.isEmpty()) {
+                lookupsPendientes.addAll(paraLookup);
+                colaLookup.encolar(paraLookup);
+                asegurarHiloLookup();
+            }
+            listaImeis.refresh();
+        }
+
+        /** Relanza el hilo de proceso de la cola de lookup si no está vivo (solo desde el hilo de JavaFX). */
+        private void asegurarHiloLookup() {
+            if (hiloLookup == null || !hiloLookup.isAlive()) {
+                hiloLookup = new Thread(colaLookup::procesarPendientes, "alta-manual-lookup");
+                hiloLookup.setDaemon(true);
+                hiloLookup.start();
+            }
+        }
+
+        /** Adapta {@link TelefonoDAO#getModelo(String)} (checked) a la {@code Function} sin checked de la cola. */
+        private String lookupModelo(String imei) {
+            try {
+                return telefonoDAO.getModelo(imei);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private void esperar(long ms) {
+            try {
+                Thread.sleep(ms);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        /** Callback de {@link LookupModelosImeis}: llega en un hilo de fondo, salta al de JavaFX. */
+        private void onModeloDetectado(LookupModelosImeis.Resultado r) {
+            Platform.runLater(() -> {
+                if (cerrado) return;
+                lookupsPendientes.remove(r.imei());
+                if (!imeis.contains(r.imei())) return;   // fila quitada mientras se buscaba
+                if (r.modelo() != null && !r.modelo().isBlank()) {
+                    modelosDetectados.put(r.imei(), r.modelo());
+                }
+                listaImeis.refresh();
+            });
+        }
+
+        /** Texto de modelo junto al IMEI en la lista (spec §3: manual > detectado > "—"). */
+        private String textoModeloFila(String imei) {
+            String manual = modelosManuales.get(imei);
+            if (manual != null && !manual.isBlank()) return FormularioReparacionController.traducirModelo(manual);
+            String detectado = modelosDetectados.get(imei);
+            if (detectado != null && !detectado.isBlank()) return FormularioReparacionController.traducirModelo(detectado);
+            if (lookupsPendientes.contains(imei)) return "detectando…";
+            return "—";
+        }
+
+        private void editarModeloFila(String imei) {
+            String actual = modelosManuales.getOrDefault(imei, modelosDetectados.get(imei));
+            SelectorModeloDialog.elegir(actual).ifPresent(elegido -> {
+                modelosManuales.put(imei, elegido);
+                listaImeis.refresh();
+            });
+        }
+
+        private void quitarFila(String imei) {
+            imeis.remove(imei);
+            colaLookup.descartar(imei);
+            modelosManuales.remove(imei);
+            modelosDetectados.remove(imei);
+            lookupsPendientes.remove(imei);
         }
 
         // ─── ≈ € del precio/unidad ───────────────────────────────────────────────
@@ -449,7 +604,6 @@ public final class AltaManualLoteDialog {
             List<String> imeisSnapshot = new ArrayList<>(imeis);
             if (batch.isEmpty() || proveedor == null || imeisSnapshot.isEmpty()) return;
 
-            String modelo = modeloInterno;
             Integer storageGb = comboStorage.getValue();
             String color = comboColor.getValue();
             String grado = textoOrNull(tfGrado.getText());
@@ -484,7 +638,9 @@ public final class AltaManualLoteDialog {
                             : precio.multiply(BigDecimal.valueOf(tasa)).setScale(2, RoundingMode.HALF_UP);
                     List<Importacion.TelefonoImport> telefonos = new ArrayList<>();
                     for (String imei : imeisFinal) {
-                        telefonos.add(new Importacion.TelefonoImport(imei, modelo, storageGb, color, grado,
+                        String modeloFila = LookupModelosImeis.modeloParaFila(
+                                modelosManuales.get(imei), modelosDetectados.get(imei), modeloInterno);
+                        telefonos.add(new Importacion.TelefonoImport(imei, modeloFila, storageGb, color, grado,
                                 precio, divisa, precioEur, esEsim));
                     }
                     Importacion.LoteImport loteImport = new Importacion.LoteImport(batch, idProv, null, telefonos);
