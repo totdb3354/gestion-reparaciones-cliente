@@ -3,6 +3,7 @@ package com.reparaciones.dao;
 import com.google.gson.JsonObject;
 import com.reparaciones.models.Usuario;
 import com.reparaciones.utils.ApiClient;
+import com.reparaciones.utils.ConexionException;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -23,6 +24,9 @@ public class UsuarioDAO {
      * <p>Si las credenciales son incorrectas el servidor devuelve 401
      * y este método retorna {@code null}. Cualquier otro error (red caída,
      * servidor no disponible) se propaga como {@link SQLException}.</p>
+     * <p>Si el primer intento falla por {@link ConexionException} (p. ej. un socket
+     * keep-alive muerto reutilizado tras estar la app inactiva) se reintenta una sola vez:
+     * el login es idempotente, así que repetirlo es seguro.</p>
      *
      * @param nombreUsuario nombre de inicio de sesión
      * @param password      contraseña en texto plano
@@ -30,6 +34,14 @@ public class UsuarioDAO {
      * @throws SQLException si falla la comunicación con el servidor
      */
     public Usuario login(String nombreUsuario, String password) throws SQLException {
+        try {
+            return intentarLogin(nombreUsuario, password);
+        } catch (ConexionException primerFallo) {
+            return intentarLogin(nombreUsuario, password);
+        }
+    }
+
+    private Usuario intentarLogin(String nombreUsuario, String password) throws SQLException {
         try {
             JsonObject resp = ApiClient.post(
                     "/api/auth/login",
