@@ -52,11 +52,13 @@ public class LookupModelosImeis {
     public void procesarPendientes() {
         while (true) {
             String imei;
+            boolean descartado;
             synchronized (this) {
                 imei = pendientes.pollFirst();
+                descartado = imei != null && descartados.contains(imei);
             }
             if (imei == null) return;
-            if (descartados.contains(imei)) continue;
+            if (descartado) continue;
             if (!primero) espera.accept(ESPERA_MS);
             primero = false;
             String modelo;
