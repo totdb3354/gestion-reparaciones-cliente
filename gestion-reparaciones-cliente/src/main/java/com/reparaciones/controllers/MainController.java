@@ -772,15 +772,15 @@ public class MainController {
     }
 
     /**
-     * Navega a la vista de inventario (agrupado por IMEI, vista completa) — solo SUPERTECNICO/ADMIN.
-     * El controlador se configura para {@link ConfigVistaAgrupado.Vista#INVENTARIO} la primera vez
-     * que se carga (patrón de {@code mostrarVista} en el miss de caché); en cada visualización
-     * posterior los datos se refrescan vía {@link com.reparaciones.utils.Recargable#recargar()}.
+     * Navega a la vista de inventario (anfitrión con sidebar Inventario | Suppliers) — solo
+     * SUPERTECNICO/ADMIN. {@link InventarioController} se configura solo en su
+     * {@code initialize()} la primera vez que se carga; en cada visualización posterior los
+     * datos se refrescan vía {@link com.reparaciones.utils.Recargable#recargar()}.
      */
     @FXML
     private void mostrarInventario() {
         accionVistaActual = this::mostrarInventario;
-        mostrarVista("/views/AgrupadoView.fxml", btnInventario, btnReparaciones, btnStock, btnEstadisticas, btnClientes);
+        mostrarVista("/views/InventarioView.fxml", btnInventario, btnReparaciones, btnStock, btnEstadisticas, btnClientes);
     }
 
     /** Navega a la vista de stock y abre directamente la sección de pedidos. */
@@ -984,15 +984,6 @@ public class MainController {
                         filtroNavTecnico = tecnico;
                         mostrarReparaciones();
                     });
-                }
-
-                // Configurar el Agrupado (Inventario) para el rol anfitrión y cargar los datos
-                // iniciales (solo primera carga; en visitas posteriores refresca el bloque de
-                // recargar() de más abajo vía Recargable).
-                if (ctrl instanceof AgrupadoController ac) {
-                    ac.configurar(Sesion.esSuperTecnico() ? AgrupadoController.Rol.SUPERTECNICO : AgrupadoController.Rol.ADMIN,
-                                  ConfigVistaAgrupado.Vista.INVENTARIO);
-                    ac.cargar();
                 }
 
                 vistaCache.put(ruta, new Object[]{vista, ctrl});
