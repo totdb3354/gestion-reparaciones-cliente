@@ -74,7 +74,7 @@ public final class AltaManualLoteDialog {
     public static void abrir(Window owner, Runnable onImportado) {
         new Thread(() -> {
             try {
-                List<Proveedor> proveedores = new ProveedorDAO().getActivos();
+                List<Proveedor> proveedores = new ProveedorDAO().getActivos(null);
                 Platform.runLater(() -> new Sesion(owner, proveedores, onImportado).mostrar());
             } catch (SQLException e) {
                 Platform.runLater(() -> Alertas.mostrarError("No se pudieron cargar los proveedores: " + e.getMessage()));

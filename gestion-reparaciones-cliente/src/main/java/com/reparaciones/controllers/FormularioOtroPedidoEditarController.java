@@ -79,7 +79,7 @@ public class FormularioOtroPedidoEditarController {
         txtConcepto.setText(pedido.getConcepto() != null ? pedido.getConcepto() : "");
 
         try {
-            cmbProveedor.getItems().setAll(proveedorDAO.getActivos());
+            cmbProveedor.getItems().setAll(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) {
             mostrarError(e);
         }

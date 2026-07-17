@@ -1716,7 +1716,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
 
     private void cargarProveedores() {
         try {
-            datosProveedores.setAll(proveedorDAO.getAll());
+            datosProveedores.setAll(proveedorDAO.getAll(ProveedorDAO.TIPO_COMPONENTES));
             poblarFiltrosProveedor();
             String hora = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
             if (lblUltimaActProveedores != null) lblUltimaActProveedores.setText("Actualizado " + hora);
@@ -1778,7 +1778,7 @@ public class StockController implements com.reparaciones.utils.Recargable, com.r
         d.showAndWait().ifPresent(nombre -> {
             if (nombre.isBlank()) return;
             try {
-                proveedorDAO.insertar(nombre.trim());
+                proveedorDAO.insertar(nombre.trim(), null, ProveedorDAO.TIPO_COMPONENTES);
                 cargarProveedores();
             } catch (SQLException e) { mostrarError(e); }
         });

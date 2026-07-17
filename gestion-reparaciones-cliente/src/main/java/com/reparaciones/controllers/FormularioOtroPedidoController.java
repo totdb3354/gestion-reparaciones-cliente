@@ -112,7 +112,7 @@ public class FormularioOtroPedidoController {
     public void init(Runnable onGuardado) {
         this.onGuardado = onGuardado;
         try {
-            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos());
+            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) {
             mostrarError(e);
         }

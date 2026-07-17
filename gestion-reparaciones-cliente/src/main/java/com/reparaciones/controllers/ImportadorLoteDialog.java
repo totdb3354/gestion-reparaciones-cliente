@@ -97,7 +97,7 @@ public final class ImportadorLoteDialog {
                 ColorEquivalenciaDAO colorEquivalenciaDAO = new ColorEquivalenciaDAO();
                 Map<String, String> equivalenciasColor = colorEquivalenciaDAO.getAll();
                 ProveedorDAO proveedorDAO = new ProveedorDAO();
-                List<Proveedor> proveedores = proveedorDAO.getActivos();
+                List<Proveedor> proveedores = proveedorDAO.getActivos(null);
 
                 List<String> imeis = resultado.filas().stream()
                         .map(ImportadorLoteDialog::imeiLimpio)
