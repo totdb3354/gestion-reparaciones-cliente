@@ -24,6 +24,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -32,6 +33,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
@@ -97,7 +99,7 @@ public final class ImportadorLoteDialog {
                 ColorEquivalenciaDAO colorEquivalenciaDAO = new ColorEquivalenciaDAO();
                 Map<String, String> equivalenciasColor = colorEquivalenciaDAO.getAll();
                 ProveedorDAO proveedorDAO = new ProveedorDAO();
-                List<Proveedor> proveedores = proveedorDAO.getActivos(null);
+                List<Proveedor> proveedores = proveedorDAO.getActivos(ProveedorDAO.TIPO_TELEFONOS);
 
                 List<String> imeis = resultado.filas().stream()
                         .map(ImportadorLoteDialog::imeiLimpio)
@@ -181,6 +183,9 @@ public final class ImportadorLoteDialog {
         private Map<String, String> equivalenciasColor;
         private Plan plan;
         private final Map<String, Proveedor> seleccionProveedorPorLote = new HashMap<>();
+        /** Combo de proveedor por lote (clave batchNumber), espejo de {@link #seleccionProveedorPorLote};
+         *  permite refrescar todos los combos tras crear un supplier inline sin reconstruir los panes. */
+        private final Map<String, ComboBox<Proveedor>> comboPorLote = new HashMap<>();
         private final Map<String, Double> tasasCache = new ConcurrentHashMap<>();
 
         private Stage stage;
@@ -204,7 +209,7 @@ public final class ImportadorLoteDialog {
             this.filas = filas;
             this.equivalencias = new HashMap<>(equivalencias);
             this.equivalenciasColor = new HashMap<>(equivalenciasColor);
-            this.proveedores = proveedores;
+            this.proveedores = new ArrayList<>(proveedores);
             this.onImportado = onImportado;
             for (VerificacionImei v : verificaciones) existentesPorImei.put(v.getImei(), v);
         }
@@ -452,13 +457,23 @@ public final class ImportadorLoteDialog {
 
             ComboBox<Proveedor> comboProveedor = new ComboBox<>(FXCollections.observableArrayList(proveedores));
             comboProveedor.setValue(seleccionActual);
-            comboProveedor.setPromptText("Selecciona proveedor…");
+            comboProveedor.setPromptText("Selecciona supplier…");
             comboProveedor.setVisibleRowCount(8);
+            comboPorLote.put(lote.batchNumber(), comboProveedor);
 
-            Label lblAvisoProveedor = new Label("Elige proveedor");
+            Label lblAvisoProveedor = new Label("Elige supplier");
             lblAvisoProveedor.setStyle("-fx-text-fill: " + Colores.TEXTO_ERROR + "; -fx-font-size: 11px; -fx-font-weight: bold;");
             lblAvisoProveedor.setVisible(seleccionActual == null);
             lblAvisoProveedor.setManaged(seleccionActual == null);
+
+            Hyperlink crearSupplier = new Hyperlink();
+            crearSupplier.setText("Crear supplier \"" + lote.proveedorNombre() + "\"");
+            boolean mostrarCrear = seleccionActual == null
+                    && lote.proveedorNombre() != null && !lote.proveedorNombre().isBlank();
+            crearSupplier.setVisible(mostrarCrear);
+            crearSupplier.setManaged(mostrarCrear);
+            crearSupplier.setOnAction(e -> NuevoSupplierDialog.abrir(stage, lote.proveedorNombre(),
+                    nombreCreado -> recargarProveedoresTrasCreacion()));
 
             Label lblTotal = new Label();
             actualizarTotalLote(lblTotal, lote, seleccionActual);
@@ -468,11 +483,15 @@ public final class ImportadorLoteDialog {
                 seleccionProveedorPorLote.put(lote.batchNumber(), val);
                 lblAvisoProveedor.setVisible(val == null);
                 lblAvisoProveedor.setManaged(val == null);
+                boolean mostrar = val == null
+                        && lote.proveedorNombre() != null && !lote.proveedorNombre().isBlank();
+                crearSupplier.setVisible(mostrar);
+                crearSupplier.setManaged(mostrar);
                 actualizarTotalLote(lblTotal, lote, val);
                 actualizarBotonImportar();
             });
 
-            HBox filaProveedor = new HBox(10, new Label("Proveedor:"), comboProveedor, lblAvisoProveedor);
+            HBox filaProveedor = new HBox(10, new Label("Proveedor:"), comboProveedor, lblAvisoProveedor, crearSupplier);
             filaProveedor.setAlignment(Pos.CENTER_LEFT);
 
             TableView<FilaClasificada> tabla = crearTablaImportables();
@@ -495,6 +514,46 @@ public final class ImportadorLoteDialog {
             return proveedores.stream()
                     .filter(p -> p.getNombre() != null && p.getNombre().trim().equalsIgnoreCase(n))
                     .findFirst().orElse(null);
+        }
+
+        /**
+         * Tras crear un supplier inline (Hyperlink "Crear supplier…" de un lote sin selección):
+         * relanza la carga de suppliers activos y, en el hilo de JavaFX, refresca los items de
+         * TODOS los combos de lote conservando su selección, reintenta el match por nombre en los
+         * lotes que aún no tengan proveedor (cubre varios lotes del mismo xlsx con el mismo supplier
+         * nuevo) y recalcula avisos/hyperlinks/botón reutilizando el propio manejador de cada combo.
+         */
+        private void recargarProveedoresTrasCreacion() {
+            new Thread(() -> {
+                try {
+                    List<Proveedor> nuevos = new ProveedorDAO().getActivos(ProveedorDAO.TIPO_TELEFONOS);
+                    Platform.runLater(() -> {
+                        proveedores.clear();
+                        proveedores.addAll(nuevos);
+
+                        for (ComboBox<Proveedor> combo : comboPorLote.values()) {
+                            Proveedor seleccionPrevia = combo.getValue();
+                            combo.setItems(FXCollections.observableArrayList(proveedores));
+                            combo.setValue(seleccionPrevia);
+                        }
+
+                        for (LotePlan lote : plan.lotes()) {
+                            if (seleccionProveedorPorLote.get(lote.batchNumber()) != null) continue;
+                            Proveedor match = buscarProveedorPorNombre(lote.proveedorNombre());
+                            if (match == null) continue;
+                            ComboBox<Proveedor> combo = comboPorLote.get(lote.batchNumber());
+                            if (combo != null) combo.setValue(match);
+                        }
+
+                        for (ComboBox<Proveedor> combo : comboPorLote.values()) {
+                            if (combo.getOnAction() != null) combo.getOnAction().handle(new ActionEvent());
+                        }
+                        actualizarBotonImportar();
+                    });
+                } catch (SQLException ex) {
+                    Platform.runLater(() -> Alertas.mostrarError("No se pudieron recargar los suppliers: " + ex.getMessage()));
+                }
+            }, "importador-recarga-proveedores").start();
         }
 
         private void actualizarTotalLote(Label lblTotal, LotePlan lote, Proveedor proveedor) {
