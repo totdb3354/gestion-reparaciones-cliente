@@ -77,7 +77,7 @@ public final class AltaManualLoteDialog {
                 List<Proveedor> proveedores = new ProveedorDAO().getActivos(ProveedorDAO.TIPO_TELEFONOS);
                 Platform.runLater(() -> new Sesion(owner, proveedores, onImportado).mostrar());
             } catch (SQLException e) {
-                Platform.runLater(() -> Alertas.mostrarError("No se pudieron cargar los proveedores: " + e.getMessage()));
+                Platform.runLater(() -> Alertas.mostrarError("No se pudieron cargar los suppliers: " + e.getMessage()));
             }
         }, "alta-manual-lote-carga").start();
     }
@@ -214,7 +214,7 @@ public final class AltaManualLoteDialog {
             repoblarColor(null);
 
             tfGrado = new TextField();
-            tfGrado.setPromptText("Grado proveedor");
+            tfGrado.setPromptText("Grado supplier");
             cbEsim = new CheckBox("eSIM");
             HBox filaGrado = new HBox(10, tfGrado, cbEsim);
             filaGrado.setAlignment(Pos.CENTER_LEFT);
@@ -232,7 +232,7 @@ public final class AltaManualLoteDialog {
             VBox boxAtributos = new VBox(6, lblAtributos, filaModelo,
                     new Label("Storage GB:"), comboStorage,
                     new Label("Color:"), comboColor,
-                    new Label("Grado proveedor:"), filaGrado,
+                    new Label("Grado supplier:"), filaGrado,
                     new Label("Precio/unidad:"), filaPrecio);
 
             VBox contenidoScroll = new VBox(14, boxBatch, boxProveedor, boxAtributos);

@@ -491,7 +491,7 @@ public final class ImportadorLoteDialog {
                 actualizarBotonImportar();
             });
 
-            HBox filaProveedor = new HBox(10, new Label("Proveedor:"), comboProveedor, lblAvisoProveedor, crearSupplier);
+            HBox filaProveedor = new HBox(10, new Label("Supplier:"), comboProveedor, lblAvisoProveedor, crearSupplier);
             filaProveedor.setAlignment(Pos.CENTER_LEFT);
 
             TableView<FilaClasificada> tabla = crearTablaImportables();
@@ -558,7 +558,7 @@ public final class ImportadorLoteDialog {
 
         private void actualizarTotalLote(Label lblTotal, LotePlan lote, Proveedor proveedor) {
             if (proveedor == null) {
-                lblTotal.setText("Elige un proveedor para ver el total.");
+                lblTotal.setText("Elige un supplier para ver el total.");
                 lblTotal.setStyle("-fx-font-size: 12px; -fx-text-fill: " + Colores.AZUL_GRIS + ";");
                 return;
             }
