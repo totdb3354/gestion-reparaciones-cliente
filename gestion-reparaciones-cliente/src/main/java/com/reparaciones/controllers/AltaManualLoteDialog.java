@@ -214,7 +214,7 @@ public final class AltaManualLoteDialog {
             repoblarColor(null);
 
             tfGrado = new TextField();
-            tfGrado.setPromptText("Grado supplier");
+            tfGrado.setPromptText("Grado proveedor");
             cbEsim = new CheckBox("eSIM");
             HBox filaGrado = new HBox(10, tfGrado, cbEsim);
             filaGrado.setAlignment(Pos.CENTER_LEFT);
@@ -232,7 +232,7 @@ public final class AltaManualLoteDialog {
             VBox boxAtributos = new VBox(6, lblAtributos, filaModelo,
                     new Label("Storage GB:"), comboStorage,
                     new Label("Color:"), comboColor,
-                    new Label("Grado supplier:"), filaGrado,
+                    new Label("Grado proveedor:"), filaGrado,
                     new Label("Precio/unidad:"), filaPrecio);
 
             VBox contenidoScroll = new VBox(14, boxBatch, boxProveedor, boxAtributos);
