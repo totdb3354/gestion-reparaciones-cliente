@@ -426,6 +426,8 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
                        "updatedAt", updatedAt));
     }
 
+    /** Marca/desmarca urgente. Desde 2026-07 el servidor propaga el valor a TODAS
+     *  las asignaciones abiertas del mismo IMEI (urgencia por teléfono, spec 2026-07-21). */
     public void actualizarUrgente(String idRep, boolean urgente) throws SQLException {
         ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/urgente",
                 Map.of("urgente", urgente));
