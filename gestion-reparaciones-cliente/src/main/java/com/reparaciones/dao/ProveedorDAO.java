@@ -4,25 +4,33 @@ import com.reparaciones.models.Proveedor;
 import com.reparaciones.utils.ApiClient;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ProveedorDAO {
 
-    public List<Proveedor> getAll() throws SQLException {
-        return ApiClient.getList("/api/proveedores", Proveedor.class);
+    public static final String TIPO_COMPONENTES = "COMPONENTES";
+    public static final String TIPO_TELEFONOS   = "TELEFONOS";
+
+    public List<Proveedor> getAll(String tipo) throws SQLException {
+        return ApiClient.getList("/api/proveedores" + (tipo == null ? "" : "?tipo=" + tipo), Proveedor.class);
     }
 
-    public List<Proveedor> getActivos() throws SQLException {
-        return ApiClient.getList("/api/proveedores/activos", Proveedor.class);
+    public List<Proveedor> getActivos(String tipo) throws SQLException {
+        return ApiClient.getList("/api/proveedores/activos" + (tipo == null ? "" : "?tipo=" + tipo), Proveedor.class);
     }
 
     public boolean tienePedidos(int idProv) throws SQLException {
         return ApiClient.getBoolean("/api/proveedores/" + idProv + "/tiene-pedidos");
     }
 
-    public void insertar(String nombre) throws SQLException {
-        ApiClient.post("/api/proveedores", Map.of("nombre", nombre));
+    public void insertar(String nombre, String divisa, String tipo) throws SQLException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("nombre", nombre);
+        if (divisa != null) body.put("divisa", divisa);
+        if (tipo != null) body.put("tipo", tipo);
+        ApiClient.post("/api/proveedores", body);
     }
 
     public void setActivo(int idProv, boolean activo) throws SQLException {

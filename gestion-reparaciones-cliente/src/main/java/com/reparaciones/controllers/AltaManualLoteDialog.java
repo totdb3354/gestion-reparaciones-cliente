@@ -74,10 +74,10 @@ public final class AltaManualLoteDialog {
     public static void abrir(Window owner, Runnable onImportado) {
         new Thread(() -> {
             try {
-                List<Proveedor> proveedores = new ProveedorDAO().getActivos();
+                List<Proveedor> proveedores = new ProveedorDAO().getActivos(ProveedorDAO.TIPO_TELEFONOS);
                 Platform.runLater(() -> new Sesion(owner, proveedores, onImportado).mostrar());
             } catch (SQLException e) {
-                Platform.runLater(() -> Alertas.mostrarError("No se pudieron cargar los proveedores: " + e.getMessage()));
+                Platform.runLater(() -> Alertas.mostrarError("No se pudieron cargar los suppliers: " + e.getMessage()));
             }
         }, "alta-manual-lote-carga").start();
     }
@@ -87,9 +87,14 @@ public final class AltaManualLoteDialog {
         private static final String ESTILO_ERROR = "-fx-font-size: 11px; -fx-text-fill: " + Colores.TEXTO_ERROR + ";";
         private static final String ESTILO_OK    = "-fx-font-size: 11px; -fx-text-fill: #2E7D32;";
 
+        /** Entrada centinela de creación inline, siempre la última del combo de supplier. */
+        private static final Proveedor CREAR = new Proveedor(-1, "➕ Crear supplier…", true, "EUR", null);
+
         private final Window owner;
         private final List<Proveedor> proveedores;
         private final Runnable onImportado;
+        /** true mientras se cambia la selección del combo de supplier por código (evita reentradas del onAction). */
+        private boolean sincronizandoProveedor;
 
         private final LoteDAO loteDAO = new LoteDAO();
         private final TipoCambioDAO tipoCambioDAO = new TipoCambioDAO();
@@ -136,7 +141,7 @@ public final class AltaManualLoteDialog {
 
         Sesion(Window owner, List<Proveedor> proveedores, Runnable onImportado) {
             this.owner = owner;
-            this.proveedores = proveedores;
+            this.proveedores = new ArrayList<>(proveedores);
             this.onImportado = onImportado;
         }
 
@@ -154,13 +159,25 @@ public final class AltaManualLoteDialog {
             tfBatch.textProperty().addListener((obs, o, n) -> actualizarBotonCrear());
             VBox boxBatch = new VBox(4, lblBatch, tfBatch);
 
-            Label lblProveedor = new Label("Proveedor:");
-            comboProveedor = new ComboBox<>(FXCollections.observableArrayList(proveedores));
-            comboProveedor.setPromptText("Selecciona proveedor…");
+            Label lblProveedor = new Label("Supplier:");
+            comboProveedor = new ComboBox<>(FXCollections.observableArrayList(itemsProveedorConCentinela()));
+            comboProveedor.setPromptText("Selecciona supplier…");
             comboProveedor.setMaxWidth(Double.MAX_VALUE);
             comboProveedor.setVisibleRowCount(8);
             comboProveedor.setOnAction(e -> {
+                if (sincronizandoProveedor) return;
                 Proveedor prov = comboProveedor.getValue();
+                if (prov == CREAR) {
+                    // Vuelve la selección a null PRIMERO: que lblDivisaPrecio no herede el EUR del centinela.
+                    sincronizandoProveedor = true;
+                    comboProveedor.setValue(null);
+                    sincronizandoProveedor = false;
+                    lblDivisaPrecio.setText("");
+                    actualizarBotonCrear();
+                    actualizarPrecioEur();
+                    NuevoSupplierDialog.abrir(stage, null, this::onSupplierCreado);
+                    return;
+                }
                 lblDivisaPrecio.setText(prov == null ? "" : prov.getDivisa());
                 actualizarBotonCrear();
                 actualizarPrecioEur();
@@ -345,6 +362,45 @@ public final class AltaManualLoteDialog {
             tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == KeyCode.ENTER) intentarAnadir.run(); });
 
             actualizarBotonCrear();
+        }
+
+        // ─── Combo de supplier: centinela "Crear supplier…" y creación inline ────
+
+        /** Items del combo de supplier: los activos + el centinela {@link #CREAR} siempre al final. */
+        private List<Proveedor> itemsProveedorConCentinela() {
+            List<Proveedor> items = new ArrayList<>(proveedores);
+            items.add(CREAR);
+            return items;
+        }
+
+        private Proveedor buscarProveedorPorNombre(String nombre) {
+            if (nombre == null) return null;
+            String n = nombre.trim();
+            return proveedores.stream()
+                    .filter(p -> p.getNombre() != null && p.getNombre().trim().equalsIgnoreCase(n))
+                    .findFirst().orElse(null);
+        }
+
+        /**
+         * Callback de {@link NuevoSupplierDialog#abrir} tras crear un supplier desde el centinela
+         * del combo: relanza la carga de suppliers activos y, en el hilo de JavaFX, repuebla el
+         * combo (centinela de nuevo al final) seleccionando el recién creado por nombre.
+         */
+        private void onSupplierCreado(String nombreCreado) {
+            new Thread(() -> {
+                try {
+                    List<Proveedor> nuevos = new ProveedorDAO().getActivos(ProveedorDAO.TIPO_TELEFONOS);
+                    Platform.runLater(() -> {
+                        proveedores.clear();
+                        proveedores.addAll(nuevos);
+                        Proveedor creado = buscarProveedorPorNombre(nombreCreado);
+                        comboProveedor.setItems(FXCollections.observableArrayList(itemsProveedorConCentinela()));
+                        comboProveedor.setValue(creado);
+                    });
+                } catch (SQLException ex) {
+                    Platform.runLater(() -> Alertas.mostrarError("No se pudieron recargar los suppliers: " + ex.getMessage()));
+                }
+            }, "alta-manual-recarga-proveedores").start();
         }
 
         // ─── Contador / botón ────────────────────────────────────────────────────

@@ -79,7 +79,7 @@ public class FormularioCompraController {
                     componenteDAO.getAllGestionados().stream()
                             .filter(com.reparaciones.models.Componente::isActivo)
                             .collect(java.util.stream.Collectors.toList()));
-            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos());
+            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) {
             mostrarError(e);
         }
@@ -568,7 +568,7 @@ public class FormularioCompraController {
                     componenteDAO.getAllGestionados().stream()
                             .filter(Componente::isActivo)
                             .collect(java.util.stream.Collectors.toList()));
-            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos());
+            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) { mostrarError(e); }
         configurarTabla();
         tablaLineas.setItems(lineas);
@@ -599,7 +599,7 @@ public class FormularioCompraController {
                     componenteDAO.getAllGestionados().stream()
                             .filter(Componente::isActivo)
                             .collect(java.util.stream.Collectors.toList()));
-            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos());
+            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) { mostrarError(e); }
         configurarTabla();
         tablaLineas.setItems(lineas);
@@ -649,7 +649,7 @@ public class FormularioCompraController {
                     componenteDAO.getAllGestionados().stream()
                             .filter(Componente::isActivo)
                             .collect(java.util.stream.Collectors.toList()));
-            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos());
+            proveedoresDisponibles = FXCollections.observableArrayList(proveedorDAO.getActivos(ProveedorDAO.TIPO_COMPONENTES));
         } catch (SQLException e) { mostrarError(e); }
         configurarTabla();
         tablaLineas.setItems(lineas);
