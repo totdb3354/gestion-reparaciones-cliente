@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F2b — Ciclo de estados de la revisión</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 32px 16px; }
+  .page { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 22px 0 6px; }
+  .subtitle { color: #64748b; font-size: 13px; margin: 0 0 18px; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; margin: 10px 0 6px; }
+  .st { border-radius: 8px; padding: 8px 13px; font-weight: 700; font-size: 12.5px; text-align: center; border: 2px solid; white-space: nowrap; }
+  .st small { display: block; font-weight: 400; font-size: 10.5px; margin-top: 2px; }
+  .st.recib { background: #fef3c7; border-color: #d97706; color: #92400e; }
+  .st.rev { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
+  .st.revd { background: #cffafe; border-color: #0891b2; color: #0e7490; border-style: dashed; }
+  .st.repn { background: #ede9fe; border-color: #7c3aed; color: #6d28d9; border-style: dashed; }
+  .st.repd { background: #ffedd5; border-color: #ea580c; color: #c2410c; border-style: dashed; }
+  .st.okk { background: #dcfce7; border-color: #16a34a; color: #15803d; }
+  .arr { display: flex; flex-direction: column; align-items: center; padding: 0 5px; min-width: 78px; }
+  .arr .lbl { font-size: 10px; color: #64748b; text-align: center; line-height: 1.25; }
+  .arr .ln { font-size: 19px; color: #94a3b8; line-height: 1; }
+  .backrow { display: flex; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .back { border: 1.5px dashed #b91c1c; color: #b91c1c; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; text-align: center; max-width: 430px; background: #fff; }
+  .back.cyan { border-color: #0891b2; color: #0e7490; }
+  .legend { display: flex; gap: 18px; justify-content: center; margin-top: 14px; font-size: 12px; color: #475569; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 14px; height: 14px; border-radius: 4px; border: 2px solid #64748b; display: inline-block; }
+  .dot.solid { background: #e2e8f0; }
+  .dot.dash { border-style: dashed; }
+  .mtable { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  .mtable th { text-align: left; font-size: 10.5px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #cbd5e1; padding: 3px 6px; }
+  .mtable td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+  .chip { border-radius: 10px; padding: 0 7px; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+  .chip.y { background: #fef3c7; color: #b45309; }
+  .chip.c { background: #cffafe; color: #0e7490; }
+  .chip.o { background: #ffedd5; color: #c2410c; }
+  .chip.v { background: #ede9fe; color: #6d28d9; }
+  p { font-size: 13px; color: #475569; }
+  .meta { font-size: 11.5px; color: #94a3b8; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>F2b — Ciclo de estados de la revisión</h1>
+  <p class="subtitle">Validado en el brainstorm de F2b (2026-07-21). Complementa la spec canónica de F2 (§2.1): añade los estados <strong>derivados</strong> REVISADO y REPARADO al ciclo. Referencia para la spec de detalle de F2b.</p>
+
+  <div class="card">
+    <div class="flow">
+      <div class="st recib">RECIBIDO</div>
+      <div class="arr"><span class="lbl">escaneo<br>"a revisar"</span><span class="ln">→</span></div>
+      <div class="st rev">EN REVISIÓN<small>ficha a medias o vacía</small></div>
+      <div class="arr"><span class="lbl">las 2 partes<br>guardadas</span><span class="ln">→</span></div>
+      <div class="st revd">REVISADO<small>esperando decisión</small></div>
+      <div class="arr"><span class="lbl">asignar<br>trabajos</span><span class="ln">→</span></div>
+      <div class="st repn">EN REPARACIÓN</div>
+      <div class="arr"><span class="lbl">se cierra el<br>último trabajo</span><span class="ln">→</span></div>
+      <div class="st repd">REPARADO<small>esperando OK</small></div>
+      <div class="arr"><span class="lbl"><strong>OK manual</strong></span><span class="ln">→</span></div>
+      <div class="st okk">OK</div>
+    </div>
+    <div class="backrow">
+      <div class="back cyan">Atajo del sano: desde <strong>REVISADO</strong>, si salió limpio → <strong>OK manual directo</strong> (sin pasar por reparación). Del veredicto salen también Bloquear y Desguace.</div>
+      <div class="back">↩ Trabajo nuevo a un OK / REPARADO / REVISADO → el OK ya no vale: vuelve a EN REPARACIÓN y a pedir OK manual al acabar (regla del check de revisión actual: se pone a mano, se quita solo).</div>
+    </div>
+    <div class="legend">
+      <span><span class="dot solid"></span> borde continuo = estado guardado en BD (lo fija una acción)</span>
+      <span><span class="dot dash"></span> borde discontinuo = derivado (lo calcula la app; no existe en el enum de BD)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Definiciones de los derivados</h3>
+    <ul style="font-size:13px;color:#475569;line-height:1.6">
+      <li><strong>EN REPARACIÓN</strong> = tiene algún trabajo abierto (ya existía como estado efectivo en F2a).</li>
+      <li><strong>REVISADO</strong> = estado BD EN_REVISION + <strong>las dos partes</strong> de la revisión vigente guardadas (estética y funcional) + sin trabajos abiertos + sin OK. Con una sola parte no basta: la estética decide pulido/glass.</li>
+      <li><strong>REPARADO</strong> = estado BD EN_REVISION + revisión vigente completa + hubo trabajos y el último se cerró (esperando el OK humano). Reaparece solo en la cola de revisión, sin re-escanear.</li>
+    </ul>
+    <p>Los estados guardados en BD siguen siendo los del enum de F2a — RECIBIDO, EN_REVISION, BLOQUEADO, OK, ENVIADO, DESGUACE — sin ALTER nuevo.</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">La cola del panel Revisión</h3>
+    <table class="mtable">
+      <tr><th>IMEI</th><th>Modelo</th><th>Situación</th><th>Estética</th><th>Funcional</th></tr>
+      <tr><td>353911…02</td><td>iPhone 12</td><td><span class="chip y">por revisar</span></td><td>pend.</td><td>pend.</td></tr>
+      <tr><td>353845…14</td><td>iPhone 13</td><td><span class="chip y">por revisar</span></td><td>✓ Javi</td><td>pend.</td></tr>
+      <tr><td>354200…58</td><td>iPhone 15</td><td><span class="chip c">REVISADO — esperando decisión</span></td><td>✓ Javi</td><td>✓ Marta</td></tr>
+      <tr><td>356720…91</td><td>iPhone 14 eSIM</td><td><span class="chip o">REPARADO — esperando OK</span></td><td>✓ Javi</td><td>✓ Marta</td></tr>
+      <tr><td style="color:#94a3b8">351002…33</td><td style="color:#94a3b8">iPhone 13</td><td><span class="chip v">en reparación</span></td><td style="color:#94a3b8">✓ Javi</td><td style="color:#94a3b8">✓ Marta</td></tr>
+    </table>
+    <p style="font-size:12px;color:#64748b;margin-top:6px">Los "en reparación" salen atenuados (o filtrables): no son trabajo del revisor hasta que vuelvan solos como REPARADO.</p>
+  </div>
+
+  <p class="meta">Generado en el brainstorm F2b · 2026-07-21 · pareja de la spec de detalle de F2b (docs/superpowers/specs/).</p>
+</div>
+</body>
+</html>
