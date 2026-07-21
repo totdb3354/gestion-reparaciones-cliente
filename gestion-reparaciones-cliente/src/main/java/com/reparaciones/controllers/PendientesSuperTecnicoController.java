@@ -415,7 +415,7 @@ public class PendientesSuperTecnicoController {
                     boolean esRep = getItem() != null && tipoDe(getItem().getIdRep()) == TipoTrabajo.REPARACION;
                     editarComentario.setVisible(!soloLectura);
                     editarModelo.setVisible(!soloLectura && esPulido);          // pulido: edita modelo (rep/glass van por el modal de piezas)
-                    toggleUrgente.setVisible(!soloLectura && !esPulido);
+                    toggleUrgente.setVisible(!soloLectura);
                     editarCliente.setVisible(!soloLectura);   // cliente aplica a cualquier tipo, pulido incluido
                     if (getItem() != null)
                         toggleUrgente.setText(getItem().isUrgente() ? "Quitar urgente" : "Marcar urgente");
