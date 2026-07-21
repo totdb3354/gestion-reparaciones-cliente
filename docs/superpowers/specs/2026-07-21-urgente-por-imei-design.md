@@ -67,6 +67,10 @@ con el que se cerraron (dato hoy no mostrado en ninguna vista; queda en BD).
   (mejora silenciosa). Servidor viejo + cliente nuevo: sin ventana peligrosa
   (el cliente no cambia contratos). Orden de despliegue libre; servidor
   primero por costumbre.
+- Limitación aceptada (concurrencia): la herencia en el alta lee el estado sin
+  bloqueo; un alta cruzada en el mismo milisegundo con un marcado puede nacer
+  con el valor previo. Se autocura en la siguiente escritura de urgencia del
+  IMEI y con el job nocturno.
 
 ## 7. Testing
 
