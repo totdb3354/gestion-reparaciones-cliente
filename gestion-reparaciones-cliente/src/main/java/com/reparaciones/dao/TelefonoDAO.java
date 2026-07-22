@@ -159,4 +159,57 @@ public class TelefonoDAO {
         body.put("updatedAt", updatedAt);
         ApiClient.patch("/api/telefonos/" + imei + "/atributos", body);
     }
+
+    /** F2b: escaneo masivo a revisar. Devuelve el resultado por IMEI (enum del servidor como texto). */
+    public java.util.List<com.reparaciones.models.ResultadoARevisar> pasarARevisar(java.util.List<String> imeis) throws SQLException {
+        com.reparaciones.models.ResultadoARevisar[] res = ApiClient.post(
+                "/api/telefonos/a-revisar", java.util.Map.of("imeis", imeis),
+                com.reparaciones.models.ResultadoARevisar[].class);
+        return java.util.Arrays.asList(res);
+    }
+
+    /** F2b: revisión vigente para la ficha; null si el teléfono nunca pasó por revisión. */
+    public com.reparaciones.models.RevisionTelefono getRevision(String imei) throws SQLException {
+        RevisionResponse r = ApiClient.get("/api/telefonos/" + imei + "/revision", RevisionResponse.class);
+        return (r != null && r.existe) ? r.revision : null;
+    }
+
+    private static class RevisionResponse {
+        boolean existe;
+        com.reparaciones.models.RevisionTelefono revision;
+    }
+
+    public void guardarRevisionEstetica(String imei, String grado, String pant) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("grado", grado);
+        body.put("pant", pant);
+        ApiClient.patch("/api/telefonos/" + imei + "/revision/estetica", body);
+    }
+
+    public void guardarRevisionFuncional(String imei, com.reparaciones.models.RevisionTelefono f) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("bateriaPct", f.getFunBateriaPct());
+        body.put("pantTactil", f.isFunPantTactil());
+        body.put("pantQuemada", f.isFunPantQuemada());
+        body.put("pantMal", f.isFunPantMal());
+        body.put("camMancha", f.isFunCamMancha());
+        body.put("camLente", f.isFunCamLente());
+        body.put("altSup", f.isFunAltSup());
+        body.put("altInf", f.isFunAltInf());
+        body.put("mic", f.isFunMic());
+        body.put("faceId", f.isFunFaceId());
+        body.put("ms", f.isFunMs());
+        body.put("msTexto", f.getFunMsTexto());
+        body.put("bloqueoOp", f.isFunBloqueoOp());
+        body.put("observacion", f.getFunObservacion());
+        ApiClient.patch("/api/telefonos/" + imei + "/revision/funcional", body);
+    }
+
+    /** F2b: acciones OK / BLOQUEAR / DESBLOQUEAR / DESGUACE (motivo solo en desguace/bloqueo). */
+    public void accionEstado(String imei, String accion, String motivo) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("accion", accion);
+        body.put("motivo", motivo);
+        ApiClient.post("/api/telefonos/" + imei + "/estado", body);
+    }
 }

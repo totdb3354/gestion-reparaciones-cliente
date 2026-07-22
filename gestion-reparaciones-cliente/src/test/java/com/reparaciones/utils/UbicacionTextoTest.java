@@ -42,4 +42,9 @@ class UbicacionTextoTest {
                 UbicacionTexto.padre(tel("EN_REPARACION", "REPARACIONES", List.of("PULIDO", "NORMAL"), 2)));
         assertEquals(UbicacionTexto.FUERA, UbicacionTexto.padre(tel(null, null, List.of(), 0)));
     }
+
+    @Test void estadosDerivadosNuevosDeF2b() {
+        assertEquals("Revisado", UbicacionTexto.estado(tel("REVISADO", "PARA_REVISAR", List.of(), 0)));
+        assertEquals("Reparado", UbicacionTexto.estado(tel("REPARADO", "PARA_REVISAR", List.of(), 0)));
+    }
 }
