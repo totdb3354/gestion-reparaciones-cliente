@@ -19,6 +19,8 @@
         <VBox styleClass="stock-sidebar" spacing="0">
             <Button fx:id="btnTabInventario" text="Inventario" maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarInventarioPanel"/>
+            <Button fx:id="btnTabRevision" text="Revisión" maxWidth="Infinity"
+                    styleClass="stock-sidebar-btn" onAction="#mostrarRevision"/>
             <Button fx:id="btnTabSuppliers"  text="Suppliers"  maxWidth="Infinity"
                     styleClass="stock-sidebar-btn" onAction="#mostrarSuppliers"/>
         </VBox>
@@ -31,6 +33,11 @@
             <!-- Panel: Inventario (agrupado por IMEI, componente compartido) -->
             <VBox fx:id="pnlInventario" visible="true" managed="true" VBox.vgrow="ALWAYS">
                 <fx:include source="AgrupadoView.fxml" fx:id="agrupado"/>
+            </VBox>
+
+            <!-- Panel: Revisión (cola de EN_REVISION con escáner — F2b) -->
+            <VBox fx:id="pnlRevision" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                <fx:include source="RevisionPanelView.fxml" fx:id="revisionPanel"/>
             </VBox>
 
             <!-- Panel: Suppliers (proveedores de teléfonos — calco del panel Proveedores de Stock) -->

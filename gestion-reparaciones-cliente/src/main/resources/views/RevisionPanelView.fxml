@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.reparaciones.controllers.RevisionPanelController"
+      spacing="12" VBox.vgrow="ALWAYS">
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <Label text="Revisión" styleClass="vista-titulo"/>
+    </HBox>
+    <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
+        <Label text="Escanear IMEI:" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="tfScan" prefWidth="190" promptText="Enter abre la ficha" styleClass="buscador"/>
+        <Label fx:id="lblScan"/>
+        <Button fx:id="btnMasivo" text="A revisar (masivo)" styleClass="btn-primary" onAction="#abrirMasivo"/>
+    </FlowPane>
+    <TableView fx:id="tabla" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colImei"      text="IMEI"               prefWidth="140"/>
+            <TableColumn fx:id="colModelo"    text="Modelo"             prefWidth="150"/>
+            <TableColumn fx:id="colLote"      text="Lote"               prefWidth="110"/>
+            <TableColumn fx:id="colSituacion" text="Situación"          prefWidth="210"/>
+            <TableColumn fx:id="colEstetica"  text="Estética"           prefWidth="120"/>
+            <TableColumn fx:id="colFuncional" text="Funcional"          prefWidth="120"/>
+            <TableColumn fx:id="colDesde"     text="En revisión desde"  prefWidth="140"/>
+        </columns>
+    </TableView>
+</VBox>

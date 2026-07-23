@@ -36,10 +36,13 @@ import java.sql.SQLException;
 public class InventarioController implements com.reparaciones.utils.Recargable, com.reparaciones.utils.Exportable {
 
     @FXML private Button btnTabInventario;
+    @FXML private Button btnTabRevision;
     @FXML private Button btnTabSuppliers;
     @FXML private VBox   pnlInventario;
+    @FXML private VBox   pnlRevision;
     @FXML private VBox   pnlSuppliers;
     @FXML private AgrupadoController agrupadoController;
+    @FXML private RevisionPanelController revisionPanelController;
 
     // ── Panel Suppliers ──────────────────────────────────────────────────────
     @FXML private Button btnNuevoSupplier;
@@ -71,6 +74,10 @@ public class InventarioController implements com.reparaciones.utils.Recargable, 
         mostrarPanel(pnlInventario, btnTabInventario);
     }
 
+    @FXML private void mostrarRevision() {
+        mostrarPanel(pnlRevision, btnTabRevision);
+    }
+
     @FXML private void mostrarSuppliers() {
         mostrarPanel(pnlSuppliers, btnTabSuppliers);
     }
@@ -81,13 +88,15 @@ public class InventarioController implements com.reparaciones.utils.Recargable, 
             agrupadoController.resetarModo();
 
         pnlInventario.setVisible(false); pnlInventario.setManaged(false);
+        pnlRevision  .setVisible(false); pnlRevision  .setManaged(false);
         pnlSuppliers .setVisible(false); pnlSuppliers .setManaged(false);
         panel.setVisible(true); panel.setManaged(true);
-        for (Button b : new Button[]{btnTabInventario, btnTabSuppliers}) {
+        for (Button b : new Button[]{btnTabInventario, btnTabRevision, btnTabSuppliers}) {
             b.getStyleClass().removeAll("stock-sidebar-btn-active", "stock-sidebar-btn");
             b.getStyleClass().add(b == btnActivo ? "stock-sidebar-btn-active" : "stock-sidebar-btn");
         }
         if (panel == pnlInventario)      agrupadoController.cargar();
+        else if (panel == pnlRevision)   revisionPanelController.cargar();
         else if (panel == pnlSuppliers)  cargarSuppliers();
     }
 
@@ -221,6 +230,7 @@ public class InventarioController implements com.reparaciones.utils.Recargable, 
     @Override
     public void recargar() {
         if (pnlInventario.isVisible())      agrupadoController.cargar();
+        else if (pnlRevision.isVisible())   revisionPanelController.cargar();
         else if (pnlSuppliers.isVisible())  cargarSuppliers();
     }
 
@@ -230,6 +240,6 @@ public class InventarioController implements com.reparaciones.utils.Recargable, 
     @Override
     public void exportarCSV(Stage owner) {
         if (pnlInventario.isVisible()) { agrupadoController.exportarCSV(owner); }
-        // Suppliers no exporta CSV (fuera de alcance — spec)
+        // Revisión y Suppliers no exportan CSV (fuera de alcance — spec)
     }
 }
