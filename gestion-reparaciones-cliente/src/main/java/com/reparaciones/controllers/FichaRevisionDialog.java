@@ -419,6 +419,7 @@ public final class FichaRevisionDialog {
             t.setCliente(nombreNuevo);
             lnkCliente.setText(nombreNuevo != null ? nombreNuevo : "— sin cliente —");
             huboCambios = true;
+            refrescarTelefonoUpdatedAt();
         } catch (StaleDataException ex) {
             // No hay aquí un "cargar()" de tabla al que recargar: se avisa y se cierra la ficha
             // para que el llamador refresque con datos frescos (onCambios, vía setOnHidden).
@@ -428,6 +429,37 @@ public final class FichaRevisionDialog {
         } catch (SQLException ex) {
             Alertas.mostrarError(ex.getMessage());
         }
+    }
+
+    /**
+     * Tras reasignar cliente, el servidor bumpa {@code Telefono.UPDATED_AT}
+     * (ON UPDATE CURRENT_TIMESTAMP), pero la copia local de {@code t} no se entera solo
+     * con {@code setCliente}. Sin refrescarla, una segunda reasignación en la misma
+     * ficha abierta enviaría el timestamp caducado y provocaría un 409 falso (cierre de
+     * la ficha por "StaleDataException" sin que nadie más la haya tocado). Se relee el
+     * inventario en segundo plano y se copia la fila fresca sobre {@code t}; si el IMEI
+     * no aparece (caso raro), se deja el estado actual — un conflicto real se verá en el
+     * siguiente guardado, legítimamente.
+     */
+    private void refrescarTelefonoUpdatedAt() {
+        String imei = t.getImei();
+        new Thread(() -> {
+            List<TelefonoInventario> inventario;
+            try {
+                inventario = dao.getInventario();
+            } catch (SQLException ex) {
+                return;
+            }
+            TelefonoInventario fresco = inventario.stream()
+                    .filter(ti -> imei.equals(ti.getImei()))
+                    .findFirst().orElse(null);
+            if (fresco == null) return;
+            Platform.runLater(() -> {
+                t.setTelefonoUpdatedAt(fresco.getTelefonoUpdatedAt());
+                t.setCliente(fresco.getCliente());
+                lnkCliente.setText(fresco.getCliente() != null ? fresco.getCliente() : "— sin cliente —");
+            });
+        }, "refrescar-updated-at").start();
     }
 
     // ── Carga inicial ─────────────────────────────────────────────────────────
