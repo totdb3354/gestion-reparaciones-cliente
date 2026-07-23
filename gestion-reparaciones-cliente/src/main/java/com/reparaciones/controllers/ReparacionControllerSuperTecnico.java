@@ -312,6 +312,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         mostrarPanel(pnlPendientes, btnTabPendientes);
     }
 
+    /** F2b: fuerza el apartado Asignaciones y abre el modal de asignación con el IMEI precargado. */
+    public void abrirAsignacionPrecargada(String imei, com.reparaciones.utils.TipoTrabajo tipo) {
+        mostrarPanel(pnlPendientes, btnTabPendientes);
+        pendientesSuperTecnicoController.abrirAsignacionPrecargada(imei, tipo);
+    }
+
     private void mostrarPanel(VBox panel, Button btnActivo) {
         // Al salir del apartado Agrupado, volver su drill-down a maestro
         if (pnlAgrupado.isVisible() && panel != pnlAgrupado)

@@ -12,6 +12,7 @@ import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.SelectorClienteDialog;
 import com.reparaciones.utils.StaleDataException;
 import com.reparaciones.utils.UbicacionTexto;
+import com.reparaciones.utils.VeredictoRevision;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -41,6 +42,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * F2b: ficha de revisión de un teléfono (spec §5, layout A aprobado en brainstorm).
@@ -369,22 +371,35 @@ public final class FichaRevisionDialog {
         btnOk.setStyle("-fx-background-color: " + Colores.VERDE_OK + "; -fx-text-fill: white; -fx-font-weight: bold;" +
                 "-fx-background-radius: 24; -fx-font-size: 12px; -fx-padding: 8 16 8 16; -fx-cursor: hand;");
         btnOk.setDisable(true);
+        btnOk.setOnAction(e -> ConfirmDialog.mostrar("Marcar OK",
+                "El teléfono pasará a OK (caja de listos).", "Marcar OK", () -> accion("OK", null)));
 
         btnAsignar = new Button("Asignar trabajos…");
         btnAsignar.getStyleClass().add("btn-secondary");
         btnAsignar.setDisable(true);
+        btnAsignar.setOnAction(e -> {
+            VeredictoRevision.Veredicto vActual = VeredictoRevision.evaluar(revisionActual);
+            ventana.close();
+            MainController.irAAsignarTelefono(t.getImei(), VeredictoRevision.tipoPrincipal(vActual));
+        });
 
         btnBloquear = new Button("Bloquear");
         btnBloquear.getStyleClass().add("btn-secondary");
         btnBloquear.setDisable(true);
+        btnBloquear.setOnAction(e -> ConfirmDialog.mostrarConMotivo("Bloquear teléfono",
+                "Pasará a la caja de bloqueo.", "Bloquear", motivo -> accion("BLOQUEAR", motivo)));
 
         btnDesbloquear = new Button("Desbloquear");
         btnDesbloquear.getStyleClass().add("btn-secondary");
         btnDesbloquear.setDisable(true);
+        btnDesbloquear.setOnAction(e -> ConfirmDialog.mostrar("Desbloquear",
+                "Volverá a EN REVISIÓN; la derivación decide el resto.", "Desbloquear", () -> accion("DESBLOQUEAR", null)));
 
         btnDesguace = new Button("Desguace");
         btnDesguace.getStyleClass().add("btn-secondary");
         btnDesguace.setDisable(true);
+        btnDesguace.setOnAction(e -> ConfirmDialog.mostrarConMotivo("Desguace",
+                "Estado terminal, solo registro.", "Desguace", motivo -> accion("DESGUACE", motivo)));
 
         HBox pie = new HBox(10, lblCliente, lnkCliente, spacerPie,
                 btnOk, btnAsignar, btnBloquear, btnDesbloquear, btnDesguace);
@@ -481,6 +496,7 @@ public final class FichaRevisionDialog {
                 revisionActual = (rCargada != null) ? rCargada : new RevisionTelefono();
                 poblarDesdeRevision();
                 recargarChips();
+                pintarVeredicto();
                 // Null solo debería darse consultando un teléfono que nunca pasó por revisión
                 // (si estuviera EN_REVISION, la fila Revision ya existe desde el escaneo).
                 if (sinRevision && !"EN_REVISION".equals(t.getEstado())) {
@@ -556,6 +572,113 @@ public final class FichaRevisionDialog {
         tfMsTexto.setDisable(!editable || !chkMs.isSelected());
     }
 
+    // ── Veredicto + acciones de estado (T9) ────────────────────────────────────
+
+    /**
+     * Repinta el banner de veredicto bajo las columnas y recalcula la habilitación
+     * de los botones de acción. Se llama al terminar la carga inicial y tras cada
+     * guardado (estética o funcional), para que el veredicto se recalcule al momento.
+     */
+    private void pintarVeredicto() {
+        zonaVeredicto.getChildren().clear();
+        VeredictoRevision.Veredicto v = VeredictoRevision.evaluar(revisionActual);
+        if (v != null) {
+            HBox banner = construirBanner(v);
+            if (banner != null) zonaVeredicto.getChildren().add(banner);
+        }
+        actualizarAcciones(v);
+    }
+
+    private HBox construirBanner(VeredictoRevision.Veredicto v) {
+        String texto;
+        String bg, brd;
+        if (v.bloqueado()) {
+            texto = "⛔ BLOQUEADO — bloqueo de operador";
+            bg = Colores.FILA_INCIDENCIA_BG; brd = Colores.FILA_INCIDENCIA_BRD;
+        } else if (v.bateriaObligatoria()) {
+            // Batería + trabajos coinciden (la batería obligatoria siempre añade NORMAL a trabajos): un solo banner ámbar.
+            texto = "🔋 Batería " + revisionActual.getFunBateriaPct() + "% — reparación obligatoria (< 85)"
+                    + "  🔧 Necesita trabajos: " + trabajosLegibles(v.trabajos());
+            bg = Colores.FILA_SOLICITUD_BG; brd = Colores.FILA_SOLICITUD_BRD;
+        } else if (!v.trabajos().isEmpty()) {
+            texto = "🔧 Necesita trabajos: " + trabajosLegibles(v.trabajos());
+            bg = Colores.FILA_EDICION_BG; brd = Colores.FILA_EDICION_BRD;
+        } else if (v.limpio()) {
+            texto = "✅ Sin defectos — candidato a OK";
+            if (revisionActual.getEstFecha() == null) texto += " — falta estética para el OK";
+            bg = Colores.FILA_REPARADO_BG; brd = Colores.FILA_REPARADO_BRD;
+        } else {
+            // Batería no registrada, sin trabajos y sin bloqueo: nada concluyente que pintar todavía.
+            return null;
+        }
+        Label lbl = new Label(texto);
+        lbl.setWrapText(true);
+        lbl.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + brd + ";");
+        HBox banner = new HBox(lbl);
+        HBox.setHgrow(lbl, Priority.ALWAYS);
+        banner.setAlignment(Pos.CENTER_LEFT);
+        banner.setPadding(new Insets(10, 14, 10, 14));
+        banner.setStyle("-fx-background-color: " + bg + "; -fx-background-radius: 6;" +
+                "-fx-border-color: " + brd + "; -fx-border-radius: 6; -fx-border-width: 1;");
+        return banner;
+    }
+
+    private static String trabajosLegibles(List<String> trabajos) {
+        return trabajos.stream().map(FichaRevisionDialog::etiquetaTrabajo).collect(Collectors.joining(", "));
+    }
+
+    private static String etiquetaTrabajo(String codigo) {
+        return switch (codigo) {
+            case "PULIDO" -> "Pulido";
+            case "GLASS"  -> "Glass";
+            default       -> "Reparación";
+        };
+    }
+
+    /** Habilitación/visibilidad de los botones de acción, según el veredicto, el rol y el estado. */
+    private void actualizarAcciones(VeredictoRevision.Veredicto v) {
+        boolean esSuper = Sesion.esSuperTecnico();
+        String estado = t.getEstado();
+        boolean ambasPartes = revisionActual != null
+                && revisionActual.getEstFecha() != null && revisionActual.getFunFecha() != null;
+
+        if (editable && ambasPartes) {
+            boolean bateriaNull = revisionActual.getFunBateriaPct() == null;
+            btnOk.setDisable(v.bateriaObligatoria() || bateriaNull);
+        } else {
+            btnOk.setDisable(true);
+        }
+
+        btnAsignar.setDisable(v == null || v.trabajos().isEmpty());
+
+        btnBloquear.setVisible(editable);
+        btnBloquear.setManaged(editable);
+
+        boolean bloqueado = "BLOQUEADO".equals(estado);
+        btnDesbloquear.setVisible(bloqueado && esSuper);
+        btnDesbloquear.setManaged(bloqueado && esSuper);
+
+        boolean desguaceable = esSuper && ("EN_REVISION".equals(estado) || "BLOQUEADO".equals(estado));
+        btnDesguace.setVisible(desguaceable);
+        btnDesguace.setManaged(desguaceable);
+    }
+
+    /** Ejecuta una acción de cambio de estado (OK/BLOQUEAR/DESBLOQUEAR/DESGUACE) y cierra la ficha al éxito. */
+    private void accion(String accion, String motivo) {
+        String imei = t.getImei();
+        new Thread(() -> {
+            try {
+                dao.accionEstado(imei, accion, motivo);
+                Platform.runLater(() -> {
+                    huboCambios = true;
+                    ventana.close();
+                });
+            } catch (SQLException ex) {
+                Platform.runLater(() -> Alertas.mostrarError(ex.getMessage()));
+            }
+        }, "accion-estado-revision").start();
+    }
+
     // ── Guardado por parte ────────────────────────────────────────────────────
 
     private void guardarEstetica() {
@@ -575,6 +698,7 @@ public final class FichaRevisionDialog {
                 Platform.runLater(() -> {
                     revisionActual = actualizada;
                     recargarChips();
+                    pintarVeredicto();
                     huboCambios = true;
                     guardandoEst = false;
                     btnGuardarEst.setDisable(!editable);
@@ -635,6 +759,7 @@ public final class FichaRevisionDialog {
                 Platform.runLater(() -> {
                     revisionActual = actualizada;
                     recargarChips();
+                    pintarVeredicto();
                     huboCambios = true;
                     guardandoFun = false;
                     if (bloqueo) {

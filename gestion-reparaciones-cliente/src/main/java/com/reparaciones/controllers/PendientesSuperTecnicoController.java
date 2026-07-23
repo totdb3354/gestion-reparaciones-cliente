@@ -88,6 +88,10 @@ public class PendientesSuperTecnicoController {
     /** IMEI → nº de técnicos distintos con asignación pendiente (sub-indicador "N asignados"). */
     private java.util.Map<String,Integer> conteoTecnicosPorImei = java.util.Map.of();
 
+    // F2b: precarga desde la ficha de revisión (IMEI escaneado de antemano + tipo principal del veredicto).
+    private String precargaImei;
+    private com.reparaciones.utils.TipoTrabajo precargaTipo;
+
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
     private List<ReparacionResumen> cerradasHoy = List.of();
@@ -1602,6 +1606,13 @@ public class PendientesSuperTecnicoController {
         return new VBox(8, lblTecTop, cbTecTop, new Separator(), lblScan, tfScan, lblErr, new Separator(), lblTitulo, cols);
     }
 
+    /** F2b: abre el modal de asignación con un IMEI ya escaneado y el tipo por defecto fijado. */
+    public void abrirAsignacionPrecargada(String imei, com.reparaciones.utils.TipoTrabajo tipo) {
+        this.precargaImei = imei;
+        this.precargaTipo = tipo;
+        abrirFormularioAsignacion();
+    }
+
     @FXML
     private void abrirFormularioAsignacion() {
         // ── Estado del lote ──────────────────────────────────────────────────
@@ -2391,6 +2402,22 @@ public class PendientesSuperTecnicoController {
         ventana.setScene(scene);
         renderPila[0].run();
         javafx.application.Platform.runLater(tfScan::requestFocus);
+
+        // ── F2b: precarga desde la ficha de revisión (IMEI + tipo principal del veredicto) ──
+        if (precargaImei != null) {
+            if (precargaTipo != null) {
+                tipoActual[0] = precargaTipo;
+                switch (precargaTipo) {
+                    case GLASS  -> tbGlass.setSelected(true);
+                    case PULIDO -> tbPulido.setSelected(true);
+                    default     -> tbRep.setSelected(true);
+                }
+            }
+            tfScan.setText(precargaImei);   // el listener existente lo añade y limpia el campo
+            precargaImei = null;
+            precargaTipo = null;
+        }
+
         ventana.showAndWait();
     }
 
