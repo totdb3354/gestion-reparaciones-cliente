@@ -700,6 +700,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     switch (est) {
                         case "Recibido"      -> badge.setStyle(base + "-fx-background-color: #E3F2FD; -fx-text-fill: #1565C0;");
                         case "En reparación" -> badge.setStyle(base + "-fx-background-color: " + Colores.FILA_INCIDENCIA_BG + "; -fx-text-fill: " + Colores.FILA_INCIDENCIA_BRD + ";");
+                        case "Revisado"      -> badge.setStyle(base + "-fx-background-color: #CFFAFE; -fx-text-fill: #0E7490;");
+                        case "Reparado"      -> badge.setStyle(base + "-fx-background-color: #FFEDD5; -fx-text-fill: #C2410C;");
                         default              -> badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
                     setGraphic(badge);
@@ -835,6 +837,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 MenuItem editarObs   = new MenuItem("Editar observación");
                 MenuItem editarCli   = new MenuItem("Editar cliente");
                 MenuItem editarAtr   = new MenuItem("Editar atributos");
+                MenuItem fichaRev    = new MenuItem("Ficha de revisión");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -886,8 +889,12 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     } catch (SQLException ex) { mostrarError(ex); }
                 });
                 editarAtr  .setOnAction(e -> { if (getItem() instanceof TelefonoInventario t) abrirDialogoAtributos(t); });
+                fichaRev   .setOnAction(e -> {
+                    if (!(getItem() instanceof TelefonoInventario t)) return;
+                    FichaRevisionDialog.abrir(getScene().getWindow(), t, AgrupadoController.this::cargar);
+                });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
-                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr);
+                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof TelefonoInventario;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
@@ -896,6 +903,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         editarObs.setVisible(esSuper && esGrupo);
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
                         editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
+                        fichaRev.setVisible(esGrupo && modoActual == Modo.MAESTRO && vista == ConfigVistaAgrupado.Vista.INVENTARIO);
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -906,6 +914,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     editarObs   .setVisible(false);
                     editarCli   .setVisible(false);
                     editarAtr   .setVisible(false);
+                    fichaRev    .setVisible(false);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(ev -> {
