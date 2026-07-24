@@ -655,14 +655,17 @@ public final class FichaRevisionDialog {
 
         btnBloquear.setVisible(editable);
         btnBloquear.setManaged(editable);
+        btnBloquear.setDisable(!editable);
 
         boolean bloqueado = "BLOQUEADO".equals(estado);
         btnDesbloquear.setVisible(bloqueado && esSuper);
         btnDesbloquear.setManaged(bloqueado && esSuper);
+        btnDesbloquear.setDisable(!(bloqueado && esSuper));
 
         boolean desguaceable = esSuper && ("EN_REVISION".equals(estado) || "BLOQUEADO".equals(estado));
         btnDesguace.setVisible(desguaceable);
         btnDesguace.setManaged(desguaceable);
+        btnDesguace.setDisable(!desguaceable);
     }
 
     /** Ejecuta una acción de cambio de estado (OK/BLOQUEAR/DESBLOQUEAR/DESGUACE) y cierra la ficha al éxito. */
