@@ -506,6 +506,7 @@ public final class FichaRevisionDialog {
                     lblAviso.setManaged(true);
                 }
                 aplicarEditable();
+                ventana.sizeToScene(); // el banner/chips crecen tras la carga async: reajusta la ventana (smoke)
             });
         }, "cargar-revision").start();
     }
@@ -703,6 +704,7 @@ public final class FichaRevisionDialog {
                     huboCambios = true;
                     guardandoEst = false;
                     btnGuardarEst.setDisable(!editable);
+                    ventana.sizeToScene(); // el veredicto puede cambiar de tamaño tras guardar (smoke)
                 });
             } catch (SQLException ex) {
                 Platform.runLater(() -> {
@@ -767,6 +769,7 @@ public final class FichaRevisionDialog {
                         ventana.close(); // salió de la cola: cierra y notifica onCambios (setOnHidden)
                     } else {
                         btnGuardarFun.setDisable(!editable);
+                        ventana.sizeToScene(); // el veredicto puede cambiar de tamaño tras guardar (smoke)
                     }
                 });
             } catch (SQLException ex) {
