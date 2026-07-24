@@ -9,6 +9,7 @@ import com.reparaciones.models.TelefonoInventario;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.SelectorClienteDialog;
 import com.reparaciones.utils.StaleDataException;
 import com.reparaciones.utils.UbicacionTexto;
@@ -559,7 +560,7 @@ public final class FichaRevisionDialog {
 
     private void aplicarChip(Label lbl, LocalDateTime fecha, String usuario) {
         if (fecha != null) {
-            lbl.setText("guardada · " + usuario + " · " + fecha.format(FMT_CHIP));
+            lbl.setText("guardada · " + usuario + " · " + FechaUtils.formatear(fecha, FMT_CHIP));
             lbl.setStyle(ESTILO_CHIP_VERDE);
         } else {
             lbl.setText("pendiente");
@@ -649,7 +650,7 @@ public final class FichaRevisionDialog {
             btnOk.setDisable(true);
         }
 
-        btnAsignar.setDisable(v == null || v.trabajos().isEmpty());
+        btnAsignar.setDisable(v == null || v.trabajos().isEmpty() || !editable);
 
         btnBloquear.setVisible(editable);
         btnBloquear.setManaged(editable);
