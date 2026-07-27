@@ -102,6 +102,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private Button btnImportar;
     @FXML private Button btnAltaManual;
     @FXML private Button btnEnviar;
+    @FXML private Button btnDevolucion;
 
     // ── DAOs ────────────────────────────────────────────────────────────────
     private final ReparacionDAO           reparacionDAO           = new ReparacionDAO();
@@ -233,6 +234,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         btnImportar.setVisible(mostrarBotones);   btnImportar.setManaged(mostrarBotones);
         btnAltaManual.setVisible(mostrarBotones); btnAltaManual.setManaged(mostrarBotones);
         btnEnviar.setVisible(mostrarBotones);     btnEnviar.setManaged(mostrarBotones);
+        btnDevolucion.setVisible(mostrarBotones); btnDevolucion.setManaged(mostrarBotones);
         resetarModo();
     }
 
@@ -283,6 +285,11 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML
     private void enviarMasivo() {
         EnvioDialog.abrir(tabla.getScene().getWindow(), java.util.List.of(), this::cargar);
+    }
+
+    @FXML
+    private void registrarDevolucion() {
+        DevolucionDialog.abrir(tabla.getScene().getWindow(), this::cargar);
     }
 
     /** Vuelve a modo maestro sin recargar (útil al ocultar el panel). */

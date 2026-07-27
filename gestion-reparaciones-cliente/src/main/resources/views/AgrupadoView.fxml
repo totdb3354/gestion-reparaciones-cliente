@@ -26,6 +26,7 @@
         <Button fx:id="btnImportar" text="Importar lote" styleClass="btn-secondary" onAction="#importarLote" visible="false" managed="false"/>
         <Button fx:id="btnAltaManual" text="Alta manual" styleClass="btn-secondary" onAction="#altaManualLote" visible="false" managed="false"/>
         <Button fx:id="btnEnviar" text="Enviar (masivo)" styleClass="btn-secondary" onAction="#enviarMasivo" visible="false" managed="false"/>
+        <Button fx:id="btnDevolucion" text="Registrar devolución" styleClass="btn-secondary" onAction="#registrarDevolucion" visible="false" managed="false"/>
         <Region HBox.hgrow="ALWAYS"/>
     </HBox>
 
