@@ -14,7 +14,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
@@ -90,7 +89,48 @@ public final class DevolucionDialog {
 
         TableColumn<FilaDevolucion, String> colMotivo = new TableColumn<>("Motivo");
         colMotivo.setCellValueFactory(c -> c.getValue().motivoProperty());
-        colMotivo.setCellFactory(TextFieldTableCell.forTableColumn());
+        // Celda editable a medida: el TextFieldTableCell de fábrica solo confirma con Enter
+        // (su TextField llama a commitEdit únicamente desde setOnAction); al hacer clic fuera
+        // (p.ej. en "Registrar") el foco se mueve sin confirmar y la edición en curso se pierde
+        // en silencio. Calco del patrón de FormularioCompraController (colCantidad/colPrecio):
+        // un listener de focusedProperty fuerza el commit también al perder el foco.
+        colMotivo.setCellFactory(col -> new TableCell<>() {
+            private final TextField tf = new TextField();
+            {
+                tf.setOnAction(e -> commitEdit(tf.getText()));
+                tf.focusedProperty().addListener((obs, was, focused) -> {
+                    if (!focused && isEditing()) commitEdit(tf.getText());
+                });
+            }
+            @Override
+            public void startEdit() {
+                super.startEdit();
+                tf.setText(getItem() == null ? "" : getItem());
+                setText(null);
+                setGraphic(tf);
+                tf.selectAll();
+                tf.requestFocus();
+            }
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                setText(getItem());
+                setGraphic(null);
+            }
+            @Override
+            public void commitEdit(String newValue) {
+                super.commitEdit(newValue);
+                setText(newValue);
+                setGraphic(null);
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setText(null); setGraphic(null); return; }
+                if (isEditing()) { setText(null); setGraphic(tf); }
+                else { setText(item); setGraphic(null); }
+            }
+        });
         colMotivo.setOnEditCommit(e -> e.getRowValue().motivoProperty().set(e.getNewValue()));
         colMotivo.setSortable(false);
         colMotivo.setPrefWidth(280);
