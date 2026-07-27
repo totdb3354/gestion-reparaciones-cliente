@@ -212,4 +212,30 @@ public class TelefonoDAO {
         body.put("motivo", motivo);
         ApiClient.post("/api/telefonos/" + imei + "/estado", body);
     }
+
+    /** F2c: remesa de salida. Devuelve id de envío creado (o null) y resultado por IMEI. */
+    public com.reparaciones.models.ResultadoEnvioLote enviarTelefonos(Integer idCli, String destinoTexto,
+            String referencia, java.util.List<String> imeis) throws SQLException {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("idCli", idCli);
+        body.put("destinoTexto", destinoTexto);
+        body.put("referencia", referencia);
+        body.put("imeis", imeis);
+        return ApiClient.post("/api/envios", body, com.reparaciones.models.ResultadoEnvioLote.class);
+    }
+
+    /** F2c: registro masivo de devoluciones (cada item con su motivo). */
+    public java.util.List<com.reparaciones.models.ItemDevolucion> registrarDevoluciones(
+            java.util.List<java.util.Map<String, String>> items) throws SQLException {
+        com.reparaciones.models.ItemDevolucion[] res = ApiClient.post(
+                "/api/telefonos/devoluciones", java.util.Map.of("items", items),
+                com.reparaciones.models.ItemDevolucion[].class);
+        return java.util.Arrays.asList(res);
+    }
+
+    /** F2c: línea de vida del teléfono para el historial de la ficha. */
+    public java.util.List<com.reparaciones.models.MovimientoTelefono> getMovimientos(String imei) throws SQLException {
+        return ApiClient.getList("/api/telefonos/" + imei + "/movimientos",
+                com.reparaciones.models.MovimientoTelefono.class);
+    }
 }
