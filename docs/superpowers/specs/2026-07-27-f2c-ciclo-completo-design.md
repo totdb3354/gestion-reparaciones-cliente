@@ -141,8 +141,10 @@ nacidos-cerrados se ven por el historial del teléfono, no hace falta logearlos.
 **Retoques a lo existente:**
 - `marcarOk`: veto adicional si la vigente tiene `FUN_BLOQUEO_OP=TRUE` (409 "Bloqueo
   de operador marcado en la revisión").
-- Log de `COMPLETAR_GLASS/_REPARACION` (los 3 puntos: `/completa`, `/completar`,
-  `guardar-fila`): detalle + `", COMPONENTES: <tipo1>, <tipo2>"`.
+- Log de `COMPLETAR_GLASS/_REPARACION` con componentes: detalle +
+  `", COMPONENTES: <tipo1>, <tipo2>"` en los DOS puntos que consumen filas
+  (`POST /completa` y `POST /{idAsignacion}/filas`); `PATCH /{idRep}/completar`
+  no consume componentes y queda igual.
 - Retirada `REVISION_LOGISTICA`: fuera de `resetRevisionAlAsignar` (queda solo el
   UPDATE OK→EN_REVISION; renombrar si procede), fuera de las queries de
   `ReparacionDAO` (L54/L932, mapper defensivo L141) y del inventario
