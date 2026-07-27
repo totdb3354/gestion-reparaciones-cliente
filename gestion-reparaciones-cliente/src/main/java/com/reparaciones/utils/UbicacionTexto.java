@@ -19,7 +19,8 @@ public final class UbicacionTexto {
 
     private static final Map<String, String> ESTADOS = Map.of(
             "RECIBIDO", "Recibido", "EN_REVISION", "En revisión", "BLOQUEADO", "Bloqueado",
-            "EN_REPARACION", "En reparación", "OK", "OK", "ENVIADO", "Enviado", "DESGUACE", "Desguace");
+            "EN_REPARACION", "En reparación", "OK", "OK", "ENVIADO", "Enviado", "DESGUACE", "Desguace",
+            "REVISADO", "Revisado", "REPARADO", "Reparado");
 
     /** Etiqueta del filtro de ubicación para teléfonos fuera del ciclo (sin ubicación). */
     public static final String FUERA = "Fuera / —";

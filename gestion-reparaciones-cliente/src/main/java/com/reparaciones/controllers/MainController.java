@@ -95,6 +95,9 @@ public class MainController {
     private Runnable accionVistaActual;
     private final java.util.Map<String, Object[]> vistaCache = new java.util.HashMap<>();
 
+    /** F2b: instancia viva del controlador principal, para navegación estática desde otros diálogos. */
+    private static MainController instancia;
+
     // Filtro pendiente para la próxima carga de la vista de reparaciones
     private java.time.LocalDate filtroNavDesde;
     private java.time.LocalDate filtroNavHasta;
@@ -147,6 +150,8 @@ public class MainController {
         // Auto-logout controlado al caducar la sesión (un 401 con sesión activa)
         com.reparaciones.utils.ApiClient.setSesionExpiradaHandler(
                 () -> javafx.application.Platform.runLater(this::forzarCierreSesionPorCaducidad));
+
+        instancia = this;
     }
 
     /**
@@ -797,6 +802,15 @@ public class MainController {
         Object[] cached = vistaCache.get("/views/StockView.fxml");
         if (cached != null && cached[1] instanceof StockController sc)
             Platform.runLater(sc::irAStockActual);
+    }
+
+    /** F2b: navega a Reparaciones → Asignaciones y abre el modal de asignación precargado con el IMEI. */
+    public static void irAAsignarTelefono(String imei, com.reparaciones.utils.TipoTrabajo tipo) {
+        if (instancia == null || !Sesion.esSuperTecnico()) return;
+        instancia.mostrarReparaciones();
+        Object[] cached = instancia.vistaCache.get("/views/ReparacionViewSuperTecnico.fxml");
+        if (cached != null && cached[1] instanceof ReparacionControllerSuperTecnico rc)
+            Platform.runLater(() -> rc.abrirAsignacionPrecargada(imei, tipo));
     }
 
     /** Navega a la vista de estadísticas. */

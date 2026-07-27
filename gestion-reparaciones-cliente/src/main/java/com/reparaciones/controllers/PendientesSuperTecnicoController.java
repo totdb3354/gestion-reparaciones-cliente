@@ -88,6 +88,10 @@ public class PendientesSuperTecnicoController {
     /** IMEI → nº de técnicos distintos con asignación pendiente (sub-indicador "N asignados"). */
     private java.util.Map<String,Integer> conteoTecnicosPorImei = java.util.Map.of();
 
+    // F2b: precarga desde la ficha de revisión (IMEI escaneado de antemano + tipo principal del veredicto).
+    private String precargaImei;
+    private com.reparaciones.utils.TipoTrabajo precargaTipo;
+
     @FXML private Label  lblUltimaActualizacion;
     @FXML private Label  lblContador;
     private List<ReparacionResumen> cerradasHoy = List.of();
@@ -1244,14 +1248,17 @@ public class PendientesSuperTecnicoController {
     /**
      * Construye el sub-panel ligero de alta de pulido (técnico + comentario por defecto,
      * escaneo con pegado de lote, lista editable por fila). Rellena {@code lote};
-     * {@code onChange} refresca la barra de guardar del modal unificado.
+     * {@code onChange} refresca la barra de guardar del modal unificado. {@code onScanFieldListo}
+     * (F2b) expone el {@code tfScan} propio de este panel al llamador, para que la precarga desde
+     * la ficha de revisión pueda alimentar el intake real de pulido cuando el veredicto es PULIDO.
      */
     private VBox construirPulidoPane(List<FilaPulido> lote, List<Tecnico> tecnicosModal, Runnable onChange,
                                      java.util.function.Consumer<FilaPulido> onClienteCambiado,
                                      List<Runnable> refrescadoresCliente,
                                      java.util.function.Consumer<FilaPulido> sembrarCliente,
                                      java.util.function.Consumer<FilaPulido> aplicarClienteDefault,
-                                     java.util.function.Predicate<String> tieneDecisionManualCliente) {
+                                     java.util.function.Predicate<String> tieneDecisionManualCliente,
+                                     java.util.function.Consumer<TextField> onScanFieldListo) {
         // ── Técnico (por defecto para los IMEIs que se escaneen; editable por fila) ──
         Label lblTecTop = new Label("Técnico (se aplica a los IMEIs que escanees)");
         lblTecTop.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376; -fx-font-weight: bold;");
@@ -1290,6 +1297,7 @@ public class PendientesSuperTecnicoController {
         tfScan.setPromptText("Escanea o escribe el IMEI (15 dígitos)...");
         tfScan.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 4;"
                 + " -fx-background-radius: 4; -fx-padding: 11; -fx-text-fill: #2C3B54; -fx-font-size: 14px;");
+        if (onScanFieldListo != null) onScanFieldListo.accept(tfScan);
         Label lblErr = new Label();
         String errStyle = "-fx-font-size: 11px; -fx-text-fill: " + com.reparaciones.utils.Colores.TEXTO_ERROR + "; -fx-min-height: 15;";
         String okStyle  = "-fx-font-size: 11px; -fx-text-fill: #2E7D32; -fx-min-height: 15;";
@@ -1600,6 +1608,13 @@ public class PendientesSuperTecnicoController {
 
         HBox cols = new HBox(18, scroll, detalleBox);
         return new VBox(8, lblTecTop, cbTecTop, new Separator(), lblScan, tfScan, lblErr, new Separator(), lblTitulo, cols);
+    }
+
+    /** F2b: abre el modal de asignación con un IMEI ya escaneado y el tipo por defecto fijado. */
+    public void abrirAsignacionPrecargada(String imei, com.reparaciones.utils.TipoTrabajo tipo) {
+        this.precargaImei = imei;
+        this.precargaTipo = tipo;
+        abrirFormularioAsignacion();
     }
 
     @FXML
@@ -2299,6 +2314,9 @@ public class PendientesSuperTecnicoController {
         // ── Layout + ventana ─────────────────────────────────────────────────
         HBox cols = new HBox(18, pilaBox, formBox);
         VBox richArea = new VBox(12, lblScan, tfScan, lblScanErr, new Separator(), cols);   // reparación + glass
+        // F2b: holder para el tfScan propio del panel de pulido (expuesto vía onScanFieldListo),
+        // así la precarga desde la ficha de revisión puede alimentar el intake real de pulido.
+        TextField[] tfScanPulidoHolder = new TextField[1];
         VBox pulidoPane = construirPulidoPane(lotePulido, tecnicosModal,
                 () -> { if (renderPila[0] != null) renderPila[0].run(); },
                 fila -> { Cliente m = fila.sinCliente ? SIN_CLIENTE : fila.cliente;
@@ -2308,7 +2326,8 @@ public class PendientesSuperTecnicoController {
                 refrescadoresClientePulido,
                 sembrarClientePulido,
                 aplicarClienteDefaultPulido,
-                imei -> clienteManual.containsKey(imei));
+                imei -> clienteManual.containsKey(imei),
+                tf -> tfScanPulidoHolder[0] = tf);
         pulidoPane.setVisible(false); pulidoPane.setManaged(false);
         javafx.scene.layout.StackPane centro = new javafx.scene.layout.StackPane(richArea, pulidoPane);
         javafx.scene.layout.StackPane.setAlignment(richArea, Pos.TOP_LEFT);
@@ -2391,6 +2410,29 @@ public class PendientesSuperTecnicoController {
         ventana.setScene(scene);
         renderPila[0].run();
         javafx.application.Platform.runLater(tfScan::requestFocus);
+
+        // ── F2b: precarga desde la ficha de revisión (IMEI + tipo principal del veredicto) ──
+        if (precargaImei != null) {
+            if (precargaTipo != null) {
+                tipoActual[0] = precargaTipo;
+                switch (precargaTipo) {
+                    case GLASS  -> tbGlass.setSelected(true);
+                    case PULIDO -> tbPulido.setSelected(true);
+                    default     -> tbRep.setSelected(true);
+                }
+            }
+            // PULIDO tiene su propio intake (tfScan del panel de pulido, distinto del de esta pila
+            // rica): alimentarlo a él, no al de aquí, para que el IMEI aterrice en lotePulido tal
+            // como si se hubiera escaneado a mano en esa pestaña.
+            if (precargaTipo == TipoTrabajo.PULIDO && tfScanPulidoHolder[0] != null) {
+                tfScanPulidoHolder[0].setText(precargaImei);   // el listener propio del panel de pulido lo añade y limpia el campo
+            } else {
+                tfScan.setText(precargaImei);   // el listener existente lo añade y limpia el campo
+            }
+            precargaImei = null;
+            precargaTipo = null;
+        }
+
         ventana.showAndWait();
     }
 
