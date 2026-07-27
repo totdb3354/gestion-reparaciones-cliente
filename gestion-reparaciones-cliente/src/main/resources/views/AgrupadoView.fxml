@@ -25,6 +25,7 @@
                style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
         <Button fx:id="btnImportar" text="Importar lote" styleClass="btn-secondary" onAction="#importarLote" visible="false" managed="false"/>
         <Button fx:id="btnAltaManual" text="Alta manual" styleClass="btn-secondary" onAction="#altaManualLote" visible="false" managed="false"/>
+        <Button fx:id="btnEnviar" text="Enviar (masivo)" styleClass="btn-secondary" onAction="#enviarMasivo" visible="false" managed="false"/>
         <Region HBox.hgrow="ALWAYS"/>
     </HBox>
 

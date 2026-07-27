@@ -101,6 +101,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private Button btnImportar;
     @FXML private Button btnAltaManual;
+    @FXML private Button btnEnviar;
 
     // ── DAOs ────────────────────────────────────────────────────────────────
     private final ReparacionDAO           reparacionDAO           = new ReparacionDAO();
@@ -181,6 +182,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         tabla.setFixedCellSize(44);
         tabla.getColumns().forEach(c -> c.setSortable(false));
         tabla.getColumns().forEach(c -> c.setReorderable(false));
+        tabla.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
 
         construirMapasClave();
         configurarColumnas();
@@ -230,6 +232,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         boolean mostrarBotones = ConfigVistaAgrupado.botonesImportacion(vista) && esSuper;
         btnImportar.setVisible(mostrarBotones);   btnImportar.setManaged(mostrarBotones);
         btnAltaManual.setVisible(mostrarBotones); btnAltaManual.setManaged(mostrarBotones);
+        btnEnviar.setVisible(mostrarBotones);     btnEnviar.setManaged(mostrarBotones);
         resetarModo();
     }
 
@@ -276,6 +279,11 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
     @FXML private void importarLote()   { ImportadorLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
     @FXML private void altaManualLote() { AltaManualLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
+
+    @FXML
+    private void enviarMasivo() {
+        EnvioDialog.abrir(tabla.getScene().getWindow(), java.util.List.of(), this::cargar);
+    }
 
     /** Vuelve a modo maestro sin recargar (útil al ocultar el panel). */
     public void resetarModo() {
@@ -655,7 +663,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     for (int i = 0; i < getTableView().getItems().size(); i++) {
                         Object candidate = getTableView().getItems().get(i);
                         if (candidate instanceof ReparacionResumen r && idAnterior.equals(r.getIdRep())) {
-                            getTableView().getSelectionModel().select(i);
+                            // clearAndSelect (no select): con SelectionMode.MULTIPLE, select() añadiría
+                            // este índice a lo que ya hubiera seleccionado en vez de reemplazarlo.
+                            getTableView().getSelectionModel().clearAndSelect(i);
                             getTableView().scrollTo(i);
                             getTableView().requestFocus();
                             break;
@@ -838,6 +848,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 MenuItem editarCli   = new MenuItem("Editar cliente");
                 MenuItem editarAtr   = new MenuItem("Editar atributos");
                 MenuItem fichaRev    = new MenuItem("Ficha de revisión");
+                MenuItem enviarSel   = new MenuItem("Enviar seleccionados");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -893,8 +904,13 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     if (!(getItem() instanceof TelefonoInventario t)) return;
                     FichaRevisionDialog.abrir(getScene().getWindow(), t, AgrupadoController.this::cargar);
                 });
+                enviarSel  .setOnAction(e -> {
+                    java.util.List<TelefonoInventario> seleccion = seleccionInventario();
+                    if (!seleccion.isEmpty())
+                        EnvioDialog.abrir(getScene().getWindow(), seleccion, AgrupadoController.this::cargar);
+                });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
-                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev);
+                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev, enviarSel);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof TelefonoInventario;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
@@ -904,6 +920,11 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
                         editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
                         fichaRev.setVisible(esGrupo && modoActual == Modo.MAESTRO && vista == ConfigVistaAgrupado.Vista.INVENTARIO);
+                        java.util.List<TelefonoInventario> sel = seleccionInventario();
+                        enviarSel.setVisible(esGrupo && modoActual == Modo.MAESTRO
+                                && vista == ConfigVistaAgrupado.Vista.INVENTARIO
+                                && Sesion.esSuperTecnico() && !sel.isEmpty());
+                        enviarSel.setText("Enviar seleccionados (" + sel.size() + ")");
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -913,6 +934,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     cancelarInc .setVisible(esSuper && tieneInc);
                     editarObs   .setVisible(false);
                     editarCli   .setVisible(false);
+                    enviarSel   .setVisible(false);
                     editarAtr   .setVisible(false);
                     fichaRev    .setVisible(false);
                 });
@@ -974,6 +996,14 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 setOpacity(item instanceof ReparacionResumen rep && idsAjenas.contains(rep.getIdRep()) ? 0.45 : 1.0);
             }
         });
+    }
+
+    /** Filas TelefonoInventario de la selección múltiple (ignora filas de otros tipos). */
+    private java.util.List<TelefonoInventario> seleccionInventario() {
+        java.util.List<TelefonoInventario> out = new java.util.ArrayList<>();
+        for (Object o : tabla.getSelectionModel().getSelectedItems())
+            if (o instanceof TelefonoInventario t) out.add(t);
+        return out;
     }
 
     /**
