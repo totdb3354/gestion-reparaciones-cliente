@@ -15,6 +15,7 @@ import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.models.TelefonoInventario;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.ChipsEstado;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
@@ -705,6 +706,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     private void configurarColEstado() {
         colEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
+            private final HBox chipsBox = new HBox(4);
+            private final VBox contenedor = new VBox(2, badge, chipsBox);
+            { contenedor.setAlignment(Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -721,7 +725,19 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         case "Reparado"      -> badge.setStyle(base + "-fx-background-color: #FFEDD5; -fx-text-fill: #C2410C;");
                         default              -> badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
-                    setGraphic(badge);
+                    List<String> chips = ChipsEstado.de(t);
+                    chipsBox.getChildren().clear();
+                    for (String chip : chips) {
+                        Label lbl = new Label(chip);
+                        String chipStyle = "-fx-font-size: 9px; -fx-padding: 0 4 0 4; -fx-background-radius: 6; "
+                                + ("devolución".equals(chip)
+                                        ? "-fx-background-color: #FFEDD5; -fx-text-fill: #C2410C;"
+                                        : "-fx-background-color: #EEF1F6; -fx-text-fill: #586376;");
+                        lbl.setStyle(chipStyle);
+                        chipsBox.getChildren().add(lbl);
+                    }
+                    contenedor.getChildren().setAll(chips.isEmpty() ? List.of(badge) : List.of(badge, chipsBox));
+                    setGraphic(contenedor);
                 } else if (row instanceof ReparacionResumen rep) {
                     if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
                         badge.setText("Incidencia");
@@ -733,7 +749,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         badge.setText("Normal");
                         badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
-                    setGraphic(badge);
+                    contenedor.getChildren().setAll(badge);
+                    setGraphic(contenedor);
                 } else {
                     setGraphic(null);
                 }
@@ -1779,7 +1796,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         m.put("Inc. abiertas", String.valueOf(t.getIncAbiertas()));
         m.put("Observación", t.getObservacion() != null ? t.getObservacion() : "");
         m.put("Cliente", t.getCliente() != null ? t.getCliente() : "");
-        m.put("Revisión logística", (t.isRevisionLogistica() && !t.isTieneAsignaciones()) ? "Sí" : "No");
+        m.put("Devolución", t.isEsDevolucion() ? "Sí" : "");
         return m;
     }
 
