@@ -38,6 +38,7 @@ public class RevisionPanelController {
     @FXML private TextField tfScan;
     @FXML private Label lblScan;
     @FXML private Button btnMasivo;
+    @FXML private Button btnAbrirFicha;
     @FXML private TableView<TelefonoInventario> tabla;
     @FXML private TableColumn<TelefonoInventario, String> colImei;
     @FXML private TableColumn<TelefonoInventario, String> colModelo;
@@ -54,6 +55,7 @@ public class RevisionPanelController {
     public void initialize() {
         configurarTabla();
         configurarEscaner();
+        tabla.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> btnAbrirFicha.setDisable(n == null));
 
         if (!Sesion.esSuperTecnico()) {
             btnMasivo.setVisible(false); btnMasivo.setManaged(false);
@@ -136,6 +138,12 @@ public class RevisionPanelController {
 
     @FXML private void abrirMasivo() {
         ARevisarDialog.abrir(tabla.getScene().getWindow(), this::cargar);
+    }
+
+    @FXML
+    private void abrirFichaSeleccion() {
+        TelefonoInventario t = tabla.getSelectionModel().getSelectedItem();
+        if (t != null) abrirFicha(t);
     }
 
     /** Recarga el inventario completo y repuebla la tabla con la cola EN_REVISION (revDesde asc, nulls al final). */
