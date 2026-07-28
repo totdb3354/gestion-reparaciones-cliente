@@ -192,7 +192,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         tabla.setFixedCellSize(44);
         tabla.getColumns().forEach(c -> c.setSortable(false));
         tabla.getColumns().forEach(c -> c.setReorderable(false));
-        tabla.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
 
         construirMapasClave();
         configurarColumnas();
@@ -299,9 +298,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
     @FXML
     private void enviarMasivo() {
-        // Marcados primero (checks estilo Gmail); si no hay ninguno, comportamiento previo (vacío).
-        List<TelefonoInventario> preseleccion = imeisMarcados.isEmpty() ? List.of() : resolverMarcados();
-        EnvioDialog.abrir(tabla.getScene().getWindow(), preseleccion, this::cargar);
+        // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c);
+        // sin marcados, resolverMarcados() ya devuelve vacío y el diálogo abre sin preselección.
+        EnvioDialog.abrir(tabla.getScene().getWindow(), resolverMarcados(), this::cargar);
     }
 
     /**
@@ -709,8 +708,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     for (int i = 0; i < getTableView().getItems().size(); i++) {
                         Object candidate = getTableView().getItems().get(i);
                         if (candidate instanceof ReparacionResumen r && idAnterior.equals(r.getIdRep())) {
-                            // clearAndSelect (no select): con SelectionMode.MULTIPLE, select() añadiría
-                            // este índice a lo que ya hubiera seleccionado en vez de reemplazarlo.
+                            // clearAndSelect (no select): reemplaza la selección en vez de sumarse
+                            // a ella; correcto también bajo SelectionMode.SINGLE (ajuste smoke F2c).
                             getTableView().getSelectionModel().clearAndSelect(i);
                             getTableView().scrollTo(i);
                             getTableView().requestFocus();
@@ -742,11 +741,12 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     }
 
     /**
-     * Columna de checks estilo Gmail para multiseleccionar teléfonos a enviar (ajuste smoke F2c).
-     * Visible solo en INVENTARIO/maestro para el supertécnico ({@link #aplicarColumnasMaestro}/
-     * {@link #aplicarColumnasDetalle}); no se toca CSV ni la selección azul (Ctrl/Shift sigue
-     * funcionando como fallback). El estado vive en {@link #imeisMarcados}, indexado por IMEI,
-     * para sobrevivir al recycling de celdas y a la ida y vuelta maestro↔detalle.
+     * Columna de checks estilo Gmail, única vía de multiselección para enviar teléfonos (ajuste
+     * smoke F2c: la tabla vuelve a {@code SelectionMode.SINGLE}, la selección azul de fila ya no
+     * multiselecciona). Visible solo en INVENTARIO/maestro para el supertécnico
+     * ({@link #aplicarColumnasMaestro}/{@link #aplicarColumnasDetalle}); no se toca CSV. El estado
+     * vive en {@link #imeisMarcados}, indexado por IMEI, para sobrevivir al recycling de celdas y
+     * a la ida y vuelta maestro↔detalle.
      */
     private void configurarColCheck() {
         cbMarcarTodos = new CheckBox();
@@ -908,7 +908,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 MenuItem editarCli   = new MenuItem("Editar cliente");
                 MenuItem editarAtr   = new MenuItem("Editar atributos");
                 MenuItem fichaRev    = new MenuItem("Ficha de revisión");
-                MenuItem enviarSel   = new MenuItem("Enviar seleccionados");
+                MenuItem enviarSel   = new MenuItem("Enviar marcados");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -965,8 +965,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     FichaRevisionDialog.abrir(getScene().getWindow(), t, AgrupadoController.this::cargar);
                 });
                 enviarSel  .setOnAction(e -> {
-                    // Marcados primero (checks estilo Gmail); si no hay ninguno, cae a la selección azul.
-                    java.util.List<TelefonoInventario> destino = imeisMarcados.isEmpty() ? seleccionInventario() : resolverMarcados();
+                    // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c).
+                    java.util.List<TelefonoInventario> destino = resolverMarcados();
                     if (!destino.isEmpty())
                         EnvioDialog.abrir(getScene().getWindow(), destino, AgrupadoController.this::cargar);
                 });
@@ -981,12 +981,12 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
                         editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
                         fichaRev.setVisible(esGrupo && modoActual == Modo.MAESTRO && vista == ConfigVistaAgrupado.Vista.INVENTARIO);
-                        java.util.List<TelefonoInventario> sel = seleccionInventario();
-                        boolean hayMarcados = !imeisMarcados.isEmpty();
+                        // resolverMarcados() purga de paso los IMEIs marcados que ya no estén en inventario.
+                        java.util.List<TelefonoInventario> marcados = resolverMarcados();
                         enviarSel.setVisible(esGrupo && modoActual == Modo.MAESTRO
                                 && vista == ConfigVistaAgrupado.Vista.INVENTARIO
-                                && Sesion.esSuperTecnico() && (hayMarcados || !sel.isEmpty()));
-                        enviarSel.setText("Enviar seleccionados (" + (hayMarcados ? imeisMarcados.size() : sel.size()) + ")");
+                                && Sesion.esSuperTecnico() && !marcados.isEmpty());
+                        enviarSel.setText("Enviar marcados (" + marcados.size() + ")");
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -1058,14 +1058,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 setOpacity(item instanceof ReparacionResumen rep && idsAjenas.contains(rep.getIdRep()) ? 0.45 : 1.0);
             }
         });
-    }
-
-    /** Filas TelefonoInventario de la selección múltiple (ignora filas de otros tipos). */
-    private java.util.List<TelefonoInventario> seleccionInventario() {
-        java.util.List<TelefonoInventario> out = new java.util.ArrayList<>();
-        for (Object o : tabla.getSelectionModel().getSelectedItems())
-            if (o instanceof TelefonoInventario t) out.add(t);
-        return out;
     }
 
     /**
