@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,6 +81,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private MenuButton filtroIncidencias;
 
     @FXML private TableView<Object> tabla;
+    @FXML private TableColumn<Object, Void>   colCheck;
     @FXML private TableColumn<Object, Void>   colTipo;
     @FXML private TableColumn<Object, String> colIdRep;
     @FXML private TableColumn<Object, String> colImei;
@@ -128,6 +130,13 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private final ObservableList<TelefonoInventario> inventario = FXCollections.observableArrayList();
     private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
+
+    // ── Selección de envío (checks estilo Gmail) ───────────────────────────
+    /** IMEIs marcados para el envío masivo, por orden de marcado; sobrevive a scroll, recycling
+     * de celdas y a la ida y vuelta maestro↔detalle (no se limpia salvo en {@link #cargar()}). */
+    private final Set<String> imeisMarcados = new LinkedHashSet<>();
+    /** Checkbox de cabecera de {@link #colCheck}: marca/desmarca todos los visibles (filtrados). */
+    private CheckBox cbMarcarTodos;
 
     // ── Drill-down ──────────────────────────────────────────────────────────
     private enum Modo { MAESTRO, DETALLE }
@@ -264,7 +273,14 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                                   actualizarTextoFiltroLote(); aplicarFiltros(); },
                 etiquetaLote);
             poblarFiltrosMaestro();
+            // Cubre tanto la recarga manual como el envío con éxito (EnvioDialog dispara cargar()
+            // como onCambios): los teléfonos marcados ya se enviaron o los datos son otros nuevos.
+            // Se limpia aquí, tras cargar todo con éxito, para no dejar el check de cabecera/botón
+            // desincronizados con la tabla si una recarga fallida (SQLException) cortara antes.
+            imeisMarcados.clear();
             aplicarFiltros();
+            actualizarHeaderMarcarTodos();
+            actualizarTextoBtnEnviar();
         } catch (SQLException e) {
             mostrarError(e);
         }
@@ -283,7 +299,30 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
     @FXML
     private void enviarMasivo() {
-        EnvioDialog.abrir(tabla.getScene().getWindow(), java.util.List.of(), this::cargar);
+        // Marcados primero (checks estilo Gmail); si no hay ninguno, comportamiento previo (vacío).
+        List<TelefonoInventario> preseleccion = imeisMarcados.isEmpty() ? List.of() : resolverMarcados();
+        EnvioDialog.abrir(tabla.getScene().getWindow(), preseleccion, this::cargar);
+    }
+
+    /**
+     * Teléfonos marcados ({@link #imeisMarcados}) que siguen presentes en el inventario cargado,
+     * en el orden en que se marcaron. Si algún IMEI marcado ya no está en los datos (p. ej. tras
+     * un envío anterior o una recarga con otro filtro de rol), se descarta también del set.
+     */
+    private List<TelefonoInventario> resolverMarcados() {
+        if (imeisMarcados.isEmpty()) return List.of();
+        Map<String, TelefonoInventario> porImei = inventario.stream()
+                .collect(Collectors.toMap(TelefonoInventario::getImei, java.util.function.Function.identity(), (a, b) -> a));
+        imeisMarcados.removeIf(imei -> !porImei.containsKey(imei));
+        List<TelefonoInventario> out = new ArrayList<>();
+        for (String imei : imeisMarcados) out.add(porImei.get(imei));
+        return out;
+    }
+
+    /** Texto de {@link #btnEnviar}: cuenta total de marcados (aunque los filtros oculten alguno). */
+    private void actualizarTextoBtnEnviar() {
+        int n = imeisMarcados.size();
+        btnEnviar.setText(n > 0 ? "Enviar (" + n + " marcados)" : "Enviar (masivo)");
     }
 
     @FXML
@@ -331,6 +370,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         colTipo.setVisible(false);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
+        // Checks de envío masivo: solo INVENTARIO/maestro y solo para el supertécnico (ajuste smoke F2c).
+        colCheck.setVisible(vista == ConfigVistaAgrupado.Vista.INVENTARIO && Sesion.esSuperTecnico());
         // Columnas de la vista activa (ver ConfigVistaAgrupado).
         List<String> visibles = ConfigVistaAgrupado.columnasMaestro(vista);
         columnaPorClave.forEach((clave, col) -> col.setVisible(visibles.contains(clave)));
@@ -339,6 +380,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     }
 
     private void aplicarColumnasDetalle() {
+        colCheck.setVisible(false);
         colTipo.setVisible(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true); colIdAnterior.setVisible(true);
@@ -696,6 +738,71 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
         configurarColEstado();
         configurarColIncidencia();
+        configurarColCheck();
+    }
+
+    /**
+     * Columna de checks estilo Gmail para multiseleccionar teléfonos a enviar (ajuste smoke F2c).
+     * Visible solo en INVENTARIO/maestro para el supertécnico ({@link #aplicarColumnasMaestro}/
+     * {@link #aplicarColumnasDetalle}); no se toca CSV ni la selección azul (Ctrl/Shift sigue
+     * funcionando como fallback). El estado vive en {@link #imeisMarcados}, indexado por IMEI,
+     * para sobrevivir al recycling de celdas y a la ida y vuelta maestro↔detalle.
+     */
+    private void configurarColCheck() {
+        cbMarcarTodos = new CheckBox();
+        cbMarcarTodos.setOnAction(e -> {
+            List<TelefonoInventario> visibles = tablaItems.stream()
+                    .filter(TelefonoInventario.class::isInstance)
+                    .map(TelefonoInventario.class::cast)
+                    .collect(Collectors.toList());
+            boolean todosMarcados = !visibles.isEmpty()
+                    && visibles.stream().allMatch(t -> imeisMarcados.contains(t.getImei()));
+            if (!todosMarcados) visibles.forEach(t -> imeisMarcados.add(t.getImei()));
+            else visibles.forEach(t -> imeisMarcados.remove(t.getImei()));
+            tabla.refresh();
+            actualizarHeaderMarcarTodos();
+            actualizarTextoBtnEnviar();
+        });
+        colCheck.setGraphic(cbMarcarTodos);
+        colCheck.setText(null);
+
+        colCheck.setCellFactory(col -> new TableCell<>() {
+            private final CheckBox check = new CheckBox();
+            {
+                // Evita que el click en el checkbox llegue a la fila (seleccionaría/dispararía
+                // el drill-down de doble click de #configurarFilas).
+                check.setOnMouseClicked(javafx.event.Event::consume);
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (!(row instanceof TelefonoInventario t)) { setGraphic(null); return; }
+                // Reasignar el estado antes que el handler: setSelected() no dispara onAction,
+                // así que no hay riesgo de marcar/desmarcar el IMEI equivocado al reciclar la celda.
+                check.setOnAction(null);
+                check.setSelected(imeisMarcados.contains(t.getImei()));
+                check.setOnAction(e -> {
+                    if (check.isSelected()) imeisMarcados.add(t.getImei());
+                    else imeisMarcados.remove(t.getImei());
+                    actualizarHeaderMarcarTodos();
+                    actualizarTextoBtnEnviar();
+                });
+                setGraphic(check);
+            }
+        });
+    }
+
+    /** Refleja en {@link #cbMarcarTodos} si todos los teléfonos visibles (filtrados) están marcados. */
+    private void actualizarHeaderMarcarTodos() {
+        if (cbMarcarTodos == null) return;
+        List<TelefonoInventario> visibles = tablaItems.stream()
+                .filter(TelefonoInventario.class::isInstance)
+                .map(TelefonoInventario.class::cast)
+                .collect(Collectors.toList());
+        boolean todos = !visibles.isEmpty() && visibles.stream().allMatch(t -> imeisMarcados.contains(t.getImei()));
+        cbMarcarTodos.setSelected(todos);
     }
 
     private void configurarColEstado() {
@@ -858,9 +965,10 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     FichaRevisionDialog.abrir(getScene().getWindow(), t, AgrupadoController.this::cargar);
                 });
                 enviarSel  .setOnAction(e -> {
-                    java.util.List<TelefonoInventario> seleccion = seleccionInventario();
-                    if (!seleccion.isEmpty())
-                        EnvioDialog.abrir(getScene().getWindow(), seleccion, AgrupadoController.this::cargar);
+                    // Marcados primero (checks estilo Gmail); si no hay ninguno, cae a la selección azul.
+                    java.util.List<TelefonoInventario> destino = imeisMarcados.isEmpty() ? seleccionInventario() : resolverMarcados();
+                    if (!destino.isEmpty())
+                        EnvioDialog.abrir(getScene().getWindow(), destino, AgrupadoController.this::cargar);
                 });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
                         aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev, enviarSel);
@@ -874,10 +982,11 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
                         fichaRev.setVisible(esGrupo && modoActual == Modo.MAESTRO && vista == ConfigVistaAgrupado.Vista.INVENTARIO);
                         java.util.List<TelefonoInventario> sel = seleccionInventario();
+                        boolean hayMarcados = !imeisMarcados.isEmpty();
                         enviarSel.setVisible(esGrupo && modoActual == Modo.MAESTRO
                                 && vista == ConfigVistaAgrupado.Vista.INVENTARIO
-                                && Sesion.esSuperTecnico() && !sel.isEmpty());
-                        enviarSel.setText("Enviar seleccionados (" + sel.size() + ")");
+                                && Sesion.esSuperTecnico() && (hayMarcados || !sel.isEmpty()));
+                        enviarSel.setText("Enviar seleccionados (" + (hayMarcados ? imeisMarcados.size() : sel.size()) + ")");
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -1358,6 +1467,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         int n = tablaItems.size();
         lblContador.setText(n + (n == 1 ? " teléfono" : " teléfonos"));
         lblContador.setVisible(true); lblContador.setManaged(true);
+        // El conjunto de visibles pudo cambiar con el filtro: resincroniza el check de cabecera.
+        actualizarHeaderMarcarTodos();
     }
 
     /** Si venimos de un detalle, re-selecciona el teléfono y hace scroll hasta él. */

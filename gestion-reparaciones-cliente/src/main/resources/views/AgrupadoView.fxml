@@ -49,6 +49,7 @@
 
     <TableView fx:id="tabla" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>
+            <TableColumn fx:id="colCheck" minWidth="34" prefWidth="34" maxWidth="34" text=""/>
             <TableColumn fx:id="colTipo" minWidth="90" prefWidth="100" maxWidth="120" text="Tipo"/>
             <TableColumn fx:id="colIdRep" minWidth="110" text="Id"/>
             <TableColumn fx:id="colImei" minWidth="130" text="IMEI teléfono"/>
