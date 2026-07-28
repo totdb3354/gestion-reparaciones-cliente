@@ -12,7 +12,7 @@ class ConfigVistaAgrupadoTest {
 
     @Test void inventarioConservaLaVistaActualCompleta() {
         assertEquals(List.of("imei", "modelo", "storage", "color", "grado", "ultimaActividad",
-                        "trabajos", "estado", "ubicacion", "lote", "observacionTelefono", "cliente", "revision"),
+                        "trabajos", "estado", "ubicacion", "lote", "observacionTelefono", "cliente"),
                 ConfigVistaAgrupado.columnasMaestro(INVENTARIO));
         assertTrue(ConfigVistaAgrupado.filtrosVisibles(INVENTARIO).containsAll(
                 java.util.Set.of("imei", "tecnico", "cliente", "estado", "ubicacion", "lote", "modelo", "fechas", "incidencias")));
@@ -32,10 +32,9 @@ class ConfigVistaAgrupadoTest {
         assertFalse(ConfigVistaAgrupado.edicionAtributos(TALLER));
     }
 
-    @Test void csvTallerEsEspejoSinRevision() {
+    @Test void csvTallerEsEspejoDeSusColumnas() {
         assertEquals(List.of("IMEI", "Modelo", "Última actividad", "Reparaciones", "Glass", "Pulidos",
                         "Abiertos", "Inc. abiertas", "Observación", "Cliente"),
                 ConfigVistaAgrupado.cabeceraCsvMaestro(TALLER));
-        assertFalse(ConfigVistaAgrupado.columnasMaestro(TALLER).contains("revision"));
     }
 }

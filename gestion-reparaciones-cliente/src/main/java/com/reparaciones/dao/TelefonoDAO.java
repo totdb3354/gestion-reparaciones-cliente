@@ -118,11 +118,6 @@ public class TelefonoDAO {
                        "updatedAt", updatedAt));
     }
 
-    public void actualizarRevisionLogistica(String imei, boolean revisado, java.time.LocalDateTime updatedAt) throws SQLException {
-        ApiClient.put("/api/telefonos/" + imei + "/revision-logistica",
-                Map.of("revisado", revisado, "updatedAt", updatedAt));
-    }
-
     /**
      * Actualiza el cliente asociado al teléfono con el IMEI dado.
      *

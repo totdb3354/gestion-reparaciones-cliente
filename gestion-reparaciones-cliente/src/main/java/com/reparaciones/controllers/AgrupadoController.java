@@ -99,7 +99,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TableColumn<Object, String> colCliente;
-    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private Button btnImportar;
     @FXML private Button btnAltaManual;
     @FXML private Button btnEnviar;
@@ -212,7 +211,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         columnaPorClave.put("lote", colLote);
         columnaPorClave.put("observacionTelefono", colObservacionTelefono);
         columnaPorClave.put("cliente", colCliente);
-        columnaPorClave.put("revision", colRevision);
 
         filtrosPorClave = new LinkedHashMap<>();
         filtrosPorClave.put("imei", List.of(filtroImei));
@@ -333,8 +331,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         colTipo.setVisible(false);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
-        // Columnas de la vista activa (ver ConfigVistaAgrupado); revision, si aparece, queda
-        // visible para todos — solo el supertécnico puede editarla (ver configurarColRevision).
+        // Columnas de la vista activa (ver ConfigVistaAgrupado).
         List<String> visibles = ConfigVistaAgrupado.columnasMaestro(vista);
         columnaPorClave.forEach((clave, col) -> col.setVisible(visibles.contains(clave)));
         colFecha.setText("Última actividad");
@@ -348,7 +345,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         colStorage.setVisible(false); colColor.setVisible(false); colGrado.setVisible(false);
         colUbicacion.setVisible(false); colLote.setVisible(false);
         colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
-        colRevision.setVisible(false);
         // Estado del trabajo (Incidencia/Resuelta/Normal): en TALLER la queda oculta en modo
         // maestro (no está en COLS_TALLER), pero el detalle la necesita en ambas vistas.
         colEstado.setVisible(true);
@@ -700,7 +696,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
         configurarColEstado();
         configurarColIncidencia();
-        configurarColRevision();
     }
 
     private void configurarColEstado() {
@@ -787,72 +782,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     }
                 } else {
                     setStyle(""); setGraphic(null);
-                }
-            }
-        });
-    }
-
-    private void configurarColRevision() {
-        colRevision.setCellFactory(col -> new TableCell<>() {
-            private final ToggleButton toggle = new ToggleButton();
-            {
-                toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
-                setAlignment(Pos.CENTER);
-                toggle.setMouseTransparent(!esSuper);   // admin/técnico: solo lectura del estado
-                toggle.setOnAction(e -> {
-                    if (!esSuper) return;
-                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
-                    Object row = getTableView().getItems().get(getIndex());
-                    if (!(row instanceof TelefonoInventario t)) return;
-                    if (t.isTieneAsignaciones()) { toggle.setSelected(false); return; }
-                    boolean nuevoValor = toggle.isSelected();
-                    boolean estadoAnterior = !nuevoValor;
-                    new Thread(() -> {
-                        try {
-                            telefonoDAO.actualizarRevisionLogistica(t.getImei(), nuevoValor, t.getTelefonoUpdatedAt());
-                            javafx.application.Platform.runLater(AgrupadoController.this::cargar);
-                        } catch (com.reparaciones.utils.StaleDataException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new Alert(Alert.AlertType.WARNING, "El teléfono fue modificado por otro usuario. Se recargan los datos.").showAndWait();
-                                cargar();
-                            });
-                        } catch (SQLException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new Alert(Alert.AlertType.ERROR, "Error al guardar: " + ex.getMessage()).showAndWait();
-                            });
-                        }
-                    }).start();
-                });
-            }
-            private void aplicarEstiloToggle(boolean on) {
-                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; ";
-                if (on) {
-                    toggle.setText("OK");
-                    toggle.setStyle(base + "-fx-background-color: #2E7D32; -fx-text-fill: white;");
-                } else {
-                    toggle.setText("—");
-                    toggle.setStyle(base + "-fx-background-color: #9E9E9E; -fx-text-fill: white;");
-                }
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof TelefonoInventario t) {
-                    boolean efectivo = t.isRevisionLogistica() && !t.isTieneAsignaciones();
-                    toggle.setSelected(efectivo);
-                    aplicarEstiloToggle(efectivo);
-                    if (t.isTieneAsignaciones()) {
-                        toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") + " -fx-opacity: 0.5;");
-                    }
-                    setGraphic(toggle);
-                } else {
-                    setGraphic(null);
                 }
             }
         });
@@ -1156,14 +1085,16 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
             etiquetaCli);
 
         filtroEstadoHandle = MultiSelectDropdown.setup(
-            filtroEstado, List.of("Recibido", "En reparación", "Histórico"), java.util.function.Function.identity(),
+            filtroEstado, List.of("Recibido", "En revisión", "Revisado", "Reparado", "En reparación",
+                    "Bloqueado", "OK", "Enviado", "Desguace", "Histórico"), java.util.function.Function.identity(),
             est -> estadosFiltro.contains(est),
             (est, checked) -> { if (checked) estadosFiltro.add(est); else estadosFiltro.remove(est);
                                 actualizarTextoFiltroEstado(); aplicarFiltros(); },
             etiquetaEstado);
 
         filtroUbicacionHandle = MultiSelectDropdown.setup(
-            filtroUbicacion, List.of("Almacén", "Reparaciones", UbicacionTexto.FUERA), java.util.function.Function.identity(),
+            filtroUbicacion, List.of("Almacén", "Para revisar", "Bloqueo", "Reparaciones", "Listos", "Pedidos",
+                    UbicacionTexto.FUERA), java.util.function.Function.identity(),
             ub -> ubicacionesFiltro.contains(ub),
             (ub, checked) -> { if (checked) ubicacionesFiltro.add(ub); else ubicacionesFiltro.remove(ub);
                                actualizarTextoFiltroUbicacion(); aplicarFiltros(); },
