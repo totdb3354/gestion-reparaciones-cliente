@@ -12,6 +12,7 @@ import com.reparaciones.utils.ImeiUtils;
 import com.reparaciones.utils.ImeiUtils.ResultadoPegado;
 import com.reparaciones.utils.ImeiUtils.TipoPegado;
 import com.reparaciones.utils.TextoResultadoEnvio;
+import com.reparaciones.utils.UbicacionTexto;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -27,14 +28,19 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * F2c: remesa de salida — escaneo local (a diferencia de {@link ARevisarDialog}, aquí NO se
  * llama al servidor por cada IMEI: solo se acumulan en una lista con dedupe) y confirmación
  * única que envía todo el lote de una vez ({@code TelefonoDAO#enviarTelefonos}). Patrón de
  * ventana/hilos (Stage APPLICATION_MODAL + Thread + Platform.runLater) calcado de
- * {@link ARevisarDialog}.
+ * {@link ARevisarDialog}. Cada IMEI escaneado se clasifica en vivo contra el snapshot de
+ * inventario cargado al abrir (ajuste smoke F2c #4); el servidor sigue siendo la autoridad
+ * final al confirmar, así que esta clasificación puede quedar desfasada si el inventario
+ * cambió entre cargar la tabla y escanear.
  */
 public final class EnvioDialog {
 
@@ -43,9 +49,28 @@ public final class EnvioDialog {
     /** Centinela "sin cliente" en el combo de cabecera, mismo patrón que SelectorClienteDialog/PendientesSuperTecnicoController. */
     private static final Cliente SIN_CLIENTE = new Cliente(-1, "— sin cliente —", true, null);
 
-    public static void abrir(Window owner, List<TelefonoInventario> preseleccion, Runnable onCambios) {
+    /**
+     * Sufijo de clasificación en vivo de un IMEI contra el snapshot de inventario cargado al
+     * abrir el diálogo. {@code "OK"} es el único sufijo enviable; el resto son motivos de
+     * rechazo (ausente, histórico u otro estado), redactados en la misma familia de textos
+     * que {@link TextoResultadoEnvio} usa para el resultado real del servidor.
+     */
+    private static String sufijoClasificacion(String imei, Map<String, TelefonoInventario> porImei) {
+        TelefonoInventario t = porImei.get(imei);
+        if (t == null) return "no existe";
+        String estado = UbicacionTexto.estado(t);
+        if ("OK".equals(estado)) return "OK";
+        if ("Histórico".equals(estado)) return "histórico — dar de alta en un lote";
+        return "está " + estado;
+    }
+
+    public static void abrir(Window owner, List<TelefonoInventario> preseleccion,
+                              List<TelefonoInventario> inventarioCompleto, Runnable onCambios) {
         TelefonoDAO telefonoDAO = new TelefonoDAO();
         ClienteDAO clienteDAO = new ClienteDAO();
+        Map<String, TelefonoInventario> porImei = inventarioCompleto == null ? Map.of() : inventarioCompleto.stream()
+                .filter(t -> t.getImei() != null)
+                .collect(Collectors.toMap(TelefonoInventario::getImei, java.util.function.Function.identity(), (a, b) -> a));
         Set<String> vistos = new LinkedHashSet<>();
         boolean[] huboCambios = { false };
         boolean[] enviado = { false };    // true tras confirmar con éxito: la lista pasa a modo resultados
@@ -92,9 +117,15 @@ public final class EnvioDialog {
 
         ListView<String> lista = new ListView<>();
         lista.setPrefSize(520, 300);
-        Label lblContador = new Label("0 teléfonos");
+        Label lblContador = new Label("0 teléfonos (0 enviables)");
 
-        Runnable actualizarContador = () -> lblContador.setText(lista.getItems().size() + " teléfonos");
+        // Tras confirmar, la lista pasa a modo resultados (textos del servidor); el contador
+        // deja de recalcularse por esta vía (se fija directamente al recibir la respuesta).
+        Runnable actualizarContador = () -> {
+            long enviables = lista.getItems().stream()
+                    .filter(imei -> "OK".equals(sufijoClasificacion(imei, porImei))).count();
+            lblContador.setText(lista.getItems().size() + " teléfonos (" + enviables + " enviables)");
+        };
 
         Button btnEnviar = new Button("Enviar remesa");
         btnEnviar.getStyleClass().add("btn-primary");
@@ -153,14 +184,33 @@ public final class EnvioDialog {
         }
 
         // "Quitar" por fila mientras la remesa no se ha enviado (tras enviar, la lista pasa a
-        // modo resultados y deja de tener sentido quitar filas).
+        // modo resultados y deja de tener sentido quitar filas). Pre-envío, cada fila muestra
+        // además la clasificación en vivo (imei · sufijo, sufijo coloreado); en modo resultados
+        // el texto es el literal que devuelve el servidor, sin clasificación ni color añadidos.
         lista.setCellFactory(lv -> new ListCell<>() {
+            private final Label lblImei = new Label();
+            private final Label lblSufijo = new Label();
+            private final HBox caja = new HBox(0, lblImei, lblSufijo);
+            {
+                caja.setAlignment(Pos.CENTER_LEFT);
+            }
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setContextMenu(null); return; }
-                setText(item);
-                if (enviado[0]) { setContextMenu(null); return; }
+                if (empty || item == null) { setText(null); setGraphic(null); setContextMenu(null); return; }
+                if (enviado[0]) {
+                    setGraphic(null);
+                    setText(item);
+                    setContextMenu(null);
+                    return;
+                }
+                String sufijo = sufijoClasificacion(item, porImei);
+                boolean enviable = "OK".equals(sufijo);
+                lblImei.setText(item + "  ·  ");
+                lblSufijo.setText(sufijo);
+                lblSufijo.setStyle("-fx-text-fill: " + (enviable ? Colores.VERDE_OK : Colores.TEXTO_ERROR) + ";");
+                setText(null);
+                setGraphic(caja);
                 ContextMenu menu = new ContextMenu();
                 MenuItem quitar = new MenuItem("Quitar");
                 quitar.setOnAction(e -> {

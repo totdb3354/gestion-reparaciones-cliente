@@ -300,7 +300,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     private void enviarMasivo() {
         // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c);
         // sin marcados, resolverMarcados() ya devuelve vacío y el diálogo abre sin preselección.
-        EnvioDialog.abrir(tabla.getScene().getWindow(), resolverMarcados(), this::cargar);
+        EnvioDialog.abrir(tabla.getScene().getWindow(), resolverMarcados(), inventario, this::cargar);
     }
 
     /**
@@ -968,7 +968,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c).
                     java.util.List<TelefonoInventario> destino = resolverMarcados();
                     if (!destino.isEmpty())
-                        EnvioDialog.abrir(getScene().getWindow(), destino, AgrupadoController.this::cargar);
+                        EnvioDialog.abrir(getScene().getWindow(), destino, inventario, AgrupadoController.this::cargar);
                 });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
                         aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev, enviarSel);
