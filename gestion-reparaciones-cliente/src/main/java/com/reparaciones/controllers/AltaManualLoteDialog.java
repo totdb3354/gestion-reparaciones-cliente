@@ -101,7 +101,9 @@ public final class AltaManualLoteDialog {
         private final Map<String, Double> tasasCache = new ConcurrentHashMap<>();
 
         private final ObservableList<String> imeis = FXCollections.observableArrayList();
-        private String modeloInterno;   // puede quedar null: el alta manual permite teléfono sin modelo
+        // Modelo común: puede quedar null si cada fila resuelve su propio modelo (manual o detectado).
+        // La importación exige modelo resuelto (común o por fila) para cada IMEI: ver confirmar().
+        private String modeloInterno;
 
         /** Modelo detectado por fila (BD vía loteDAO.verificar o API vía colaLookup), IMEI → modelo interno. */
         private final Map<String, String> modelosDetectados = new ConcurrentHashMap<>();
@@ -262,8 +264,12 @@ public final class AltaManualLoteDialog {
                     String manualActual = modelosManuales.get(imei);
                     boolean manual = manualActual != null && !manualActual.isBlank();
                     Label lblModeloFila = new Label(textoModeloFila(imei));
-                    lblModeloFila.setStyle("-fx-font-size: 11px; -fx-text-fill: " + Colores.AZUL_GRIS
-                            + (manual ? "; -fx-font-weight: bold;" : ";"));
+                    lblModeloFila.setStyle(sinModeloFila(imei)
+                            ? "-fx-font-size: 11px; -fx-text-fill: " + Colores.TEXTO_ACCION
+                                    + "; -fx-underline: true; -fx-cursor: hand;"
+                            : "-fx-font-size: 11px; -fx-text-fill: " + Colores.AZUL_GRIS
+                                    + (manual ? "; -fx-font-weight: bold;" : ";"));
+                    lblModeloFila.setOnMouseClicked(e -> editarModeloFila(imei));
                     Region spacer = new Region();
                     HBox.setHgrow(spacer, Priority.ALWAYS);
                     Button btnQuitar = new Button("✕");
@@ -510,14 +516,23 @@ public final class AltaManualLoteDialog {
             });
         }
 
-        /** Texto de modelo junto al IMEI en la lista (spec §3: manual > detectado > "—"). */
+        /** Texto de modelo junto al IMEI en la lista (manual > detectado > "detectando…" > prompt de acción). */
         private String textoModeloFila(String imei) {
             String manual = modelosManuales.get(imei);
             if (manual != null && !manual.isBlank()) return FormularioReparacionController.traducirModelo(manual);
             String detectado = modelosDetectados.get(imei);
             if (detectado != null && !detectado.isBlank()) return FormularioReparacionController.traducirModelo(detectado);
             if (lookupsPendientes.contains(imei)) return "detectando…";
-            return "—";
+            return "escribe modelo";
+        }
+
+        /** true si la fila no tiene modelo propio resuelto (ni manual, ni detectado, ni lookup en curso). */
+        private boolean sinModeloFila(String imei) {
+            String manual = modelosManuales.get(imei);
+            if (manual != null && !manual.isBlank()) return false;
+            String detectado = modelosDetectados.get(imei);
+            if (detectado != null && !detectado.isBlank()) return false;
+            return !lookupsPendientes.contains(imei);
         }
 
         private void editarModeloFila(String imei) {
@@ -661,6 +676,15 @@ public final class AltaManualLoteDialog {
             List<String> imeisSnapshot = new ArrayList<>(imeis);
             if (batch.isEmpty() || proveedor == null || imeisSnapshot.isEmpty()) return;
 
+            List<String> sinModelo = imeisSnapshot.stream()
+                    .filter(imei -> LookupModelosImeis.modeloParaFila(
+                            modelosManuales.get(imei), modelosDetectados.get(imei), modeloInterno) == null)
+                    .toList();
+            if (!sinModelo.isEmpty()) {
+                mostrarAvisoSinModelo(sinModelo.size());
+                return;
+            }
+
             Integer storageGb = comboStorage.getValue();
             String color = comboColor.getValue();
             String grado = textoOrNull(tfGrado.getText());
@@ -724,6 +748,16 @@ public final class AltaManualLoteDialog {
                     });
                 }
             }, "alta-manual-lote-importar").start();
+        }
+
+        /** Bloquea la importación (spec F2c ajuste 3): exige modelo resuelto (fila o común) por cada IMEI. */
+        private void mostrarAvisoSinModelo(int n) {
+            String cuerpo = (n == 1 ? "1 teléfono" : n + " teléfonos")
+                    + " sin modelo — escribe el modelo en cada fila o elige uno común";
+            Alert alert = new Alert(Alert.AlertType.WARNING, cuerpo);
+            alert.setHeaderText(null);
+            alert.initOwner(stage);
+            alert.showAndWait();
         }
 
         private void mostrarAvisoActivos(List<String> activos) {
