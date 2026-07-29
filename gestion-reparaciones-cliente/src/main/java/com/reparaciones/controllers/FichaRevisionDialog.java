@@ -453,6 +453,7 @@ public final class FichaRevisionDialog {
                 lineas = dao.getMovimientos(imei).stream()
                         .map(m -> FormatoMovimiento.linea(m, FMT_CHIP))
                         .collect(Collectors.toList());
+                java.util.Collections.reverse(lineas);
             } catch (SQLException ex) {
                 lineas = List.of("No se pudo cargar el historial");
             }

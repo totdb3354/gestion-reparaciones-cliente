@@ -13,7 +13,11 @@ public final class FormatoMovimiento {
         StringBuilder sb = new StringBuilder();
         sb.append(FechaUtils.formatear(m.getFecha(), fmt));
         sb.append(" · ").append(m.getUbicacionOrigen() == null ? "—" : m.getUbicacionOrigen());
-        sb.append(" → ").append(m.getUbicacionDestino());
+        String destino = m.getUbicacionDestino();
+        if ("ENVIADO".equals(m.getUbicacionOrigen()) && "ALMACEN".equals(destino)) {
+            destino = destino + " (devolución)";
+        }
+        sb.append(" → ").append(destino);
         sb.append(" · ").append(m.getUsuario());
         if (m.getMotivo() != null && !m.getMotivo().isBlank()) sb.append(" · ").append(m.getMotivo());
         if (m.getReferencia() != null && !m.getReferencia().isBlank()) sb.append(" (").append(m.getReferencia()).append(")");

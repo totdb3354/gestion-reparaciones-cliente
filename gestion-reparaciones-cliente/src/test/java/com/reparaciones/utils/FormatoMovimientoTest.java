@@ -25,8 +25,15 @@ class FormatoMovimientoTest {
 
     @Test void lineaCompleta() {
         assertEquals(FechaUtils.formatear(LocalDateTime.of(2026, 7, 27, 10, 0), FMT)
-                        + " · ENVIADO → ALMACEN · ana · pantalla amarilla (ENVIO 9)",
+                        + " · ENVIADO → ALMACEN (devolución) · ana · pantalla amarilla (ENVIO 9)",
                 FormatoMovimiento.linea(mov("ENVIADO", "ALMACEN", "ana", "pantalla amarilla", "ENVIO 9"), FMT));
+    }
+
+    @Test void noDevolucionSinOrigenEnviado() {
+        // Arrival to ALMACEN sin ENVIADO como origen → SIN (devolución)
+        assertEquals(FechaUtils.formatear(LocalDateTime.of(2026, 7, 27, 10, 0), FMT)
+                        + " · PULIDO → ALMACEN · ana",
+                FormatoMovimiento.linea(mov("PULIDO", "ALMACEN", "ana", null, null), FMT));
     }
 
     @Test void origenNullYSinExtras() {
