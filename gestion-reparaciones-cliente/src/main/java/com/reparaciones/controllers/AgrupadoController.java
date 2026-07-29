@@ -389,6 +389,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         // Estado del trabajo (Incidencia/Resuelta/Normal): en TALLER la queda oculta en modo
         // maestro (no está en COLS_TALLER), pero el detalle la necesita en ambas vistas.
         colEstado.setVisible(true);
+        // Componente: en INVENTARIO maestro está oculto (ajuste smoke F2c), pero el detalle lo necesita en ambas vistas.
+        colComponente.setVisible(true);
         colFecha.setText("Fechas");
         colComponente.setText("Componente");
     }

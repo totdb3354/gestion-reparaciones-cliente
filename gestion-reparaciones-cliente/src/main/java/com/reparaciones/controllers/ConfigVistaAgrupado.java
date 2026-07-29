@@ -17,7 +17,7 @@ public final class ConfigVistaAgrupado {
 
     private static final List<String> COLS_INVENTARIO = List.of(
             "imei", "modelo", "storage", "color", "grado", "ultimaActividad",
-            "trabajos", "estado", "ubicacion", "lote", "observacionTelefono", "cliente");
+            "estado", "ubicacion", "lote", "observacionTelefono", "cliente");
 
     private static final List<String> COLS_TALLER = List.of(
             "imei", "modelo", "ultimaActividad", "trabajos", "observacionTelefono", "cliente");

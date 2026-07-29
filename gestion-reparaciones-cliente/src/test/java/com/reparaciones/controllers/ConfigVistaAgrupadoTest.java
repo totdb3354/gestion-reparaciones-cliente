@@ -12,7 +12,7 @@ class ConfigVistaAgrupadoTest {
 
     @Test void inventarioConservaLaVistaActualCompleta() {
         assertEquals(List.of("imei", "modelo", "storage", "color", "grado", "ultimaActividad",
-                        "trabajos", "estado", "ubicacion", "lote", "observacionTelefono", "cliente"),
+                        "estado", "ubicacion", "lote", "observacionTelefono", "cliente"),
                 ConfigVistaAgrupado.columnasMaestro(INVENTARIO));
         assertTrue(ConfigVistaAgrupado.filtrosVisibles(INVENTARIO).containsAll(
                 java.util.Set.of("imei", "tecnico", "cliente", "estado", "ubicacion", "lote", "modelo", "fechas", "incidencias")));
