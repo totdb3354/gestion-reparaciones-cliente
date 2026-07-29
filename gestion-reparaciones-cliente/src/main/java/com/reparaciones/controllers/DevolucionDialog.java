@@ -2,12 +2,14 @@ package com.reparaciones.controllers;
 
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.ItemDevolucion;
+import com.reparaciones.models.TelefonoInventario;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ImeiUtils;
 import com.reparaciones.utils.ImeiUtils.ResultadoPegado;
 import com.reparaciones.utils.ImeiUtils.TipoPegado;
 import com.reparaciones.utils.TextoResultadoDevolucion;
+import com.reparaciones.utils.UbicacionTexto;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -29,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * F2c: registro masivo de devoluciones a almacén — escaneo local (como {@link EnvioDialog},
@@ -37,7 +40,10 @@ import java.util.Set;
  * motivo común de cabecera en el momento de añadir la fila) y confirmación única que envía
  * todo el lote de una vez ({@code TelefonoDAO#registrarDevoluciones}). Patrón de
  * ventana/hilos (Stage APPLICATION_MODAL + Thread + Platform.runLater) calcado de
- * {@link EnvioDialog}.
+ * {@link EnvioDialog}. Cada IMEI escaneado se clasifica en vivo contra el snapshot de
+ * inventario cargado al abrir (ajuste smoke F2c #7, calco de {@link EnvioDialog} #4); el
+ * servidor sigue siendo la autoridad final al confirmar, así que esta clasificación puede
+ * quedar desfasada si el inventario cambió entre cargar la tabla y escanear.
  */
 public final class DevolucionDialog {
 
@@ -70,8 +76,25 @@ public final class DevolucionDialog {
         Clipboard.getSystemClipboard().setContent(content);
     }
 
-    public static void abrir(Window owner, Runnable onCambios) {
+    /**
+     * Sufijo de clasificación en vivo de un IMEI contra el snapshot de inventario cargado al
+     * abrir el diálogo. {@code "Enviado"} es el único sufijo válido para devolución (el
+     * teléfono está fuera y puede volver a almacén); el resto son motivos de rechazo (ausente
+     * u otro estado), calco de {@code EnvioDialog#sufijoClasificacion}.
+     */
+    private static String sufijoClasificacion(String imei, Map<String, TelefonoInventario> porImei) {
+        TelefonoInventario t = porImei.get(imei);
+        if (t == null) return "no existe";
+        String estado = UbicacionTexto.estado(t);
+        if ("Enviado".equals(estado)) return "Enviado";
+        return "está " + estado;
+    }
+
+    public static void abrir(Window owner, List<TelefonoInventario> inventarioCompleto, Runnable onCambios) {
         TelefonoDAO telefonoDAO = new TelefonoDAO();
+        Map<String, TelefonoInventario> porImei = inventarioCompleto == null ? Map.of() : inventarioCompleto.stream()
+                .filter(t -> t.getImei() != null)
+                .collect(Collectors.toMap(TelefonoInventario::getImei, java.util.function.Function.identity(), (a, b) -> a));
         Set<String> vistos = new LinkedHashSet<>();
         boolean[] huboCambios = { false };
         boolean[] registrado = { false };    // true tras confirmar con éxito: la tabla pasa a modo resultados
@@ -101,6 +124,27 @@ public final class DevolucionDialog {
         colImei.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getImei()));
         colImei.setSortable(false);
         colImei.setPrefWidth(220);
+        // Clasificación en vivo (imei · sufijo, sufijo coloreado) mientras el lote no se ha
+        // registrado; en modo resultados esta columna desaparece con la tabla entera, así que
+        // no necesita distinguir modos (calco de EnvioDialog, adaptado a celda de TableView).
+        colImei.setCellFactory(col -> new TableCell<>() {
+            private final Label lblImei = new Label();
+            private final Label lblSufijo = new Label();
+            private final HBox caja = new HBox(0, lblImei, lblSufijo);
+            { caja.setAlignment(Pos.CENTER_LEFT); }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setGraphic(null); return; }
+                String sufijo = sufijoClasificacion(item, porImei);
+                boolean valida = "Enviado".equals(sufijo);
+                lblImei.setText(item + "  ·  ");
+                lblSufijo.setText(sufijo);
+                lblSufijo.setStyle("-fx-text-fill: " + (valida ? Colores.VERDE_OK : Colores.TEXTO_ERROR) + ";");
+                setText(null);
+                setGraphic(caja);
+            }
+        });
 
         TableColumn<FilaDevolucion, String> colMotivo = new TableColumn<>("Motivo");
         colMotivo.setCellValueFactory(c -> c.getValue().motivoProperty());
@@ -170,9 +214,15 @@ public final class DevolucionDialog {
         listaResultados.setVisible(false);
         listaResultados.setManaged(false);
 
-        Label lblContador = new Label("0 devoluciones");
+        Label lblContador = new Label("0 devoluciones (0 válidas)");
 
-        Runnable actualizarContador = () -> lblContador.setText(tabla.getItems().size() + " devoluciones");
+        // Tras registrar, la tabla pasa a modo resultados (textos del servidor); el contador
+        // deja de recalcularse por esta vía (se fija directamente al recibir la respuesta).
+        Runnable actualizarContador = () -> {
+            long validas = tabla.getItems().stream()
+                    .filter(fila -> "Enviado".equals(sufijoClasificacion(fila.getImei(), porImei))).count();
+            lblContador.setText(tabla.getItems().size() + " devoluciones (" + validas + " válidas)");
+        };
 
         Button btnRegistrar = new Button("Registrar");
         btnRegistrar.getStyleClass().add("btn-primary");

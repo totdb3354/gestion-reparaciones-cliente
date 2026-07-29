@@ -326,7 +326,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
     @FXML
     private void registrarDevolucion() {
-        DevolucionDialog.abrir(tabla.getScene().getWindow(), this::cargar);
+        DevolucionDialog.abrir(tabla.getScene().getWindow(), inventario, this::cargar);
     }
 
     /** Vuelve a modo maestro sin recargar (útil al ocultar el panel). */
