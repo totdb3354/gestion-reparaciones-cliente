@@ -18,6 +18,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
@@ -62,6 +64,18 @@ public final class EnvioDialog {
         if ("OK".equals(estado)) return "OK";
         if ("Histórico".equals(estado)) return "histórico — dar de alta en un lote";
         return "está " + estado;
+    }
+
+    /** IMEI de una fila de la lista: en modo resultados el texto es "imei  ·  <texto servidor>". */
+    private static String imeiDeFila(String item) {
+        int idx = item.indexOf("  ·  ");
+        return idx < 0 ? item : item.substring(0, idx);
+    }
+
+    private static void copiarAlPortapapeles(String texto) {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(texto);
+        Clipboard.getSystemClipboard().setContent(content);
     }
 
     public static void abrir(Window owner, List<TelefonoInventario> preseleccion,
@@ -183,25 +197,39 @@ public final class EnvioDialog {
             anadir.accept(imeisPre);
         }
 
-        // "Quitar" por fila mientras la remesa no se ha enviado (tras enviar, la lista pasa a
-        // modo resultados y deja de tener sentido quitar filas). Pre-envío, cada fila muestra
-        // además la clasificación en vivo (imei · sufijo, sufijo coloreado); en modo resultados
-        // el texto es el literal que devuelve el servidor, sin clasificación ni color añadidos.
+        // Botón "✕" visible por fila mientras la remesa no se ha enviado ni está en vuelo (calco
+        // de AltaManualLoteDialog): sustituye el antiguo "Quitar" del menú contextual, que era
+        // indescubrible. Tras enviar, la lista pasa a modo resultados y deja de tener sentido
+        // quitar filas; mientras la petición está en vuelo el botón se oculta (cierra el hueco
+        // que antes permitía quitar filas locales mientras el servidor procesaba el envío).
+        // Pre-envío, cada fila muestra además la clasificación en vivo (imei · sufijo, sufijo
+        // coloreado); en modo resultados el texto es el literal que devuelve el servidor, sin
+        // clasificación ni color añadidos. El menú contextual "Copiar IMEI" está disponible en
+        // ambos modos (copia el IMEI, sin el sufijo/texto de resultado).
         lista.setCellFactory(lv -> new ListCell<>() {
             private final Label lblImei = new Label();
             private final Label lblSufijo = new Label();
-            private final HBox caja = new HBox(0, lblImei, lblSufijo);
+            private final Region spacer = new Region();
+            private final Button btnQuitar = new Button("✕");
+            private final HBox caja = new HBox(0, lblImei, lblSufijo, spacer, btnQuitar);
+            private final ContextMenu menu = new ContextMenu();
+            private final MenuItem copiarImei = new MenuItem("Copiar IMEI");
             {
                 caja.setAlignment(Pos.CENTER_LEFT);
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                btnQuitar.setStyle("-fx-background-color: transparent; -fx-text-fill: " + Colores.AZUL_GRIS
+                        + "; -fx-cursor: hand; -fx-font-size: 12px;");
+                menu.getItems().add(copiarImei);
             }
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) { setText(null); setGraphic(null); setContextMenu(null); return; }
+                copiarImei.setOnAction(e -> copiarAlPortapapeles(imeiDeFila(item)));
+                setContextMenu(menu);
                 if (enviado[0]) {
                     setGraphic(null);
                     setText(item);
-                    setContextMenu(null);
                     return;
                 }
                 String sufijo = sufijoClasificacion(item, porImei);
@@ -209,18 +237,16 @@ public final class EnvioDialog {
                 lblImei.setText(item + "  ·  ");
                 lblSufijo.setText(sufijo);
                 lblSufijo.setStyle("-fx-text-fill: " + (enviable ? Colores.VERDE_OK : Colores.TEXTO_ERROR) + ";");
-                setText(null);
-                setGraphic(caja);
-                ContextMenu menu = new ContextMenu();
-                MenuItem quitar = new MenuItem("Quitar");
-                quitar.setOnAction(e -> {
+                btnQuitar.setVisible(!enviando[0]);
+                btnQuitar.setManaged(!enviando[0]);
+                btnQuitar.setOnAction(e -> {
                     vistos.remove(item);
                     lista.getItems().remove(item);
                     actualizarContador.run();
                     btnEnviar.setDisable(enviando[0] || lista.getItems().isEmpty());
                 });
-                menu.getItems().add(quitar);
-                setContextMenu(menu);
+                setText(null);
+                setGraphic(caja);
             }
         });
 
@@ -242,6 +268,7 @@ public final class EnvioDialog {
             enviando[0] = true;
             btnEnviar.setDisable(true);   // guard doble-click
             tfScan.setDisable(true);      // evita colar IMEIs nuevos mientras la petición está en vuelo
+            lista.refresh();              // oculta el botón ✕ de cada fila mientras la petición está en vuelo
             String referenciaFinal = referencia;
             new Thread(() -> {
                 try {
@@ -269,6 +296,7 @@ public final class EnvioDialog {
                         enviando[0] = false;
                         btnEnviar.setDisable(false);
                         tfScan.setDisable(false);
+                        lista.refresh();   // vuelve a mostrar el botón ✕ de cada fila
                     });
                 }
             }, "envio-confirmar").start();

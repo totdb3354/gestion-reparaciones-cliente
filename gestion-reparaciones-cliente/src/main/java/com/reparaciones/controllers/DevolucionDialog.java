@@ -3,6 +3,7 @@ package com.reparaciones.controllers;
 import com.reparaciones.dao.TelefonoDAO;
 import com.reparaciones.models.ItemDevolucion;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ImeiUtils;
 import com.reparaciones.utils.ImeiUtils.ResultadoPegado;
 import com.reparaciones.utils.ImeiUtils.TipoPegado;
@@ -14,6 +15,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
@@ -55,6 +58,18 @@ public final class DevolucionDialog {
         String getMotivo() { return motivo.get(); }
     }
 
+    /** IMEI de una fila de la lista de resultados: el texto es "imei  ·  <texto servidor>". */
+    private static String imeiDeFila(String item) {
+        int idx = item.indexOf("  ·  ");
+        return idx < 0 ? item : item.substring(0, idx);
+    }
+
+    private static void copiarAlPortapapeles(String texto) {
+        ClipboardContent content = new ClipboardContent();
+        content.putString(texto);
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+
     public static void abrir(Window owner, Runnable onCambios) {
         TelefonoDAO telefonoDAO = new TelefonoDAO();
         Set<String> vistos = new LinkedHashSet<>();
@@ -80,7 +95,7 @@ public final class DevolucionDialog {
         TableView<FilaDevolucion> tabla = new TableView<>();
         tabla.setEditable(true);
         tabla.setPlaceholder(new Label("Sin teléfonos escaneados"));
-        tabla.setPrefSize(520, 300);
+        tabla.setPrefSize(554, 300);   // +34 de la columna de acción "✕" frente al ancho previo
 
         TableColumn<FilaDevolucion, String> colImei = new TableColumn<>("IMEI");
         colImei.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getImei()));
@@ -135,7 +150,18 @@ public final class DevolucionDialog {
         colMotivo.setSortable(false);
         colMotivo.setPrefWidth(280);
 
-        tabla.getColumns().setAll(List.of(colImei, colMotivo));
+        // Columna de acción con el botón "✕" por fila (calco de AltaManualLoteDialog): sustituye
+        // el antiguo "Quitar" del menú contextual, que era indescubrible. Sin cabecera, estrecha
+        // y fija (no ordenable ni reordenable): solo aloja el botón.
+        TableColumn<FilaDevolucion, Void> colQuitar = new TableColumn<>("");
+        colQuitar.setSortable(false);
+        colQuitar.setReorderable(false);
+        colQuitar.setResizable(false);
+        colQuitar.setPrefWidth(34);
+        colQuitar.setMinWidth(34);
+        colQuitar.setMaxWidth(34);
+
+        tabla.getColumns().setAll(List.of(colImei, colMotivo, colQuitar));
 
         // Tras registrar, la tabla deja paso a una lista de resultados (más simple que
         // reescribir la columna Motivo con el texto de resultado; calco de EnvioDialog).
@@ -198,22 +224,65 @@ public final class DevolucionDialog {
         });
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == KeyCode.ENTER) intentarAnadir.run(); });
 
-        // "Quitar" por fila mientras el lote no se ha registrado (tras registrar, la tabla
-        // se oculta en favor de la lista de resultados y deja de tener sentido quitar filas).
-        tabla.setRowFactory(tv -> new TableRow<>() {
-            @Override
-            protected void updateItem(FilaDevolucion item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null || registrado[0]) { setContextMenu(null); return; }
-                ContextMenu menu = new ContextMenu();
-                MenuItem quitar = new MenuItem("Quitar");
-                quitar.setOnAction(e -> {
-                    vistos.remove(item.getImei());
-                    tabla.getItems().remove(item);
+        // Botón "✕" por fila mientras el lote no se ha registrado ni está en vuelo (calco de
+        // AltaManualLoteDialog); deshabilitado durante el registro (cierra el hueco que antes
+        // permitía quitar filas locales mientras el servidor procesaba el registro). Tras
+        // registrar, la tabla entera se oculta en favor de la lista de resultados, así que la
+        // columna deja de verse con ella.
+        colQuitar.setCellFactory(col -> new TableCell<>() {
+            private final Button btnQuitar = new Button("✕");
+            {
+                btnQuitar.setStyle("-fx-background-color: transparent; -fx-text-fill: " + Colores.AZUL_GRIS
+                        + "; -fx-cursor: hand; -fx-font-size: 12px;");
+                btnQuitar.setOnAction(e -> {
+                    FilaDevolucion fila = getTableRow() == null ? null : getTableRow().getItem();
+                    if (fila == null) return;
+                    vistos.remove(fila.getImei());
+                    tabla.getItems().remove(fila);
                     actualizarContador.run();
                     btnRegistrar.setDisable(registrando[0] || tabla.getItems().isEmpty());
                 });
-                menu.getItems().add(quitar);
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                btnQuitar.setDisable(registrando[0]);
+                btnQuitar.setVisible(!registrando[0]);
+                setGraphic(btnQuitar);
+            }
+        });
+
+        // "Copiar IMEI" sustituye el antiguo "Quitar" del menú contextual de la tabla (indescubrible).
+        tabla.setRowFactory(tv -> new TableRow<>() {
+            private final ContextMenu menu = new ContextMenu();
+            private final MenuItem copiarImei = new MenuItem("Copiar IMEI");
+            {
+                menu.getItems().add(copiarImei);
+            }
+            @Override
+            protected void updateItem(FilaDevolucion item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setContextMenu(null); return; }
+                copiarImei.setOnAction(e -> copiarAlPortapapeles(item.getImei()));
+                setContextMenu(menu);
+            }
+        });
+
+        // La lista de resultados no tenía menú contextual: se añade "Copiar IMEI" (extrae el
+        // IMEI del texto "imei  ·  <texto servidor>").
+        listaResultados.setCellFactory(lv -> new ListCell<>() {
+            private final ContextMenu menu = new ContextMenu();
+            private final MenuItem copiarImei = new MenuItem("Copiar IMEI");
+            {
+                menu.getItems().add(copiarImei);
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setContextMenu(null); return; }
+                setText(item);
+                copiarImei.setOnAction(e -> copiarAlPortapapeles(imeiDeFila(item)));
                 setContextMenu(menu);
             }
         });
@@ -231,6 +300,7 @@ public final class DevolucionDialog {
             btnRegistrar.setDisable(true);   // guard doble-click
             tfScan.setDisable(true);         // evita colar IMEIs nuevos mientras la petición está en vuelo
             tfMotivoComun.setDisable(true);
+            tabla.refresh();                 // deshabilita el botón ✕ de cada fila mientras la petición está en vuelo
             new Thread(() -> {
                 try {
                     List<ItemDevolucion> res = telefonoDAO.registrarDevoluciones(items);
@@ -257,6 +327,7 @@ public final class DevolucionDialog {
                         btnRegistrar.setDisable(false);
                         tfScan.setDisable(false);
                         tfMotivoComun.setDisable(false);
+                        tabla.refresh();   // vuelve a habilitar el botón ✕ de cada fila
                     });
                 }
             }, "devolucion-confirmar").start();
