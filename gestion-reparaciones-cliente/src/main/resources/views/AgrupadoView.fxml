@@ -25,6 +25,8 @@
                style="-fx-background-color: #E8EAF0; -fx-text-fill: #586376; -fx-font-weight: bold; -fx-font-size: 12px; -fx-background-radius: 12; -fx-padding: 3 10 3 10;"/>
         <Button fx:id="btnImportar" text="Importar lote" styleClass="btn-secondary" onAction="#importarLote" visible="false" managed="false"/>
         <Button fx:id="btnAltaManual" text="Alta manual" styleClass="btn-secondary" onAction="#altaManualLote" visible="false" managed="false"/>
+        <Button fx:id="btnEnviar" text="Enviar (masivo)" styleClass="btn-secondary" onAction="#enviarMasivo" visible="false" managed="false"/>
+        <Button fx:id="btnDevolucion" text="Registrar devolución" styleClass="btn-secondary" onAction="#registrarDevolucion" visible="false" managed="false"/>
         <Region HBox.hgrow="ALWAYS"/>
     </HBox>
 
@@ -47,6 +49,7 @@
 
     <TableView fx:id="tabla" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>
+            <TableColumn fx:id="colCheck" minWidth="34" prefWidth="34" maxWidth="34" text=""/>
             <TableColumn fx:id="colTipo" minWidth="90" prefWidth="100" maxWidth="120" text="Tipo"/>
             <TableColumn fx:id="colIdRep" minWidth="110" text="Id"/>
             <TableColumn fx:id="colImei" minWidth="130" text="IMEI teléfono"/>
@@ -66,7 +69,6 @@
             <TableColumn fx:id="colIdAnterior" minWidth="150" text="Id Rep. Anterior"/>
             <TableColumn fx:id="colObservacionTelefono" minWidth="150" maxWidth="300" text="Observación"/>
             <TableColumn fx:id="colCliente" minWidth="150" maxWidth="300" text="Cliente"/>
-            <TableColumn fx:id="colRevision" minWidth="90" prefWidth="100" maxWidth="120" text="Revisión"/>
         </columns>
     </TableView>
 

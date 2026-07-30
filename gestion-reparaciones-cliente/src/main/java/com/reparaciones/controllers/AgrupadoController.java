@@ -15,6 +15,7 @@ import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.models.TelefonoInventario;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.ChipsEstado;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,6 +81,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private MenuButton filtroIncidencias;
 
     @FXML private TableView<Object> tabla;
+    @FXML private TableColumn<Object, Void>   colCheck;
     @FXML private TableColumn<Object, Void>   colTipo;
     @FXML private TableColumn<Object, String> colIdRep;
     @FXML private TableColumn<Object, String> colImei;
@@ -98,9 +101,10 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     @FXML private TableColumn<Object, String> colIdAnterior;
     @FXML private TableColumn<Object, String> colObservacionTelefono;
     @FXML private TableColumn<Object, String> colCliente;
-    @FXML private TableColumn<Object, Void>   colRevision;
     @FXML private Button btnImportar;
     @FXML private Button btnAltaManual;
+    @FXML private Button btnEnviar;
+    @FXML private Button btnDevolucion;
 
     // ── DAOs ────────────────────────────────────────────────────────────────
     private final ReparacionDAO           reparacionDAO           = new ReparacionDAO();
@@ -126,6 +130,13 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     private final ObservableList<ReparacionResumen> datos = FXCollections.observableArrayList();
     private final ObservableList<TelefonoInventario> inventario = FXCollections.observableArrayList();
     private final ObservableList<Object> tablaItems = FXCollections.observableArrayList();
+
+    // ── Selección de envío (checks estilo Gmail) ───────────────────────────
+    /** IMEIs marcados para el envío masivo, por orden de marcado; sobrevive a scroll, recycling
+     * de celdas y a la ida y vuelta maestro↔detalle (no se limpia salvo en {@link #cargar()}). */
+    private final Set<String> imeisMarcados = new LinkedHashSet<>();
+    /** Checkbox de cabecera de {@link #colCheck}: marca/desmarca todos los visibles (filtrados). */
+    private CheckBox cbMarcarTodos;
 
     // ── Drill-down ──────────────────────────────────────────────────────────
     private enum Modo { MAESTRO, DETALLE }
@@ -208,7 +219,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         columnaPorClave.put("lote", colLote);
         columnaPorClave.put("observacionTelefono", colObservacionTelefono);
         columnaPorClave.put("cliente", colCliente);
-        columnaPorClave.put("revision", colRevision);
 
         filtrosPorClave = new LinkedHashMap<>();
         filtrosPorClave.put("imei", List.of(filtroImei));
@@ -230,6 +240,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         boolean mostrarBotones = ConfigVistaAgrupado.botonesImportacion(vista) && esSuper;
         btnImportar.setVisible(mostrarBotones);   btnImportar.setManaged(mostrarBotones);
         btnAltaManual.setVisible(mostrarBotones); btnAltaManual.setManaged(mostrarBotones);
+        btnEnviar.setVisible(mostrarBotones);     btnEnviar.setManaged(mostrarBotones);
+        btnDevolucion.setVisible(mostrarBotones); btnDevolucion.setManaged(mostrarBotones);
         resetarModo();
     }
 
@@ -260,7 +272,14 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                                   actualizarTextoFiltroLote(); aplicarFiltros(); },
                 etiquetaLote);
             poblarFiltrosMaestro();
+            // Cubre tanto la recarga manual como el envío con éxito (EnvioDialog dispara cargar()
+            // como onCambios): los teléfonos marcados ya se enviaron o los datos son otros nuevos.
+            // Se limpia aquí, tras cargar todo con éxito, para no dejar el check de cabecera/botón
+            // desincronizados con la tabla si una recarga fallida (SQLException) cortara antes.
+            imeisMarcados.clear();
             aplicarFiltros();
+            actualizarHeaderMarcarTodos();
+            actualizarTextoBtnEnviar();
         } catch (SQLException e) {
             mostrarError(e);
         }
@@ -276,6 +295,39 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
     @FXML private void importarLote()   { ImportadorLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
     @FXML private void altaManualLote() { AltaManualLoteDialog.abrir(raiz.getScene().getWindow(), this::cargar); }
+
+    @FXML
+    private void enviarMasivo() {
+        // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c);
+        // sin marcados, resolverMarcados() ya devuelve vacío y el diálogo abre sin preselección.
+        EnvioDialog.abrir(tabla.getScene().getWindow(), resolverMarcados(), inventario, this::cargar);
+    }
+
+    /**
+     * Teléfonos marcados ({@link #imeisMarcados}) que siguen presentes en el inventario cargado,
+     * en el orden en que se marcaron. Si algún IMEI marcado ya no está en los datos (p. ej. tras
+     * un envío anterior o una recarga con otro filtro de rol), se descarta también del set.
+     */
+    private List<TelefonoInventario> resolverMarcados() {
+        if (imeisMarcados.isEmpty()) return List.of();
+        Map<String, TelefonoInventario> porImei = inventario.stream()
+                .collect(Collectors.toMap(TelefonoInventario::getImei, java.util.function.Function.identity(), (a, b) -> a));
+        imeisMarcados.removeIf(imei -> !porImei.containsKey(imei));
+        List<TelefonoInventario> out = new ArrayList<>();
+        for (String imei : imeisMarcados) out.add(porImei.get(imei));
+        return out;
+    }
+
+    /** Texto de {@link #btnEnviar}: cuenta total de marcados (aunque los filtros oculten alguno). */
+    private void actualizarTextoBtnEnviar() {
+        int n = imeisMarcados.size();
+        btnEnviar.setText(n > 0 ? "Enviar (" + n + " marcados)" : "Enviar (masivo)");
+    }
+
+    @FXML
+    private void registrarDevolucion() {
+        DevolucionDialog.abrir(tabla.getScene().getWindow(), inventario, this::cargar);
+    }
 
     /** Vuelve a modo maestro sin recargar (útil al ocultar el panel). */
     public void resetarModo() {
@@ -317,8 +369,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         colTipo.setVisible(false);
         colIdRep.setVisible(false); colReparador.setVisible(false); colAsignadoPor.setVisible(false);
         colObservaciones.setVisible(false); colIncidencia.setVisible(false); colIdAnterior.setVisible(false);
-        // Columnas de la vista activa (ver ConfigVistaAgrupado); revision, si aparece, queda
-        // visible para todos — solo el supertécnico puede editarla (ver configurarColRevision).
+        // Checks de envío masivo: solo INVENTARIO/maestro y solo para el supertécnico (ajuste smoke F2c).
+        colCheck.setVisible(vista == ConfigVistaAgrupado.Vista.INVENTARIO && Sesion.esSuperTecnico());
+        // Columnas de la vista activa (ver ConfigVistaAgrupado).
         List<String> visibles = ConfigVistaAgrupado.columnasMaestro(vista);
         columnaPorClave.forEach((clave, col) -> col.setVisible(visibles.contains(clave)));
         colFecha.setText("Última actividad");
@@ -326,16 +379,18 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
     }
 
     private void aplicarColumnasDetalle() {
+        colCheck.setVisible(false);
         colTipo.setVisible(true);
         colIdRep.setVisible(true); colReparador.setVisible(true); colAsignadoPor.setVisible(true);
         colObservaciones.setVisible(true); colIncidencia.setVisible(true); colIdAnterior.setVisible(true);
         colStorage.setVisible(false); colColor.setVisible(false); colGrado.setVisible(false);
         colUbicacion.setVisible(false); colLote.setVisible(false);
         colObservacionTelefono.setVisible(false); colCliente.setVisible(false);
-        colRevision.setVisible(false);
         // Estado del trabajo (Incidencia/Resuelta/Normal): en TALLER la queda oculta en modo
         // maestro (no está en COLS_TALLER), pero el detalle la necesita en ambas vistas.
         colEstado.setVisible(true);
+        // Componente: en INVENTARIO maestro está oculto (ajuste smoke F2c), pero el detalle lo necesita en ambas vistas.
+        colComponente.setVisible(true);
         colFecha.setText("Fechas");
         colComponente.setText("Componente");
     }
@@ -655,7 +710,9 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     for (int i = 0; i < getTableView().getItems().size(); i++) {
                         Object candidate = getTableView().getItems().get(i);
                         if (candidate instanceof ReparacionResumen r && idAnterior.equals(r.getIdRep())) {
-                            getTableView().getSelectionModel().select(i);
+                            // clearAndSelect (no select): reemplaza la selección en vez de sumarse
+                            // a ella; correcto también bajo SelectionMode.SINGLE (ajuste smoke F2c).
+                            getTableView().getSelectionModel().clearAndSelect(i);
                             getTableView().scrollTo(i);
                             getTableView().requestFocus();
                             break;
@@ -682,12 +739,80 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
 
         configurarColEstado();
         configurarColIncidencia();
-        configurarColRevision();
+        configurarColCheck();
+    }
+
+    /**
+     * Columna de checks estilo Gmail, única vía de multiselección para enviar teléfonos (ajuste
+     * smoke F2c: la tabla vuelve a {@code SelectionMode.SINGLE}, la selección azul de fila ya no
+     * multiselecciona). Visible solo en INVENTARIO/maestro para el supertécnico
+     * ({@link #aplicarColumnasMaestro}/{@link #aplicarColumnasDetalle}); no se toca CSV. El estado
+     * vive en {@link #imeisMarcados}, indexado por IMEI, para sobrevivir al recycling de celdas y
+     * a la ida y vuelta maestro↔detalle.
+     */
+    private void configurarColCheck() {
+        cbMarcarTodos = new CheckBox();
+        cbMarcarTodos.setOnAction(e -> {
+            List<TelefonoInventario> visibles = tablaItems.stream()
+                    .filter(TelefonoInventario.class::isInstance)
+                    .map(TelefonoInventario.class::cast)
+                    .collect(Collectors.toList());
+            boolean todosMarcados = !visibles.isEmpty()
+                    && visibles.stream().allMatch(t -> imeisMarcados.contains(t.getImei()));
+            if (!todosMarcados) visibles.forEach(t -> imeisMarcados.add(t.getImei()));
+            else visibles.forEach(t -> imeisMarcados.remove(t.getImei()));
+            tabla.refresh();
+            actualizarHeaderMarcarTodos();
+            actualizarTextoBtnEnviar();
+        });
+        colCheck.setGraphic(cbMarcarTodos);
+        colCheck.setText(null);
+
+        colCheck.setCellFactory(col -> new TableCell<>() {
+            private final CheckBox check = new CheckBox();
+            {
+                // Evita que el click en el checkbox llegue a la fila (seleccionaría/dispararía
+                // el drill-down de doble click de #configurarFilas).
+                check.setOnMouseClicked(javafx.event.Event::consume);
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
+                Object row = getTableView().getItems().get(getIndex());
+                if (!(row instanceof TelefonoInventario t)) { setGraphic(null); return; }
+                // Reasignar el estado antes que el handler: setSelected() no dispara onAction,
+                // así que no hay riesgo de marcar/desmarcar el IMEI equivocado al reciclar la celda.
+                check.setOnAction(null);
+                check.setSelected(imeisMarcados.contains(t.getImei()));
+                check.setOnAction(e -> {
+                    if (check.isSelected()) imeisMarcados.add(t.getImei());
+                    else imeisMarcados.remove(t.getImei());
+                    actualizarHeaderMarcarTodos();
+                    actualizarTextoBtnEnviar();
+                });
+                setGraphic(check);
+            }
+        });
+    }
+
+    /** Refleja en {@link #cbMarcarTodos} si todos los teléfonos visibles (filtrados) están marcados. */
+    private void actualizarHeaderMarcarTodos() {
+        if (cbMarcarTodos == null) return;
+        List<TelefonoInventario> visibles = tablaItems.stream()
+                .filter(TelefonoInventario.class::isInstance)
+                .map(TelefonoInventario.class::cast)
+                .collect(Collectors.toList());
+        boolean todos = !visibles.isEmpty() && visibles.stream().allMatch(t -> imeisMarcados.contains(t.getImei()));
+        cbMarcarTodos.setSelected(todos);
     }
 
     private void configurarColEstado() {
         colEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badge = new Label();
+            private final HBox chipsBox = new HBox(4);
+            private final VBox contenedor = new VBox(2, badge, chipsBox);
+            { contenedor.setAlignment(Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
@@ -704,7 +829,19 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         case "Reparado"      -> badge.setStyle(base + "-fx-background-color: #FFEDD5; -fx-text-fill: #C2410C;");
                         default              -> badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
-                    setGraphic(badge);
+                    List<String> chips = ChipsEstado.de(t);
+                    chipsBox.getChildren().clear();
+                    for (String chip : chips) {
+                        Label lbl = new Label(chip);
+                        String chipStyle = "-fx-font-size: 9px; -fx-padding: 0 4 0 4; -fx-background-radius: 6; "
+                                + ("devolución".equals(chip)
+                                        ? "-fx-background-color: #FFEDD5; -fx-text-fill: #C2410C;"
+                                        : "-fx-background-color: #EEF1F6; -fx-text-fill: #586376;");
+                        lbl.setStyle(chipStyle);
+                        chipsBox.getChildren().add(lbl);
+                    }
+                    contenedor.getChildren().setAll(chips.isEmpty() ? List.of(badge) : List.of(badge, chipsBox));
+                    setGraphic(contenedor);
                 } else if (row instanceof ReparacionResumen rep) {
                     if (rep.isEsIncidencia() && !rep.isEsResuelto()) {
                         badge.setText("Incidencia");
@@ -716,7 +853,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         badge.setText("Normal");
                         badge.setStyle(base + "-fx-background-color: #E8EAF0; -fx-text-fill: #586376;");
                     }
-                    setGraphic(badge);
+                    contenedor.getChildren().setAll(badge);
+                    setGraphic(contenedor);
                 } else {
                     setGraphic(null);
                 }
@@ -758,72 +896,6 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         });
     }
 
-    private void configurarColRevision() {
-        colRevision.setCellFactory(col -> new TableCell<>() {
-            private final ToggleButton toggle = new ToggleButton();
-            {
-                toggle.setStyle("-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
-                setAlignment(Pos.CENTER);
-                toggle.setMouseTransparent(!esSuper);   // admin/técnico: solo lectura del estado
-                toggle.setOnAction(e -> {
-                    if (!esSuper) return;
-                    if (getIndex() < 0 || getIndex() >= getTableView().getItems().size()) return;
-                    Object row = getTableView().getItems().get(getIndex());
-                    if (!(row instanceof TelefonoInventario t)) return;
-                    if (t.isTieneAsignaciones()) { toggle.setSelected(false); return; }
-                    boolean nuevoValor = toggle.isSelected();
-                    boolean estadoAnterior = !nuevoValor;
-                    new Thread(() -> {
-                        try {
-                            telefonoDAO.actualizarRevisionLogistica(t.getImei(), nuevoValor, t.getTelefonoUpdatedAt());
-                            javafx.application.Platform.runLater(AgrupadoController.this::cargar);
-                        } catch (com.reparaciones.utils.StaleDataException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new Alert(Alert.AlertType.WARNING, "El teléfono fue modificado por otro usuario. Se recargan los datos.").showAndWait();
-                                cargar();
-                            });
-                        } catch (SQLException ex) {
-                            javafx.application.Platform.runLater(() -> {
-                                toggle.setSelected(estadoAnterior);
-                                aplicarEstiloToggle(estadoAnterior);
-                                new Alert(Alert.AlertType.ERROR, "Error al guardar: " + ex.getMessage()).showAndWait();
-                            });
-                        }
-                    }).start();
-                });
-            }
-            private void aplicarEstiloToggle(boolean on) {
-                String base = "-fx-background-radius: 10; -fx-padding: 2 10 2 10; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand; ";
-                if (on) {
-                    toggle.setText("OK");
-                    toggle.setStyle(base + "-fx-background-color: #2E7D32; -fx-text-fill: white;");
-                } else {
-                    toggle.setText("—");
-                    toggle.setStyle(base + "-fx-background-color: #9E9E9E; -fx-text-fill: white;");
-                }
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) { setGraphic(null); return; }
-                Object row = getTableView().getItems().get(getIndex());
-                if (row instanceof TelefonoInventario t) {
-                    boolean efectivo = t.isRevisionLogistica() && !t.isTieneAsignaciones();
-                    toggle.setSelected(efectivo);
-                    aplicarEstiloToggle(efectivo);
-                    if (t.isTieneAsignaciones()) {
-                        toggle.setStyle(toggle.getStyle().replace("-fx-cursor: hand;", "-fx-cursor: default;") + " -fx-opacity: 0.5;");
-                    }
-                    setGraphic(toggle);
-                } else {
-                    setGraphic(null);
-                }
-            }
-        });
-    }
-
     private void configurarFilas() {
         tabla.setRowFactory(tv -> new TableRow<>() {
             {
@@ -838,6 +910,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 MenuItem editarCli   = new MenuItem("Editar cliente");
                 MenuItem editarAtr   = new MenuItem("Editar atributos");
                 MenuItem fichaRev    = new MenuItem("Ficha de revisión");
+                MenuItem enviarSel   = new MenuItem("Enviar marcados");
 
                 copiar.setOnAction(e -> {
                     Object rowItem = getItem();
@@ -893,8 +966,14 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     if (!(getItem() instanceof TelefonoInventario t)) return;
                     FichaRevisionDialog.abrir(getScene().getWindow(), t, AgrupadoController.this::cargar);
                 });
+                enviarSel  .setOnAction(e -> {
+                    // Los checks (imeisMarcados) son la única vía de multiselección (ajuste smoke F2c).
+                    java.util.List<TelefonoInventario> destino = resolverMarcados();
+                    if (!destino.isEmpty())
+                        EnvioDialog.abrir(getScene().getWindow(), destino, inventario, AgrupadoController.this::cargar);
+                });
                 menu.getItems().addAll(editar, borrar, new SeparatorMenuItem(), copiar, new SeparatorMenuItem(),
-                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev);
+                        aniadirInc, cancelarInc, new SeparatorMenuItem(), editarObs, new SeparatorMenuItem(), editarCli, new SeparatorMenuItem(), editarAtr, fichaRev, enviarSel);
                 menu.setOnShowing(e -> {
                     boolean esGrupo = getItem() instanceof TelefonoInventario;
                     if (!(getItem() instanceof ReparacionResumen rep)) {
@@ -904,6 +983,12 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                         editarCli.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO);
                         editarAtr.setVisible(esSuper && esGrupo && modoActual == Modo.MAESTRO && ConfigVistaAgrupado.edicionAtributos(vista));
                         fichaRev.setVisible(esGrupo && modoActual == Modo.MAESTRO && vista == ConfigVistaAgrupado.Vista.INVENTARIO);
+                        // resolverMarcados() purga de paso los IMEIs marcados que ya no estén en inventario.
+                        java.util.List<TelefonoInventario> marcados = resolverMarcados();
+                        enviarSel.setVisible(esGrupo && modoActual == Modo.MAESTRO
+                                && vista == ConfigVistaAgrupado.Vista.INVENTARIO
+                                && Sesion.esSuperTecnico() && !marcados.isEmpty());
+                        enviarSel.setText("Enviar marcados (" + marcados.size() + ")");
                         return;
                     }
                     boolean tieneInc = rep.isEsIncidencia() && !rep.isEsResuelto();
@@ -913,6 +998,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                     cancelarInc .setVisible(esSuper && tieneInc);
                     editarObs   .setVisible(false);
                     editarCli   .setVisible(false);
+                    enviarSel   .setVisible(false);
                     editarAtr   .setVisible(false);
                     fichaRev    .setVisible(false);
                 });
@@ -1102,14 +1188,16 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
             etiquetaCli);
 
         filtroEstadoHandle = MultiSelectDropdown.setup(
-            filtroEstado, List.of("Recibido", "En reparación", "Histórico"), java.util.function.Function.identity(),
+            filtroEstado, List.of("Recibido", "En revisión", "Revisado", "Reparado", "En reparación",
+                    "Bloqueado", "OK", "Enviado", "Desguace", "Histórico"), java.util.function.Function.identity(),
             est -> estadosFiltro.contains(est),
             (est, checked) -> { if (checked) estadosFiltro.add(est); else estadosFiltro.remove(est);
                                 actualizarTextoFiltroEstado(); aplicarFiltros(); },
             etiquetaEstado);
 
         filtroUbicacionHandle = MultiSelectDropdown.setup(
-            filtroUbicacion, List.of("Almacén", "Reparaciones", UbicacionTexto.FUERA), java.util.function.Function.identity(),
+            filtroUbicacion, List.of("Almacén", "Para revisar", "Bloqueo", "Reparaciones", "Listos", "Pedidos",
+                    UbicacionTexto.FUERA), java.util.function.Function.identity(),
             ub -> ubicacionesFiltro.contains(ub),
             (ub, checked) -> { if (checked) ubicacionesFiltro.add(ub); else ubicacionesFiltro.remove(ub);
                                actualizarTextoFiltroUbicacion(); aplicarFiltros(); },
@@ -1373,6 +1461,8 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         int n = tablaItems.size();
         lblContador.setText(n + (n == 1 ? " teléfono" : " teléfonos"));
         lblContador.setVisible(true); lblContador.setManaged(true);
+        // El conjunto de visibles pudo cambiar con el filtro: resincroniza el check de cabecera.
+        actualizarHeaderMarcarTodos();
     }
 
     /** Si venimos de un detalle, re-selecciona el teléfono y hace scroll hasta él. */
@@ -1742,7 +1832,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         m.put("Inc. abiertas", String.valueOf(t.getIncAbiertas()));
         m.put("Observación", t.getObservacion() != null ? t.getObservacion() : "");
         m.put("Cliente", t.getCliente() != null ? t.getCliente() : "");
-        m.put("Revisión logística", (t.isRevisionLogistica() && !t.isTieneAsignaciones()) ? "Sí" : "No");
+        m.put("Devolución", t.isEsDevolucion() ? "Sí" : "");
         return m;
     }
 

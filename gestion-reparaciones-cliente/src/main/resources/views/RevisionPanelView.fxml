@@ -14,6 +14,7 @@
         <TextField fx:id="tfScan" prefWidth="190" promptText="Enter abre la ficha" styleClass="buscador"/>
         <Label fx:id="lblScan"/>
         <Button fx:id="btnMasivo" text="A revisar (masivo)" styleClass="btn-primary" onAction="#abrirMasivo"/>
+        <Button fx:id="btnAbrirFicha" text="Abrir ficha" styleClass="btn-secondary" onAction="#abrirFichaSeleccion" disable="true"/>
     </FlowPane>
     <TableView fx:id="tabla" styleClass="tabla-reparaciones" VBox.vgrow="ALWAYS">
         <columns>

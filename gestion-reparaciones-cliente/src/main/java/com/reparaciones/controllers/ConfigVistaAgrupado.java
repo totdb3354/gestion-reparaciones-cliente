@@ -17,7 +17,7 @@ public final class ConfigVistaAgrupado {
 
     private static final List<String> COLS_INVENTARIO = List.of(
             "imei", "modelo", "storage", "color", "grado", "ultimaActividad",
-            "trabajos", "estado", "ubicacion", "lote", "observacionTelefono", "cliente", "revision");
+            "estado", "ubicacion", "lote", "observacionTelefono", "cliente");
 
     private static final List<String> COLS_TALLER = List.of(
             "imei", "modelo", "ultimaActividad", "trabajos", "observacionTelefono", "cliente");
@@ -25,7 +25,7 @@ public final class ConfigVistaAgrupado {
     private static final List<String> CSV_INVENTARIO = List.of(
             "IMEI", "Modelo", "Storage", "Color", "Grado propio", "Grado proveedor", "Estado",
             "Ubicación", "Lote", "Proveedor", "Última actividad", "Reparaciones", "Glass",
-            "Pulidos", "Abiertos", "Inc. abiertas", "Observación", "Cliente", "Revisión logística");
+            "Pulidos", "Abiertos", "Inc. abiertas", "Observación", "Cliente", "Devolución");
 
     private static final List<String> CSV_TALLER = List.of(
             "IMEI", "Modelo", "Última actividad", "Reparaciones", "Glass", "Pulidos",

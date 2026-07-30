@@ -10,12 +10,14 @@ import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.Colores;
 import com.reparaciones.utils.ConfirmDialog;
 import com.reparaciones.utils.FechaUtils;
+import com.reparaciones.utils.FormatoMovimiento;
 import com.reparaciones.utils.SelectorClienteDialog;
 import com.reparaciones.utils.StaleDataException;
 import com.reparaciones.utils.UbicacionTexto;
 import com.reparaciones.utils.VeredictoRevision;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -24,10 +26,13 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -116,6 +121,10 @@ public final class FichaRevisionDialog {
     /** Zona vacía bajo las columnas; T9 la puebla con el banner de veredicto. */
     VBox zonaVeredicto;
 
+    // ── Historial (F2c) ─────────────────────────────────────────────────────
+    private ListView<String> listaHistorial;
+    private boolean historialCargado = false;
+
     /** Acciones de estado; creados deshabilitados aquí, cableados en T9. */
     Button btnOk, btnAsignar, btnBloquear, btnDesbloquear, btnDesguace;
 
@@ -154,9 +163,11 @@ public final class FichaRevisionDialog {
 
         zonaVeredicto = new VBox();
 
+        TitledPane paneHistorial = construirHistorial();
+
         HBox pie = construirPie();
 
-        VBox contenido = new VBox(14, cabecera, lblAviso, columnas, zonaVeredicto, pie);
+        VBox contenido = new VBox(14, cabecera, lblAviso, columnas, zonaVeredicto, paneHistorial, pie);
         contenido.setPadding(new Insets(20));
         contenido.setPrefWidth(760);
         contenido.setStyle("-fx-background-color: #DDE1E7;");
@@ -319,7 +330,12 @@ public final class FichaRevisionDialog {
         filaFaceMs.setAlignment(Pos.CENTER_LEFT);
 
         chkBloqueoOp = new CheckBox("Bloqueo operador");
-        HBox filaBloqueo = new HBox(chkBloqueoOp);
+        Label lblAvisoBloqueo = new Label("al guardar → BLOQUEADO");
+        lblAvisoBloqueo.setStyle("-fx-text-fill: #B83746; -fx-font-size: 10px;");
+        lblAvisoBloqueo.visibleProperty().bind(chkBloqueoOp.selectedProperty());
+        lblAvisoBloqueo.managedProperty().bind(lblAvisoBloqueo.visibleProperty());
+        HBox filaBloqueo = new HBox(8, chkBloqueoOp, lblAvisoBloqueo);
+        filaBloqueo.setAlignment(Pos.CENTER_LEFT);
 
         Label lblObs = etiqueta("Observ.");
         tfObservacion = new TextField();
@@ -387,6 +403,8 @@ public final class FichaRevisionDialog {
         btnBloquear = new Button("Bloquear");
         btnBloquear.getStyleClass().add("btn-secondary");
         btnBloquear.setDisable(true);
+        btnBloquear.setTooltip(new Tooltip("Apartar el teléfono con motivo (MS externa, pendiente de devolución…).\n"
+                + "El bloqueo por operadora va por su check en la funcional."));
         btnBloquear.setOnAction(e -> ConfirmDialog.mostrarConMotivo("Bloquear teléfono",
                 "Pasará a la caja de bloqueo.", "Bloquear", motivo -> accion("BLOQUEAR", motivo)));
 
@@ -406,6 +424,45 @@ public final class FichaRevisionDialog {
                 btnOk, btnAsignar, btnBloquear, btnDesbloquear, btnDesguace);
         pie.setAlignment(Pos.CENTER_LEFT);
         return pie;
+    }
+
+    /**
+     * Historial/línea de vida del teléfono (F2c): colapsado por defecto, carga perezosa
+     * en la primera expansión (disponible también en consulta — no se deshabilita con
+     * {@code editable=false}).
+     */
+    private TitledPane construirHistorial() {
+        listaHistorial = new ListView<>();
+        listaHistorial.setPrefHeight(140);
+
+        TitledPane pane = new TitledPane("Historial", listaHistorial);
+        pane.setAnimated(false);
+        pane.setExpanded(false);
+        pane.expandedProperty().addListener((obs, o, expandido) -> {
+            if (expandido && !historialCargado) cargarHistorial();
+        });
+        return pane;
+    }
+
+    private void cargarHistorial() {
+        historialCargado = true;
+        String imei = t.getImei();
+        new Thread(() -> {
+            List<String> lineas;
+            try {
+                lineas = dao.getMovimientos(imei).stream()
+                        .map(m -> FormatoMovimiento.linea(m, FMT_CHIP))
+                        .collect(Collectors.toList());
+                java.util.Collections.reverse(lineas);
+            } catch (SQLException ex) {
+                lineas = List.of("No se pudo cargar el historial");
+            }
+            List<String> lineasFinal = lineas;
+            Platform.runLater(() -> {
+                listaHistorial.setItems(FXCollections.observableArrayList(lineasFinal));
+                ventana.sizeToScene();
+            });
+        }, "cargar-historial-revision").start();
     }
 
     /** Permite deseleccionar un {@link ToggleButton} de un {@link ToggleGroup} haciendo clic sobre él ya seleccionado. */
@@ -646,7 +703,7 @@ public final class FichaRevisionDialog {
 
         if (editable && ambasPartes) {
             boolean bateriaNull = revisionActual.getFunBateriaPct() == null;
-            btnOk.setDisable(v.bateriaObligatoria() || bateriaNull);
+            btnOk.setDisable(v.bateriaObligatoria() || bateriaNull || v.bloqueado());
         } else {
             btnOk.setDisable(true);
         }

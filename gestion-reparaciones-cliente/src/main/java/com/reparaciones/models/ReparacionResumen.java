@@ -41,7 +41,6 @@ public class ReparacionResumen {
     private String        nombreTecnicoAsigna;
     private boolean       urgente;
     private boolean       esChasis;
-    private boolean       revisionLogistica;
     private boolean       tieneAsignaciones;
     private LocalDateTime telefonoUpdatedAt;
     private String        cliente;
@@ -182,8 +181,6 @@ public class ReparacionResumen {
     public void    setUrgente(boolean urgente)       { this.urgente = urgente; }
     public boolean isEsChasis()                  { return esChasis; }
     public void    setEsChasis(boolean esChasis) { this.esChasis = esChasis; }
-    public boolean isRevisionLogistica()             { return revisionLogistica; }
-    public void    setRevisionLogistica(boolean v)   { this.revisionLogistica = v; }
     public boolean isTieneAsignaciones()             { return tieneAsignaciones; }
     public void    setTieneAsignaciones(boolean v)   { this.tieneAsignaciones = v; }
     public LocalDateTime getTelefonoUpdatedAt()                      { return telefonoUpdatedAt; }
