@@ -158,17 +158,30 @@ nacidos-cerrados se ven por el historial del teléfono, no hace falta logearlos.
 
 **`EnvioDialog`** (un diálogo, dos vías): cabecera de remesa (selector de cliente
 **o** texto libre de destino — al menos uno; referencia opcional), escáner con
-pegado masivo (patrón A-revisar), lista de añadidos con quitar-fila; al confirmar,
-POST único y resultados por IMEI en la lista. Entradas: botón **"Enviar (masivo)"**
-en la barra del inventario (junto a Importar lote / Alta manual) y **"Enviar
-seleccionados (N)"** en el menú contextual del maestro. **Multiselección acotada:**
-`SelectionMode.MULTIPLE` en el maestro, pero la ÚNICA acción masiva es Enviar (el
-resto de items siguen actuando sobre la fila bajo el cursor). La selección precarga
-el diálogo; el escáner puede seguir añadiendo.
+pegado masivo (patrón A-revisar), lista de añadidos con botón **✕ por fila** para
+quitar (se desactiva durante el envío en vuelo; menú contextual pasa a "Copiar
+IMEI"); validación EN VIVO por inventario cargado al escanear/pegar/preseleccionar
+— píldora "· OK" verde / "· está X" rojo / "· histórico — dar de alta en un lote" /
+"· no existe" — y contador "N teléfonos (M enviables)"; al confirmar, POST único y
+resultados por IMEI en la lista (el servidor sigue siendo la autoridad). Entradas:
+botón **"Enviar (masivo)"** en la barra del inventario (junto a Importar lote /
+Alta manual). **Multiselección por columna de checks, no fila azul (cambiado en
+smoke):** columna de checks estilo Gmail en el maestro de Inventario (solo
+INVENTARIO + supertécnico) — Set por IMEI que sobrevive scroll/reciclado/
+drill-down; check de cabecera marca todo lo visible (filtrado); botón **"Enviar (N
+marcados)"** en la barra y **"Enviar marcados (N)"** en el menú contextual, visible
+solo con marcas; limpieza al enviar con éxito o al recargar. La tabla vuelve a
+selección simple: la fila azul ya NO alimenta el envío (sustituye la decisión
+inicial de `SelectionMode.MULTIPLE`/ctrl-click). La selección de checks precarga el
+diálogo; el escáner puede seguir añadiendo.
 
 **`DevolucionDialog`:** botón "Registrar devolución" en la misma barra. Escáner
 masivo; motivo común arriba que se copia a cada fila (editable por IMEI); envío de
-origen autodetectado visible por fila; resultados por IMEI al confirmar.
+origen autodetectado visible por fila; botón **✕ por fila** para quitar (se
+desactiva durante el registro en vuelo; menú contextual pasa a "Copiar IMEI");
+validación EN VIVO por inventario cargado — "· Enviado" verde (válida) / "· está X"
+rojo / "· no existe" — y contador "N devoluciones (M válidas)"; resultados por IMEI
+al confirmar.
 
 **Tags bajo la píldora** (celda Estado del maestro): píldora + fila de mini-chips:
 `devolución` (si `ES_DEVOLUCION`) y `rep · glass · pulido` (si En reparación; los
@@ -176,8 +189,10 @@ tipos con trabajo abierto — contadores que ya viajan). La fila crece solo cuan
 tags. CSV: columna nueva "Devolución" (Sí/vacío); los tags de tipo NO van al CSV.
 
 **Historial en la ficha de revisión:** sección plegada bajo el veredicto, lista
-cronológica solo-lectura `fecha · de→a · usuario · motivo/ref`, carga perezosa al
-desplegar (GET movimientos).
+solo-lectura `fecha · de→a · usuario · motivo/ref` en orden **más-reciente-arriba**
+(cambiado en smoke; era cronológico ascendente), carga perezosa al desplegar (GET
+movimientos); la línea `ENVIADO→ALMACEN` de una devolución se marca **"ALMACEN
+(devolución)"**.
 
 **Flecos UI:** botón "Abrir ficha" en el panel Revisión (habilitado con selección;
 el doble clic y el escáner se quedan); aviso rojo junto al check "Bloqueo operador"
@@ -207,8 +222,9 @@ deshabilitado también con `bloqueoOp` marcado (espejo del veto servidor).
 
 1. Enviar por escáner: mezcla OK / no-OK / inexistente → resultados por IMEI; envío
    con cliente y envío con texto libre + referencia.
-2. Enviar por selección: filtro Estado=OK + Lote, ctrl-click, "Enviar seleccionados
-   (N)" → diálogo precargado, añadir uno más por escáner, confirmar.
+2. Enviar por selección: filtro Estado=OK + Lote, marcar varios con la columna de
+   checks (incl. check de cabecera), "Enviar (N marcados)" → diálogo precargado,
+   añadir uno más por escáner, confirmar.
 3. Devolución masiva: 2-3 IMEIs enviados (de envíos distintos), motivo común +
    uno editado → a RECIBIDO con minitag "devolución"; envío de origen correcto por
    fila; re-enviar uno → minitag desaparece.
@@ -231,3 +247,35 @@ deshabilitado también con `bloqueoOp` marcado (espejo del veto servidor).
 Calidad por lote (% devoluciones/desguace/OK por lote, con motivo de devolución
 agregable), vista/navegador de envíos y lotes, alertas de caducidad por caja,
 métricas de revisión (tiempos por pasada, por usuario).
+
+## Ajustes de smoke (2026-07-28/29)
+
+Ocho ajustes tras smoke de usuario, ya implementados y revisados en
+`feature/f2c-ciclo-completo` (integrados en las secciones 6 y 8 de arriba donde
+corresponde; resumen con commit):
+
+1. Multiselección de envío por **columna de checks estilo Gmail** en el maestro de
+   Inventario (solo INVENTARIO + supertécnico): Set por IMEI que sobrevive
+   scroll/reciclado/drill-down; check de cabecera marca todo lo visible; botón
+   "Enviar (N marcados)"; limpieza al enviar con éxito o recargar (`32c56b1`).
+2. Los checks pasan a ser la ÚNICA vía de multiselección: la tabla vuelve a
+   selección simple, el menú contextual "Enviar marcados (N)" solo aparece con
+   marcas, y la fila azul ya no alimenta el envío — afina la multiselección
+   acotada original (`8538644`).
+3. Alta manual: **modelo obligatorio por fila** (fila sin modelo → "escribe
+   modelo" clicable; Importar bloqueado si falta alguno) — revierte la decisión
+   F2a de permitir teléfono sin modelo (`cb46991`).
+4. `EnvioDialog`: validación en vivo por inventario al escanear/pegar/
+   preseleccionar ("· OK" / "· está X" / "· histórico" / "· no existe") con
+   contador "N teléfonos (M enviables)"; el servidor sigue siendo la autoridad al
+   confirmar (`f79bfde`).
+5. Botón **✕ por fila** para quitar en `EnvioDialog` y `DevolucionDialog`
+   (sustituye el "Quitar" del menú contextual, que pasa a "Copiar IMEI"); se
+   desactiva durante el envío/registro en vuelo (`2f4bffd`).
+6. Columna **"Trabajos" retirada** del maestro de Inventario (la píldora + chips +
+   drill-down ya cubren esa información); Taller la conserva; CSV intacto
+   (`96e4c90`).
+7. `DevolucionDialog`: misma validación en vivo ("· Enviado" válida / "· está X" /
+   "· no existe") con contador "N devoluciones (M válidas)" (`403edef`).
+8. Historial de la ficha: **orden más-reciente-arriba** y la línea
+   `ENVIADO→ALMACEN` de una devolución se marca "ALMACEN (devolución)" (`7b5dc6c`).
