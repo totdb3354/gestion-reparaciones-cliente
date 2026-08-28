@@ -44,9 +44,9 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Situación | Efecto |
   |---|---|
   | Reasignan la glass (Jhona → Javi) | Se conserva. Javi ve "Llegó 10:42"; arriba el tooltip pasa a "a Javi". |
-  | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "Entregado 10:42" con "por Manu" y puede deshacer. |
+  | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "→ Jhona" (tooltip "…por Manu, 28/08 10:42") y puede deshacer. |
   | Borran la glass | Desaparece con ella; arriba no queda acción ni badge. |
-  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. Con dos AG abiertas donde solo la más antigua está entregada, arriba se ve "Entregado" (derivado de la más antigua) y la nueva no; para sellar la nueva: Deshacer → Entregar (caso jamás visto, aceptado). |
+  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. Con dos AG abiertas donde solo la más antigua está entregada, arriba se ve "→ <glass>" (derivado de la más antigua) y la nueva no; para sellar la nueva: Deshacer → Entregar (caso jamás visto, aceptado). |
   | Completan la glass | La fila `AG` queda cerrada con su `ENTREGADO_AT` (futuro F4: tiempo real de glass = `FECHA_FIN − ENTREGADO_AT`). |
   | Completan la normal antes que la glass | Sin efecto; la glass sigue con su "Llegó". |
 
