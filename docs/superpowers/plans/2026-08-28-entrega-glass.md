@@ -250,7 +250,7 @@ por
             " (SELECT g.ENTREGADO_AT FROM Reparacion g" +
             "  WHERE g.IMEI = r.IMEI AND g.ID_REP LIKE 'AG%' AND g.FECHA_FIN IS NULL" +
             "  ORDER BY g.FECHA_ASIG ASC LIMIT 1) AS GLASS_ENTREGADO_AT," +
-            " (SELECT tg.NOMBRE FROM Reparacion g JOIN Tecnico tg ON g.ENTREGADO_POR = tg.ID_TEC" +
+            " (SELECT tg.NOMBRE FROM Reparacion g LEFT JOIN Tecnico tg ON g.ENTREGADO_POR = tg.ID_TEC" +
             "  WHERE g.IMEI = r.IMEI AND g.ID_REP LIKE 'AG%' AND g.FECHA_FIN IS NULL" +
             "  ORDER BY g.FECHA_ASIG ASC LIMIT 1) AS GLASS_ENTREGADO_POR_NOMBRE," +
             " (SELECT tg.NOMBRE FROM Reparacion g JOIN Tecnico tg ON g.ID_TEC = tg.ID_TEC" +
@@ -279,15 +279,15 @@ Ojo: esa pareja de líneas puede existir también en `ASIGNACION_PULIDO_SELECT`;
 
 - [ ] **Step 6: GROUP BY de las tres queries de glass**
 
-Las tres (`getAsignacionesGlass`, `getAsignacionesGlassPorImei`, `getAsignacionGlassById`) comparten el fragmento `r.ES_CHASIS, ta.NOMBRE, cli.NOMBRE`:
+Las cuatro consumidoras de `GLASS_ASIGNACION_SELECT` (`getAsignacionesGlass`, `getAsignacionesGlassPorImei`, `getAsignacionGlassById` y el lado glass de `getAsignacionesCompletadasHoy`) comparten el fragmento `r.ES_CHASIS, ta.NOMBRE, cli.NOMBRE`:
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor
-grep -c 'r\.ES_CHASIS, ta\.NOMBRE, cli\.NOMBRE' src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java   # esperado: 3
+grep -c 'r\.ES_CHASIS, ta\.NOMBRE, cli\.NOMBRE' src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java   # esperado: 4
 sed -i 's/r\.ES_CHASIS, ta\.NOMBRE, cli\.NOMBRE/r.ES_CHASIS, r.ENTREGADO_AT, r.ENTREGADO_POR, ta.NOMBRE, cli.NOMBRE/g' src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java
-grep -c 'r\.ENTREGADO_AT, r\.ENTREGADO_POR, ta\.NOMBRE' src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java   # esperado: 3
+grep -c 'r\.ENTREGADO_AT, r\.ENTREGADO_POR, ta\.NOMBRE' src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java   # esperado: 4
 ```
-Si el primer `grep -c` no da 3, parar y mirar cada ocurrencia: solo deben cambiar las que acompañan a `GLASS_ASIGNACION_SELECT`. Las queries de filas `A` no necesitan cambios en el GROUP BY (las subconsultas nuevas solo correlacionan `r.IMEI`, que ya está agrupado).
+Si el primer `grep -c` no da 4, parar y mirar cada ocurrencia: solo deben cambiar las que acompañan a `GLASS_ASIGNACION_SELECT`. Las queries de filas `A` no necesitan cambios en el GROUP BY (las subconsultas nuevas solo correlacionan `r.IMEI`, que ya está agrupado).
 
 - [ ] **Step 7: Mapper**
 
