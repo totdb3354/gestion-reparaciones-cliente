@@ -39,6 +39,7 @@ public final class CeldaReparador {
                     lblLlego.setTooltip(new Tooltip(EntregaGlass.tooltip((ReparacionResumen) fila)));
                     lblLlego.setVisible(true); lblLlego.setManaged(true);
                 } else {
+                    lblLlego.setText(null);
                     lblLlego.setTooltip(null);
                     lblLlego.setVisible(false); lblLlego.setManaged(false);
                 }

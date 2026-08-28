@@ -47,7 +47,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "→ Jhona" (tooltip "…por Manu, 28/08 10:42") y puede deshacer. |
   | Borran la glass | Desaparece con ella; arriba no queda acción ni badge. |
   | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. Con dos AG abiertas donde solo la más antigua está entregada, arriba se ve "→ <glass>" (derivado de la más antigua) y la nueva no; para sellar la nueva: Deshacer → Entregar (caso jamás visto, aceptado). |
-  | Completan la glass | La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar). |
+  | Completan la glass | La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar). Futuro F4: tiempo real de glass = `FECHA_FIN − ENTREGADO_AT` en la propia `G`. |
   | Completan la normal antes que la glass | Sin efecto; la glass sigue con su "Llegó". |
 
 - **Log de actividad**: `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS`, detalle `ID_REP: A…, IMEI: …, GLASS: AG…, TECNICO_GLASS: Jhona`. Ambas acciones en el filtro de la vista Log.
@@ -138,4 +138,4 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
   9. CSV de Asignaciones con la columna "Entregado".
   10. Cliente 0.16.0 contra el servidor nuevo: todo igual que antes.
   11. Cambiar contraseña con la actual incorrecta → el diálogo dice "Contraseña actual incorrecta." (con el servidor nuevo y, por el fallback, con uno viejo).
-  14. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").
+  12. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").
