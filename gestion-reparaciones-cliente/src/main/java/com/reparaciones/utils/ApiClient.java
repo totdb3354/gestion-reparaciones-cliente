@@ -326,7 +326,10 @@ public class ApiClient {
             case 403 -> new SQLException("No tienes permisos para realizar esta acción.");
             case 404 -> new SQLException("Recurso no encontrado.");
             case 409 -> new StaleDataException(msg);
-            case 422 -> new SQLException("Contraseña actual incorrecta.");
+            // 422 = regla de negocio del servidor (por-cerrar, entrega-glass…): su mensaje es el bueno.
+            // El texto fijo antiguo ("Contraseña actual incorrecta.") era un resto: ningún endpoint
+            // del servidor devuelve 422 para la contraseña.
+            case 422 -> new SQLException(msg);
             default  -> (status >= 500)
                     ? new ConexionException("El servidor no está disponible. Inténtalo de nuevo en unos segundos.")
                     : new SQLException("Error del servidor (" + status + "): " + msg);

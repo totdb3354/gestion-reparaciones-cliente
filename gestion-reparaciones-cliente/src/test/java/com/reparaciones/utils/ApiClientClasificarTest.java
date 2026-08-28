@@ -41,4 +41,10 @@ class ApiClientClasificarTest {
         assertFalse(ApiClient.clasificar(404, "x") instanceof ConexionException);
         assertFalse(ApiClient.clasificar(422, "x") instanceof ConexionException);
     }
+
+    @Test
+    void status_422_conserva_el_mensaje_del_servidor() {
+        SQLException e = ApiClient.clasificar(422, "Sin glass abierta para este IMEI");
+        assertEquals("Sin glass abierta para este IMEI", e.getMessage());
+    }
 }

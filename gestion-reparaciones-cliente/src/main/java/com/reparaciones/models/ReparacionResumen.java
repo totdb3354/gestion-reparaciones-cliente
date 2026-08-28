@@ -46,6 +46,13 @@ public class ReparacionResumen {
     private LocalDateTime telefonoUpdatedAt;
     private String        cliente;
     private boolean       porCerrar;
+    // Entrega a glass (spec 2026-08-28): reales en filas AG, derivadas en filas A. Nulas con servidor viejo.
+    private LocalDateTime entregadoAt;
+    private String        entregadoPorNombre;
+    private boolean       glassAbierta;
+    private LocalDateTime glassEntregadoAt;
+    private String        glassEntregadoPorNombre;
+    private String        glassTecnicoNombre;
 
     public ReparacionResumen() {}
 
@@ -192,4 +199,16 @@ public class ReparacionResumen {
     public void          setCliente(String cliente)                  { this.cliente = cliente; }
     public boolean isPorCerrar()                                     { return porCerrar; }
     public void    setPorCerrar(boolean porCerrar)                   { this.porCerrar = porCerrar; }
+    public LocalDateTime getEntregadoAt()                            { return entregadoAt; }
+    public void          setEntregadoAt(LocalDateTime v)             { this.entregadoAt = v; }
+    public String        getEntregadoPorNombre()                     { return entregadoPorNombre; }
+    public void          setEntregadoPorNombre(String v)             { this.entregadoPorNombre = v; }
+    public boolean       isGlassAbierta()                            { return glassAbierta; }
+    public void          setGlassAbierta(boolean v)                  { this.glassAbierta = v; }
+    public LocalDateTime getGlassEntregadoAt()                       { return glassEntregadoAt; }
+    public void          setGlassEntregadoAt(LocalDateTime v)        { this.glassEntregadoAt = v; }
+    public String        getGlassEntregadoPorNombre()                { return glassEntregadoPorNombre; }
+    public void          setGlassEntregadoPorNombre(String v)        { this.glassEntregadoPorNombre = v; }
+    public String        getGlassTecnicoNombre()                     { return glassTecnicoNombre; }
+    public void          setGlassTecnicoNombre(String v)             { this.glassTecnicoNombre = v; }
 }
