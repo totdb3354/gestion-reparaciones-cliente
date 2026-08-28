@@ -1180,7 +1180,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID", "Tipo", "Técnico", "IMEI", "Modelo", "Fecha asignación", "Comentario",
-                    "Cliente", "Asignado por", "Urgente", "Chasis", "Por cerrar", "En espera de pieza");
+                    "Cliente", "Asignado por", "Urgente", "Chasis", "Por cerrar", "Entregado", "En espera de pieza");
             List<List<String>> filas = new ArrayList<>();
             for (ReparacionResumen r : items) filas.add(filaAsignacion(r, fmtHora));
             com.reparaciones.utils.CsvExporter.exportar(owner, "reparaciones_pendientes", cabeceras, filas);
@@ -1255,6 +1255,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.isUrgente() ? "Sí" : "No");
         fila.add(r.isEsChasis() ? "Sí" : "No");
         fila.add(r.isPorCerrar() ? "Sí" : "No");
+        fila.add(com.reparaciones.utils.EntregaGlass.textoCsv(r, fmt));   // entrega a glass (A: derivada; AG: real)
 
         // Mismo criterio que CargaTecnicos.enEsperaDePieza (privado): solicitud activa
         // y aún no recibida (gestionada + stock disponible).

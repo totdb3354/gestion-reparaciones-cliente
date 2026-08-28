@@ -468,9 +468,10 @@ public class PendientesSuperTecnicoController {
         cEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badgeUrgente   = new Label();
             private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badgeEntrega   = new Label();     // "Entregado hh:mm" (A) / "Llegó hh:mm" (AG)
             private final Label badge          = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badgeEntrega, badge);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -493,6 +494,16 @@ public class PendientesSuperTecnicoController {
                     badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
                 } else {
                     badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
+                }
+                String textoEntrega = com.reparaciones.utils.EntregaGlass.textoBadge(rep, com.reparaciones.utils.EntregaGlass.hoy());
+                if (textoEntrega != null) {
+                    badgeEntrega.setText(textoEntrega);
+                    badgeEntrega.setStyle(base + com.reparaciones.utils.EntregaGlass.estiloColores());
+                    badgeEntrega.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltip(rep)));
+                    badgeEntrega.setVisible(true); badgeEntrega.setManaged(true);
+                } else {
+                    badgeEntrega.setTooltip(null);
+                    badgeEntrega.setVisible(false); badgeEntrega.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
