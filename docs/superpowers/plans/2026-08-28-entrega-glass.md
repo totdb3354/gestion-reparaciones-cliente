@@ -951,10 +951,12 @@ public final class EntregaGlass {
                 : "Entregar a " + nombre(rep.getGlassTecnicoNombre());
     }
 
-    /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío. */
+    /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío (pulido y fila nula ⇒ vacío). */
     public static String textoCsv(ReparacionResumen rep, DateTimeFormatter fmt) {
-        LocalDateTime at = TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.GLASS
-                ? rep.getEntregadoAt() : rep.getGlassEntregadoAt();
+        if (rep == null) return "";
+        TipoTrabajo tipo = TipoTrabajo.desde(rep.getIdRep());
+        if (tipo == TipoTrabajo.PULIDO) return "";
+        LocalDateTime at = tipo == TipoTrabajo.GLASS ? rep.getEntregadoAt() : rep.getGlassEntregadoAt();
         return FechaUtils.formatear(at, fmt);   // "" si null
     }
 
