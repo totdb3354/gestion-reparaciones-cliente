@@ -138,7 +138,16 @@ public class UsuarioDAO {
      * @throws SQLException si la contraseña actual es incorrecta o falla la llamada al servidor
      */
     public void cambiarPassword(String passwordActual, String passwordNueva) throws SQLException {
-        ApiClient.patch("/api/auth/cambiar-password",
-                Map.of("passwordActual", passwordActual, "passwordNueva", passwordNueva));
+        try {
+            ApiClient.patch("/api/auth/cambiar-password",
+                    Map.of("passwordActual", passwordActual, "passwordNueva", passwordNueva));
+        } catch (SQLException e) {
+            // Fallback para servidores anteriores a este arreglo: un 422 sin cuerpo se traduce al
+            // centinela "Sin detalles."; aquí lo convertimos en el mensaje real conocido.
+            if ("Sin detalles.".equals(e.getMessage())) {
+                throw new SQLException("Contraseña actual incorrecta.");
+            }
+            throw e;
+        }
     }
 }

@@ -671,12 +671,14 @@ Expected: FAIL — `expected: <Sin glass abierta para este IMEI> but was: <Contr
 En `ApiClient.clasificar`, cambiar `case 422 -> new SQLException("Contraseña actual incorrecta.");` por:
 
 ```java
-            // 422 = regla de negocio del servidor (por-cerrar, entrega-glass…): su mensaje es el bueno.
-            // El texto fijo antiguo ("Contraseña actual incorrecta.") era un resto: ningún endpoint
-            // del servidor devuelve 422 para la contraseña.
+            // 422 = regla de negocio del servidor (por-cerrar, entrega-glass, contraseña…): su mensaje es el bueno.
+            // El texto fijo antiguo ("Contraseña actual incorrecta.") ocultaba todos los demás; el único 422 sin
+            // cuerpo (cambiar contraseña en servidores viejos) lo resuelve UsuarioDAO.cambiarPassword.
             case 422 -> new SQLException(msg);
 ```
 (`msg` viene de `extractMessage`, que ya devuelve "Sin detalles." si el cuerpo está vacío; el servidor envía `message` porque tiene `server.error.include-message=always`.)
+
+Nota (review final): `AuthController` sí devolvía un 422 sin cuerpo para la contraseña; corregido en servidor (body con `message`) y con fallback en `UsuarioDAO.cambiarPassword`.
 
 Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=ApiClientClasificarTest` → sin salida (PASS).
 

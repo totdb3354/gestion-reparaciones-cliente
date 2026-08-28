@@ -33,7 +33,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Supertécnico / admin | ambas filas en **Asignaciones** | los mismos badges | los mismos tooltips |
 
   - Si la entrega **no es de hoy**, el badge incluye la fecha: "Entregado 27/08 10:42" / "Llegó 27/08 10:42".
-  - Formato hora `HH:mm`, fecha `dd/MM` (zona local del cliente).
+  - Formato hora `HH:mm`, fecha `dd/MM` (zona Europe/Madrid, como el resto de fechas del cliente).
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.
 - **Dos datos de naturaleza distinta**:
@@ -46,7 +46,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Reasignan la glass (Jhona → Javi) | Se conserva. Javi ve "Llegó 10:42"; arriba el tooltip pasa a "a Javi". |
   | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "Entregado 10:42" con "por Manu" y puede deshacer. |
   | Borran la glass | Desaparece con ella; arriba no queda acción ni badge. |
-  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. |
+  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. Con dos AG abiertas donde solo la más antigua está entregada, arriba se ve "Entregado" (derivado de la más antigua) y la nueva no; para sellar la nueva: Deshacer → Entregar (caso jamás visto, aceptado). |
   | Completan la glass | La fila `AG` queda cerrada con su `ENTREGADO_AT` (futuro F4: tiempo real de glass = `FECHA_FIN − ENTREGADO_AT`). |
   | Completan la normal antes que la glass | Sin efecto; la glass sigue con su "Llegó". |
 
@@ -137,3 +137,4 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
   8. Log: las dos acciones con su detalle; filtro funciona.
   9. CSV de Asignaciones con la columna "Entregado".
   10. Cliente 0.16.0 contra el servidor nuevo: todo igual que antes.
+  11. Cambiar contraseña con la actual incorrecta → el diálogo dice "Contraseña actual incorrecta." (con el servidor nuevo y, por el fallback, con uno viejo).

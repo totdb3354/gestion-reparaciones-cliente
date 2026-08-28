@@ -47,4 +47,10 @@ class ApiClientClasificarTest {
         SQLException e = ApiClient.clasificar(422, "Sin glass abierta para este IMEI");
         assertEquals("Sin glass abierta para este IMEI", e.getMessage());
     }
+
+    @Test
+    void status_422_sin_cuerpo_devuelve_el_centinela() {
+        SQLException e = ApiClient.clasificar(422, "Sin detalles.");
+        assertEquals("Sin detalles.", e.getMessage());
+    }
 }
