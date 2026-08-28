@@ -7,7 +7,14 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-_(cambios para la próxima versión)_
+### Added
+- **Entrega del teléfono al técnico de glass**: en Mis pendientes, el dueño de una reparación normal cuyo IMEI tiene glass abierta puede **"Entregar a <técnico de glass>"** (clic derecho, junto a "Marcar por cerrar"); se registra quién y a qué hora. Badge **"Entregado hh:mm"** en su fila y **"Llegó hh:mm"** en la fila de glass del otro técnico (con fecha si no es de hoy; tooltip con quién/a quién), visibles también en Asignaciones. "Deshacer entrega" por si fue un error. Columna "Entregado" en el CSV de Asignaciones. Acciones `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` en el log.
+
+### Fixed
+- Los errores **422** del servidor muestran su mensaje real (antes salía siempre "Contraseña actual incorrecta.").
+
+### Notas de despliegue
+- Requiere el **servidor** con el endpoint `entrega-glass` y la migración `sql/migracion-entrega-glass.sql` (columnas `ENTREGADO_AT`/`ENTREGADO_POR` en `Reparacion`; **ya aplicada en preproducción el 2026-08-28**). Orden: **ALTER → servidor → cliente**. Retrocompatible en ambos sentidos (campos JSON aditivos).
 
 ## [0.16.0] - 2026-07-10
 
