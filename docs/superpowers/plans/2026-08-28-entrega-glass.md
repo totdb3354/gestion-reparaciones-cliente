@@ -477,8 +477,11 @@ class ReparacionControllerEntregaGlassTest {
         assertEquals(404, statusDe(() -> ctl.actualizarEntregaGlass("A20260828_1", req(true), manu)));
     }
 
+    // Ojo Mockito 5: el mock se crea ANTES del when(...) externo — anidar asigDe() dentro de
+    // thenReturn(Optional.of(...)) lanza UnfinishedStubbingException (stubbing anidado).
     @Test void soloElDuenoPuedeEntregar() {
-        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(asigDe(99)));
+        ReparacionResumen ajena = asigDe(99);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(ajena));
         assertEquals(403, statusDe(() -> ctl.actualizarEntregaGlass("A20260828_1", req(true), manu)));
         UsuarioPrincipal admin = new UsuarioPrincipal(1, "admin", "x", "ADMIN", null);
         assertEquals(403, statusDe(() -> ctl.actualizarEntregaGlass("A20260828_1", req(true), admin)));
@@ -486,7 +489,8 @@ class ReparacionControllerEntregaGlassTest {
     }
 
     @Test void sinGlassAbiertaEs422YNoEscribe() {
-        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(asigDe(7)));
+        ReparacionResumen propia = asigDe(7);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
         when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of());
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> ctl.actualizarEntregaGlass("A20260828_1", req(true), manu));
@@ -497,7 +501,8 @@ class ReparacionControllerEntregaGlassTest {
     }
 
     @Test void entregarSellaYRegistraEnElLog() {
-        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(asigDe(7)));
+        ReparacionResumen propia = asigDe(7);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
         when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of(new ReparacionDAO.GlassAbierta("AG20260828_3", "Jhona")));
         ctl.actualizarEntregaGlass("A20260828_1", req(true), manu);
         verify(dao).entregarGlass(IMEI, 7);
@@ -507,7 +512,8 @@ class ReparacionControllerEntregaGlassTest {
     }
 
     @Test void deshacerLimpiaYRegistraEnElLog() {
-        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(asigDe(7)));
+        ReparacionResumen propia = asigDe(7);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
         when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of(new ReparacionDAO.GlassAbierta("AG20260828_3", "Jhona")));
         ctl.actualizarEntregaGlass("A20260828_1", req(false), manu);
         verify(dao).deshacerEntregaGlass(IMEI);
