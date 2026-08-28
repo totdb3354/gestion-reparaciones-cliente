@@ -91,6 +91,17 @@ public final class EntregaGlass {
         return FechaUtils.formatear(at, fmt);   // "" si null
     }
 
+    /**
+     * Sub-etiqueta bajo el nombre del reparador en las vistas de historial (Agrupado por IMEI,
+     * Historial): solo filas de glass (AG/G) con entrega, siempre con día y hora porque en el
+     * historial las "Fechas" de una G son las de completar, no las de asignar. Tooltip: {@link #tooltip}.
+     */
+    public static String subEtiquetaHistorial(ReparacionResumen rep) {
+        if (rep == null || rep.getEntregadoAt() == null) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        return "Llegó " + FechaUtils.formatear(rep.getEntregadoAt(), FMT_DIA_HORA);
+    }
+
     /** Colores del badge, para concatenar al estilo base de pastilla. */
     public static String estiloColores() {
         return "-fx-background-color: " + COLOR_FONDO + "; -fx-text-fill: " + COLOR_TEXTO + ";";

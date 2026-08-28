@@ -423,14 +423,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     rep.getNombreTecnicoAsigna() != null ? rep.getNombreTecnicoAsigna() : "—");
             return new javafx.beans.property.SimpleStringProperty("");
         });
-        colReparador.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty || item == null || item.isEmpty() ? null : item);
-            }
-        });
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
 
         colFecha.setCellFactory(col -> new TableCell<>() {
             private final javafx.scene.control.Label lblInicio = new javafx.scene.control.Label();

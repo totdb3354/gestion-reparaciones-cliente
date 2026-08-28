@@ -151,4 +151,18 @@ class EntregaGlassTest {
         assertTrue(EntregaGlass.estiloColores().contains("#E8EAF6"));
         assertTrue(EntregaGlass.estiloColores().contains("#3949AB"));
     }
+
+    // ── Sub-etiqueta de historial ─────────────────────────────────────────
+
+    @Test void subEtiquetaHistorialSoloEnGlassConEntrega() {
+        ReparacionResumen g = new ReparacionResumen();
+        g.setIdRep("G20260828_64");
+        g.setEntregadoAt(UTC_0842);
+        g.setEntregadoPorNombre("Manu");
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(g));
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(glass(UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(glass(null)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(normal(true, UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(null));
+    }
 }
