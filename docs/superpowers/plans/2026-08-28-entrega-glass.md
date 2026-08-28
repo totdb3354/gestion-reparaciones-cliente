@@ -1433,3 +1433,129 @@ Si en alguno de los cuatro el bloque no es exactamente ese (p. ej. `colReparador
 `CHANGELOG.md` `[Unreleased]` → Added: añadir al final de la línea de la entrega: ` En el historial (Agrupado por IMEI e Historial), las glass completadas muestran bajo el reparador **"Llegó dd/MM hh:mm"** (la entrega se hereda al completar).`
 Spec: en §2 tabla de ciclo de vida, fila "Completan la glass" → `La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar).`; en §9 añadir `14. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").`
 Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test` → sin salida. Commit (raíz, por nombre, sin gitlink): `feat(cliente): "Llego dd/MM hh:mm" bajo el reparador en Agrupado por IMEI e Historial (celda compartida CeldaReparador; la G hereda la entrega)`.
+
+---
+
+### Task 12: Sin teléfono no hay glass — ocultar "Añadir glass" hasta la entrega
+
+Decisión del usuario (smoke 2026-08-28): en Mis pendientes → Glass, el botón **"Añadir glass"** se **oculta** mientras el teléfono no haya llegado. Regla exacta (para no bloquear a nadie): se oculta **solo si** el IMEI tiene una **reparación normal abierta** (`A…` sin `FECHA_FIN`, ni `AG` ni `AP`) **y** la glass **no tiene entrega** (`entregadoAt == null`). Sin normal abierta (glass directa, o normal ya completada sin marcar) → botón visible. Con "Llegó" → visible.
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass-gate` desde `main` `f8c09ed`): `src/main/java/com/reparaciones/servidor/model/ReparacionResumen.java`, `src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java` (`GLASS_ASIGNACION_SELECT` y `RESUMEN_MAPPER`)
+- Test (servidor): `src/test/java/com/reparaciones/servidor/dao/ReparacionDAOEntregaGlassTest.java`
+- Modify (cliente, rama `feature/entrega-glass`): `models/ReparacionResumen.java`, `utils/EntregaGlass.java`, `controllers/PendientesTecnicoController.java` (celda `cAccion`, ~L301-320), `CHANGELOG.md`, spec §2/§9
+- Test (cliente): `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- Servidor → JSON aditivo en filas `AG`: `normalAbierta` (boolean), `normalTecnicoNombre` (String, dueño de la normal abierta más antigua; null si no hay).
+- Cliente: `EntregaGlass.ocultarAnadirGlass(ReparacionResumen rep)` → boolean.
+
+- [ ] **Step 1 (servidor): test que falla**
+
+Añadir a `ReparacionDAOEntregaGlassTest`:
+```java
+    @SuppressWarnings("unchecked")
+    @Test void asignacionesGlassDicenSiHayNormalAbiertaEnElImei() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        dao(jdbc).getAsignacionesGlass(null);
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class));
+        String q = sql.getValue();
+        assertTrue(q.contains("AS NORMAL_ABIERTAS"), "NORMAL_ABIERTAS");
+        assertTrue(q.contains("AS NORMAL_TECNICO_NOMBRE"), "NORMAL_TECNICO_NOMBRE");
+        assertTrue(q.contains("n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL"),
+                "solo reparaciones normales abiertas");
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test -Dtest=ReparacionDAOEntregaGlassTest` → FAIL en `NORMAL_ABIERTAS`.
+
+- [ ] **Step 2 (servidor): modelo + SELECT + mapper**
+
+`ReparacionResumen` (servidor): tras `private String glassTecnicoNombre;` añadir
+```java
+    private boolean       normalAbierta;            // AG: hay reparación normal abierta en el IMEI (alguien arriba debe entregar)
+    private String        normalTecnicoNombre;      // AG: dueño de esa normal (la más antigua)
+```
+y los accesores tras `setGlassTecnicoNombre`:
+```java
+    public boolean       isNormalAbierta()                         { return normalAbierta; }
+    public void          setNormalAbierta(boolean v)               { this.normalAbierta = v; }
+    public String        getNormalTecnicoNombre()                  { return normalTecnicoNombre; }
+    public void          setNormalTecnicoNombre(String v)          { this.normalTecnicoNombre = v; }
+```
+`ReparacionDAO`, dentro de `GLASS_ASIGNACION_SELECT` (termina en `WHERE r.ID_REP LIKE 'AG%' AND r.FECHA_FIN IS NULL`), justo después de la línea `" (SELECT te.NOMBRE FROM Tecnico te WHERE te.ID_TEC = r.ENTREGADO_POR) AS ENTREGADO_POR_NOMBRE," +` añadir:
+```java
+            // Sin teléfono no hay glass: ¿hay una reparación normal abierta arriba que deba entregarlo? (Task 12)
+            " (SELECT COUNT(*) FROM Reparacion n" +
+            "  WHERE n.IMEI = r.IMEI AND n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL) AS NORMAL_ABIERTAS," +
+            " (SELECT tn.NOMBRE FROM Reparacion n JOIN Tecnico tn ON n.ID_TEC = tn.ID_TEC" +
+            "  WHERE n.IMEI = r.IMEI AND n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL" +
+            "  ORDER BY n.FECHA_ASIG ASC LIMIT 1) AS NORMAL_TECNICO_NOMBRE," +
+```
+(Solo correlacionan `r.IMEI`, ya agrupado: los GROUP BY no cambian.) En `RESUMEN_MAPPER`, tras la línea de `setGlassTecnicoNombre`:
+```java
+        try { rr.setNormalAbierta(rs.getInt("NORMAL_ABIERTAS") > 0); } catch (Exception ignored) {}
+        try { rr.setNormalTecnicoNombre(rs.getString("NORMAL_TECNICO_NOMBRE")); } catch (Exception ignored) {}
+```
+Run el test enfocado (verde) y la suite completa del servidor. Commit (3 ficheros): `feat(servidor): filas AG con normalAbierta/normalTecnicoNombre (hay reparacion normal abierta en el IMEI) para ocultar Anadir glass hasta la entrega`.
+
+- [ ] **Step 3 (cliente): tests que fallan**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void anadirGlassSeOcultaSoloConNormalAbiertaYSinEntrega() {
+        ReparacionResumen g = glass(null);
+        g.setNormalAbierta(true);
+        assertTrue(EntregaGlass.ocultarAnadirGlass(g));                 // alguien arriba aún no ha entregado
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(entregada));        // ya llegó
+        assertFalse(EntregaGlass.ocultarAnadirGlass(glass(null)));      // glass directa, sin normal arriba
+        ReparacionResumen normal = normal(true, null);
+        normal.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(normal));           // no es fila de glass
+        assertFalse(EntregaGlass.ocultarAnadirGlass(null));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación (`setNormalAbierta`).
+
+- [ ] **Step 4 (cliente): modelo, lógica y botón**
+
+`ReparacionResumen` (cliente): tras `private String glassTecnicoNombre;` añadir `private boolean normalAbierta;` y `private String normalTecnicoNombre;`, con accesores `isNormalAbierta/setNormalAbierta/getNormalTecnicoNombre/setNormalTecnicoNombre` tras `setGlassTecnicoNombre`.
+`EntregaGlass`, tras `subEtiquetaHistorial`:
+```java
+    /**
+     * Sin teléfono no hay glass (decisión 2026-08-28): el botón "Añadir glass" se oculta mientras haya
+     * una reparación normal abierta en el IMEI y esta glass no tenga entrega. Sin normal abierta
+     * (glass directa, o normal ya completada sin marcar) no se bloquea a nadie.
+     */
+    public static boolean ocultarAnadirGlass(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return false;
+        return rep.isNormalAbierta() && rep.getEntregadoAt() == null;
+    }
+```
+`PendientesTecnicoController`, celda `cAccion`, sustituir el `updateItem`:
+```java
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty) btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                setGraphic(empty ? null : btn);
+            }
+```
+por
+```java
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                ReparacionResumen asig = getTableView().getItems().get(getIndex());
+                // Glass: sin el teléfono (normal abierta arriba y sin entrega) no hay nada que reparar → sin botón
+                setGraphic(glass && EntregaGlass.ocultarAnadirGlass(asig) ? null : btn);
+            }
+```
+
+- [ ] **Step 5 (cliente): docs, suite, commit**
+
+CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Sin teléfono no hay glass**: en Mis pendientes → Glass, el botón "Añadir glass" no aparece mientras el IMEI tenga una reparación normal abierta y la glass no tenga entrega; en cuanto llega la píldora "Llegó" (o si no hay reparación normal abierta) vuelve a estar disponible.`
+Spec §2, tras la lista de "Qué ve cada uno": `- **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.` Spec §9: `13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.`
+Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): ocultar "Anadir glass" mientras haya reparacion normal abierta sin entrega (sin telefono no hay glass)`.
