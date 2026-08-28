@@ -29,7 +29,10 @@ public final class EntregaGlass {
     /** Hoy en Madrid (para decidir si el badge lleva fecha). */
     public static LocalDate hoy() { return LocalDate.now(MADRID); }
 
-    /** Texto del badge o {@code null} si no hay entrega (o la fila es de pulido). */
+    /**
+     * Texto del badge o {@code null} si no hay entrega (o la fila es de pulido).
+     * {@code hoy == null} ⇒ siempre con fecha.
+     */
     public static String textoBadge(ReparacionResumen rep, LocalDate hoy) {
         if (rep == null) return null;
         switch (TipoTrabajo.desde(rep.getIdRep())) {
@@ -72,6 +75,8 @@ public final class EntregaGlass {
 
     /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío. */
     public static String textoCsv(ReparacionResumen rep, DateTimeFormatter fmt) {
+        if (rep == null) return "";
+        if (TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.PULIDO) return "";
         LocalDateTime at = TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.GLASS
                 ? rep.getEntregadoAt() : rep.getGlassEntregadoAt();
         return FechaUtils.formatear(at, fmt);   // "" si null

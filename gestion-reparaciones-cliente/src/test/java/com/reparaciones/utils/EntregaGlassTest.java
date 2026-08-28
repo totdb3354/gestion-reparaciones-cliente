@@ -98,6 +98,17 @@ class EntregaGlassTest {
         assertNull(EntregaGlass.opcionMenu(null, false));
     }
 
+    @Test void nombreVacioCaeEnGlass() {
+        ReparacionResumen sinTecnico = normal(true, null);
+        sinTecnico.setGlassTecnicoNombre(null);
+        assertEquals("Entregar a glass", EntregaGlass.opcionMenu(sinTecnico, false));
+
+        ReparacionResumen conEntrega = normal(true, UTC_0842);
+        conEntrega.setGlassTecnicoNombre("");
+        conEntrega.setGlassEntregadoPorNombre(null);
+        assertEquals("Entregado a glass por glass, 28/08 10:42", EntregaGlass.tooltip(conEntrega));
+    }
+
     // ── CSV ────────────────────────────────────────────────────────────────
 
     @Test void csvFechaCompletaOVacio() {
@@ -105,6 +116,31 @@ class EntregaGlassTest {
         assertEquals("28/08/2026 10:42", EntregaGlass.textoCsv(normal(true, UTC_0842), fmt));
         assertEquals("28/08/2026 10:42", EntregaGlass.textoCsv(glass(UTC_0842), fmt));
         assertEquals("", EntregaGlass.textoCsv(normal(true, null), fmt));
+    }
+
+    @Test void csvSinFilaEsVacio() {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        assertEquals("", EntregaGlass.textoCsv(null, fmt));
+        assertEquals("", EntregaGlass.textoCsv(glass(null), fmt));
+    }
+
+    @Test void pulidoSinTooltipNiCsv() {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        ReparacionResumen p = new ReparacionResumen();
+        p.setIdRep("AP20260828_1");
+        p.setEntregadoAt(UTC_0842);
+        p.setGlassEntregadoAt(UTC_0842);
+        assertNull(EntregaGlass.tooltip(p));
+        assertEquals("", EntregaGlass.textoCsv(p, fmt));
+    }
+
+    @Test void badgeYTooltipSinFilaSonNull() {
+        assertNull(EntregaGlass.textoBadge(null, HOY));
+        assertNull(EntregaGlass.tooltip(null));
+    }
+
+    @Test void hoyNuloUsaFormatoConFecha() {
+        assertEquals("Entregado 28/08 10:42", EntregaGlass.textoBadge(normal(true, UTC_0842), null));
     }
 
     @Test void estiloLlevaLaPaletaIndigo() {
