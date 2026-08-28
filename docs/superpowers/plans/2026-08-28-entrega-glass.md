@@ -1244,3 +1244,192 @@ git checkout hotfix/0.16.1
 git merge --no-ff feature/entrega-glass -m "merge: entrega del telefono al tecnico de glass — Entregado/Llego en Mis pendientes y Asignaciones, CSV y log; 422 con mensaje real (feature/entrega-glass)"
 ```
 El bump a 0.16.1, NOVEDADES y el gitlink del servidor van en el commit de release, fuera de este plan (ver spec §8 y `Apuntes/plan-futuro.md` § Hotfix 0.16.1).
+
+---
+
+## Extra del smoke (2026-08-28)
+
+### Task 11: La entrega sobrevive al completar — "Llegó" en el historial de glass
+
+Hallazgo del smoke: al completar una glass, la fila de historial `G…` nace con `FECHA_ASIG = FECHA_FIN = NOW()` y sin enlace a su `AG…` (`ID_REP_ANTERIOR` es solo para reincidencias). Decisión del usuario: la fila `G` **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` al completar, y en las vistas de historial (Agrupado por IMEI e Historial de los 3 roles) la columna Reparador muestra bajo el nombre la sub-etiqueta gris **"Llegó dd/MM HH:mm"** (siempre con día y hora), tooltip "Bajado por <quien>, dd/MM HH:mm". Sin migración (la entrega existe desde hoy).
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass` del submódulo, desde `main` `f3a1054`): `src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java` (`insertarCompleta` INSERT ~L469 y `guardarFilaIndividual` INSERT ~L553; `GLASS_HISTORIAL_SELECT` ~L968)
+- Test (servidor): `src/test/java/com/reparaciones/servidor/dao/ReparacionDAOEntregaGlassTest.java`
+- Create (cliente): `gestion-reparaciones-cliente/src/main/java/com/reparaciones/utils/CeldaReparador.java`
+- Modify (cliente): `utils/EntregaGlass.java`, `controllers/AgrupadoController.java` (~L323), `controllers/ReparacionControllerSuperTecnico.java` (~L426), `controllers/ReparacionControllerTecnico.java` (~L411), `controllers/ReparacionControllerAdmin.java` (~L287), `CHANGELOG.md`, spec §2/§5/§9
+- Test (cliente): `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- Servidor: filas `G…` del historial devuelven `entregadoAt`/`entregadoPorNombre` (mismos campos que las `AG`; el mapper ya los lee).
+- Cliente: `EntregaGlass.subEtiquetaHistorial(ReparacionResumen rep)` → `"Llegó dd/MM HH:mm"` o `null`; `CeldaReparador.crear()` → `TableCell<Object, String>`.
+
+- [ ] **Step 1 (servidor): test que falla — el historial de glass trae la entrega**
+
+Añadir a `ReparacionDAOEntregaGlassTest`:
+
+```java
+    @SuppressWarnings("unchecked")
+    @Test void historialGlassDevuelveLaEntregaHeredada() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        dao(jdbc).getHistorialGlass(null);
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class));
+        assertTrue(sql.getValue().contains(" r.ENTREGADO_AT,"), "columna ENTREGADO_AT en historial glass");
+        assertTrue(sql.getValue().contains("AS ENTREGADO_POR_NOMBRE"), "ENTREGADO_POR_NOMBRE en historial glass");
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test -Dtest=ReparacionDAOEntregaGlassTest` → FAIL en `columna ENTREGADO_AT en historial glass`.
+
+- [ ] **Step 2 (servidor): `GLASS_HISTORIAL_SELECT` con la entrega**
+
+Dentro de `GLASS_HISTORIAL_SELECT` (termina en `WHERE r.ID_REP LIKE 'G%'`), cambiar
+```java
+            " tel.UPDATED_AT AS TELEFONO_UPDATED_AT," +
+            " ta.NOMBRE AS NOMBRE_TEC_ASIGNA," +
+```
+por
+```java
+            " tel.UPDATED_AT AS TELEFONO_UPDATED_AT," +
+            " r.ENTREGADO_AT," +
+            " (SELECT te.NOMBRE FROM Tecnico te WHERE te.ID_TEC = r.ENTREGADO_POR) AS ENTREGADO_POR_NOMBRE," +
+            " ta.NOMBRE AS NOMBRE_TEC_ASIGNA," +
+```
+(Esa pareja de líneas también existe en `HISTORIAL_SELECT` de reparaciones normales: NO tocarla; solo la que está entre `GLASS_HISTORIAL_SELECT =` y `getAsignacionesGlass(`.) Las queries de historial no llevan `GROUP BY`.
+
+- [ ] **Step 3 (servidor): heredar la entrega al completar (dos INSERT)**
+
+Añadir en `ReparacionDAO` este helper privado (junto a `entregarGlass`):
+
+```java
+    /** Entrega sellada en una AG (o {ts, id} nulos si no es AG o no hay entrega): la hereda la G al completar. */
+    private Object[] entregaHeredable(String idAsignacion) {
+        if (idAsignacion == null || !idAsignacion.startsWith("AG")) return new Object[] {null, null};
+        java.util.Map<String, Object> e = jdbc.queryForMap(
+                "SELECT ENTREGADO_AT, ENTREGADO_POR FROM Reparacion WHERE ID_REP = ?", idAsignacion);
+        return new Object[] {e.get("ENTREGADO_AT"), e.get("ENTREGADO_POR")};
+    }
+```
+En `insertarCompleta` (la variante con `categoria`), justo antes de `for (FilaReparacion fila : filas) {` (~L464) añadir `Object[] entrega = entregaHeredable(idAsignacion);` y cambiar el INSERT de ~L469-471 a:
+```java
+                jdbc.update(
+                        "INSERT INTO Reparacion (ID_REP, IMEI, ID_TEC, ID_REP_ANTERIOR, FECHA_ASIG, FECHA_FIN, ID_TEC_ASIGNA, ENTREGADO_AT, ENTREGADO_POR)" +
+                        " VALUES (?,?,?,?,NOW(),NOW(),?,?,?)",
+                        idRep, imei, idTec, idRepAnterior, idTecAsigna, entrega[0], entrega[1]);
+```
+Lo mismo en `guardarFilaIndividual`: `Object[] entrega = entregaHeredable(idAsignacion);` antes de su `for`, y su INSERT (~L553-555) con las mismas dos columnas y los mismos dos argumentos extra. Si en cualquiera de los dos métodos el INSERT ya tiene otra forma, parar y reportar.
+
+- [ ] **Step 4 (servidor): test verde + suite + commit**
+
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test` → sin salida. Commit en el submódulo (solo los 2 ficheros): `feat(servidor): la G hereda ENTREGADO_AT/POR de la AG al completar y el historial de glass devuelve la entrega (Llego en historial)`.
+
+- [ ] **Step 5 (cliente): tests que fallan — sub-etiqueta de historial**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void subEtiquetaHistorialSoloEnGlassConEntrega() {
+        ReparacionResumen g = new ReparacionResumen();
+        g.setIdRep("G20260828_64");
+        g.setEntregadoAt(UTC_0842);
+        g.setEntregadoPorNombre("Manu");
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(g));
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(glass(UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(glass(null)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(normal(true, UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(null));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación (`subEtiquetaHistorial`).
+
+- [ ] **Step 6 (cliente): `EntregaGlass.subEtiquetaHistorial` + `CeldaReparador`**
+
+En `EntregaGlass`, tras `textoCsv`:
+```java
+    /**
+     * Sub-etiqueta bajo el nombre del reparador en las vistas de historial (Agrupado por IMEI,
+     * Historial): solo filas de glass (AG/G) con entrega, siempre con día y hora porque en el
+     * historial las "Fechas" de una G son las de completar, no las de asignar. Tooltip: {@link #tooltip}.
+     */
+    public static String subEtiquetaHistorial(ReparacionResumen rep) {
+        if (rep == null || rep.getEntregadoAt() == null) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        return "Llegó " + FechaUtils.formatear(rep.getEntregadoAt(), FMT_DIA_HORA);
+    }
+```
+Crear `gestion-reparaciones-cliente/src/main/java/com/reparaciones/utils/CeldaReparador.java`:
+```java
+package com.reparaciones.utils;
+
+import com.reparaciones.models.ReparacionResumen;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.VBox;
+
+/**
+ * Celda de la columna Reparador de las vistas de historial: el nombre y, en filas de glass
+ * con entrega, la sub-etiqueta "Llegó dd/MM HH:mm" debajo (mismo estilo que "Chasis" bajo
+ * el tipo). Compartida por Agrupado por IMEI y por el Historial de los tres roles.
+ */
+public final class CeldaReparador {
+
+    private CeldaReparador() {}
+
+    public static TableCell<Object, String> crear() {
+        return new TableCell<>() {
+            private final Label lblNombre = new Label();
+            private final Label lblLlego  = new Label();
+            private final VBox  box       = new VBox(1, lblNombre, lblLlego);
+            {
+                box.setAlignment(Pos.CENTER_LEFT);
+                lblLlego.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6;");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(null);
+                if (empty || item == null || item.isEmpty()) { setGraphic(null); return; }
+                Object fila = (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
+                        ? getTableView().getItems().get(getIndex()) : null;
+                String sub = fila instanceof ReparacionResumen rep ? EntregaGlass.subEtiquetaHistorial(rep) : null;
+                lblNombre.setText(item);
+                if (sub != null) {
+                    lblLlego.setText(sub);
+                    lblLlego.setTooltip(new Tooltip(EntregaGlass.tooltip((ReparacionResumen) fila)));
+                    lblLlego.setVisible(true); lblLlego.setManaged(true);
+                } else {
+                    lblLlego.setTooltip(null);
+                    lblLlego.setVisible(false); lblLlego.setManaged(false);
+                }
+                setGraphic(box);
+            }
+        };
+    }
+}
+```
+
+- [ ] **Step 7 (cliente): usar la celda en las 4 vistas**
+
+En `AgrupadoController` (~L323), `ReparacionControllerSuperTecnico` (~L426), `ReparacionControllerTecnico` (~L411) y `ReparacionControllerAdmin` (~L287), sustituir el bloque
+```java
+        colReparador.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(null);
+                setText(empty || item == null || item.isEmpty() ? null : item);
+            }
+        });
+```
+por
+```java
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
+```
+Si en alguno de los cuatro el bloque no es exactamente ese (p. ej. `colReparador` tipado distinto de `TableColumn<Object, String>`), parar y reportar en vez de adaptar.
+
+- [ ] **Step 8 (cliente): docs, suite, commit**
+
+`CHANGELOG.md` `[Unreleased]` → Added: añadir al final de la línea de la entrega: ` En el historial (Agrupado por IMEI e Historial), las glass completadas muestran bajo el reparador **"Llegó dd/MM hh:mm"** (la entrega se hereda al completar).`
+Spec: en §2 tabla de ciclo de vida, fila "Completan la glass" → `La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar).`; en §9 añadir `14. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").`
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test` → sin salida. Commit (raíz, por nombre, sin gitlink): `feat(cliente): "Llego dd/MM hh:mm" bajo el reparador en Agrupado por IMEI e Historial (celda compartida CeldaReparador; la G hereda la entrega)`.
