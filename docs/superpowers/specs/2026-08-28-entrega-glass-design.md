@@ -32,7 +32,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Técnico de glass | su `AG…` (Mis pendientes, Glass) | **"Llegó 10:42"** | "Bajado por Manu, 28/08 10:42" |
   | Supertécnico / admin | ambas filas en **Asignaciones** | los mismos badges | los mismos tooltips |
 
-  - Si la entrega **no es de hoy**, el badge "Llegó" incluye la fecha: "Llegó 27/08 10:42" (el de arriba no lleva hora; la fecha completa está en su tooltip).
+  - Si la entrega **no es de hoy**, el badge "Llegó" muestra solo la fecha: "Llegó 27/08" (ya no es cuestión de minutos, y "Llegó dd/MM hh:mm" no cabía en los 100 px); la hora exacta está en el tooltip. El de arriba no lleva hora.
   - Formato hora `HH:mm`, fecha `dd/MM` (zona Europe/Madrid, como el resto de fechas del cliente).
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.

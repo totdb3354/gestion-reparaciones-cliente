@@ -22,6 +22,7 @@ public final class EntregaGlass {
 
     private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final DateTimeFormatter FMT_HORA     = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter FMT_DIA      = DateTimeFormatter.ofPattern("dd/MM");
     private static final DateTimeFormatter FMT_DIA_HORA = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
     private EntregaGlass() {}
@@ -97,8 +98,10 @@ public final class EntregaGlass {
 
     private static String texto(String prefijo, LocalDateTime utc, LocalDate hoy) {
         if (utc == null) return null;
+        // Hoy: la hora (cuánto lleva esperando). Otro día: solo la fecha — ya no es cuestión de
+        // minutos, y "Llegó dd/MM HH:mm" no cabía en la columna Estado (100 px). Tooltip con todo.
         boolean esHoy = hoy != null && hoy.equals(FechaUtils.toLocalDate(utc));
-        return prefijo + " " + FechaUtils.formatear(utc, esHoy ? FMT_HORA : FMT_DIA_HORA);
+        return prefijo + " " + FechaUtils.formatear(utc, esHoy ? FMT_HORA : FMT_DIA);
     }
 
     private static String nombre(String n) {

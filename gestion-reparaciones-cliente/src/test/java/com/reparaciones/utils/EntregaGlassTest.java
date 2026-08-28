@@ -49,7 +49,7 @@ class EntregaGlassTest {
 
     @Test void badgeGlassDiceLlego() {
         assertEquals("Llegó 10:42", EntregaGlass.textoBadge(glass(UTC_0842), HOY));
-        assertEquals("Llegó 28/08 10:42", EntregaGlass.textoBadge(glass(UTC_0842), MANANA));
+        assertEquals("Llegó 28/08", EntregaGlass.textoBadge(glass(UTC_0842), MANANA));   // otro día: solo fecha
     }
 
     @Test void sinEntregaNoHayBadge() {
@@ -144,7 +144,7 @@ class EntregaGlassTest {
     }
 
     @Test void hoyNuloUsaFormatoConFecha() {
-        assertEquals("Llegó 28/08 10:42", EntregaGlass.textoBadge(glass(UTC_0842), null));
+        assertEquals("Llegó 28/08", EntregaGlass.textoBadge(glass(UTC_0842), null));
     }
 
     @Test void estiloLlevaLaPaletaIndigo() {
