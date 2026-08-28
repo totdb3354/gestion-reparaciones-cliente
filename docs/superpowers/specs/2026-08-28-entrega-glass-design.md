@@ -36,6 +36,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   - Formato hora `HH:mm`, fecha `dd/MM` (zona Europe/Madrid, como el resto de fechas del cliente).
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.
+- **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.
 - **Dos datos de naturaleza distinta**:
   - **"Entregado por"** es un **hecho**: se graba (`ENTREGADO_POR`) y no cambia aunque reasignen la reparación normal.
   - **"A quién / quién lo tiene"** es **estado actual**: no se guarda; se lee del dueño de la glass en cada momento.
@@ -139,3 +140,4 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
   10. Cliente 0.16.0 contra el servidor nuevo: todo igual que antes.
   11. Cambiar contraseña con la actual incorrecta → el diálogo dice "Contraseña actual incorrecta." (con el servidor nuevo y, por el fallback, con uno viejo).
   12. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").
+  13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.

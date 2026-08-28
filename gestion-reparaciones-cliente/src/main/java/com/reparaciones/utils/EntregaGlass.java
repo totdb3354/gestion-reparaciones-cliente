@@ -102,6 +102,16 @@ public final class EntregaGlass {
         return "Llegó " + FechaUtils.formatear(rep.getEntregadoAt(), FMT_DIA_HORA);
     }
 
+    /**
+     * Sin teléfono no hay glass (decisión 2026-08-28): el botón "Añadir glass" se oculta mientras haya
+     * una reparación normal abierta en el IMEI y esta glass no tenga entrega. Sin normal abierta
+     * (glass directa, o normal ya completada sin marcar) no se bloquea a nadie.
+     */
+    public static boolean ocultarAnadirGlass(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return false;
+        return rep.isNormalAbierta() && rep.getEntregadoAt() == null;
+    }
+
     /** Colores del badge, para concatenar al estilo base de pastilla. */
     public static String estiloColores() {
         return "-fx-background-color: " + COLOR_FONDO + "; -fx-text-fill: " + COLOR_TEXTO + ";";

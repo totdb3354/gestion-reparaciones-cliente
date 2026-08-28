@@ -315,8 +315,11 @@ public class PendientesTecnicoController {
             }
             @Override protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (!empty) btn.setText(glass ? "Añadir glass" : "Añadir reparación");
-                setGraphic(empty ? null : btn);
+                if (empty) { setGraphic(null); return; }
+                btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                ReparacionResumen asig = getTableView().getItems().get(getIndex());
+                // Glass: sin el teléfono (normal abierta arriba y sin entrega) no hay nada que reparar → sin botón
+                setGraphic(glass && EntregaGlass.ocultarAnadirGlass(asig) ? null : btn);
             }
         });
 

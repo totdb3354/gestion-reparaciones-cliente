@@ -53,6 +53,8 @@ public class ReparacionResumen {
     private LocalDateTime glassEntregadoAt;
     private String        glassEntregadoPorNombre;
     private String        glassTecnicoNombre;
+    private boolean       normalAbierta;
+    private String        normalTecnicoNombre;
 
     public ReparacionResumen() {}
 
@@ -211,4 +213,8 @@ public class ReparacionResumen {
     public void          setGlassEntregadoPorNombre(String v)        { this.glassEntregadoPorNombre = v; }
     public String        getGlassTecnicoNombre()                     { return glassTecnicoNombre; }
     public void          setGlassTecnicoNombre(String v)             { this.glassTecnicoNombre = v; }
+    public boolean       isNormalAbierta()                           { return normalAbierta; }
+    public void          setNormalAbierta(boolean v)                 { this.normalAbierta = v; }
+    public String        getNormalTecnicoNombre()                    { return normalTecnicoNombre; }
+    public void          setNormalTecnicoNombre(String v)            { this.normalTecnicoNombre = v; }
 }

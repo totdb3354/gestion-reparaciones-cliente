@@ -154,6 +154,20 @@ class EntregaGlassTest {
 
     // ── Sub-etiqueta de historial ─────────────────────────────────────────
 
+    @Test void anadirGlassSeOcultaSoloConNormalAbiertaYSinEntrega() {
+        ReparacionResumen g = glass(null);
+        g.setNormalAbierta(true);
+        assertTrue(EntregaGlass.ocultarAnadirGlass(g));                 // alguien arriba aún no ha entregado
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(entregada));        // ya llegó
+        assertFalse(EntregaGlass.ocultarAnadirGlass(glass(null)));      // glass directa, sin normal arriba
+        ReparacionResumen normal = normal(true, null);
+        normal.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(normal));           // no es fila de glass
+        assertFalse(EntregaGlass.ocultarAnadirGlass(null));
+    }
+
     @Test void subEtiquetaHistorialSoloEnGlassConEntrega() {
         ReparacionResumen g = new ReparacionResumen();
         g.setIdRep("G20260828_64");
