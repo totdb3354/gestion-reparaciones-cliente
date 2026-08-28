@@ -8,7 +8,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
-- **Entrega del teléfono al técnico de glass**: en Mis pendientes, el dueño de una reparación normal cuyo IMEI tiene glass abierta puede **"Entregar a <técnico de glass>"** (clic derecho, junto a "Marcar por cerrar"); se registra quién y a qué hora. Badge **"Entregado hh:mm"** en su fila y **"Llegó hh:mm"** en la fila de glass del otro técnico (con fecha si no es de hoy; tooltip con quién/a quién), visibles también en Asignaciones. "Deshacer entrega" por si fue un error. Columna "Entregado" en el CSV de Asignaciones. Acciones `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` en el log.
+- **Entrega del teléfono al técnico de glass**: en Mis pendientes, el dueño de una reparación normal cuyo IMEI tiene glass abierta puede **"Entregar a <técnico de glass>"** (clic derecho, junto a "Marcar por cerrar"); se registra quién y a qué hora. Badge **"E. <técnico de glass>"** en su fila (la columna Estado no daba para "Entregado dd/MM hh:mm") y **"Llegó hh:mm"** en la fila de glass del otro técnico (con fecha si no es de hoy); el tooltip lleva quién, a quién y la hora. Visibles también en Asignaciones. "Deshacer entrega" por si fue un error. Columna "Entregado" en el CSV de Asignaciones. Acciones `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` en el log.
 
 ### Fixed
 - Los errores **422** del servidor muestran su mensaje real (antes salía siempre "Contraseña actual incorrecta."); cambiar contraseña conserva su mensaje también contra servidores anteriores.

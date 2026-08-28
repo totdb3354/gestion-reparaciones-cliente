@@ -31,14 +31,22 @@ public final class EntregaGlass {
 
     /**
      * Texto del badge o {@code null} si no hay entrega (o la fila es de pulido).
-     * {@code hoy == null} ⇒ siempre con fecha.
+     *
+     * <p>Fila {@code A…}: {@code "E. <técnico de glass>"} — sin hora, porque la columna
+     * Estado mide 100 px y "Entregado dd/MM hh:mm" se cortaba (2026-08-28); la hora y
+     * quién entregó van en el {@link #tooltip}. Fila {@code AG…}: {@code "Llegó hh:mm"},
+     * con fecha si no es de hoy ({@code hoy == null} ⇒ siempre con fecha).</p>
      */
     public static String textoBadge(ReparacionResumen rep, LocalDate hoy) {
         if (rep == null) return null;
         switch (TipoTrabajo.desde(rep.getIdRep())) {
-            case GLASS:      return texto("Llegó", rep.getEntregadoAt(), hoy);
-            case REPARACION: return texto("Entregado", rep.getGlassEntregadoAt(), hoy);
-            default:         return null;
+            case GLASS:
+                return texto("Llegó", rep.getEntregadoAt(), hoy);
+            case REPARACION:
+                if (rep.getGlassEntregadoAt() == null) return null;
+                return "E. " + nombre(rep.getGlassTecnicoNombre());
+            default:
+                return null;
         }
     }
 
