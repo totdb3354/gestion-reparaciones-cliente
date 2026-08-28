@@ -37,14 +37,14 @@ class EntregaGlassTest {
     // ── Badge ──────────────────────────────────────────────────────────────
 
     @Test void badgeArribaDiceAQuienSinHora() {
-        // "E. <técnico de glass>": la columna Estado mide 100 px y "Entregado 28/08 10:42"
+        // "→ <técnico de glass>": la columna Estado mide 100 px y "Entregado 28/08 10:42"
         // no cabía (2026-08-28). La hora y quién entregó siguen en el tooltip.
-        assertEquals("E. Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), HOY));
+        assertEquals("→ Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), HOY));
     }
 
     @Test void badgeArribaNoDependeDelDia() {
-        assertEquals("E. Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), MANANA));
-        assertEquals("E. Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), null));
+        assertEquals("→ Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), MANANA));
+        assertEquals("→ Jhona", EntregaGlass.textoBadge(normal(true, UTC_0842), null));
     }
 
     @Test void badgeGlassDiceLlego() {
@@ -110,7 +110,7 @@ class EntregaGlassTest {
         conEntrega.setGlassTecnicoNombre("");
         conEntrega.setGlassEntregadoPorNombre(null);
         assertEquals("Entregado a glass por glass, 28/08 10:42", EntregaGlass.tooltip(conEntrega));
-        assertEquals("E. glass", EntregaGlass.textoBadge(conEntrega, HOY));
+        assertEquals("→ glass", EntregaGlass.textoBadge(conEntrega, HOY));
     }
 
     // ── CSV ────────────────────────────────────────────────────────────────

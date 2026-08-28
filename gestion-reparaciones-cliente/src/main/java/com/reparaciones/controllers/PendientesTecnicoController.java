@@ -215,7 +215,7 @@ public class PendientesTecnicoController {
         cEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badgeUrgente   = new Label();
             private final Label badgePorCerrar = new Label("Por cerrar");
-            private final Label badgeEntrega   = new Label();     // "E. <técnico glass>" (A) / "Llegó hh:mm" (AG)
+            private final Label badgeEntrega   = new Label();     // "→ <técnico glass>" (A) / "Llegó hh:mm" (AG)
             private final Label badge          = new Label();
             private final Label lblTipo        = new Label();
             private final javafx.scene.layout.VBox celdaBox =

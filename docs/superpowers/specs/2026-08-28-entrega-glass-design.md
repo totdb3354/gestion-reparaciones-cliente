@@ -28,7 +28,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
 
   | Quién | Fila | Badge | Tooltip |
   |---|---|---|---|
-  | Técnico de arriba | su `A…` (Mis pendientes, Reparación) | **"E. Jhona"** (sin hora: la columna Estado mide 100 px y "Entregado dd/MM hh:mm" se cortaba — ajuste smoke 2026-08-28) | "Entregado a Jhona por Manu, 28/08 10:42" |
+  | Técnico de arriba | su `A…` (Mis pendientes, Reparación) | **"→ Jhona"** (sin hora: la columna Estado mide 100 px y "Entregado dd/MM hh:mm" se cortaba — ajuste smoke 2026-08-28) | "Entregado a Jhona por Manu, 28/08 10:42" |
   | Técnico de glass | su `AG…` (Mis pendientes, Glass) | **"Llegó 10:42"** | "Bajado por Manu, 28/08 10:42" |
   | Supertécnico / admin | ambas filas en **Asignaciones** | los mismos badges | los mismos tooltips |
 
@@ -92,7 +92,7 @@ Efecto: `UPDATE Reparacion SET ENTREGADO_AT = NOW(), ENTREGADO_POR = ?, UPDATED_
 - `ReparacionResumen`: campos de §4 (Gson los rellena; nulos si no vienen).
 - `ReparacionDAO.actualizarEntregaGlass(String idRep, boolean entregado)` → el PATCH; errores como `SQLException` con el mensaje del servidor (patrón existente).
 - **Clase nueva `utils/EntregaGlass`** (pura, con JUnit): concentra toda la lógica para que los controladores solo enganchen y el futuro merge `hotfix → main` (donde esos controladores han cambiado) tenga conflictos mínimos:
-  - `textoBadge(rep, LocalDate hoy)` → fila `A`: `"E. <técnico de glass>"`; fila `AG`: `"Llegó 10:42"` / `"Llegó 27/08 10:42"`; `null` si no hay entrega o es pulido.
+  - `textoBadge(rep, LocalDate hoy)` → fila `A`: `"→ <técnico de glass>"`; fila `AG`: `"Llegó 10:42"` / `"Llegó 27/08"`; `null` si no hay entrega o es pulido.
   - `tooltipArriba(rep)` → "Entregado a Jhona por Manu, 28/08 10:42"; `tooltipGlass(rep)` → "Bajado por Manu, 28/08 10:42".
   - `opcionMenu(rep, esPestanaGlass)` → `null` (oculta) / `"Entregar a Jhona"` / `"Deshacer entrega"`. Oculta si pestaña Glass, si no es `A…` normal o si `!glassAbierta`.
   - Colores del badge como constantes.
@@ -127,7 +127,7 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
 - **Servidor** (JUnit sobre BD de test, patrón de la suite actual): entregar sella todas las `AG` abiertas del IMEI y ninguna cerrada ni de otro IMEI; deshacer las limpia; derivados de la fila `A` con entrega / sin entrega / sin glass; validaciones 422/404/403 si el patrón de test de controlador existe (si no, quedan en smoke). Suite completa en verde antes del merge.
 - **Cliente**: JUnit de `EntregaGlass` (textos hoy/otro día/nulo, tooltips, visibilidad y texto de la opción). Suite en verde.
 - **Smoke en preprod** (checklist):
-  1. IMEI con normal + glass: entregar → "E. <glass>" arriba (tooltip con hora), "Llegó hh:mm" en la pestaña Glass del otro técnico, ambos en Asignaciones.
+  1. IMEI con normal + glass: entregar → "→ <glass>" arriba (tooltip con hora), "Llegó hh:mm" en la pestaña Glass del otro técnico, ambos en Asignaciones.
   2. Reasignar la glass → el tooltip de arriba cambia de técnico; el nuevo glass ve "Llegó".
   3. Reasignar la normal → "por Manu" no cambia; el nuevo dueño puede deshacer.
   4. Deshacer → desaparecen ambos badges; volver a entregar → hora nueva.
