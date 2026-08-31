@@ -1861,3 +1861,221 @@ y dentro de `menu.setOnShowing`, tras las líneas de `toggleEntrega`:
 ```
 
 - [ ] **Step 5 (cliente): docs, suite, commit** — spec §2, tras el bloque "Sin teléfono no hay glass": `- **"Marcar que llegó"** (2026-08-31): en la fila de glass bloqueada, el propio técnico registra la llegada (menú contextual); queda firmado (`ENTREGADO_POR` = él, log `ENTREGAR_GLASS` con detalle de llegada propia). Cubre a los técnicos de abajo, que no dependen de que nadie "baje" nada.` Spec §4, tras el endpoint de entrega: una línea con el endpoint `/llegada` y sus validaciones. Spec §9: `16. Fila glass bloqueada → "Marcar que llegó" en su menú; al usarla el botón "Añadir glass" aparece, arriba se ve "→ <glass>" y el log registra la llegada propia; en una fila ya entregada o sin normal abierta la opción no sale.` CHANGELOG (sección 0.16.1, línea "Sin teléfono no hay glass"): añadir al final: ` Si el dueño de la reparación no registra la entrega (p. ej. el teléfono ya estaba abajo), el técnico de glass puede desbloquearse con **"Marcar que llegó"** (queda firmado en el log).` NOVEDADES-v0.16.1.md, sección "🚫 Sin teléfono no hay glass", añadir bullet: `- ¿El teléfono ya estaba abajo o nadie registró la entrega? El técnico de glass tiene **"Marcar que llegó"** (clic derecho): se desbloquea al momento y queda firmado quién lo registró.` Suite completa verde → commit (por nombre, sin gitlink): `feat(cliente): "Marcar que llego" — el tecnico de glass registra su propia llegada cuando el gate le bloquea`.
+
+---
+
+### Task 15: Quien marca, desmarca — la firma (`ENTREGADO_POR`) manda en el deshacer
+
+Decisión del usuario (2026-08-31, pre-reparto): **solo quien registró la entrega puede deshacerla**. Si la entregó el de rep, solo él ve "Deshacer entrega"; si la marcó el de glass ("Marcar que llegó"), solo él la deshace con la nueva **"Deshacer llegada"**. Válvula si el firmante no está: re-entregar sobrescribe hora y firma. Requiere exponer el **id** del firmante en el JSON (el nombre ya viaja).
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass-firma` desde `main` `f5c6a11`): `model/ReparacionResumen.java`, `dao/ReparacionDAO.java` (`ASIGNACION_SELECT`, `GLASS_ASIGNACION_SELECT`, `RESUMEN_MAPPER`), `controller/ReparacionController.java`
+- Test (servidor): `ReparacionDAOEntregaGlassTest.java` y `ReparacionControllerEntregaGlassTest.java` (ampliar y ACTUALIZAR un test existente)
+- Modify (cliente, rama `hotfix/0.16.1`): `models/ReparacionResumen.java`, `utils/EntregaGlass.java`, `dao/ReparacionDAO.java`, `controllers/PendientesTecnicoController.java`, `CHANGELOG.md`, `NOVEDADES-v0.16.1.md`, spec §2/§4/§9
+- Test (cliente): `EntregaGlassTest.java` (helper y tests ACTUALIZADOS + nuevos)
+
+**Interfaces:**
+- JSON aditivo: filas `AG` → `entregadoPor` (Integer); filas `A` → `glassEntregadoPor` (Integer).
+- Servidor: `PATCH /entrega-glass {entregado:false}` añade validaciones: sin entrega → 422 "No hay entrega que deshacer"; firma ajena → 403 "Solo quien registró la entrega puede deshacerla". Nuevo `DELETE /api/reparaciones/asignaciones/{idRep}/llegada` (idRep `AG…`, 204): no-AG → 422 "Solo aplica a asignaciones de glass"; no existe → 404; no dueño → 403 "Solo puedes deshacer la llegada de tus propias asignaciones"; sin entrega → 422 "No hay entrega que deshacer"; firma ajena → 403 "Solo quien registró la entrega puede deshacerla". Efecto `dao.deshacerEntregaGlass(imei)`; log `DESHACER_ENTREGA_GLASS` detalle `ID_REP: AG…, IMEI: …, LLEGADA deshecha por el tecnico de glass`.
+- Cliente: `EntregaGlass.opcionMenu(rep, pestanaGlass, Integer idTecSesion)` (firma en el "Deshacer"); `EntregaGlass.opcionDeshacerLlegada(rep, pestanaGlass, Integer idTecSesion)` → `"Deshacer llegada"` o null; `ReparacionDAO.deshacerLlegadaGlass(idRep)` → `ApiClient.delete(...)`.
+
+- [ ] **Step 1 (servidor): tests que fallan.** En `ReparacionDAOEntregaGlassTest` añadir asserts a los tests de columnas existentes: en `asignacionesNormalesDevuelvenDerivadosDeLaGlassAbierta` → `assertTrue(q.contains("AS GLASS_ENTREGADO_POR,"), "id del firmante en filas A");` y en `asignacionesGlassDevuelvenEntregaYAgrupanPorLasColumnasNuevas` → `assertTrue(q.contains(" r.ENTREGADO_POR,"), "id del firmante en filas AG");`. En `ReparacionControllerEntregaGlassTest`: **actualizar** `deshacerLimpiaYRegistraEnElLog` (la fila ahora necesita entrega firmada por el principal):
+
+```java
+    @Test void deshacerLimpiaYRegistraEnElLog() {
+        ReparacionResumen propia = asigDe(7);
+        when(propia.getGlassEntregadoAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 31, 10, 0));
+        when(propia.getGlassEntregadoPor()).thenReturn(7);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
+        when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of(new ReparacionDAO.GlassAbierta("AG20260828_3", "Jhona")));
+        ctl.actualizarEntregaGlass("A20260828_1", req(false), manu);
+        verify(dao).deshacerEntregaGlass(IMEI);
+        verify(dao, never()).entregarGlass(anyString(), anyInt());
+        verify(logDao).insertar(42, "DESHACER_ENTREGA_GLASS",
+                "ID_REP: A20260828_1, IMEI: " + IMEI + ", GLASS: AG20260828_3, TECNICO_GLASS: Jhona");
+    }
+```
+y añadir:
+```java
+    @Test void deshacerConFirmaAjenaEs403() {
+        ReparacionResumen propia = asigDe(7);
+        when(propia.getGlassEntregadoAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 31, 10, 0));
+        when(propia.getGlassEntregadoPor()).thenReturn(9);   // la marco el de glass
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
+        when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of(new ReparacionDAO.GlassAbierta("AG20260828_3", "Jhona")));
+        assertEquals(403, statusDe(() -> ctl.actualizarEntregaGlass("A20260828_1", req(false), manu)));
+        verify(dao, never()).deshacerEntregaGlass(anyString());
+    }
+
+    @Test void deshacerSinEntregaEs422() {
+        ReparacionResumen propia = asigDe(7);
+        when(dao.getAsignacionAnyById("A20260828_1")).thenReturn(Optional.of(propia));
+        when(dao.getGlassAbiertas(IMEI)).thenReturn(List.of(new ReparacionDAO.GlassAbierta("AG20260828_3", "Jhona")));
+        assertEquals(422, statusDe(() -> ctl.actualizarEntregaGlass("A20260828_1", req(false), manu)));
+        verify(dao, never()).deshacerEntregaGlass(anyString());
+    }
+
+    @Test void deshacerLlegadaSoloConFirmaPropia() {
+        ReparacionResumen propia = asigDe(7);
+        when(propia.getEntregadoAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 31, 10, 0));
+        when(propia.getEntregadoPor()).thenReturn(7);
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.of(propia));
+        ctl.deshacerLlegadaGlass("AG20260828_3", manu);
+        verify(dao).deshacerEntregaGlass(IMEI);
+        verify(logDao).insertar(42, "DESHACER_ENTREGA_GLASS",
+                "ID_REP: AG20260828_3, IMEI: " + IMEI + ", LLEGADA deshecha por el tecnico de glass");
+    }
+
+    @Test void deshacerLlegadaConFirmaAjenaEs403() {
+        ReparacionResumen propia = asigDe(7);
+        when(propia.getEntregadoAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 31, 10, 0));
+        when(propia.getEntregadoPor()).thenReturn(3);   // la entrego el de rep
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.of(propia));
+        assertEquals(403, statusDe(() -> ctl.deshacerLlegadaGlass("AG20260828_3", manu)));
+        verify(dao, never()).deshacerEntregaGlass(anyString());
+    }
+
+    @Test void deshacerLlegadaValidaTipoYExistencia() {
+        assertEquals(422, statusDe(() -> ctl.deshacerLlegadaGlass("A20260828_1", manu)));
+        when(dao.getAsignacionAnyById("AG20260828_9")).thenReturn(Optional.empty());
+        assertEquals(404, statusDe(() -> ctl.deshacerLlegadaGlass("AG20260828_9", manu)));
+    }
+```
+Run enfocados → fallo de compilación (`getGlassEntregadoPor`/`deshacerLlegadaGlass`).
+
+- [ ] **Step 2 (servidor): modelo + SELECTs + mapper + controller.** `ReparacionResumen` (servidor): campos `private Integer entregadoPor;` (tras `entregadoPorNombre`) y `private Integer glassEntregadoPor;` (tras `glassEntregadoPorNombre`) + getters/setters (`getEntregadoPor/setEntregadoPor/getGlassEntregadoPor/setGlassEntregadoPor`). `ReparacionDAO`: en `GLASS_ASIGNACION_SELECT`, tras la línea `" r.ENTREGADO_AT," +` añadir `" r.ENTREGADO_POR," +` (los GROUP BY ya lo listan). En `ASIGNACION_SELECT`, tras la subconsulta `GLASS_ENTREGADO_POR_NOMBRE` añadir:
+```java
+            " (SELECT g.ENTREGADO_POR FROM Reparacion g" +
+            "  WHERE g.IMEI = r.IMEI AND g.ID_REP LIKE 'AG%' AND g.FECHA_FIN IS NULL" +
+            "  ORDER BY g.FECHA_ASIG ASC LIMIT 1) AS GLASS_ENTREGADO_POR," +
+```
+Mapper, tras la línea de `setGlassTecnicoNombre`:
+```java
+        try { rr.setEntregadoPor((Integer) rs.getObject("ENTREGADO_POR")); } catch (Exception ignored) {}
+        try { rr.setGlassEntregadoPor((Integer) rs.getObject("GLASS_ENTREGADO_POR")); } catch (Exception ignored) {}
+```
+`ReparacionController.actualizarEntregaGlass`: sustituir `if (req.entregado()) dao.entregarGlass(asig.getImei(), principal.getIdTec());` / `else dao.deshacerEntregaGlass(asig.getImei());` por:
+```java
+        if (!req.entregado()) {
+            // Quien marca, desmarca (decisión 2026-08-31): la firma ENTREGADO_POR manda.
+            if (asig.getGlassEntregadoAt() == null) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "No hay entrega que deshacer");
+            }
+            if (!principal.getIdTec().equals(asig.getGlassEntregadoPor())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Solo quien registró la entrega puede deshacerla");
+            }
+        }
+        if (req.entregado()) dao.entregarGlass(asig.getImei(), principal.getIdTec());
+        else                 dao.deshacerEntregaGlass(asig.getImei());
+```
+Nuevo endpoint tras `marcarLlegadaGlass`:
+```java
+    /** Deshacer la llegada: solo el dueño de la AG y solo si la firma (ENTREGADO_POR) es suya. */
+    @DeleteMapping("/asignaciones/{idRep}/llegada")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deshacerLlegadaGlass(@PathVariable String idRep,
+                                     @AuthenticationPrincipal UsuarioPrincipal principal) {
+        if (idRep == null || !idRep.startsWith("AG")) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Solo aplica a asignaciones de glass");
+        }
+        ReparacionResumen asig = dao.getAsignacionAnyById(idRep)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Recurso no encontrado: " + idRep));
+        boolean esSuya = principal.getIdTec() != null && asig.getIdTec() == principal.getIdTec();
+        if (!esSuya) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo puedes deshacer la llegada de tus propias asignaciones");
+        }
+        if (asig.getEntregadoAt() == null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "No hay entrega que deshacer");
+        }
+        if (!principal.getIdTec().equals(asig.getEntregadoPor())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo quien registró la entrega puede deshacerla");
+        }
+        dao.deshacerEntregaGlass(asig.getImei());
+        logDao.insertar(principal.getIdUsu(), "DESHACER_ENTREGA_GLASS",
+                "ID_REP: " + idRep + ", IMEI: " + asig.getImei() + ", LLEGADA deshecha por el tecnico de glass");
+    }
+```
+Tests enfocados verdes → suite completa → commit (4 ficheros): `feat(servidor): quien marca desmarca — firma ENTREGADO_POR en el deshacer (entrega-glass y DELETE llegada) + ids del firmante en el JSON`.
+
+- [ ] **Step 3 (cliente): tests que fallan.** En `EntregaGlassTest`: en el helper `normal(...)` añadir `r.setGlassEntregadoPor(entregadoAt != null ? 7 : null);` y en `glass(...)` añadir `r.setEntregadoPor(entregadoAt != null ? 7 : null);`. Actualizar TODAS las llamadas `EntregaGlass.opcionMenu(x, y)` a `EntregaGlass.opcionMenu(x, y, 7)`. Añadir:
+```java
+    @Test void deshacerEntregaSoloParaElFirmante() {
+        assertEquals("Deshacer entrega", EntregaGlass.opcionMenu(normal(true, UTC_0842), false, 7));
+        assertNull(EntregaGlass.opcionMenu(normal(true, UTC_0842), false, 9));   // la firmo otro (p. ej. el de glass)
+        assertNull(EntregaGlass.opcionMenu(normal(true, UTC_0842), false, null));
+        assertEquals("Entregar a Jhona", EntregaGlass.opcionMenu(normal(true, null), false, 9)); // entregar no exige firma
+    }
+
+    @Test void deshacerLlegadaSoloParaElFirmante() {
+        ReparacionResumen ag = glass(UTC_0842);
+        assertEquals("Deshacer llegada", EntregaGlass.opcionDeshacerLlegada(ag, true, 7));
+        assertNull(EntregaGlass.opcionDeshacerLlegada(ag, true, 9));
+        assertNull(EntregaGlass.opcionDeshacerLlegada(ag, false, 7));            // pestaña Reparación
+        assertNull(EntregaGlass.opcionDeshacerLlegada(glass(null), true, 7));    // sin entrega
+        assertNull(EntregaGlass.opcionDeshacerLlegada(normal(true, UTC_0842), true, 7)); // fila A
+        assertNull(EntregaGlass.opcionDeshacerLlegada(null, true, 7));
+    }
+```
+Run → errores de compilación.
+
+- [ ] **Step 4 (cliente): modelo, lógica, DAO y menú.** `ReparacionResumen` (cliente): `private Integer entregadoPor;` (tras `entregadoPorNombre`) y `private Integer glassEntregadoPor;` (tras `glassEntregadoPorNombre`) + accesores. `EntregaGlass.opcionMenu` pasa a firma-aware:
+```java
+    /**
+     * Texto de la opción del menú contextual de Mis pendientes, o {@code null} para ocultarla.
+     * Solo pestaña Reparación, filas {@code A…} con glass abierta. "Deshacer entrega" exige la
+     * firma: solo quien registró la entrega ({@code glassEntregadoPor}) puede deshacerla
+     * (decisión 2026-08-31); re-entregar sobrescribe hora y firma.
+     */
+    public static String opcionMenu(ReparacionResumen rep, boolean pestanaGlass, Integer idTecSesion) {
+        if (rep == null || pestanaGlass) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return null;
+        if (!rep.isGlassAbierta()) return null;
+        if (rep.getGlassEntregadoAt() == null) return "Entregar a " + nombre(rep.getGlassTecnicoNombre());
+        return (idTecSesion != null && idTecSesion.equals(rep.getGlassEntregadoPor()))
+                ? "Deshacer entrega" : null;
+    }
+```
+y nueva:
+```java
+    /** "Deshacer llegada": pestaña Glass, fila AG con entrega y firma del propio técnico. */
+    public static String opcionDeshacerLlegada(ReparacionResumen rep, boolean pestanaGlass, Integer idTecSesion) {
+        if (rep == null || !pestanaGlass) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        if (rep.getEntregadoAt() == null) return null;
+        return (idTecSesion != null && idTecSesion.equals(rep.getEntregadoPor()))
+                ? "Deshacer llegada" : null;
+    }
+```
+`ReparacionDAO` (cliente), tras `marcarLlegadaGlass`:
+```java
+    /** Deshace la llegada auto-registrada (solo el firmante; el servidor valida la firma). */
+    public void deshacerLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.delete("/api/reparaciones/asignaciones/" + idRep + "/llegada");
+    }
+```
+`PendientesTecnicoController`: la llamada existente pasa a `EntregaGlass.opcionMenu(rep, glass, Sesion.getIdTec())`; tras `menu.getItems().add(marcarLlegada);` añadir:
+```java
+                MenuItem deshacerLlegada = new MenuItem("Deshacer llegada");
+                deshacerLlegada.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.deshacerLlegadaGlass(rep.getIdRep());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(deshacerLlegada);
+```
+y en `menu.setOnShowing`, tras la línea de `marcarLlegada.setVisible(...)`:
+```java
+                    deshacerLlegada.setVisible(EntregaGlass.opcionDeshacerLlegada(rep, glass, Sesion.getIdTec()) != null);
+```
+
+- [ ] **Step 5 (cliente): docs, suite, commit.** Spec §2, tras el bloque de "Marcar que llegó": `- **Quien marca, desmarca** (2026-08-31): "Deshacer entrega"/"Deshacer llegada" solo para quien firmó (`ENTREGADO_POR`); el servidor lo valida (403). Si el firmante no está, re-entregar sobrescribe hora y firma.` Spec §4: tras el endpoint `/llegada`, una línea con el `DELETE /llegada` y las validaciones de firma de ambos deshacer. Spec §9: `17. Con la llegada auto-marcada, el de rep NO ve "Deshacer entrega" y el de glass sí ve "Deshacer llegada" (y viceversa con la entrega normal); deshacer con firma ajena vía API → 403.` CHANGELOG (0.16.1, línea del gate): añadir: ` "Deshacer entrega"/"Deshacer llegada" solo puede usarlas quien registró la entrega (la firma queda en `ENTREGADO_POR`).` NOVEDADES, bullet nuevo en la sección de entrega: `- Deshacer solo puede hacerlo **quien registró** la entrega o la llegada — nadie te desmarca lo que tú firmaste (y si no está, re-entregar sobrescribe con nueva firma).` Suite completa verde → commit (por nombre, sin gitlink): `feat(cliente): quien marca desmarca — Deshacer entrega/llegada solo para el firmante (Sesion.getIdTec vs ENTREGADO_POR)`.
