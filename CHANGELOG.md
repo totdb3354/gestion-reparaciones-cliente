@@ -14,6 +14,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Fixed
 - Los errores **422** del servidor muestran su mensaje real (antes salía siempre "Contraseña actual incorrecta."); cambiar contraseña conserva su mensaje también contra servidores anteriores.
+- Las **alertas de stock de la campana ya no incluyen componentes desactivados** (aparecían como "Sin Stock" y entraban en "Pedir todas las piezas"; también podían encender el aviso al arrancar). Como en el resto de la app, un desactivado no cuenta para conteos ni alertas.
 
 ### Notas de despliegue
 - Requiere el **servidor** con el endpoint `entrega-glass` y la migración `sql/migracion-entrega-glass.sql` (columnas `ENTREGADO_AT`/`ENTREGADO_POR` en `Reparacion`; **ya aplicada en preproducción el 2026-08-28**). Orden: **ALTER → servidor → cliente**. Retrocompatible en ambos sentidos (campos JSON aditivos).
