@@ -251,12 +251,15 @@ public class PendientesSuperTecnicoController {
         });
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
             private final Label lblAsignados = new Label();
-            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblAsignados);
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass, lblAsignados);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> aplicarEstilos(sel);
             {
                 box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblGlass.setStyle(com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
                 lblAsignados.setVisible(false); lblAsignados.setManaged(false);
                 aplicarEstilos(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
@@ -274,10 +277,21 @@ public class PendientesSuperTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                String imei = getTableView().getItems().get(getIndex()).getImei();
+                ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String imei = repFila.getImei();
                 lbl.setText(imei);
+                String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
                 int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
-                boolean varios = n >= 2;
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltipGlassPendiente(repFila)));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null); lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                boolean varios = n >= 2 && glassPend == null
+                        && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
                 lblAsignados.setText(varios ? n + " asignados" : "");
                 lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
                 aplicarEstilos(getTableRow() != null && getTableRow().isSelected());
@@ -468,9 +482,10 @@ public class PendientesSuperTecnicoController {
         cEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badgeUrgente   = new Label();
             private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badgeEntrega   = new Label();     // "→ <técnico glass>" (A) / "Llegó hh:mm" (AG)
             private final Label badge          = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badgeEntrega, badge);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -493,6 +508,16 @@ public class PendientesSuperTecnicoController {
                     badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
                 } else {
                     badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
+                }
+                String textoEntrega = com.reparaciones.utils.EntregaGlass.textoBadge(rep, com.reparaciones.utils.EntregaGlass.hoy());
+                if (textoEntrega != null) {
+                    badgeEntrega.setText(textoEntrega);
+                    badgeEntrega.setStyle(base + com.reparaciones.utils.EntregaGlass.estiloColores());
+                    badgeEntrega.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltip(rep)));
+                    badgeEntrega.setVisible(true); badgeEntrega.setManaged(true);
+                } else {
+                    badgeEntrega.setTooltip(null);
+                    badgeEntrega.setVisible(false); badgeEntrega.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");

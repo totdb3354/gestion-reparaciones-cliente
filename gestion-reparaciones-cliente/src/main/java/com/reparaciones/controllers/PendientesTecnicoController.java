@@ -6,6 +6,7 @@ import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.Alertas;
 import com.reparaciones.utils.ConfirmDialog;
+import com.reparaciones.utils.EntregaGlass;
 import com.reparaciones.utils.FechaUtils;
 import com.reparaciones.utils.TipoTrabajo;
 import javafx.scene.image.Image;
@@ -71,10 +72,15 @@ public class PendientesTecnicoController {
         cTipo.setCellFactory(col -> TipoTrabajo.celdaTipoConChasis());
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                lblGlass.setStyle(EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
@@ -86,9 +92,20 @@ public class PendientesTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lbl.setText(rep.getImei());
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                setGraphic(lbl);
+                String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip(EntregaGlass.tooltipGlassPendiente(rep)));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null);
+                    lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                setGraphic(box);
             }
         });
         cModelo.setCellValueFactory(d -> {
@@ -155,12 +172,26 @@ public class PendientesTecnicoController {
                     } catch (SQLException ex) { mostrarError(ex); }
                 });
                 menu.getItems().add(togglePorCerrar);
+                MenuItem toggleEntrega = new MenuItem("Entregar a glass");
+                toggleEntrega.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        // true = entregar (aún sin entrega); false = deshacer (ya entregada)
+                        reparacionDAO.actualizarEntregaGlass(rep.getIdRep(), rep.getGlassEntregadoAt() == null);
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(toggleEntrega);
                 menu.setOnShowing(ev -> {
                     ReparacionResumen rep = getItem();
                     boolean esRepNormal = rep != null && !glass
                             && TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.REPARACION;
                     togglePorCerrar.setVisible(esRepNormal);
                     if (esRepNormal) togglePorCerrar.setText(rep.isPorCerrar() ? "Quitar por cerrar" : "Marcar por cerrar");
+                    String opcionEntrega = EntregaGlass.opcionMenu(rep, glass);
+                    toggleEntrega.setVisible(opcionEntrega != null);
+                    if (opcionEntrega != null) toggleEntrega.setText(opcionEntrega);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {
@@ -200,10 +231,11 @@ public class PendientesTecnicoController {
         cEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badgeUrgente   = new Label();
             private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badgeEntrega   = new Label();     // "→ <técnico glass>" (A) / "Llegó hh:mm" (AG)
             private final Label badge          = new Label();
             private final Label lblTipo        = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge, lblTipo);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badgeEntrega, badge, lblTipo);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -227,6 +259,16 @@ public class PendientesTecnicoController {
                     badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
                 } else {
                     badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
+                }
+                String textoEntrega = EntregaGlass.textoBadge(rep, EntregaGlass.hoy());
+                if (textoEntrega != null) {
+                    badgeEntrega.setText(textoEntrega);
+                    badgeEntrega.setStyle(base + EntregaGlass.estiloColores());
+                    badgeEntrega.setTooltip(new Tooltip(EntregaGlass.tooltip(rep)));
+                    badgeEntrega.setVisible(true); badgeEntrega.setManaged(true);
+                } else {
+                    badgeEntrega.setTooltip(null);
+                    badgeEntrega.setVisible(false); badgeEntrega.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
@@ -289,8 +331,11 @@ public class PendientesTecnicoController {
             }
             @Override protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (!empty) btn.setText(glass ? "Añadir glass" : "Añadir reparación");
-                setGraphic(empty ? null : btn);
+                if (empty) { setGraphic(null); return; }
+                btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                ReparacionResumen asig = getTableView().getItems().get(getIndex());
+                // Glass: sin el teléfono (normal abierta arriba y sin entrega) no hay nada que reparar → sin botón
+                setGraphic(glass && EntregaGlass.ocultarAnadirGlass(asig) ? null : btn);
             }
         });
 

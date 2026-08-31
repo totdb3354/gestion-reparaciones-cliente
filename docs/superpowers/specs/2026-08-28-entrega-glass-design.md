@@ -28,14 +28,16 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
 
   | Quién | Fila | Badge | Tooltip |
   |---|---|---|---|
-  | Técnico de arriba | su `A…` (Mis pendientes, Reparación) | **"Entregado 10:42"** | "Entregado a Jhona por Manu, 28/08 10:42" |
+  | Técnico de arriba | su `A…` (Mis pendientes, Reparación) | **"→ Jhona"** (sin hora: la columna Estado mide 100 px y "Entregado dd/MM hh:mm" se cortaba — ajuste smoke 2026-08-28) | "Entregado a Jhona por Manu, 28/08 10:42" |
   | Técnico de glass | su `AG…` (Mis pendientes, Glass) | **"Llegó 10:42"** | "Bajado por Manu, 28/08 10:42" |
   | Supertécnico / admin | ambas filas en **Asignaciones** | los mismos badges | los mismos tooltips |
 
-  - Si la entrega **no es de hoy**, el badge incluye la fecha: "Entregado 27/08 10:42" / "Llegó 27/08 10:42".
-  - Formato hora `HH:mm`, fecha `dd/MM` (zona local del cliente).
+  - Si la entrega **no es de hoy**, el badge "Llegó" muestra solo la fecha: "Llegó 27/08" (ya no es cuestión de minutos, y "Llegó dd/MM hh:mm" no cabía en los 100 px); la hora exacta está en el tooltip. El de arriba no lleva hora.
+  - Formato hora `HH:mm`, fecha `dd/MM` (zona Europe/Madrid, como el resto de fechas del cliente).
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.
+- **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.
+- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo). En Asignaciones sustituye al "N asignados" cuando aplica, y con glass entregada y 2 asignados no se muestra contador.
 - **Dos datos de naturaleza distinta**:
   - **"Entregado por"** es un **hecho**: se graba (`ENTREGADO_POR`) y no cambia aunque reasignen la reparación normal.
   - **"A quién / quién lo tiene"** es **estado actual**: no se guarda; se lee del dueño de la glass en cada momento.
@@ -44,10 +46,10 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   | Situación | Efecto |
   |---|---|
   | Reasignan la glass (Jhona → Javi) | Se conserva. Javi ve "Llegó 10:42"; arriba el tooltip pasa a "a Javi". |
-  | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "Entregado 10:42" con "por Manu" y puede deshacer. |
+  | Reasignan la reparación normal | Se conserva (el teléfono ya está abajo). El nuevo dueño ve "→ Jhona" (tooltip "…por Manu, 28/08 10:42") y puede deshacer. |
   | Borran la glass | Desaparece con ella; arriba no queda acción ni badge. |
-  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. |
-  | Completan la glass | La fila `AG` queda cerrada con su `ENTREGADO_AT` (futuro F4: tiempo real de glass = `FECHA_FIN − ENTREGADO_AT`). |
+  | Incidencia y reasignar (nueva `AG`, cierra la vieja) | La nueva nace **sin entrega**; si el teléfono sigue abajo, se vuelve a "Entregar" con un clic. Con dos AG abiertas donde solo la más antigua está entregada, arriba se ve "→ <glass>" (derivado de la más antigua) y la nueva no; para sellar la nueva: Deshacer → Entregar (caso jamás visto, aceptado). |
+  | Completan la glass | La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar). Futuro F4: tiempo real de glass = `FECHA_FIN − ENTREGADO_AT` en la propia `G`. |
   | Completan la normal antes que la glass | Sin efecto; la glass sigue con su "Llegó". |
 
 - **Log de actividad**: `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS`, detalle `ID_REP: A…, IMEI: …, GLASS: AG…, TECNICO_GLASS: Jhona`. Ambas acciones en el filtro de la vista Log.
@@ -92,7 +94,7 @@ Efecto: `UPDATE Reparacion SET ENTREGADO_AT = NOW(), ENTREGADO_POR = ?, UPDATED_
 - `ReparacionResumen`: campos de §4 (Gson los rellena; nulos si no vienen).
 - `ReparacionDAO.actualizarEntregaGlass(String idRep, boolean entregado)` → el PATCH; errores como `SQLException` con el mensaje del servidor (patrón existente).
 - **Clase nueva `utils/EntregaGlass`** (pura, con JUnit): concentra toda la lógica para que los controladores solo enganchen y el futuro merge `hotfix → main` (donde esos controladores han cambiado) tenga conflictos mínimos:
-  - `textoBadge(String prefijo, LocalDateTime entregadoAt, LocalDate hoy)` → `"Entregado 10:42"` / `"Entregado 27/08 10:42"` / `null` si no hay entrega.
+  - `textoBadge(rep, LocalDate hoy)` → fila `A`: `"→ <técnico de glass>"`; fila `AG`: `"Llegó 10:42"` / `"Llegó 27/08"`; `null` si no hay entrega o es pulido.
   - `tooltipArriba(rep)` → "Entregado a Jhona por Manu, 28/08 10:42"; `tooltipGlass(rep)` → "Bajado por Manu, 28/08 10:42".
   - `opcionMenu(rep, esPestanaGlass)` → `null` (oculta) / `"Entregar a Jhona"` / `"Deshacer entrega"`. Oculta si pestaña Glass, si no es `A…` normal o si `!glassAbierta`.
   - Colores del badge como constantes.
@@ -127,13 +129,17 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
 - **Servidor** (JUnit sobre BD de test, patrón de la suite actual): entregar sella todas las `AG` abiertas del IMEI y ninguna cerrada ni de otro IMEI; deshacer las limpia; derivados de la fila `A` con entrega / sin entrega / sin glass; validaciones 422/404/403 si el patrón de test de controlador existe (si no, quedan en smoke). Suite completa en verde antes del merge.
 - **Cliente**: JUnit de `EntregaGlass` (textos hoy/otro día/nulo, tooltips, visibilidad y texto de la opción). Suite en verde.
 - **Smoke en preprod** (checklist):
-  1. IMEI con normal + glass: entregar → "Entregado hh:mm" arriba, "Llegó hh:mm" en la pestaña Glass del otro técnico, ambos en Asignaciones.
+  1. IMEI con normal + glass: entregar → "→ <glass>" arriba (tooltip con hora), "Llegó hh:mm" en la pestaña Glass del otro técnico, ambos en Asignaciones.
   2. Reasignar la glass → el tooltip de arriba cambia de técnico; el nuevo glass ve "Llegó".
   3. Reasignar la normal → "por Manu" no cambia; el nuevo dueño puede deshacer.
   4. Deshacer → desaparecen ambos badges; volver a entregar → hora nueva.
   5. Borrar la glass → arriba desaparecen acción y badge.
   6. IMEI solo con normal → la opción no aparece.
-  7. Entrega de ayer (ajustar `ENTREGADO_AT` a mano en BD) → badge con fecha.
+  7. Entrega de ayer (ajustar `ENTREGADO_AT` a mano en BD) → "Llegó" con fecha; arriba el tooltip con la fecha.
   8. Log: las dos acciones con su detalle; filtro funciona.
   9. CSV de Asignaciones con la columna "Entregado".
   10. Cliente 0.16.0 contra el servidor nuevo: todo igual que antes.
+  11. Cambiar contraseña con la actual incorrecta → el diálogo dice "Contraseña actual incorrecta." (con el servidor nuevo y, por el fallback, con uno viejo).
+  12. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").
+  13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.
+  14. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.

@@ -442,6 +442,15 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
     }
 
     /**
+     * Entrega (o deshace la entrega) del teléfono a la glass abierta del mismo IMEI.
+     * Solo el dueño de la reparación normal; el servidor valida (403/422 con mensaje).
+     */
+    public void actualizarEntregaGlass(String idRep, boolean entregado) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/entrega-glass",
+                Map.of("entregado", entregado));
+    }
+
+    /**
      * Edita el componente y observaciones de una reparación finalizada.
      *
      * @param idRep              ID de la reparación a editar

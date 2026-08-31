@@ -671,12 +671,14 @@ Expected: FAIL — `expected: <Sin glass abierta para este IMEI> but was: <Contr
 En `ApiClient.clasificar`, cambiar `case 422 -> new SQLException("Contraseña actual incorrecta.");` por:
 
 ```java
-            // 422 = regla de negocio del servidor (por-cerrar, entrega-glass…): su mensaje es el bueno.
-            // El texto fijo antiguo ("Contraseña actual incorrecta.") era un resto: ningún endpoint
-            // del servidor devuelve 422 para la contraseña.
+            // 422 = regla de negocio del servidor (por-cerrar, entrega-glass, contraseña…): su mensaje es el bueno.
+            // El texto fijo antiguo ("Contraseña actual incorrecta.") ocultaba todos los demás; el único 422 sin
+            // cuerpo (cambiar contraseña en servidores viejos) lo resuelve UsuarioDAO.cambiarPassword.
             case 422 -> new SQLException(msg);
 ```
 (`msg` viene de `extractMessage`, que ya devuelve "Sin detalles." si el cuerpo está vacío; el servidor envía `message` porque tiene `server.error.include-message=always`.)
+
+Nota (review final): `AuthController` sí devolvía un 422 sin cuerpo para la contraseña; corregido en servidor (body con `message`) y con fallback en `UsuarioDAO.cambiarPassword`.
 
 Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=ApiClientClasificarTest` → sin salida (PASS).
 
@@ -951,10 +953,12 @@ public final class EntregaGlass {
                 : "Entregar a " + nombre(rep.getGlassTecnicoNombre());
     }
 
-    /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío. */
+    /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío (pulido y fila nula ⇒ vacío). */
     public static String textoCsv(ReparacionResumen rep, DateTimeFormatter fmt) {
-        LocalDateTime at = TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.GLASS
-                ? rep.getEntregadoAt() : rep.getGlassEntregadoAt();
+        if (rep == null) return "";
+        TipoTrabajo tipo = TipoTrabajo.desde(rep.getIdRep());
+        if (tipo == TipoTrabajo.PULIDO) return "";
+        LocalDateTime at = tipo == TipoTrabajo.GLASS ? rep.getEntregadoAt() : rep.getGlassEntregadoAt();
         return FechaUtils.formatear(at, fmt);   // "" si null
     }
 
@@ -1240,3 +1244,472 @@ git checkout hotfix/0.16.1
 git merge --no-ff feature/entrega-glass -m "merge: entrega del telefono al tecnico de glass — Entregado/Llego en Mis pendientes y Asignaciones, CSV y log; 422 con mensaje real (feature/entrega-glass)"
 ```
 El bump a 0.16.1, NOVEDADES y el gitlink del servidor van en el commit de release, fuera de este plan (ver spec §8 y `Apuntes/plan-futuro.md` § Hotfix 0.16.1).
+
+---
+
+## Extra del smoke (2026-08-28)
+
+### Task 11: La entrega sobrevive al completar — "Llegó" en el historial de glass
+
+Hallazgo del smoke: al completar una glass, la fila de historial `G…` nace con `FECHA_ASIG = FECHA_FIN = NOW()` y sin enlace a su `AG…` (`ID_REP_ANTERIOR` es solo para reincidencias). Decisión del usuario: la fila `G` **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` al completar, y en las vistas de historial (Agrupado por IMEI e Historial de los 3 roles) la columna Reparador muestra bajo el nombre la sub-etiqueta gris **"Llegó dd/MM HH:mm"** (siempre con día y hora), tooltip "Bajado por <quien>, dd/MM HH:mm". Sin migración (la entrega existe desde hoy).
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass` del submódulo, desde `main` `f3a1054`): `src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java` (`insertarCompleta` INSERT ~L469 y `guardarFilaIndividual` INSERT ~L553; `GLASS_HISTORIAL_SELECT` ~L968)
+- Test (servidor): `src/test/java/com/reparaciones/servidor/dao/ReparacionDAOEntregaGlassTest.java`
+- Create (cliente): `gestion-reparaciones-cliente/src/main/java/com/reparaciones/utils/CeldaReparador.java`
+- Modify (cliente): `utils/EntregaGlass.java`, `controllers/AgrupadoController.java` (~L323), `controllers/ReparacionControllerSuperTecnico.java` (~L426), `controllers/ReparacionControllerTecnico.java` (~L411), `controllers/ReparacionControllerAdmin.java` (~L287), `CHANGELOG.md`, spec §2/§5/§9
+- Test (cliente): `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- Servidor: filas `G…` del historial devuelven `entregadoAt`/`entregadoPorNombre` (mismos campos que las `AG`; el mapper ya los lee).
+- Cliente: `EntregaGlass.subEtiquetaHistorial(ReparacionResumen rep)` → `"Llegó dd/MM HH:mm"` o `null`; `CeldaReparador.crear()` → `TableCell<Object, String>`.
+
+- [ ] **Step 1 (servidor): test que falla — el historial de glass trae la entrega**
+
+Añadir a `ReparacionDAOEntregaGlassTest`:
+
+```java
+    @SuppressWarnings("unchecked")
+    @Test void historialGlassDevuelveLaEntregaHeredada() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        dao(jdbc).getHistorialGlass(null);
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class));
+        assertTrue(sql.getValue().contains(" r.ENTREGADO_AT,"), "columna ENTREGADO_AT en historial glass");
+        assertTrue(sql.getValue().contains("AS ENTREGADO_POR_NOMBRE"), "ENTREGADO_POR_NOMBRE en historial glass");
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test -Dtest=ReparacionDAOEntregaGlassTest` → FAIL en `columna ENTREGADO_AT en historial glass`.
+
+- [ ] **Step 2 (servidor): `GLASS_HISTORIAL_SELECT` con la entrega**
+
+Dentro de `GLASS_HISTORIAL_SELECT` (termina en `WHERE r.ID_REP LIKE 'G%'`), cambiar
+```java
+            " tel.UPDATED_AT AS TELEFONO_UPDATED_AT," +
+            " ta.NOMBRE AS NOMBRE_TEC_ASIGNA," +
+```
+por
+```java
+            " tel.UPDATED_AT AS TELEFONO_UPDATED_AT," +
+            " r.ENTREGADO_AT," +
+            " (SELECT te.NOMBRE FROM Tecnico te WHERE te.ID_TEC = r.ENTREGADO_POR) AS ENTREGADO_POR_NOMBRE," +
+            " ta.NOMBRE AS NOMBRE_TEC_ASIGNA," +
+```
+(Esa pareja de líneas también existe en `HISTORIAL_SELECT` de reparaciones normales: NO tocarla; solo la que está entre `GLASS_HISTORIAL_SELECT =` y `getAsignacionesGlass(`.) Las queries de historial no llevan `GROUP BY`.
+
+- [ ] **Step 3 (servidor): heredar la entrega al completar (dos INSERT)**
+
+Añadir en `ReparacionDAO` este helper privado (junto a `entregarGlass`):
+
+```java
+    /** Entrega sellada en una AG (o {ts, id} nulos si no es AG o no hay entrega): la hereda la G al completar. */
+    private Object[] entregaHeredable(String idAsignacion) {
+        if (idAsignacion == null || !idAsignacion.startsWith("AG")) return new Object[] {null, null};
+        java.util.Map<String, Object> e = jdbc.queryForMap(
+                "SELECT ENTREGADO_AT, ENTREGADO_POR FROM Reparacion WHERE ID_REP = ?", idAsignacion);
+        return new Object[] {e.get("ENTREGADO_AT"), e.get("ENTREGADO_POR")};
+    }
+```
+En `insertarCompleta` (la variante con `categoria`), justo antes de `for (FilaReparacion fila : filas) {` (~L464) añadir `Object[] entrega = entregaHeredable(idAsignacion);` y cambiar el INSERT de ~L469-471 a:
+```java
+                jdbc.update(
+                        "INSERT INTO Reparacion (ID_REP, IMEI, ID_TEC, ID_REP_ANTERIOR, FECHA_ASIG, FECHA_FIN, ID_TEC_ASIGNA, ENTREGADO_AT, ENTREGADO_POR)" +
+                        " VALUES (?,?,?,?,NOW(),NOW(),?,?,?)",
+                        idRep, imei, idTec, idRepAnterior, idTecAsigna, entrega[0], entrega[1]);
+```
+Lo mismo en `guardarFilaIndividual`: `Object[] entrega = entregaHeredable(idAsignacion);` antes de su `for`, y su INSERT (~L553-555) con las mismas dos columnas y los mismos dos argumentos extra. Si en cualquiera de los dos métodos el INSERT ya tiene otra forma, parar y reportar.
+
+- [ ] **Step 4 (servidor): test verde + suite + commit**
+
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test` → sin salida. Commit en el submódulo (solo los 2 ficheros): `feat(servidor): la G hereda ENTREGADO_AT/POR de la AG al completar y el historial de glass devuelve la entrega (Llego en historial)`.
+
+- [ ] **Step 5 (cliente): tests que fallan — sub-etiqueta de historial**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void subEtiquetaHistorialSoloEnGlassConEntrega() {
+        ReparacionResumen g = new ReparacionResumen();
+        g.setIdRep("G20260828_64");
+        g.setEntregadoAt(UTC_0842);
+        g.setEntregadoPorNombre("Manu");
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(g));
+        assertEquals("Llegó 28/08 10:42", EntregaGlass.subEtiquetaHistorial(glass(UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(glass(null)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(normal(true, UTC_0842)));
+        assertNull(EntregaGlass.subEtiquetaHistorial(null));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación (`subEtiquetaHistorial`).
+
+- [ ] **Step 6 (cliente): `EntregaGlass.subEtiquetaHistorial` + `CeldaReparador`**
+
+En `EntregaGlass`, tras `textoCsv`:
+```java
+    /**
+     * Sub-etiqueta bajo el nombre del reparador en las vistas de historial (Agrupado por IMEI,
+     * Historial): solo filas de glass (AG/G) con entrega, siempre con día y hora porque en el
+     * historial las "Fechas" de una G son las de completar, no las de asignar. Tooltip: {@link #tooltip}.
+     */
+    public static String subEtiquetaHistorial(ReparacionResumen rep) {
+        if (rep == null || rep.getEntregadoAt() == null) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        return "Llegó " + FechaUtils.formatear(rep.getEntregadoAt(), FMT_DIA_HORA);
+    }
+```
+Crear `gestion-reparaciones-cliente/src/main/java/com/reparaciones/utils/CeldaReparador.java`:
+```java
+package com.reparaciones.utils;
+
+import com.reparaciones.models.ReparacionResumen;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.VBox;
+
+/**
+ * Celda de la columna Reparador de las vistas de historial: el nombre y, en filas de glass
+ * con entrega, la sub-etiqueta "Llegó dd/MM HH:mm" debajo (mismo estilo que "Chasis" bajo
+ * el tipo). Compartida por Agrupado por IMEI y por el Historial de los tres roles.
+ */
+public final class CeldaReparador {
+
+    private CeldaReparador() {}
+
+    public static TableCell<Object, String> crear() {
+        return new TableCell<>() {
+            private final Label lblNombre = new Label();
+            private final Label lblLlego  = new Label();
+            private final VBox  box       = new VBox(1, lblNombre, lblLlego);
+            {
+                box.setAlignment(Pos.CENTER_LEFT);
+                lblLlego.setStyle("-fx-font-size: 10px; -fx-text-fill: #8A94A6;");
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(null);
+                if (empty || item == null || item.isEmpty()) { setGraphic(null); return; }
+                Object fila = (getIndex() >= 0 && getIndex() < getTableView().getItems().size())
+                        ? getTableView().getItems().get(getIndex()) : null;
+                String sub = fila instanceof ReparacionResumen rep ? EntregaGlass.subEtiquetaHistorial(rep) : null;
+                lblNombre.setText(item);
+                if (sub != null) {
+                    lblLlego.setText(sub);
+                    lblLlego.setTooltip(new Tooltip(EntregaGlass.tooltip((ReparacionResumen) fila)));
+                    lblLlego.setVisible(true); lblLlego.setManaged(true);
+                } else {
+                    lblLlego.setTooltip(null);
+                    lblLlego.setVisible(false); lblLlego.setManaged(false);
+                }
+                setGraphic(box);
+            }
+        };
+    }
+}
+```
+
+- [ ] **Step 7 (cliente): usar la celda en las 4 vistas**
+
+En `AgrupadoController` (~L323), `ReparacionControllerSuperTecnico` (~L426), `ReparacionControllerTecnico` (~L411) y `ReparacionControllerAdmin` (~L287), sustituir el bloque
+```java
+        colReparador.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(null);
+                setText(empty || item == null || item.isEmpty() ? null : item);
+            }
+        });
+```
+por
+```java
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
+```
+Si en alguno de los cuatro el bloque no es exactamente ese (p. ej. `colReparador` tipado distinto de `TableColumn<Object, String>`), parar y reportar en vez de adaptar.
+
+- [ ] **Step 8 (cliente): docs, suite, commit**
+
+`CHANGELOG.md` `[Unreleased]` → Added: añadir al final de la línea de la entrega: ` En el historial (Agrupado por IMEI e Historial), las glass completadas muestran bajo el reparador **"Llegó dd/MM hh:mm"** (la entrega se hereda al completar).`
+Spec: en §2 tabla de ciclo de vida, fila "Completan la glass" → `La fila `G` nueva **hereda** `ENTREGADO_AT`/`ENTREGADO_POR` de la `AG` (y la `AG` cerrada los conserva). En Agrupado por IMEI e Historial, bajo el reparador: sub-etiqueta "Llegó dd/MM hh:mm" (las "Fechas" de una `G` son las de completar, no las de asignar).`; en §9 añadir `14. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").`
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test` → sin salida. Commit (raíz, por nombre, sin gitlink): `feat(cliente): "Llego dd/MM hh:mm" bajo el reparador en Agrupado por IMEI e Historial (celda compartida CeldaReparador; la G hereda la entrega)`.
+
+---
+
+### Task 12: Sin teléfono no hay glass — ocultar "Añadir glass" hasta la entrega
+
+Decisión del usuario (smoke 2026-08-28): en Mis pendientes → Glass, el botón **"Añadir glass"** se **oculta** mientras el teléfono no haya llegado. Regla exacta (para no bloquear a nadie): se oculta **solo si** el IMEI tiene una **reparación normal abierta** (`A…` sin `FECHA_FIN`, ni `AG` ni `AP`) **y** la glass **no tiene entrega** (`entregadoAt == null`). Sin normal abierta (glass directa, o normal ya completada sin marcar) → botón visible. Con "Llegó" → visible.
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass-gate` desde `main` `f8c09ed`): `src/main/java/com/reparaciones/servidor/model/ReparacionResumen.java`, `src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java` (`GLASS_ASIGNACION_SELECT` y `RESUMEN_MAPPER`)
+- Test (servidor): `src/test/java/com/reparaciones/servidor/dao/ReparacionDAOEntregaGlassTest.java`
+- Modify (cliente, rama `feature/entrega-glass`): `models/ReparacionResumen.java`, `utils/EntregaGlass.java`, `controllers/PendientesTecnicoController.java` (celda `cAccion`, ~L301-320), `CHANGELOG.md`, spec §2/§9
+- Test (cliente): `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- Servidor → JSON aditivo en filas `AG`: `normalAbierta` (boolean), `normalTecnicoNombre` (String, dueño de la normal abierta más antigua; null si no hay).
+- Cliente: `EntregaGlass.ocultarAnadirGlass(ReparacionResumen rep)` → boolean.
+
+- [ ] **Step 1 (servidor): test que falla**
+
+Añadir a `ReparacionDAOEntregaGlassTest`:
+```java
+    @SuppressWarnings("unchecked")
+    @Test void asignacionesGlassDicenSiHayNormalAbiertaEnElImei() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        dao(jdbc).getAsignacionesGlass(null);
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(RowMapper.class));
+        String q = sql.getValue();
+        assertTrue(q.contains("AS NORMAL_ABIERTAS"), "NORMAL_ABIERTAS");
+        assertTrue(q.contains("AS NORMAL_TECNICO_NOMBRE"), "NORMAL_TECNICO_NOMBRE");
+        assertTrue(q.contains("n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL"),
+                "solo reparaciones normales abiertas");
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-servidor/pom.xml test -Dtest=ReparacionDAOEntregaGlassTest` → FAIL en `NORMAL_ABIERTAS`.
+
+- [ ] **Step 2 (servidor): modelo + SELECT + mapper**
+
+`ReparacionResumen` (servidor): tras `private String glassTecnicoNombre;` añadir
+```java
+    private boolean       normalAbierta;            // AG: hay reparación normal abierta en el IMEI (alguien arriba debe entregar)
+    private String        normalTecnicoNombre;      // AG: dueño de esa normal (la más antigua)
+```
+y los accesores tras `setGlassTecnicoNombre`:
+```java
+    public boolean       isNormalAbierta()                         { return normalAbierta; }
+    public void          setNormalAbierta(boolean v)               { this.normalAbierta = v; }
+    public String        getNormalTecnicoNombre()                  { return normalTecnicoNombre; }
+    public void          setNormalTecnicoNombre(String v)          { this.normalTecnicoNombre = v; }
+```
+`ReparacionDAO`, dentro de `GLASS_ASIGNACION_SELECT` (termina en `WHERE r.ID_REP LIKE 'AG%' AND r.FECHA_FIN IS NULL`), justo después de la línea `" (SELECT te.NOMBRE FROM Tecnico te WHERE te.ID_TEC = r.ENTREGADO_POR) AS ENTREGADO_POR_NOMBRE," +` añadir:
+```java
+            // Sin teléfono no hay glass: ¿hay una reparación normal abierta arriba que deba entregarlo? (Task 12)
+            " (SELECT COUNT(*) FROM Reparacion n" +
+            "  WHERE n.IMEI = r.IMEI AND n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL) AS NORMAL_ABIERTAS," +
+            " (SELECT tn.NOMBRE FROM Reparacion n JOIN Tecnico tn ON n.ID_TEC = tn.ID_TEC" +
+            "  WHERE n.IMEI = r.IMEI AND n.ID_REP LIKE 'A%' AND n.ID_REP NOT LIKE 'AG%' AND n.ID_REP NOT LIKE 'AP%' AND n.FECHA_FIN IS NULL" +
+            "  ORDER BY n.FECHA_ASIG ASC LIMIT 1) AS NORMAL_TECNICO_NOMBRE," +
+```
+(Solo correlacionan `r.IMEI`, ya agrupado: los GROUP BY no cambian.) En `RESUMEN_MAPPER`, tras la línea de `setGlassTecnicoNombre`:
+```java
+        try { rr.setNormalAbierta(rs.getInt("NORMAL_ABIERTAS") > 0); } catch (Exception ignored) {}
+        try { rr.setNormalTecnicoNombre(rs.getString("NORMAL_TECNICO_NOMBRE")); } catch (Exception ignored) {}
+```
+Run el test enfocado (verde) y la suite completa del servidor. Commit (3 ficheros): `feat(servidor): filas AG con normalAbierta/normalTecnicoNombre (hay reparacion normal abierta en el IMEI) para ocultar Anadir glass hasta la entrega`.
+
+- [ ] **Step 3 (cliente): tests que fallan**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void anadirGlassSeOcultaSoloConNormalAbiertaYSinEntrega() {
+        ReparacionResumen g = glass(null);
+        g.setNormalAbierta(true);
+        assertTrue(EntregaGlass.ocultarAnadirGlass(g));                 // alguien arriba aún no ha entregado
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(entregada));        // ya llegó
+        assertFalse(EntregaGlass.ocultarAnadirGlass(glass(null)));      // glass directa, sin normal arriba
+        ReparacionResumen normal = normal(true, null);
+        normal.setNormalAbierta(true);
+        assertFalse(EntregaGlass.ocultarAnadirGlass(normal));           // no es fila de glass
+        assertFalse(EntregaGlass.ocultarAnadirGlass(null));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación (`setNormalAbierta`).
+
+- [ ] **Step 4 (cliente): modelo, lógica y botón**
+
+`ReparacionResumen` (cliente): tras `private String glassTecnicoNombre;` añadir `private boolean normalAbierta;` y `private String normalTecnicoNombre;`, con accesores `isNormalAbierta/setNormalAbierta/getNormalTecnicoNombre/setNormalTecnicoNombre` tras `setGlassTecnicoNombre`.
+`EntregaGlass`, tras `subEtiquetaHistorial`:
+```java
+    /**
+     * Sin teléfono no hay glass (decisión 2026-08-28): el botón "Añadir glass" se oculta mientras haya
+     * una reparación normal abierta en el IMEI y esta glass no tenga entrega. Sin normal abierta
+     * (glass directa, o normal ya completada sin marcar) no se bloquea a nadie.
+     */
+    public static boolean ocultarAnadirGlass(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return false;
+        return rep.isNormalAbierta() && rep.getEntregadoAt() == null;
+    }
+```
+`PendientesTecnicoController`, celda `cAccion`, sustituir el `updateItem`:
+```java
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (!empty) btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                setGraphic(empty ? null : btn);
+            }
+```
+por
+```java
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                btn.setText(glass ? "Añadir glass" : "Añadir reparación");
+                ReparacionResumen asig = getTableView().getItems().get(getIndex());
+                // Glass: sin el teléfono (normal abierta arriba y sin entrega) no hay nada que reparar → sin botón
+                setGraphic(glass && EntregaGlass.ocultarAnadirGlass(asig) ? null : btn);
+            }
+```
+
+- [ ] **Step 5 (cliente): docs, suite, commit**
+
+CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Sin teléfono no hay glass**: en Mis pendientes → Glass, el botón "Añadir glass" no aparece mientras el IMEI tenga una reparación normal abierta y la glass no tenga entrega; en cuanto llega la píldora "Llegó" (o si no hay reparación normal abierta) vuelve a estar disponible.`
+Spec §2, tras la lista de "Qué ve cada uno": `- **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.` Spec §9: `13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.`
+Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): ocultar "Anadir glass" mientras haya reparacion normal abierta sin entrega (sin telefono no hay glass)`.
+
+---
+
+### Task 13: Píldora "Glass: <técnico>" bajo el IMEI de la reparación normal (solo cliente)
+
+Decisión del usuario (smoke 2026-08-31): en las filas de reparación normal cuyo IMEI tiene glass abierta **sin entrega registrada**, mostrar bajo el IMEI una **mini-píldora con la paleta del tipo Glass** con el texto **"Glass: Jhona"** (dueño actual de la glass). Texto neutro a propósito: el teléfono puede estar arriba o ya abajo (abierto y repartido allí); la píldora solo dice de quién es la glass. Al registrar la entrega desaparece (la índigo "→ Jhona" de Estado toma el relevo). En Asignaciones, además, **replantea el "N asignados"**: la píldora lo sustituye cuando aplica, y con la glass ya entregada y solo 2 asignados no se muestra nada (la píldora índigo ya lo cuenta). Sin servidor: `glassAbierta`/`glassTecnicoNombre`/`glassEntregadoAt` ya llegan.
+
+**Files:**
+- Modify (cliente, rama `feature/entrega-glass`): `utils/EntregaGlass.java`, `controllers/PendientesTecnicoController.java` (celda `cImei`, ~L73-94), `controllers/PendientesSuperTecnicoController.java` (celda `cImei`, ~L252-285), `CHANGELOG.md`, spec §2/§9
+- Test: `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- `EntregaGlass.etiquetaGlassPendiente(ReparacionResumen rep)` → `"Glass: <nombre>"` o `null`.
+- `EntregaGlass.ocultarContadorAsignados(ReparacionResumen rep, int n)` → boolean (fila `A…` con glass entregada y `n == 2`).
+- `EntregaGlass.estiloPildoraGlassPendiente()` → estilo completo de la mini-píldora.
+
+- [ ] **Step 1: tests que fallan**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void etiquetaGlassPendienteSoloEnNormalConGlassSinEntrega() {
+        assertEquals("Glass: Jhona", EntregaGlass.etiquetaGlassPendiente(normal(true, null)));
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(true, UTC_0842)));   // entregada: la cuenta la píldora →
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(false, null)));      // sin glass
+        assertNull(EntregaGlass.etiquetaGlassPendiente(glass(null)));              // fila AG, no aplica
+        assertNull(EntregaGlass.etiquetaGlassPendiente(null));
+    }
+
+    @Test void contadorAsignadosSeOcultaSoloConGlassEntregadaYDosAsignados() {
+        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 2));
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 3)); // hay mas gente: el contador aporta
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, null), 2));     // sin entrega: lo cubre la pildora verde
+        assertFalse(EntregaGlass.ocultarContadorAsignados(glass(UTC_0842), 2));        // fila AG, no aplica
+        assertFalse(EntregaGlass.ocultarContadorAsignados(null, 2));
+    }
+
+    @Test void estiloPildoraGlassPendienteUsaLaPaletaGlass() {
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorFondo()));
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorTexto()));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación.
+
+- [ ] **Step 2: lógica en `EntregaGlass`**
+
+Tras `ocultarAnadirGlass`:
+```java
+    /**
+     * Píldora bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega
+     * registrada: "Glass: <dueño actual>". Texto neutro a propósito: el teléfono puede estar
+     * arriba o ya abajo (abierto y repartido allí); solo dice de quién es la glass. Al entregar
+     * → null (la píldora índigo "→ …" de Estado toma el relevo).
+     */
+    public static String etiquetaGlassPendiente(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return null;
+        if (!rep.isGlassAbierta() || rep.getGlassEntregadoAt() != null) return null;
+        return "Glass: " + nombre(rep.getGlassTecnicoNombre());
+    }
+
+    /**
+     * El "N asignados" de la vista Asignaciones sobra cuando la píldora índigo ya cuenta la
+     * historia: fila normal con glass entregada y exactamente 2 asignados (el caso típico).
+     * Con 3+ el contador sigue aportando.
+     */
+    public static boolean ocultarContadorAsignados(ReparacionResumen rep, int n) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return false;
+        return rep.isGlassAbierta() && rep.getGlassEntregadoAt() != null && n == 2;
+    }
+
+    /** Estilo completo de la mini-píldora "Glass: …" (paleta del tipo Glass, tamaño sub-etiqueta). */
+    public static String estiloPildoraGlassPendiente() {
+        return "-fx-background-radius: 8; -fx-padding: 1 8 1 8; -fx-font-size: 10px; -fx-font-weight: bold;"
+             + "-fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";";
+    }
+```
+
+- [ ] **Step 3: celda IMEI de Mis pendientes (`PendientesTecnicoController` ~L73-94)**
+
+Sustituir la celda actual de `cImei` (Label suelto) por la versión con píldora (misma gestión de selección):
+```java
+        cImei.setCellFactory(col -> new TableCell<>() {
+            private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                lblGlass.setStyle(EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) newRow.selectedProperty().addListener(selListener);
+                });
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lbl.setText(rep.getImei());
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + rep.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null);
+                    lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                setGraphic(box);
+            }
+        });
+```
+
+- [ ] **Step 4: celda IMEI de Asignaciones (`PendientesSuperTecnicoController` ~L252-285)**
+
+En la celda existente: añadir `private final Label lblGlass = new Label();` tras `lblAsignados`, VBox pasa a `new javafx.scene.layout.VBox(1, lbl, lblGlass, lblAsignados)`, en el bloque init `lblGlass.setStyle(com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente()); lblGlass.setVisible(false); lblGlass.setManaged(false);` y en `updateItem`, sustituir el bloque del contador:
+```java
+                int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
+                boolean varios = n >= 2;
+                lblAsignados.setText(varios ? n + " asignados" : "");
+                lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
+```
+por
+```java
+                ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
+                int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + repFila.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null); lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                boolean varios = n >= 2 && glassPend == null
+                        && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
+                lblAsignados.setText(varios ? n + " asignados" : "");
+                lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
+```
+(Si `Tooltip` no resuelve sin cualificar en ese fichero, usar `javafx.scene.control.Tooltip`. Si la celda difiere del anclaje, parar y reportar.)
+
+- [ ] **Step 5: docs, suite, commit**
+
+CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Píldora "Glass: <técnico>" bajo el IMEI** en Mis pendientes y Asignaciones (filas de reparación normal con glass abierta sin entrega): se ve de primeras quién tiene la glass del IMEI, esté el teléfono arriba o ya abajo. Al registrar la entrega la sustituye la píldora "→ <técnico>"; en Asignaciones, el "2 asignados" genérico deja de mostrarse cuando la píldora (verde o índigo) ya cuenta quién es el segundo.`
+Spec §2, tras el bloque "Sin teléfono no hay glass": `- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo). En Asignaciones sustituye al "N asignados" cuando aplica, y con glass entregada y 2 asignados no se muestra contador.` Spec §9, añadir: `15. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.`
+Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): pildora "Glass: <tecnico>" bajo el IMEI en Mis pendientes y Asignaciones mientras la entrega no este registrada (sustituye al contador cuando aplica)`.
