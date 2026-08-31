@@ -7,6 +7,10 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+_(cambios para la próxima versión)_
+
+## [0.16.1] - 2026-08-31
+
 ### Added
 - **Entrega del teléfono al técnico de glass**: en Mis pendientes, el dueño de una reparación normal cuyo IMEI tiene glass abierta puede **"Entregar a <técnico de glass>"** (clic derecho, junto a "Marcar por cerrar"); se registra quién y a qué hora. Badge **"→ <técnico de glass>"** en su fila (la columna Estado no daba para "Entregado dd/MM hh:mm") y **"Llegó hh:mm"** en la fila de glass del otro técnico (solo la fecha, "Llegó dd/MM", si no es de hoy); el tooltip lleva quién, a quién y la hora. Visibles también en Asignaciones. "Deshacer entrega" por si fue un error. Columna "Entregado" en el CSV de Asignaciones. Acciones `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` en el log. En el historial (Agrupado por IMEI e Historial), las glass completadas muestran bajo el reparador **"Llegó dd/MM hh:mm"** (la entrega se hereda al completar).
 - **Sin teléfono no hay glass**: en Mis pendientes → Glass, el botón "Añadir glass" no aparece mientras el IMEI tenga una reparación normal abierta y la glass no tenga entrega; en cuanto llega la píldora "Llegó" (o si no hay reparación normal abierta) vuelve a estar disponible.
@@ -17,7 +21,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - Las **alertas de stock de la campana ya no incluyen componentes desactivados** (aparecían como "Sin Stock" y entraban en "Pedir todas las piezas"; también podían encender el aviso al arrancar). Como en el resto de la app, un desactivado no cuenta para conteos ni alertas.
 
 ### Notas de despliegue
-- Requiere el **servidor** con el endpoint `entrega-glass` y la migración `sql/migracion-entrega-glass.sql` (columnas `ENTREGADO_AT`/`ENTREGADO_POR` en `Reparacion`; **ya aplicada en preproducción el 2026-08-28**). Orden: **ALTER → servidor → cliente**. Retrocompatible en ambos sentidos (campos JSON aditivos).
+- Requiere el **servidor** con el endpoint `entrega-glass` y la migración `sql/migracion-entrega-glass.sql` (columnas `ENTREGADO_AT`/`ENTREGADO_POR` en `Reparacion`; **ya aplicada en preproducción el 2026-08-28**). Orden: **ALTER → servidor → cliente**. Retrocompatible en ambos sentidos (campos JSON aditivos). Servidor: `main` `9eba0ae`, **ya desplegado en preproducción** (2026-08-31).
 
 ## [0.16.0] - 2026-07-10
 
