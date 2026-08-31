@@ -202,16 +202,27 @@ public class PendientesTecnicoController {
                     } catch (SQLException ex) { mostrarError(ex); }
                 });
                 menu.getItems().add(marcarLlegada);
+                MenuItem deshacerLlegada = new MenuItem("Deshacer llegada");
+                deshacerLlegada.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.deshacerLlegadaGlass(rep.getIdRep());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(deshacerLlegada);
                 menu.setOnShowing(ev -> {
                     ReparacionResumen rep = getItem();
                     boolean esRepNormal = rep != null && !glass
                             && TipoTrabajo.desde(rep.getIdRep()) == TipoTrabajo.REPARACION;
                     togglePorCerrar.setVisible(esRepNormal);
                     if (esRepNormal) togglePorCerrar.setText(rep.isPorCerrar() ? "Quitar por cerrar" : "Marcar por cerrar");
-                    String opcionEntrega = EntregaGlass.opcionMenu(rep, glass);
+                    String opcionEntrega = EntregaGlass.opcionMenu(rep, glass, Sesion.getIdTec());
                     toggleEntrega.setVisible(opcionEntrega != null);
                     if (opcionEntrega != null) toggleEntrega.setText(opcionEntrega);
                     marcarLlegada.setVisible(EntregaGlass.mostrarMarcarLlegada(rep, glass));
+                    deshacerLlegada.setVisible(EntregaGlass.opcionDeshacerLlegada(rep, glass, Sesion.getIdTec()) != null);
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {

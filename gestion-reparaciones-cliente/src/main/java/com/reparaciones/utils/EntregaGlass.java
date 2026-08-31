@@ -71,15 +71,26 @@ public final class EntregaGlass {
 
     /**
      * Texto de la opción del menú contextual de Mis pendientes, o {@code null} para ocultarla.
-     * Solo en la pestaña Reparación, en filas {@code A…} normales con glass abierta.
+     * Solo pestaña Reparación, filas {@code A…} con glass abierta. "Deshacer entrega" exige la
+     * firma: solo quien registró la entrega ({@code glassEntregadoPor}) puede deshacerla
+     * (decisión 2026-08-31); re-entregar sobrescribe hora y firma.
      */
-    public static String opcionMenu(ReparacionResumen rep, boolean pestanaGlass) {
+    public static String opcionMenu(ReparacionResumen rep, boolean pestanaGlass, Integer idTecSesion) {
         if (rep == null || pestanaGlass) return null;
         if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return null;
         if (!rep.isGlassAbierta()) return null;
-        return rep.getGlassEntregadoAt() != null
-                ? "Deshacer entrega"
-                : "Entregar a " + nombre(rep.getGlassTecnicoNombre());
+        if (rep.getGlassEntregadoAt() == null) return "Entregar a " + nombre(rep.getGlassTecnicoNombre());
+        return (idTecSesion != null && idTecSesion.equals(rep.getGlassEntregadoPor()))
+                ? "Deshacer entrega" : null;
+    }
+
+    /** "Deshacer llegada": pestaña Glass, fila AG con entrega y firma del propio técnico. */
+    public static String opcionDeshacerLlegada(ReparacionResumen rep, boolean pestanaGlass, Integer idTecSesion) {
+        if (rep == null || !pestanaGlass) return null;
+        if (TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        if (rep.getEntregadoAt() == null) return null;
+        return (idTecSesion != null && idTecSesion.equals(rep.getEntregadoPor()))
+                ? "Deshacer llegada" : null;
     }
 
     /** Columna "Entregado" del CSV de Asignaciones: fecha completa o vacío. */

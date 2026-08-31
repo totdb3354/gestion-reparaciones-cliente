@@ -11,6 +11,7 @@ El viaje del glass entre plantas por fin queda registrado: quién lo tiene, cuá
 - El de arriba ve **"→ Jhona"** en su fila: ya se lo entregó. ¿Clic por error? **"Deshacer entrega"** y listo.
 - El supertécnico ve ambas píldoras en **Asignaciones**, sin hacer nada.
 - Si reasignan la glass, el nombre se actualiza solo; quién la entregó no cambia (es un hecho, no un estado).
+- Deshacer solo puede hacerlo **quien registró** la entrega o la llegada — nadie te desmarca lo que tú firmaste (y si no está, re-entregar sobrescribe con nueva firma).
 
 ## 🟢 "Glass: Jhona" — sabes a quién dárselo antes de moverte
 

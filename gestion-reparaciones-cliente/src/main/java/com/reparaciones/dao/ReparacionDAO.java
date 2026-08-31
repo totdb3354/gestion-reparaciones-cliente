@@ -455,6 +455,11 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
         ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/llegada", null);
     }
 
+    /** Deshace la llegada auto-registrada (solo el firmante; el servidor valida la firma). */
+    public void deshacerLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.delete("/api/reparaciones/asignaciones/" + idRep + "/llegada");
+    }
+
     /**
      * Edita el componente y observaciones de una reparación finalizada.
      *

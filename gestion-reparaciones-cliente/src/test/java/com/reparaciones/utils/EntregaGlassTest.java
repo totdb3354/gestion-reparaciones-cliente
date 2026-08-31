@@ -22,6 +22,7 @@ class EntregaGlassTest {
         r.setGlassAbierta(glassAbierta);
         r.setGlassEntregadoAt(entregadoAt);
         r.setGlassEntregadoPorNombre(entregadoAt != null ? "Manu" : null);
+        r.setGlassEntregadoPor(entregadoAt != null ? 7 : null);
         r.setGlassTecnicoNombre(glassAbierta ? "Jhona" : null);
         return r;
     }
@@ -31,6 +32,7 @@ class EntregaGlassTest {
         r.setIdRep("AG20260828_3");
         r.setEntregadoAt(entregadoAt);
         r.setEntregadoPorNombre(entregadoAt != null ? "Manu" : null);
+        r.setEntregadoPor(entregadoAt != null ? 7 : null);
         return r;
     }
 
@@ -81,30 +83,30 @@ class EntregaGlassTest {
     // ── Opción de menú ─────────────────────────────────────────────────────
 
     @Test void opcionEntregarConGlassAbiertaSinEntrega() {
-        assertEquals("Entregar a Jhona", EntregaGlass.opcionMenu(normal(true, null), false));
+        assertEquals("Entregar a Jhona", EntregaGlass.opcionMenu(normal(true, null), false, 7));
     }
 
     @Test void opcionDeshacerConEntrega() {
-        assertEquals("Deshacer entrega", EntregaGlass.opcionMenu(normal(true, UTC_0842), false));
+        assertEquals("Deshacer entrega", EntregaGlass.opcionMenu(normal(true, UTC_0842), false, 7));
     }
 
     @Test void opcionOcultaSinGlassAbierta() {
-        assertNull(EntregaGlass.opcionMenu(normal(false, null), false));
+        assertNull(EntregaGlass.opcionMenu(normal(false, null), false, 7));
     }
 
     @Test void opcionOcultaEnPestanaGlassYEnFilasGlass() {
-        assertNull(EntregaGlass.opcionMenu(normal(true, null), true));
-        assertNull(EntregaGlass.opcionMenu(glass(null), false));
+        assertNull(EntregaGlass.opcionMenu(normal(true, null), true, 7));
+        assertNull(EntregaGlass.opcionMenu(glass(null), false, 7));
     }
 
     @Test void opcionOcultaSinFila() {
-        assertNull(EntregaGlass.opcionMenu(null, false));
+        assertNull(EntregaGlass.opcionMenu(null, false, 7));
     }
 
     @Test void nombreVacioCaeEnGlass() {
         ReparacionResumen sinTecnico = normal(true, null);
         sinTecnico.setGlassTecnicoNombre(null);
-        assertEquals("Entregar a glass", EntregaGlass.opcionMenu(sinTecnico, false));
+        assertEquals("Entregar a glass", EntregaGlass.opcionMenu(sinTecnico, false, 7));
 
         ReparacionResumen conEntrega = normal(true, UTC_0842);
         conEntrega.setGlassTecnicoNombre("");
@@ -248,5 +250,22 @@ class EntregaGlassTest {
         assertFalse(EntregaGlass.mostrarMarcarLlegada(entregada, true));             // ya llegó
         assertFalse(EntregaGlass.mostrarMarcarLlegada(glass(null), true));           // glass directa: no está bloqueada
         assertFalse(EntregaGlass.mostrarMarcarLlegada(null, true));
+    }
+
+    @Test void deshacerEntregaSoloParaElFirmante() {
+        assertEquals("Deshacer entrega", EntregaGlass.opcionMenu(normal(true, UTC_0842), false, 7));
+        assertNull(EntregaGlass.opcionMenu(normal(true, UTC_0842), false, 9));   // la firmo otro (p. ej. el de glass)
+        assertNull(EntregaGlass.opcionMenu(normal(true, UTC_0842), false, null));
+        assertEquals("Entregar a Jhona", EntregaGlass.opcionMenu(normal(true, null), false, 9)); // entregar no exige firma
+    }
+
+    @Test void deshacerLlegadaSoloParaElFirmante() {
+        ReparacionResumen ag = glass(UTC_0842);
+        assertEquals("Deshacer llegada", EntregaGlass.opcionDeshacerLlegada(ag, true, 7));
+        assertNull(EntregaGlass.opcionDeshacerLlegada(ag, true, 9));
+        assertNull(EntregaGlass.opcionDeshacerLlegada(ag, false, 7));            // pestaña Reparación
+        assertNull(EntregaGlass.opcionDeshacerLlegada(glass(null), true, 7));    // sin entrega
+        assertNull(EntregaGlass.opcionDeshacerLlegada(normal(true, UTC_0842), true, 7)); // fila A
+        assertNull(EntregaGlass.opcionDeshacerLlegada(null, true, 7));
     }
 }
