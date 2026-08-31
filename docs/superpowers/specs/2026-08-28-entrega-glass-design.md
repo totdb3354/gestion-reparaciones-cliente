@@ -37,7 +37,9 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.
 - **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.
-- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo). En Asignaciones sustituye al "N asignados" cuando aplica, y con glass entregada y 2 asignados no se muestra contador.
+- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo).
+- **Bidireccional — píldora "Rep: <técnico>"** (smoke 2026-08-31): en las filas de glass, píldora azul (paleta del tipo Reparación) con el dueño de la reparación normal abierta más antigua del IMEI. Se mantiene tras el "Llegó" (dice a quién devolver el teléfono para ensamblar) y desaparece sola al cerrarse la normal.
+- **Contador "N asignados"** (Asignaciones): con **2 asignados** y una píldora que ya cuenta al segundo (verde, índigo o azul) se oculta; con **3+** vuelve y convive con la píldora (la píldora dice el nombre relevante, el contador avisa de que hay más gente).
 - **Dos datos de naturaleza distinta**:
   - **"Entregado por"** es un **hecho**: se graba (`ENTREGADO_POR`) y no cambia aunque reasignen la reparación normal.
   - **"A quién / quién lo tiene"** es **estado actual**: no se guarda; se lee del dueño de la glass en cada momento.
@@ -143,3 +145,4 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
   12. Completar la glass entregada → en Agrupado por IMEI e Historial la fila G muestra "Llegó dd/MM hh:mm" bajo el reparador (tooltip "Bajado por …").
   13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.
   14. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.
+  15. Fila glass con normal abierta → píldora azul "Rep: <técnico>" bajo el IMEI (también tras el "Llegó"); con 3+ asignados, píldora y contador "N asignados" conviven.

@@ -15,7 +15,8 @@ El viaje del glass entre plantas por fin queda registrado: quién lo tiene, cuá
 ## 🟢 "Glass: Jhona" — sabes a quién dárselo antes de moverte
 
 - Mientras la entrega no esté registrada, la reparación normal lleva bajo el IMEI la **píldora verde "Glass: <técnico>"**: de un vistazo sabes de quién es la glass de ese teléfono, esté arriba o ya abajo.
-- Al registrar la entrega, la verde desaparece y queda la "→ <técnico>". En Asignaciones, el "2 asignados" genérico deja de estorbar cuando la píldora ya cuenta quién es el segundo.
+- Al registrar la entrega, la verde desaparece y queda la "→ <técnico>". En Asignaciones, el "2 asignados" genérico deja de estorbar cuando una píldora ya cuenta quién es el segundo (con 3 o más asignados, el contador acompaña a la píldora).
+- Y en sentido contrario: la asignación de glass lleva la píldora azul **"Rep: <técnico>"** mientras la reparación normal siga abierta — el de abajo sabe quién tiene el resto del teléfono y a quién devolvérselo, incluso después del "Llegó".
 
 ## 🚫 Sin teléfono no hay glass
 

@@ -125,13 +125,42 @@ public final class EntregaGlass {
     }
 
     /**
-     * El "N asignados" de la vista Asignaciones sobra cuando la píldora índigo ya cuenta la
-     * historia: fila normal con glass entregada y exactamente 2 asignados (el caso típico).
-     * Con 3+ el contador sigue aportando.
+     * El "N asignados" de la vista Asignaciones sobra cuando una píldora ya cuenta quién es el
+     * segundo: fila normal con glass abierta (verde si pendiente, índigo si entregada) o fila de
+     * glass con la normal abierta (azul), siempre con exactamente 2 asignados. Con 3+ el contador
+     * vuelve a aportar y convive con la píldora.
      */
     public static boolean ocultarContadorAsignados(ReparacionResumen rep, int n) {
-        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return false;
-        return rep.isGlassAbierta() && rep.getGlassEntregadoAt() != null && n == 2;
+        if (rep == null || n != 2) return false;
+        switch (TipoTrabajo.desde(rep.getIdRep())) {
+            case REPARACION: return rep.isGlassAbierta();
+            case GLASS:      return rep.isNormalAbierta();
+            default:         return false;
+        }
+    }
+
+    /**
+     * Píldora bajo el IMEI de la fila de glass mientras la reparación normal del IMEI siga
+     * abierta: "Rep: <dueño de la normal más antigua>". Se mantiene tras el "Llegó": al de
+     * glass le dice a quién devolver el teléfono para ensamblar. Desaparece sola al cerrarse
+     * la normal (los derivados solo cuentan abiertas).
+     */
+    public static String etiquetaRepAbierta(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.GLASS) return null;
+        if (!rep.isNormalAbierta()) return null;
+        return "Rep: " + nombreRep(rep.getNormalTecnicoNombre());
+    }
+
+    /** Tooltip de la píldora "Rep: …". */
+    public static String tooltipRepAbierta(ReparacionResumen rep) {
+        if (etiquetaRepAbierta(rep) == null) return null;
+        return "Reparación abierta de " + nombreRep(rep.getNormalTecnicoNombre());
+    }
+
+    /** Estilo completo de la mini-píldora "Rep: …" (paleta del tipo Reparación). */
+    public static String estiloPildoraRepAbierta() {
+        return "-fx-background-radius: 8; -fx-padding: 1 8 1 8; -fx-font-size: 10px; -fx-font-weight: bold;"
+             + "-fx-background-color: " + TipoTrabajo.REPARACION.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.REPARACION.colorTexto() + ";";
     }
 
     /** Tooltip de la píldora "Glass: …", con el mismo fallback de nombre que el resto de textos. */
@@ -161,5 +190,9 @@ public final class EntregaGlass {
 
     private static String nombre(String n) {
         return (n == null || n.isBlank()) ? "glass" : n;
+    }
+
+    private static String nombreRep(String n) {
+        return (n == null || n.isBlank()) ? "técnico" : n;
     }
 }

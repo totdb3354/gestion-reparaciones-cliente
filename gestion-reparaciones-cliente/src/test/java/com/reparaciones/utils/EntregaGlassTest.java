@@ -190,12 +190,36 @@ class EntregaGlassTest {
         assertNull(EntregaGlass.etiquetaGlassPendiente(null));
     }
 
-    @Test void contadorAsignadosSeOcultaSoloConGlassEntregadaYDosAsignados() {
-        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 2));
-        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 3)); // hay mas gente: el contador aporta
-        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, null), 2));     // sin entrega: lo cubre la pildora verde
-        assertFalse(EntregaGlass.ocultarContadorAsignados(glass(UTC_0842), 2));        // fila AG, no aplica
+    @Test void contadorAsignadosSeOcultaSoloCuandoUnaPildoraCuentaAlSegundo() {
+        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, null), 2));      // verde: Glass pendiente
+        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 2));  // indigo: entregada
+        ReparacionResumen ag = glass(null);
+        ag.setNormalAbierta(true);
+        assertTrue(EntregaGlass.ocultarContadorAsignados(ag, 2));                      // azul: Rep abierta
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, null), 3));     // 3+: el contador convive
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(false, null), 2));    // sin glass
+        assertFalse(EntregaGlass.ocultarContadorAsignados(glass(UTC_0842), 2));        // AG sin normal abierta
         assertFalse(EntregaGlass.ocultarContadorAsignados(null, 2));
+    }
+
+    @Test void etiquetaRepAbiertaSoloEnGlassConNormalAbierta() {
+        ReparacionResumen ag = glass(null);
+        ag.setNormalAbierta(true);
+        ag.setNormalTecnicoNombre("Manu");
+        assertEquals("Rep: Manu", EntregaGlass.etiquetaRepAbierta(ag));
+        assertEquals("Reparación abierta de Manu", EntregaGlass.tooltipRepAbierta(ag));
+
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        entregada.setNormalTecnicoNombre("Manu");
+        assertEquals("Rep: Manu", EntregaGlass.etiquetaRepAbierta(entregada));   // se mantiene tras el "Llegó"
+
+        assertNull(EntregaGlass.etiquetaRepAbierta(glass(null)));                // sin normal abierta
+        assertNull(EntregaGlass.etiquetaRepAbierta(normal(true, null)));         // fila A, no aplica
+        assertNull(EntregaGlass.etiquetaRepAbierta(null));
+        assertNull(EntregaGlass.tooltipRepAbierta(glass(null)));
+        assertTrue(EntregaGlass.estiloPildoraRepAbierta().contains(TipoTrabajo.REPARACION.colorFondo()));
+        assertTrue(EntregaGlass.estiloPildoraRepAbierta().contains(TipoTrabajo.REPARACION.colorTexto()));
     }
 
     @Test void tooltipGlassPendienteConFallbackDeNombre() {

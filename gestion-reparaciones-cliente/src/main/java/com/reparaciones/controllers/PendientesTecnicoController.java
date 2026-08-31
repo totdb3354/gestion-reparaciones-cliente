@@ -95,10 +95,19 @@ public class PendientesTecnicoController {
                 ReparacionResumen rep = getTableView().getItems().get(getIndex());
                 lbl.setText(rep.getImei());
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
-                if (glassPend != null) {
-                    lblGlass.setText(glassPend);
-                    lblGlass.setTooltip(new Tooltip(EntregaGlass.tooltipGlassPendiente(rep)));
+                // Verde en filas A (quién tiene la glass); azul en filas AG (quién tiene la normal).
+                String pildora = EntregaGlass.etiquetaGlassPendiente(rep);
+                String tip     = EntregaGlass.tooltipGlassPendiente(rep);
+                String estilo  = EntregaGlass.estiloPildoraGlassPendiente();
+                if (pildora == null) {
+                    pildora = EntregaGlass.etiquetaRepAbierta(rep);
+                    tip     = EntregaGlass.tooltipRepAbierta(rep);
+                    estilo  = EntregaGlass.estiloPildoraRepAbierta();
+                }
+                if (pildora != null) {
+                    lblGlass.setText(pildora);
+                    lblGlass.setStyle(estilo);
+                    lblGlass.setTooltip(new Tooltip(tip));
                     lblGlass.setVisible(true); lblGlass.setManaged(true);
                 } else {
                     lblGlass.setText(null);

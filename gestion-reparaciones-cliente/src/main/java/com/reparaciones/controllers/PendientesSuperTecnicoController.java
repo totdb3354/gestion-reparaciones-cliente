@@ -280,17 +280,27 @@ public class PendientesSuperTecnicoController {
                 ReparacionResumen repFila = getTableView().getItems().get(getIndex());
                 String imei = repFila.getImei();
                 lbl.setText(imei);
-                String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
+                // Verde en filas A (quién tiene la glass); azul en filas AG (quién tiene la normal).
+                String pildora = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
+                String tip     = com.reparaciones.utils.EntregaGlass.tooltipGlassPendiente(repFila);
+                String estilo  = com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente();
+                if (pildora == null) {
+                    pildora = com.reparaciones.utils.EntregaGlass.etiquetaRepAbierta(repFila);
+                    tip     = com.reparaciones.utils.EntregaGlass.tooltipRepAbierta(repFila);
+                    estilo  = com.reparaciones.utils.EntregaGlass.estiloPildoraRepAbierta();
+                }
                 int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
-                if (glassPend != null) {
-                    lblGlass.setText(glassPend);
-                    lblGlass.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltipGlassPendiente(repFila)));
+                if (pildora != null) {
+                    lblGlass.setText(pildora);
+                    lblGlass.setStyle(estilo);
+                    lblGlass.setTooltip(new Tooltip(tip));
                     lblGlass.setVisible(true); lblGlass.setManaged(true);
                 } else {
                     lblGlass.setText(null); lblGlass.setTooltip(null);
                     lblGlass.setVisible(false); lblGlass.setManaged(false);
                 }
-                boolean varios = n >= 2 && glassPend == null
+                // Con 2 asignados la píldora ya cuenta al segundo; con 3+ el contador convive con ella.
+                boolean varios = n >= 2
                         && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
                 lblAsignados.setText(varios ? n + " asignados" : "");
                 lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
