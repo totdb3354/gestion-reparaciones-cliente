@@ -237,4 +237,16 @@ class EntregaGlassTest {
         assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorFondo()));
         assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorTexto()));
     }
+
+    @Test void marcarLlegadaSoloEnPestanaGlassYFilaBloqueada() {
+        ReparacionResumen bloqueada = glass(null);
+        bloqueada.setNormalAbierta(true);
+        assertTrue(EntregaGlass.mostrarMarcarLlegada(bloqueada, true));
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(bloqueada, false));            // pestaña Reparación
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(entregada, true));             // ya llegó
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(glass(null), true));           // glass directa: no está bloqueada
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(null, true));
+    }
 }

@@ -113,6 +113,14 @@ public final class EntregaGlass {
     }
 
     /**
+     * "Marcar que llegó": válvula de escape del gate — visible solo en la pestaña Glass, en la
+     * fila bloqueada (normal abierta y sin entrega). La firma el propio técnico de glass.
+     */
+    public static boolean mostrarMarcarLlegada(ReparacionResumen rep, boolean pestanaGlass) {
+        return pestanaGlass && ocultarAnadirGlass(rep);
+    }
+
+    /**
      * Píldora bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega
      * registrada: "Glass: <dueño actual>". Texto neutro a propósito: el teléfono puede estar
      * arriba o ya abajo (abierto y repartido allí); solo dice de quién es la glass. Al entregar

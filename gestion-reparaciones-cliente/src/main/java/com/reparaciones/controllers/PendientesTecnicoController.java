@@ -192,6 +192,16 @@ public class PendientesTecnicoController {
                     } catch (SQLException ex) { mostrarError(ex); }
                 });
                 menu.getItems().add(toggleEntrega);
+                MenuItem marcarLlegada = new MenuItem("Marcar que llegó");
+                marcarLlegada.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.marcarLlegadaGlass(rep.getIdRep());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(marcarLlegada);
                 menu.setOnShowing(ev -> {
                     ReparacionResumen rep = getItem();
                     boolean esRepNormal = rep != null && !glass
@@ -201,6 +211,7 @@ public class PendientesTecnicoController {
                     String opcionEntrega = EntregaGlass.opcionMenu(rep, glass);
                     toggleEntrega.setVisible(opcionEntrega != null);
                     if (opcionEntrega != null) toggleEntrega.setText(opcionEntrega);
+                    marcarLlegada.setVisible(EntregaGlass.mostrarMarcarLlegada(rep, glass));
                 });
                 setContextMenu(menu);
                 setOnContextMenuRequested(e -> {

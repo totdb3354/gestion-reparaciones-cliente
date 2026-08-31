@@ -22,6 +22,7 @@ El viaje del glass entre plantas por fin queda registrado: quién lo tiene, cuá
 
 - En la pestaña Glass, el botón **"Añadir glass" no aparece** mientras el teléfono siga arriba (reparación normal abierta y entrega sin registrar). En cuanto llega — o si la glass va sola, sin reparación normal — el botón está disponible.
 - Así nadie "termina" un glass que aún no tiene, y de paso todos se acuerdan de marcar la entrega.
+- ¿El teléfono ya estaba abajo o nadie registró la entrega? El técnico de glass tiene **"Marcar que llegó"** (clic derecho): se desbloquea al momento y queda firmado quién lo registró.
 
 ## 📜 El historial también lo cuenta
 

@@ -450,6 +450,11 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
                 Map.of("entregado", entregado));
     }
 
+    /** El técnico de glass registra él mismo la llegada del teléfono (válvula del gate). */
+    public void marcarLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/llegada", null);
+    }
+
     /**
      * Edita el componente y observaciones de una reparación finalizada.
      *

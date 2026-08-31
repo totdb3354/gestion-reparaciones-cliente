@@ -37,6 +37,7 @@ Hoy el paso 1 no queda en ninguna parte. Consecuencia: el técnico de glass tien
   - Palabra "Llegó" (no "Recibido"): "Recibido" ya es el badge de *pieza de solicitud recibida* en esa misma columna.
   - Paleta propia suave, índigo (`#E8EAF6` fondo / `#3949AB` texto), misma pastilla y tamaño que Urgente/Por cerrar. Ajustable en el smoke.
 - **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.
+- **"Marcar que llegó"** (2026-08-31): en la fila de glass bloqueada, el propio técnico registra la llegada (menú contextual); queda firmado (`ENTREGADO_POR` = él, log `ENTREGAR_GLASS` con detalle de llegada propia). Cubre a los técnicos de abajo, que no dependen de que nadie "baje" nada.
 - **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo).
 - **Bidireccional — píldora "Rep: <técnico>"** (smoke 2026-08-31): en las filas de glass, píldora azul (paleta del tipo Reparación) con el dueño de la reparación normal abierta más antigua del IMEI. Se mantiene tras el "Llegó" (dice a quién devolver el teléfono para ensamblar) y desaparece sola al cerrarse la normal.
 - **Contador "N asignados"** (Asignaciones): con **2 asignados** y una píldora que ya cuenta al segundo (verde, índigo o azul) se oculta; con **3+** vuelve y convive con la píldora (la píldora dice el nombre relevante, el contador avisa de que hay más gente).
@@ -82,6 +83,8 @@ ALTER TABLE Reparacion
 4. Ninguna `AG` abierta (`ID_REP LIKE 'AG%' AND FECHA_FIN IS NULL`) en ese IMEI → **422** "Sin glass abierta para este IMEI" (también al deshacer: no hay nada que deshacer).
 
 Efecto: `UPDATE Reparacion SET ENTREGADO_AT = NOW(), ENTREGADO_POR = ?, UPDATED_AT = UPDATED_AT WHERE …` sobre **todas** las `AG` abiertas del IMEI (true) o ambas columnas a `NULL` (false). `UPDATED_AT = UPDATED_AT` para no disparar el lock optimista ajeno (paridad con por-cerrar). Sin lock optimista propio: toggle, último gana. Log según §2.
+
+**Válvula "Marcar que llegó"** (2026-08-31): `PATCH /api/reparaciones/asignaciones/{idRep}/llegada`, `idRep` es la propia `AG…`, sin body, 204. Validaciones: no es `AG` → 422 "Solo aplica a asignaciones de glass"; no existe/cerrada → 404; no es el dueño → 403 "Solo puedes registrar la llegada de tus propias asignaciones"; ya entregada → 422 "La entrega ya está registrada". Efecto: `entregarGlass(imei, principal.idTec)` (sella todas las `AG` abiertas del IMEI, firmadas por el propio técnico). Log `ENTREGAR_GLASS`, detalle `ID_REP: AG…, IMEI: …, LLEGADA registrada por el tecnico de glass`.
 
 **Lectura**: las queries de asignaciones abiertas (`getAsignaciones`, `getAsignacionesPorImei`, `getAsignacionesGlass`, `getAsignacionesGlassPorImei`) devuelven campos **aditivos** en `ReparacionResumen`:
 
@@ -146,3 +149,4 @@ Registrar la devolución (glass → arriba). Selector manual de destinatario. No
   13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.
   14. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.
   15. Fila glass con normal abierta → píldora azul "Rep: <técnico>" bajo el IMEI (también tras el "Llegó"); con 3+ asignados, píldora y contador "N asignados" conviven.
+  16. Fila glass bloqueada → "Marcar que llegó" en su menú; al usarla el botón "Añadir glass" aparece, arriba se ve "→ <glass>" y el log registra la llegada propia; en una fila ya entregada o sin normal abierta la opción no sale.
