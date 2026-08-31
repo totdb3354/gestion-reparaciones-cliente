@@ -198,6 +198,17 @@ class EntregaGlassTest {
         assertFalse(EntregaGlass.ocultarContadorAsignados(null, 2));
     }
 
+    @Test void tooltipGlassPendienteConFallbackDeNombre() {
+        assertEquals("Glass abierta de Jhona — entrega sin registrar",
+                EntregaGlass.tooltipGlassPendiente(normal(true, null)));
+        ReparacionResumen sinNombre = normal(true, null);
+        sinNombre.setGlassTecnicoNombre(null);
+        assertEquals("Glass abierta de glass — entrega sin registrar",
+                EntregaGlass.tooltipGlassPendiente(sinNombre));
+        assertNull(EntregaGlass.tooltipGlassPendiente(normal(true, UTC_0842)));
+        assertNull(EntregaGlass.tooltipGlassPendiente(null));
+    }
+
     @Test void estiloPildoraGlassPendienteUsaLaPaletaGlass() {
         assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorFondo()));
         assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorTexto()));

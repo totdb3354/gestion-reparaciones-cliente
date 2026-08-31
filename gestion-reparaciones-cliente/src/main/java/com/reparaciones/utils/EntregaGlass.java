@@ -134,6 +134,12 @@ public final class EntregaGlass {
         return rep.isGlassAbierta() && rep.getGlassEntregadoAt() != null && n == 2;
     }
 
+    /** Tooltip de la píldora "Glass: …", con el mismo fallback de nombre que el resto de textos. */
+    public static String tooltipGlassPendiente(ReparacionResumen rep) {
+        if (etiquetaGlassPendiente(rep) == null) return null;
+        return "Glass abierta de " + nombre(rep.getGlassTecnicoNombre()) + " — entrega sin registrar";
+    }
+
     /** Estilo completo de la mini-píldora "Glass: …" (paleta del tipo Glass, tamaño sub-etiqueta). */
     public static String estiloPildoraGlassPendiente() {
         return "-fx-background-radius: 8; -fx-padding: 1 8 1 8; -fx-font-size: 10px; -fx-font-weight: bold;"

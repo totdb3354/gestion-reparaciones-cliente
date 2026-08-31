@@ -277,14 +277,14 @@ public class PendientesSuperTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                String imei = getTableView().getItems().get(getIndex()).getImei();
-                lbl.setText(imei);
                 ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String imei = repFila.getImei();
+                lbl.setText(imei);
                 String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
                 int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
                 if (glassPend != null) {
                     lblGlass.setText(glassPend);
-                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + repFila.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltipGlassPendiente(repFila)));
                     lblGlass.setVisible(true); lblGlass.setManaged(true);
                 } else {
                     lblGlass.setText(null); lblGlass.setTooltip(null);

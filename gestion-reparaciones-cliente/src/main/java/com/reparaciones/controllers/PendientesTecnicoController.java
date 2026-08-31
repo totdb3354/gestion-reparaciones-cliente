@@ -98,7 +98,7 @@ public class PendientesTecnicoController {
                 String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
                 if (glassPend != null) {
                     lblGlass.setText(glassPend);
-                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + rep.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setTooltip(new Tooltip(EntregaGlass.tooltipGlassPendiente(rep)));
                     lblGlass.setVisible(true); lblGlass.setManaged(true);
                 } else {
                     lblGlass.setText(null);
