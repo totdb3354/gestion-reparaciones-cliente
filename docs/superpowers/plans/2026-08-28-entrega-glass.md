@@ -1559,3 +1559,157 @@ por
 CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Sin teléfono no hay glass**: en Mis pendientes → Glass, el botón "Añadir glass" no aparece mientras el IMEI tenga una reparación normal abierta y la glass no tenga entrega; en cuanto llega la píldora "Llegó" (o si no hay reparación normal abierta) vuelve a estar disponible.`
 Spec §2, tras la lista de "Qué ve cada uno": `- **Sin teléfono no hay glass** (smoke 2026-08-28): en Mis pendientes → Glass, "Añadir glass" se oculta mientras haya una reparación normal abierta en el IMEI y la glass no tenga entrega. Sin normal abierta (glass directa o normal completada sin marcar) no se oculta: nadie queda bloqueado. Campos derivados en filas AG: `normalAbierta`, `normalTecnicoNombre`.` Spec §9: `13. Glass con normal abierta y sin entrega → sin botón "Añadir glass"; tras entregar → aparece; glass sin normal abierta → aparece siempre.`
 Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): ocultar "Anadir glass" mientras haya reparacion normal abierta sin entrega (sin telefono no hay glass)`.
+
+---
+
+### Task 13: Píldora "Glass: <técnico>" bajo el IMEI de la reparación normal (solo cliente)
+
+Decisión del usuario (smoke 2026-08-31): en las filas de reparación normal cuyo IMEI tiene glass abierta **sin entrega registrada**, mostrar bajo el IMEI una **mini-píldora con la paleta del tipo Glass** con el texto **"Glass: Jhona"** (dueño actual de la glass). Texto neutro a propósito: el teléfono puede estar arriba o ya abajo (abierto y repartido allí); la píldora solo dice de quién es la glass. Al registrar la entrega desaparece (la índigo "→ Jhona" de Estado toma el relevo). En Asignaciones, además, **replantea el "N asignados"**: la píldora lo sustituye cuando aplica, y con la glass ya entregada y solo 2 asignados no se muestra nada (la píldora índigo ya lo cuenta). Sin servidor: `glassAbierta`/`glassTecnicoNombre`/`glassEntregadoAt` ya llegan.
+
+**Files:**
+- Modify (cliente, rama `feature/entrega-glass`): `utils/EntregaGlass.java`, `controllers/PendientesTecnicoController.java` (celda `cImei`, ~L73-94), `controllers/PendientesSuperTecnicoController.java` (celda `cImei`, ~L252-285), `CHANGELOG.md`, spec §2/§9
+- Test: `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- `EntregaGlass.etiquetaGlassPendiente(ReparacionResumen rep)` → `"Glass: <nombre>"` o `null`.
+- `EntregaGlass.ocultarContadorAsignados(ReparacionResumen rep, int n)` → boolean (fila `A…` con glass entregada y `n == 2`).
+- `EntregaGlass.estiloPildoraGlassPendiente()` → estilo completo de la mini-píldora.
+
+- [ ] **Step 1: tests que fallan**
+
+Añadir a `EntregaGlassTest`:
+```java
+    @Test void etiquetaGlassPendienteSoloEnNormalConGlassSinEntrega() {
+        assertEquals("Glass: Jhona", EntregaGlass.etiquetaGlassPendiente(normal(true, null)));
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(true, UTC_0842)));   // entregada: la cuenta la píldora →
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(false, null)));      // sin glass
+        assertNull(EntregaGlass.etiquetaGlassPendiente(glass(null)));              // fila AG, no aplica
+        assertNull(EntregaGlass.etiquetaGlassPendiente(null));
+    }
+
+    @Test void contadorAsignadosSeOcultaSoloConGlassEntregadaYDosAsignados() {
+        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 2));
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 3)); // hay mas gente: el contador aporta
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, null), 2));     // sin entrega: lo cubre la pildora verde
+        assertFalse(EntregaGlass.ocultarContadorAsignados(glass(UTC_0842), 2));        // fila AG, no aplica
+        assertFalse(EntregaGlass.ocultarContadorAsignados(null, 2));
+    }
+
+    @Test void estiloPildoraGlassPendienteUsaLaPaletaGlass() {
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorFondo()));
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorTexto()));
+    }
+```
+Run: `mvn -q -f gestion-reparaciones-cliente/pom.xml test -Dtest=EntregaGlassTest` → error de compilación.
+
+- [ ] **Step 2: lógica en `EntregaGlass`**
+
+Tras `ocultarAnadirGlass`:
+```java
+    /**
+     * Píldora bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega
+     * registrada: "Glass: <dueño actual>". Texto neutro a propósito: el teléfono puede estar
+     * arriba o ya abajo (abierto y repartido allí); solo dice de quién es la glass. Al entregar
+     * → null (la píldora índigo "→ …" de Estado toma el relevo).
+     */
+    public static String etiquetaGlassPendiente(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return null;
+        if (!rep.isGlassAbierta() || rep.getGlassEntregadoAt() != null) return null;
+        return "Glass: " + nombre(rep.getGlassTecnicoNombre());
+    }
+
+    /**
+     * El "N asignados" de la vista Asignaciones sobra cuando la píldora índigo ya cuenta la
+     * historia: fila normal con glass entregada y exactamente 2 asignados (el caso típico).
+     * Con 3+ el contador sigue aportando.
+     */
+    public static boolean ocultarContadorAsignados(ReparacionResumen rep, int n) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return false;
+        return rep.isGlassAbierta() && rep.getGlassEntregadoAt() != null && n == 2;
+    }
+
+    /** Estilo completo de la mini-píldora "Glass: …" (paleta del tipo Glass, tamaño sub-etiqueta). */
+    public static String estiloPildoraGlassPendiente() {
+        return "-fx-background-radius: 8; -fx-padding: 1 8 1 8; -fx-font-size: 10px; -fx-font-weight: bold;"
+             + "-fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";";
+    }
+```
+
+- [ ] **Step 3: celda IMEI de Mis pendientes (`PendientesTecnicoController` ~L73-94)**
+
+Sustituir la celda actual de `cImei` (Label suelto) por la versión con píldora (misma gestión de selección):
+```java
+        cImei.setCellFactory(col -> new TableCell<>() {
+            private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass);
+            private final javafx.beans.value.ChangeListener<Boolean> selListener =
+                (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
+            {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                lblGlass.setStyle(EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
+                tableRowProperty().addListener((obs, oldRow, newRow) -> {
+                    if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
+                    if (newRow != null) newRow.selectedProperty().addListener(selListener);
+                });
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setGraphic(null); return;
+                }
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lbl.setText(rep.getImei());
+                lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
+                String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + rep.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null);
+                    lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                setGraphic(box);
+            }
+        });
+```
+
+- [ ] **Step 4: celda IMEI de Asignaciones (`PendientesSuperTecnicoController` ~L252-285)**
+
+En la celda existente: añadir `private final Label lblGlass = new Label();` tras `lblAsignados`, VBox pasa a `new javafx.scene.layout.VBox(1, lbl, lblGlass, lblAsignados)`, en el bloque init `lblGlass.setStyle(com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente()); lblGlass.setVisible(false); lblGlass.setManaged(false);` y en `updateItem`, sustituir el bloque del contador:
+```java
+                int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
+                boolean varios = n >= 2;
+                lblAsignados.setText(varios ? n + " asignados" : "");
+                lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
+```
+por
+```java
+                ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
+                int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + repFila.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null); lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                boolean varios = n >= 2 && glassPend == null
+                        && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
+                lblAsignados.setText(varios ? n + " asignados" : "");
+                lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
+```
+(Si `Tooltip` no resuelve sin cualificar en ese fichero, usar `javafx.scene.control.Tooltip`. Si la celda difiere del anclaje, parar y reportar.)
+
+- [ ] **Step 5: docs, suite, commit**
+
+CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Píldora "Glass: <técnico>" bajo el IMEI** en Mis pendientes y Asignaciones (filas de reparación normal con glass abierta sin entrega): se ve de primeras quién tiene la glass del IMEI, esté el teléfono arriba o ya abajo. Al registrar la entrega la sustituye la píldora "→ <técnico>"; en Asignaciones, el "2 asignados" genérico deja de mostrarse cuando la píldora (verde o índigo) ya cuenta quién es el segundo.`
+Spec §2, tras el bloque "Sin teléfono no hay glass": `- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo). En Asignaciones sustituye al "N asignados" cuando aplica, y con glass entregada y 2 asignados no se muestra contador.` Spec §9, añadir: `15. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.`
+Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): pildora "Glass: <tecnico>" bajo el IMEI en Mis pendientes y Asignaciones mientras la entrega no este registrada (sustituye al contador cuando aplica)`.
