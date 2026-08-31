@@ -1713,3 +1713,151 @@ por
 CHANGELOG `[Unreleased]` → Added, nueva línea: `- **Píldora "Glass: <técnico>" bajo el IMEI** en Mis pendientes y Asignaciones (filas de reparación normal con glass abierta sin entrega): se ve de primeras quién tiene la glass del IMEI, esté el teléfono arriba o ya abajo. Al registrar la entrega la sustituye la píldora "→ <técnico>"; en Asignaciones, el "2 asignados" genérico deja de mostrarse cuando la píldora (verde o índigo) ya cuenta quién es el segundo.`
 Spec §2, tras el bloque "Sin teléfono no hay glass": `- **Píldora "Glass: <técnico>"** (smoke 2026-08-31): bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega registrada (paleta del tipo Glass; texto neutro — el teléfono puede estar arriba o ya abajo, abierto y repartido allí). Al entregar desaparece (la "→ …" de Estado toma el relevo). En Asignaciones sustituye al "N asignados" cuando aplica, y con glass entregada y 2 asignados no se muestra contador.` Spec §9, añadir: `15. Fila normal con glass sin entrega → píldora verde "Glass: <técnico>" bajo el IMEI (Mis pendientes y Asignaciones; el "2 asignados" no aparece); al entregar → desaparece y queda "→ <técnico>"; con 3 asignados el contador vuelve.`
 Run suite completa del cliente → sin salida. Commit (por nombre, sin gitlink): `feat(cliente): pildora "Glass: <tecnico>" bajo el IMEI en Mis pendientes y Asignaciones mientras la entrega no este registrada (sustituye al contador cuando aplica)`.
+
+---
+
+### Task 14: "Marcar que llegó" — el técnico de glass desbloquea su propia asignación
+
+Decisión del usuario (2026-08-31, pre-reparto de la 0.16.1): el gate "sin teléfono no hay glass" no debe depender de que el dueño de la normal pulse "Entregar" (abajo también hay técnicos con normales y el teléfono ya está allí). **Válvula de escape**: en la fila de glass **bloqueada** (normal abierta y sin entrega), menú contextual → **"Marcar que llegó"**: sella la entrega ahora con `ENTREGADO_POR` = el propio técnico de glass (firmado y en el log; misma confianza que "Por cerrar"). El camino principal sigue siendo "Entregar a X".
+
+**Files:**
+- Modify (servidor, rama `feature/entrega-glass-llegada` desde `main` `9eba0ae`): `src/main/java/com/reparaciones/servidor/controller/ReparacionController.java` (tras `actualizarEntregaGlass`)
+- Test (servidor): `src/test/java/com/reparaciones/servidor/controller/ReparacionControllerEntregaGlassTest.java` (ampliar)
+- Modify (cliente, rama `hotfix/0.16.1`): `utils/EntregaGlass.java`, `dao/ReparacionDAO.java`, `controllers/PendientesTecnicoController.java` (menú contextual), `CHANGELOG.md` (línea 0.16.1), `NOVEDADES-v0.16.1.md`, spec §2/§4/§9
+- Test (cliente): `src/test/java/com/reparaciones/utils/EntregaGlassTest.java`
+
+**Interfaces:**
+- Servidor: `PATCH /api/reparaciones/asignaciones/{idRep}/llegada` (idRep = `AG…`, sin body, 204). Validaciones: no es `AG` → 422 "Solo aplica a asignaciones de glass"; no existe/cerrada → 404; no es el dueño → 403 "Solo puedes registrar la llegada de tus propias asignaciones"; ya entregada → 422 "La entrega ya está registrada". Efecto: `dao.entregarGlass(imei, principal.getIdTec())` (sella TODAS las AG abiertas del IMEI). Log: acción `ENTREGAR_GLASS`, detalle `ID_REP: AG…, IMEI: …, LLEGADA registrada por el tecnico de glass`.
+- Cliente: `EntregaGlass.mostrarMarcarLlegada(ReparacionResumen rep, boolean pestanaGlass)` → `pestanaGlass && ocultarAnadirGlass(rep)`; `ReparacionDAO.marcarLlegadaGlass(String idRep)` → `ApiClient.patch(".../llegada", null)`.
+
+- [ ] **Step 1 (servidor): tests que fallan** — añadir a `ReparacionControllerEntregaGlassTest` (usa los helpers existentes `asigDe`, `manu`, `statusDe`; recuerda crear el mock ANTES del `when(...)` externo):
+
+```java
+    @Test void llegadaRechazaIdsQueNoSonGlass() {
+        assertEquals(422, statusDe(() -> ctl.marcarLlegadaGlass("A20260828_1", manu)));
+        verifyNoInteractions(logDao);
+    }
+
+    @Test void llegadaInexistenteEs404() {
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.empty());
+        assertEquals(404, statusDe(() -> ctl.marcarLlegadaGlass("AG20260828_3", manu)));
+    }
+
+    @Test void llegadaSoloDelDueno() {
+        ReparacionResumen ajena = asigDe(99);
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.of(ajena));
+        assertEquals(403, statusDe(() -> ctl.marcarLlegadaGlass("AG20260828_3", manu)));
+        verify(dao, never()).entregarGlass(anyString(), anyInt());
+    }
+
+    @Test void llegadaYaEntregadaEs422() {
+        ReparacionResumen propia = asigDe(7);
+        when(propia.getEntregadoAt()).thenReturn(java.time.LocalDateTime.of(2026, 8, 31, 10, 0));
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.of(propia));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> ctl.marcarLlegadaGlass("AG20260828_3", manu));
+        assertEquals(422, ex.getStatusCode().value());
+        assertEquals("La entrega ya está registrada", ex.getReason());
+        verify(dao, never()).entregarGlass(anyString(), anyInt());
+    }
+
+    @Test void llegadaSellaYFirmaElPropioTecnico() {
+        ReparacionResumen propia = asigDe(7);
+        when(dao.getAsignacionAnyById("AG20260828_3")).thenReturn(Optional.of(propia));
+        ctl.marcarLlegadaGlass("AG20260828_3", manu);
+        verify(dao).entregarGlass(IMEI, 7);
+        verify(logDao).insertar(42, "ENTREGAR_GLASS",
+                "ID_REP: AG20260828_3, IMEI: " + IMEI + ", LLEGADA registrada por el tecnico de glass");
+    }
+```
+Run test enfocado → error de compilación (`marcarLlegadaGlass`).
+
+- [ ] **Step 2 (servidor): endpoint** — en `ReparacionController`, justo después de `actualizarEntregaGlass`:
+
+```java
+    /**
+     * Llegada registrada por el propio técnico de glass (válvula de escape del gate "sin teléfono
+     * no hay glass" — spec 2026-08-28 §2): sella la entrega en TODAS las AG abiertas del IMEI con
+     * él como ENTREGADO_POR. Solo el dueño de la AG y solo si aún no hay entrega registrada.
+     */
+    @PatchMapping("/asignaciones/{idRep}/llegada")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void marcarLlegadaGlass(@PathVariable String idRep,
+                                   @AuthenticationPrincipal UsuarioPrincipal principal) {
+        if (idRep == null || !idRep.startsWith("AG")) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Solo aplica a asignaciones de glass");
+        }
+        ReparacionResumen asig = dao.getAsignacionAnyById(idRep)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Recurso no encontrado: " + idRep));
+        boolean esSuya = principal.getIdTec() != null && asig.getIdTec() == principal.getIdTec();
+        if (!esSuya) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Solo puedes registrar la llegada de tus propias asignaciones");
+        }
+        if (asig.getEntregadoAt() != null) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "La entrega ya está registrada");
+        }
+        dao.entregarGlass(asig.getImei(), principal.getIdTec());
+        logDao.insertar(principal.getIdUsu(), "ENTREGAR_GLASS",
+                "ID_REP: " + idRep + ", IMEI: " + asig.getImei() + ", LLEGADA registrada por el tecnico de glass");
+    }
+```
+Test enfocado verde (11 tests) → suite completa → commit (2 ficheros): `feat(servidor): PATCH /asignaciones/{idRep}/llegada — el tecnico de glass registra su propia llegada cuando el gate le bloquea (firmado como ENTREGADO_POR)`.
+
+- [ ] **Step 3 (cliente): tests que fallan** — añadir a `EntregaGlassTest`:
+
+```java
+    @Test void marcarLlegadaSoloEnPestanaGlassYFilaBloqueada() {
+        ReparacionResumen bloqueada = glass(null);
+        bloqueada.setNormalAbierta(true);
+        assertTrue(EntregaGlass.mostrarMarcarLlegada(bloqueada, true));
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(bloqueada, false));            // pestaña Reparación
+        ReparacionResumen entregada = glass(UTC_0842);
+        entregada.setNormalAbierta(true);
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(entregada, true));             // ya llegó
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(glass(null), true));           // glass directa: no está bloqueada
+        assertFalse(EntregaGlass.mostrarMarcarLlegada(null, true));
+    }
+```
+Run → error de compilación.
+
+- [ ] **Step 4 (cliente): lógica, DAO y menú** — `EntregaGlass`, tras `ocultarAnadirGlass`:
+
+```java
+    /**
+     * "Marcar que llegó": válvula de escape del gate — visible solo en la pestaña Glass, en la
+     * fila bloqueada (normal abierta y sin entrega). La firma el propio técnico de glass.
+     */
+    public static boolean mostrarMarcarLlegada(ReparacionResumen rep, boolean pestanaGlass) {
+        return pestanaGlass && ocultarAnadirGlass(rep);
+    }
+```
+`ReparacionDAO` (cliente), tras `actualizarEntregaGlass`:
+```java
+    /** El técnico de glass registra él mismo la llegada del teléfono (válvula del gate). */
+    public void marcarLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/llegada", null);
+    }
+```
+`PendientesTecnicoController`, tras `menu.getItems().add(toggleEntrega);`:
+```java
+                MenuItem marcarLlegada = new MenuItem("Marcar que llegó");
+                marcarLlegada.setOnAction(e -> {
+                    ReparacionResumen rep = getItem();
+                    if (rep == null) return;
+                    try {
+                        reparacionDAO.marcarLlegadaGlass(rep.getIdRep());
+                        cargar();
+                    } catch (SQLException ex) { mostrarError(ex); }
+                });
+                menu.getItems().add(marcarLlegada);
+```
+y dentro de `menu.setOnShowing`, tras las líneas de `toggleEntrega`:
+```java
+                    marcarLlegada.setVisible(EntregaGlass.mostrarMarcarLlegada(rep, glass));
+```
+
+- [ ] **Step 5 (cliente): docs, suite, commit** — spec §2, tras el bloque "Sin teléfono no hay glass": `- **"Marcar que llegó"** (2026-08-31): en la fila de glass bloqueada, el propio técnico registra la llegada (menú contextual); queda firmado (`ENTREGADO_POR` = él, log `ENTREGAR_GLASS` con detalle de llegada propia). Cubre a los técnicos de abajo, que no dependen de que nadie "baje" nada.` Spec §4, tras el endpoint de entrega: una línea con el endpoint `/llegada` y sus validaciones. Spec §9: `16. Fila glass bloqueada → "Marcar que llegó" en su menú; al usarla el botón "Añadir glass" aparece, arriba se ve "→ <glass>" y el log registra la llegada propia; en una fila ya entregada o sin normal abierta la opción no sale.` CHANGELOG (sección 0.16.1, línea "Sin teléfono no hay glass"): añadir al final: ` Si el dueño de la reparación no registra la entrega (p. ej. el teléfono ya estaba abajo), el técnico de glass puede desbloquearse con **"Marcar que llegó"** (queda firmado en el log).` NOVEDADES-v0.16.1.md, sección "🚫 Sin teléfono no hay glass", añadir bullet: `- ¿El teléfono ya estaba abajo o nadie registró la entrega? El técnico de glass tiene **"Marcar que llegó"** (clic derecho): se desbloquea al momento y queda firmado quién lo registró.` Suite completa verde → commit (por nombre, sin gitlink): `feat(cliente): "Marcar que llego" — el tecnico de glass registra su propia llegada cuando el gate le bloquea`.
