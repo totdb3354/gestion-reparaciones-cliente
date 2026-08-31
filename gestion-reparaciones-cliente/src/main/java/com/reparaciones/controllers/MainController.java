@@ -253,7 +253,7 @@ public class MainController {
             try {
                 List<Componente> todos = new ComponenteDAO().getAllGestionados();
                 alertasCriticas = todos.stream()
-                        .filter(c -> c.getIdComMaster() == null && c.getStock() <= c.getStockMinimo())
+                        .filter(MainController::esAlertaStock)
                         .collect(Collectors.toList());
             } catch (SQLException ex) { /* silencioso: polling de fondo */ }
             contenedorAlertas.getChildren().clear();
@@ -710,6 +710,15 @@ public class MainController {
     }
 
     /**
+     * Predicado de alerta de stock: filas master ({@code idComMaster == null})
+     * activas con stock igual o por debajo del mínimo. Los componentes
+     * desactivados se excluyen de conteos y alertas.
+     */
+    static boolean esAlertaStock(Componente c) {
+        return c.getIdComMaster() == null && c.isActivo() && c.getStock() <= c.getStockMinimo();
+    }
+
+    /**
      * Comprueba si hay componentes con stock bajo o sin stock y, de haberlos,
      * activa el indicador visual y muestra el diálogo de alertas al arrancar.
      * <p>Solo se llama para el rol SUPERTECNICO.</p>
@@ -718,7 +727,7 @@ public class MainController {
         try {
             List<Componente> todos = new ComponenteDAO().getAllGestionados();
             alertasCriticas = todos.stream()
-                    .filter(c -> c.getIdComMaster() == null && c.getStock() <= c.getStockMinimo())
+                    .filter(MainController::esAlertaStock)
                     .collect(Collectors.toList());
             if (!alertasCriticas.isEmpty()) iniciarPulso();
         } catch (SQLException e) {

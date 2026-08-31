@@ -96,6 +96,7 @@ public class Componente {
     public void setUltimoPedido(LocalDateTime ultimoPedido) { this.ultimoPedido = ultimoPedido; }
 
     public Integer getIdComMaster() { return idComMaster; }
+    public void setIdComMaster(Integer idComMaster) { this.idComMaster = idComMaster; }
 
     /** Devuelve el tipo para uso en ComboBox. */
     @Override
