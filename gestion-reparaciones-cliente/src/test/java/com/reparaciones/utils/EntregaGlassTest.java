@@ -179,4 +179,27 @@ class EntregaGlassTest {
         assertNull(EntregaGlass.subEtiquetaHistorial(normal(true, UTC_0842)));
         assertNull(EntregaGlass.subEtiquetaHistorial(null));
     }
+
+    // ── Píldora "Glass: <técnico>" bajo el IMEI ─────────────────────────────
+
+    @Test void etiquetaGlassPendienteSoloEnNormalConGlassSinEntrega() {
+        assertEquals("Glass: Jhona", EntregaGlass.etiquetaGlassPendiente(normal(true, null)));
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(true, UTC_0842)));   // entregada: la cuenta la píldora →
+        assertNull(EntregaGlass.etiquetaGlassPendiente(normal(false, null)));      // sin glass
+        assertNull(EntregaGlass.etiquetaGlassPendiente(glass(null)));              // fila AG, no aplica
+        assertNull(EntregaGlass.etiquetaGlassPendiente(null));
+    }
+
+    @Test void contadorAsignadosSeOcultaSoloConGlassEntregadaYDosAsignados() {
+        assertTrue(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 2));
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, UTC_0842), 3)); // hay mas gente: el contador aporta
+        assertFalse(EntregaGlass.ocultarContadorAsignados(normal(true, null), 2));     // sin entrega: lo cubre la pildora verde
+        assertFalse(EntregaGlass.ocultarContadorAsignados(glass(UTC_0842), 2));        // fila AG, no aplica
+        assertFalse(EntregaGlass.ocultarContadorAsignados(null, 2));
+    }
+
+    @Test void estiloPildoraGlassPendienteUsaLaPaletaGlass() {
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorFondo()));
+        assertTrue(EntregaGlass.estiloPildoraGlassPendiente().contains(TipoTrabajo.GLASS.colorTexto()));
+    }
 }

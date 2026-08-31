@@ -72,10 +72,15 @@ public class PendientesTecnicoController {
         cTipo.setCellFactory(col -> TipoTrabajo.celdaTipoConChasis());
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (sel ? "white" : "#2C3B54") + ";");
             {
+                box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #2C3B54;");
+                lblGlass.setStyle(EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
                     if (oldRow != null) oldRow.selectedProperty().removeListener(selListener);
                     if (newRow != null) newRow.selectedProperty().addListener(selListener);
@@ -87,9 +92,20 @@ public class PendientesTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                lbl.setText(getTableView().getItems().get(getIndex()).getImei());
+                ReparacionResumen rep = getTableView().getItems().get(getIndex());
+                lbl.setText(rep.getImei());
                 lbl.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (getTableRow() != null && getTableRow().isSelected() ? "white" : "#2C3B54") + ";");
-                setGraphic(lbl);
+                String glassPend = EntregaGlass.etiquetaGlassPendiente(rep);
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + rep.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null);
+                    lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                setGraphic(box);
             }
         });
         cModelo.setCellValueFactory(d -> {

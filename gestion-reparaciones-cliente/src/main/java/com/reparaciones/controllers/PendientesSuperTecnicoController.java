@@ -251,12 +251,15 @@ public class PendientesSuperTecnicoController {
         });
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
             private final Label lblAsignados = new Label();
-            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblAsignados);
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass, lblAsignados);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> aplicarEstilos(sel);
             {
                 box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblGlass.setStyle(com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
                 lblAsignados.setVisible(false); lblAsignados.setManaged(false);
                 aplicarEstilos(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
@@ -276,8 +279,19 @@ public class PendientesSuperTecnicoController {
                 }
                 String imei = getTableView().getItems().get(getIndex()).getImei();
                 lbl.setText(imei);
+                ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String glassPend = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
                 int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
-                boolean varios = n >= 2;
+                if (glassPend != null) {
+                    lblGlass.setText(glassPend);
+                    lblGlass.setTooltip(new Tooltip("Glass abierta de " + repFila.getGlassTecnicoNombre() + " — entrega sin registrar"));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null); lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                boolean varios = n >= 2 && glassPend == null
+                        && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
                 lblAsignados.setText(varios ? n + " asignados" : "");
                 lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
                 aplicarEstilos(getTableRow() != null && getTableRow().isSelected());

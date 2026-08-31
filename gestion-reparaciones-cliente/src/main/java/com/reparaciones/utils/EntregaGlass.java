@@ -112,6 +112,34 @@ public final class EntregaGlass {
         return rep.isNormalAbierta() && rep.getEntregadoAt() == null;
     }
 
+    /**
+     * Píldora bajo el IMEI de la reparación normal mientras la glass del IMEI no tenga entrega
+     * registrada: "Glass: <dueño actual>". Texto neutro a propósito: el teléfono puede estar
+     * arriba o ya abajo (abierto y repartido allí); solo dice de quién es la glass. Al entregar
+     * → null (la píldora índigo "→ …" de Estado toma el relevo).
+     */
+    public static String etiquetaGlassPendiente(ReparacionResumen rep) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return null;
+        if (!rep.isGlassAbierta() || rep.getGlassEntregadoAt() != null) return null;
+        return "Glass: " + nombre(rep.getGlassTecnicoNombre());
+    }
+
+    /**
+     * El "N asignados" de la vista Asignaciones sobra cuando la píldora índigo ya cuenta la
+     * historia: fila normal con glass entregada y exactamente 2 asignados (el caso típico).
+     * Con 3+ el contador sigue aportando.
+     */
+    public static boolean ocultarContadorAsignados(ReparacionResumen rep, int n) {
+        if (rep == null || TipoTrabajo.desde(rep.getIdRep()) != TipoTrabajo.REPARACION) return false;
+        return rep.isGlassAbierta() && rep.getGlassEntregadoAt() != null && n == 2;
+    }
+
+    /** Estilo completo de la mini-píldora "Glass: …" (paleta del tipo Glass, tamaño sub-etiqueta). */
+    public static String estiloPildoraGlassPendiente() {
+        return "-fx-background-radius: 8; -fx-padding: 1 8 1 8; -fx-font-size: 10px; -fx-font-weight: bold;"
+             + "-fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";";
+    }
+
     /** Colores del badge, para concatenar al estilo base de pastilla. */
     public static String estiloColores() {
         return "-fx-background-color: " + COLOR_FONDO + "; -fx-text-fill: " + COLOR_TEXTO + ";";
