@@ -24,7 +24,7 @@ jobs:
             icon-arg: "--icon packaging/icono_mac.icns"
             artifact: FSGR-mac
             appimage-artifact: FSGR-mac-appimage
-          - os: macos-13
+          - os: macos-15-intel
             jfx-jmods-zip: openjfx-21_osx-x64_bin-jmods.zip
             pkg-type: dmg
             pkg-version: 1.0.0
