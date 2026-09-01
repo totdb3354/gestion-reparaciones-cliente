@@ -88,6 +88,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private Button           btnVentanaSiguiente;
     @FXML private Label            lblRangoVentana;
 
+    @FXML private Label            lblCardPuntosTitulo;
+    @FXML private Label            lblCardPuntosValor;
+    @FXML private Label            lblCardPuntosDelta;
+    @FXML private Label            lblCardDiaTitulo;
+    @FXML private Label            lblCardDiaValor;
+    @FXML private Label            lblCardDiaDelta;
+
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
     // nombre → color hex fijo por ID_TEC
@@ -186,6 +193,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         chkMedia.selectedProperty().addListener((obs, o, n) -> actualizarVisibilidadMedia());
 
         recargarDatos();
+        cargarTarjetas();
 
         // ── Stock ──────────────────────────────────────────────────────────────
         cmbModeloFiltro.valueProperty().addListener((obs, o, n) -> renderStockActual());
@@ -902,7 +910,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @Override
     public void recargar() {
         if (pnlStock.isVisible()) renderStockActual();
-        else                      recargarDatos();
+        else {
+            recargarDatos();
+            cargarTarjetas();
+        }
     }
 
     @Override
@@ -1138,6 +1149,32 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 yield new java.time.LocalDate[]{lunes, lunes.plusDays(6)};
             }
         };
+    }
+
+    /** Tarjetas del mes en curso (equipo, o el propio técnico si el rol es TECNICO). */
+    private void cargarTarjetas() {
+        java.time.YearMonth mes = java.time.YearMonth.now();
+        List<PuntoEstadisticaPuntos> filas;
+        try {
+            filas = new ReparacionDAO().getEstadisticasPuntos("mes",
+                    mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
+        } catch (SQLException e) { mostrarError(e); return; }
+        String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
+        var t = PuntosEstadistica.calcularTarjetas(filas, mes, java.time.LocalDate.now(), tecnico);
+        String quien = tecnico == null ? "equipo" : "tú";
+        lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
+        lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
+        pintarDelta(lblCardPuntosDelta, t.deltaPuntosPct());
+        lblCardDiaTitulo.setText("Puntos/día · " + t.mesLabel() + " · " + quien);
+        lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosDia()));
+        pintarDelta(lblCardDiaDelta, t.deltaPuntosDiaPct());
+    }
+
+    private void pintarDelta(Label lbl, Double pct) {
+        if (pct == null) { lbl.setText(""); return; }
+        boolean sube = pct >= 0;
+        lbl.setText((sube ? "▲ +" : "▼ ") + String.format("%.0f", pct) + "%");
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (sube ? "#2E7D32" : "#C62828") + ";");
     }
 
     private void mostrarError(Exception e) {
