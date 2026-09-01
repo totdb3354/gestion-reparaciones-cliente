@@ -1,7 +1,7 @@
 # Estadísticas por puntos (dificultad) + usabilidad de la vista de técnicos
 
 Fecha: 2026-09-01
-Estado: **PENDIENTE de revisión del usuario** — segundo cambio de la línea hotfix (camino a `0.16.2`; la tienda usa la 0.16.1; `main` sigue en construcción hacia la 0.17.0).
+Estado: **IMPLEMENTADA en ramas feature/estadisticas-puntos (cliente y servidor) — pendiente migración en preprod, smoke y merges (OK del usuario)**.
 Ramas: cliente `feature/estadisticas-puntos` desde `hotfix/0.16.1`; servidor `feature/estadisticas-puntos` desde `main` del servidor (= lo desplegado en preprod).
 
 ---
