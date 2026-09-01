@@ -4,9 +4,10 @@ import com.reparaciones.dao.ComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.Componente;
-import com.reparaciones.models.PuntoEstadistica;
+import com.reparaciones.models.PuntoEstadisticaPuntos;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.PuntosEstadistica;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -23,7 +24,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.Slider;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -40,20 +42,20 @@ import java.util.stream.Collectors;
 
 /**
  * Controlador de la vista de estadísticas.
- * <p>Muestra un gráfico de líneas ({@code LineChart}) con las reparaciones finalizadas
- * por técnico a lo largo del tiempo, con granularidades: día, semana, mes y año.</p>
+ * <p>Muestra un gráfico de líneas ({@code LineChart}) con los puntos de dificultad
+ * conseguidos por técnico a lo largo del tiempo, con granularidades: día, semana, mes y año.</p>
  *
  * <p><b>Funcionalidades principales:</b></p>
  * <ul>
- *   <li>Checkbox "Todos" — línea negra con la suma de todos los técnicos.</li>
- *   <li>Checkbox "Actividad" — muestra/oculta las líneas continuas de datos.</li>
- *   <li>Checkbox "Media" — muestra/oculta las líneas de media discontinuas por técnico.</li>
- *   <li>Línea de referencia (gris punteada) — media del total / nTécnicos, para evaluar
- *       la performance individual respecto al benchmark del equipo.</li>
- *   <li>Ventana deslizante (slider) — limita los puntos visibles en periodos con muchos datos.</li>
+ *   <li>Radio "Puntos" / "Puntos/día" — métrica activa del gráfico.</li>
+ *   <li>Checkbox "Equipo (suma)" — línea negra con la suma de todos los técnicos.</li>
+ *   <li>Checkbox "Ver medias" — muestra/oculta las líneas de media discontinuas por técnico.</li>
+ *   <li>Línea "Promedio" (naranja, discontinua, siempre visible) — promedio de ventana de la
+ *       métrica activa sobre los técnicos (nunca sobre la serie "Equipo").</li>
+ *   <li>Flechas de navegación de ventana — limitan los periodos visibles cuando hay muchos.</li>
  *   <li>Clic en vértice — navega al historial de reparaciones con el filtro de fecha y
  *       técnico pre-aplicado, vía callback {@link com.reparaciones.utils.Navegable}.</li>
- *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Todos".</li>
+ *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Equipo".</li>
  * </ul>
  *
  * <p>El doble {@code Platform.runLater} en el flujo de renderizado garantiza que el eje Y
@@ -76,14 +78,15 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private CategoryAxis     ejeX;
     @FXML private NumberAxis       ejeY;
     @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> menuTecnicos;
-    @FXML private CheckBox         chkTodos;
+    @FXML private RadioButton      rbPuntos;
+    @FXML private RadioButton      rbPuntosDia;
+    @FXML private CheckBox         chkEquipo;
     @FXML private CheckBox         chkMedia;
-    @FXML private CheckBox         chkActividad;
     @FXML private Label            lblSinDatos;
-    @FXML private HBox             hboxSlider;
-    @FXML private Slider           sliderVentana;
-    @FXML private Label            lblSliderDesde;
-    @FXML private Label            lblSliderHasta;
+    @FXML private HBox             hboxNavVentana;
+    @FXML private Button           btnVentanaAnterior;
+    @FXML private Button           btnVentanaSiguiente;
+    @FXML private Label            lblRangoVentana;
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
@@ -113,11 +116,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private final Tooltip tooltipMedia = new Tooltip();
 
     // Todos los puntos cargados de BD (sin filtrar por checkbox)
-    private List<PuntoEstadistica> todosPuntos   = List.of();
+    private List<PuntoEstadisticaPuntos> todosPuntos   = List.of();
     // Periodos únicos ordenados
     private List<String>           todosPeriodos = List.of();
     // Tamaño de la ventana visible según granularidad
     private int ventanaTamanio = 30;
+    // Offset de la ventana actualmente visible (0 = más antigua)
+    private int ventanaOffset = 0;
 
     // Ventanas por granularidad
     private static final int VENTANA_DIA    = 30;
@@ -125,9 +130,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private static final int VENTANA_MES    = 12;
     private static final int VENTANA_ANO    =  5;
 
-    // Color fijo para la serie "Todos" (suma de todos los técnicos)
-    private static final String COLOR_TODOS       = "#000000";
-    // Color de la línea de referencia (benchmark del equipo)
+    // Color fijo para la serie "Equipo" (suma de todos los técnicos)
+    private static final String COLOR_EQUIPO      = "#000000";
+    // Color de la línea de referencia (Promedio del equipo)
     private static final String COLOR_REFERENCIA  = "#C07800";
 
     // Callback de navegación inyectado por MainController
@@ -154,8 +159,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         dpDesde.setValue(null);
         dpHasta.setValue(null);
 
-        sliderVentana.valueProperty().addListener((obs, oldVal, newVal) ->
-                renderVentana(newVal.intValue()));
+        ToggleGroup grupoMetrica = new ToggleGroup();
+        rbPuntos.setToggleGroup(grupoMetrica);
+        rbPuntosDia.setToggleGroup(grupoMetrica);
+        grupoMetrica.selectedToggleProperty().addListener((obs, o, n) -> renderVentana(ventanaOffset));
 
         tooltipMedia.setShowDelay(Duration.ZERO);
         tooltipMedia.setShowDuration(Duration.INDEFINITE);
@@ -170,19 +177,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         cargarTecnicos();
 
-        // Registrar color de "Todos" para que todo el sistema de colores/hover funcione automáticamente
-        coloresPorNombre.put("Todos", COLOR_TODOS);
-        chkTodos.setSelected(true);
-        chkTodos.selectedProperty().addListener((obs, o, n) -> {
-            renderVentana((int) sliderVentana.getValue());
-            actualizarVisibilidadReferencia();
-        });
+        // Registrar color de "Equipo" para que todo el sistema de colores/hover funcione automáticamente
+        coloresPorNombre.put("Equipo", COLOR_EQUIPO);
+        chkEquipo.setSelected(true);
+        chkEquipo.selectedProperty().addListener((obs, o, n) -> renderVentana(ventanaOffset));
 
-        chkMedia.setSelected(true);
+        chkMedia.setSelected(false);
         chkMedia.selectedProperty().addListener((obs, o, n) -> actualizarVisibilidadMedia());
-
-        chkActividad.setSelected(true);
-        chkActividad.selectedProperty().addListener((obs, o, n) -> actualizarVisibilidadActividad());
 
         recargarDatos();
 
@@ -239,7 +240,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         else nombresSeleccionadosTec.add(nombre);
                         filtroTecHandle.refresh();
                         actualizarTextoMenuTecnicos();
-                        renderVentana((int) sliderVentana.getValue());
+                        renderVentana(ventanaOffset);
                     });
                 }
                 @Override protected void updateItem(Tecnico t, boolean empty) {
@@ -284,6 +285,16 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 (int) (c.getBlue()  * 255));
     }
 
+    private boolean metricaPorDia() { return rbPuntosDia.isSelected(); }
+
+    /** Valor del punto según la métrica activa. */
+    private double valorDe(PuntoEstadisticaPuntos p) {
+        return metricaPorDia()
+                ? PuntosEstadistica.puntosDia(p.getPuntos(), p.getPeriodo(),
+                        cmbGranularidad.getValue(), java.time.LocalDate.now())
+                : p.getPuntos();
+    }
+
     /** Recarga datos de BD y reinicia la ventana. Llamado al cambiar fechas o granularidad. */
     @FXML
     private void recargarGrafico() {
@@ -312,7 +323,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         };
 
         try {
-            todosPuntos = new ReparacionDAO().getEstadisticasPorTecnico(
+            todosPuntos = new ReparacionDAO().getEstadisticasPuntos(
                     granularidad, desde, hasta);
         } catch (SQLException e) {
             mostrarError(e);
@@ -321,39 +332,32 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         // Periodos únicos ordenados (de todos los técnicos)
         todosPeriodos = todosPuntos.stream()
-                .map(PuntoEstadistica::getPeriodo)
+                .map(PuntoEstadisticaPuntos::getPeriodo)
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
 
-        configurarSlider();
+        configurarVentana();
     }
 
-    /** Configura el slider según el total de periodos y el tamaño de ventana. */
-    private void configurarSlider() {
-        if (todosPeriodos.size() <= ventanaTamanio) {
-            hboxSlider.setVisible(false);
-            hboxSlider.setManaged(false);
-            sliderVentana.setValue(0);
-            renderVentana(0); // setValue(0) no dispara el listener si ya era 0
-            return;
-        }
+    /** Configura la navegación de ventana y renderiza la más reciente. */
+    private void configurarVentana() {
+        int maxOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
+        boolean hayNavegacion = maxOffset > 0;
+        hboxNavVentana.setVisible(hayNavegacion);
+        hboxNavVentana.setManaged(hayNavegacion);
+        ventanaOffset = maxOffset;                 // lo más reciente
+        renderVentana(ventanaOffset);
+    }
 
-        int maxOffset = todosPeriodos.size() - ventanaTamanio;
-        hboxSlider.setVisible(true);
-        hboxSlider.setManaged(true);
-        sliderVentana.setMin(0);
-        sliderVentana.setMax(maxOffset);
-        sliderVentana.setMajorTickUnit(1);
-        sliderVentana.setBlockIncrement(1);
-        sliderVentana.setSnapToTicks(true);
-        // Posicionar al final (datos más recientes); si ya era maxOffset, forzar render
-        if (sliderVentana.getValue() == maxOffset) renderVentana(maxOffset);
-        else sliderVentana.setValue(maxOffset);
+    @FXML private void ventanaAnterior()  { renderVentana(Math.max(0, ventanaOffset - 1)); }
+    @FXML private void ventanaSiguiente() {
+        renderVentana(Math.min(Math.max(0, todosPeriodos.size() - ventanaTamanio), ventanaOffset + 1));
     }
 
     /** Renderiza la ventana de periodos que empieza en `offset`. */
     private void renderVentana(int offset) {
+        ventanaOffset = offset;
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
@@ -367,56 +371,60 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         Set<String> periodosVisibles = new LinkedHashSet<>(todosPeriodos.subList(inicio, fin));
 
-        // Actualizar etiquetas del slider
-        lblSliderDesde.setText(todosPeriodos.get(inicio));
-        lblSliderHasta.setText(todosPeriodos.get(fin - 1));
+        // Actualizar navegación de ventana
+        int maxOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
+        btnVentanaAnterior.setDisable(inicio == 0);
+        btnVentanaSiguiente.setDisable(offset >= maxOffset);
+        lblRangoVentana.setText(tamanio + " periodos · "
+                + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
 
         Set<String> seleccionados = new LinkedHashSet<>(nombresSeleccionadosTec);
 
         Map<String, XYChart.Series<String, Number>> series = new LinkedHashMap<>();
-        for (PuntoEstadistica p : todosPuntos) {
+        for (PuntoEstadisticaPuntos p : todosPuntos) {
             if (!seleccionados.contains(p.getNombreTecnico())) continue;
             if (!periodosVisibles.contains(p.getPeriodo()))    continue;
             series.computeIfAbsent(p.getNombreTecnico(), nombre -> {
                 XYChart.Series<String, Number> s = new XYChart.Series<>();
                 s.setName(nombre);
                 return s;
-            }).getData().add(new XYChart.Data<>(p.getPeriodo(), p.getCantidad()));
+            }).getData().add(new XYChart.Data<>(p.getPeriodo(), valorDe(p)));
         }
 
-        // Serie "Todos": suma de TODOS los técnicos por periodo (independiente de checkboxes)
+        // Serie "Equipo": suma de TODOS los técnicos por periodo (independiente de checkboxes)
         List<XYChart.Series<String, Number>> listaFinal = new java.util.ArrayList<>(series.values());
-        if (chkTodos.isSelected()) {
-            Map<String, Integer> sumaPorPeriodo = new java.util.LinkedHashMap<>();
-            for (String p : periodosVisibles) sumaPorPeriodo.put(p, 0);
-            for (PuntoEstadistica p : todosPuntos) {
+        if (chkEquipo.isSelected()) {
+            Map<String, Double> sumaPorPeriodo = new java.util.LinkedHashMap<>();
+            for (String p : periodosVisibles) sumaPorPeriodo.put(p, 0.0);
+            for (PuntoEstadisticaPuntos p : todosPuntos) {
                 if (periodosVisibles.contains(p.getPeriodo()))
-                    sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+                    sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
-            XYChart.Series<String, Number> serieTodos = new XYChart.Series<>();
-            serieTodos.setName("Todos");
-            sumaPorPeriodo.forEach((periodo, cantidad) ->
-                    serieTodos.getData().add(new XYChart.Data<>(periodo, cantidad)));
-            listaFinal.add(serieTodos);
+            XYChart.Series<String, Number> serieEquipo = new XYChart.Series<>();
+            serieEquipo.setName("Equipo");
+            sumaPorPeriodo.forEach((periodo, valor) ->
+                    serieEquipo.getData().add(new XYChart.Data<>(periodo, valor)));
+            listaFinal.add(serieEquipo);
         }
         chartReparaciones.getData().setAll(listaFinal);
 
-        // Eje Y: siempre enteros, upper = máximo visible + 1 de margen (mínimo 5)
-        int maxVisible = todosPuntos.stream()
+        // Eje Y: upper = máximo visible + 1 de margen (mínimo 5)
+        double maxVisible = todosPuntos.stream()
                 .filter(p -> seleccionados.contains(p.getNombreTecnico())
                           && periodosVisibles.contains(p.getPeriodo()))
-                .mapToInt(PuntoEstadistica::getCantidad)
+                .mapToDouble(this::valorDe)
                 .max().orElse(0);
-        if (chkTodos.isSelected()) {
-            Map<String, Integer> sumaPorPeriodo = new java.util.HashMap<>();
-            for (PuntoEstadistica p : todosPuntos) {
+        if (chkEquipo.isSelected()) {
+            Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
+            for (PuntoEstadisticaPuntos p : todosPuntos) {
                 if (periodosVisibles.contains(p.getPeriodo()))
-                    sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+                    sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
-            int maxTodos = sumaPorPeriodo.values().stream().mapToInt(Integer::intValue).max().orElse(0);
-            maxVisible = Math.max(maxVisible, maxTodos);
+            double maxEquipo = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).max().orElse(0);
+            maxVisible = Math.max(maxVisible, maxEquipo);
         }
-        ejeY.setUpperBound(Math.max(5, maxVisible + 1));
+        ejeY.setUpperBound(Math.max(5, Math.ceil(maxVisible) + 1));
+        ejeY.setLabel(metricaPorDia() ? "Puntos/día" : "Puntos");
 
         Runnable render = () -> {
             chartReparaciones.applyCss();
@@ -452,24 +460,24 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lineaMediaPorSerie.clear();
         mediaPorSerie.clear();
 
-        // Precomputar suma total por periodo (reutilizado en "Todos" y en la referencia)
-        Map<String, Integer> sumaPorPeriodo = new java.util.HashMap<>();
-        for (PuntoEstadistica p : todosPuntos) {
+        // Precomputar suma total por periodo (reutilizado en "Equipo")
+        Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos) {
             if (periodosVisibles.contains(p.getPeriodo()))
-                sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+                sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
         }
 
         for (XYChart.Series<String, Number> serie : chartReparaciones.getData()) {
             String color = coloresPorNombre.getOrDefault(serie.getName(), "#888888");
 
             double media;
-            if ("Todos".equals(serie.getName())) {
-                media = sumaPorPeriodo.values().stream().mapToInt(Integer::intValue).average().orElse(0);
+            if ("Equipo".equals(serie.getName())) {
+                media = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
             } else {
                 media = todosPuntos.stream()
                         .filter(p -> p.getNombreTecnico().equals(serie.getName())
                                   && periodosVisibles.contains(p.getPeriodo()))
-                        .mapToInt(PuntoEstadistica::getCantidad)
+                        .mapToDouble(this::valorDe)
                         .average().orElse(0);
             }
 
@@ -505,7 +513,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             hitLinea.setOnMouseEntered(e -> { sobreLineaMedia = true;  serieResaltada = serieRef; resaltarSerie(serieRef, todasSeries); });
             hitLinea.setOnMouseExited (e -> { sobreLineaMedia = false; serieResaltada = null;     restaurarSeries(todasSeries); });
 
-            Label lbl = new Label(String.format("x̄ %.1f", media));
+            Label lbl = new Label("x̄ " + PuntosEstadistica.formatearPuntos(media));
             lbl.setStyle("-fx-font-size:10px; -fx-text-fill:" + color +
                          "; -fx-background-color:white; -fx-padding:0 2 0 2;");
             lbl.setLayoutX(x0 + 4);
@@ -513,7 +521,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             lbl.setMouseTransparent(true);
 
             mediaPorSerie.put(serie, media);
-            Tooltip tipMedia = new Tooltip(String.format("Media %s: %.1f rep.", serie.getName(), media));
+            String unidadMedia = metricaPorDia() ? " puntos/día" : " puntos";
+            Tooltip tipMedia = new Tooltip("Media " + serie.getName() + ": "
+                    + PuntosEstadistica.formatearPuntos(media) + unidadMedia);
             tipMedia.setShowDelay(Duration.ZERO);
             tipMedia.setShowDuration(Duration.INDEFINITE);
             tipMedia.setHideDelay(Duration.millis(100));
@@ -526,94 +536,91 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             lineaMediaPorSerie.put(serie, linea);
         }
 
-        // Línea de referencia: media de las medias individuales de cada técnico
-        // (solo periodos activos de cada uno, más justo con técnicos nuevos o con ausencias)
-        int nTecnicos = (int) todosLosTecnicos.stream().filter(t -> t != null).count();
-        if (nTecnicos > 0 && !sumaPorPeriodo.isEmpty()) {
-            double refMedia = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                    .mapToDouble(nombre -> todosPuntos.stream()
-                            .filter(p -> p.getNombreTecnico().equals(nombre)
-                                      && periodosVisibles.contains(p.getPeriodo()))
-                            .mapToInt(PuntoEstadistica::getCantidad)
-                            .average().orElse(0))
-                    .filter(m -> m > 0)
-                    .average().orElse(0);
+        // Línea "Promedio": promedio de ventana de la métrica activa sobre los técnicos
+        // (nunca sobre la serie "Equipo"); siempre visible salvo que no haya actividad.
+        Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos) {
+            datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                        .put(p.getPeriodo(), valorDe(p));
+        }
+        double refMedia = PuntosEstadistica.promedioVentana(
+                datosVentana, new java.util.ArrayList<>(periodosVisibles));
 
-            if (refMedia > 0) {
-                double x0ref = bg.getBoundsInParent().getMinX();
-                double x1ref = bg.getBoundsInParent().getMaxX();
-                double yRef  = plotArea.sceneToLocal(0,
-                        ejeY.localToScene(0, ejeY.getDisplayPosition(refMedia)).getY()).getY();
+        if (refMedia > 0) { // sin actividad → no se dibuja
+            double x0ref = bg.getBoundsInParent().getMinX();
+            double x1ref = bg.getBoundsInParent().getMaxX();
+            double yRef  = plotArea.sceneToLocal(0,
+                    ejeY.localToScene(0, ejeY.getDisplayPosition(refMedia)).getY()).getY();
 
-                javafx.scene.shape.Line lineaRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
-                lineaRef.setStroke(javafx.scene.paint.Color.web(COLOR_REFERENCIA));
-                lineaRef.setStrokeWidth(1.8);
-                lineaRef.getStrokeDashArray().addAll(10.0, 4.0, 2.0, 4.0);
-                lineaRef.setOpacity(0.85);
-                lineaRef.setMouseTransparent(true);
-                bg.boundsInParentProperty().addListener((obs, o, b) -> {
-                    lineaRef.setStartX(b.getMinX()); lineaRef.setEndX(b.getMaxX());
-                });
+            javafx.scene.shape.Line lineaRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
+            lineaRef.setStroke(javafx.scene.paint.Color.web(COLOR_REFERENCIA));
+            lineaRef.setStrokeWidth(1.8);
+            lineaRef.getStrokeDashArray().addAll(10.0, 4.0, 2.0, 4.0);
+            lineaRef.setOpacity(0.85);
+            lineaRef.setMouseTransparent(true);
+            bg.boundsInParentProperty().addListener((obs, o, b) -> {
+                lineaRef.setStartX(b.getMinX()); lineaRef.setEndX(b.getMaxX());
+            });
 
-                javafx.scene.shape.Line hitRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
-                hitRef.setStroke(javafx.scene.paint.Color.color(0, 0, 0, 0.01));
-                hitRef.setStrokeWidth(12);
-                bg.boundsInParentProperty().addListener((obs, o, b) -> {
-                    hitRef.setStartX(b.getMinX()); hitRef.setEndX(b.getMaxX());
-                });
-                List<String> porEncima = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                        .filter(nombre -> {
-                            double media = todosPuntos.stream()
-                                    .filter(p -> p.getNombreTecnico().equals(nombre)
-                                              && periodosVisibles.contains(p.getPeriodo()))
-                                    .mapToInt(PuntoEstadistica::getCantidad)
-                                    .average().orElse(0);
-                            return media > refMedia;
-                        }).collect(Collectors.toList());
-                List<String> porDebajo = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                        .filter(nombre -> {
-                            double media = todosPuntos.stream()
-                                    .filter(p -> p.getNombreTecnico().equals(nombre)
-                                              && periodosVisibles.contains(p.getPeriodo()))
-                                    .mapToInt(PuntoEstadistica::getCantidad)
-                                    .average().orElse(0);
-                            return media > 0 && media <= refMedia;
-                        }).collect(Collectors.toList());
+            javafx.scene.shape.Line hitRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
+            hitRef.setStroke(javafx.scene.paint.Color.color(0, 0, 0, 0.01));
+            hitRef.setStrokeWidth(12);
+            bg.boundsInParentProperty().addListener((obs, o, b) -> {
+                hitRef.setStartX(b.getMinX()); hitRef.setEndX(b.getMaxX());
+            });
+            List<String> porEncima = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
+                    .filter(nombre -> {
+                        double media = todosPuntos.stream()
+                                .filter(p -> p.getNombreTecnico().equals(nombre)
+                                          && periodosVisibles.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorDe)
+                                .average().orElse(0);
+                        return media > refMedia;
+                    }).collect(Collectors.toList());
+            List<String> porDebajo = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
+                    .filter(nombre -> {
+                        double media = todosPuntos.stream()
+                                .filter(p -> p.getNombreTecnico().equals(nombre)
+                                          && periodosVisibles.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorDe)
+                                .average().orElse(0);
+                        return media > 0 && media <= refMedia;
+                    }).collect(Collectors.toList());
 
-                String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
-                String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
-                Tooltip tipRef = new Tooltip(String.format(
-                        "Referencia del equipo: %.1f rep./técnico%n" +
-                        "(media de medias individuales)%n" +
-                        "Por encima: %s%n" +
-                        "Por debajo: %s", refMedia, encimaTxt, debajTxt));
-                tipRef.setShowDelay(Duration.ZERO);
-                tipRef.setShowDuration(Duration.INDEFINITE);
-                tipRef.setHideDelay(Duration.millis(100));
-                Tooltip.install(hitRef, tipRef);
+            String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
+            String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
+            String unidadRef = metricaPorDia() ? "puntos/día" : "puntos";
+            Tooltip tipRef = new Tooltip(String.format(
+                    "Promedio del equipo: %s %s%n" +
+                    "Por encima: %s%n" +
+                    "Por debajo: %s",
+                    PuntosEstadistica.formatearPuntos(refMedia), unidadRef, encimaTxt, debajTxt));
+            tipRef.setShowDelay(Duration.ZERO);
+            tipRef.setShowDuration(Duration.INDEFINITE);
+            tipRef.setHideDelay(Duration.millis(100));
+            Tooltip.install(hitRef, tipRef);
 
-                Label lblRef = new Label(String.format("ref. %.1f", refMedia));
-                lblRef.setStyle("-fx-font-size:10px; -fx-text-fill:" + COLOR_REFERENCIA +
-                                "; -fx-background-color:white; -fx-padding:0 2 0 2;");
-                lblRef.setLayoutX(x0ref + 4);
-                lblRef.setLayoutY(yRef - 14);
-                lblRef.setMouseTransparent(true);
+            Label lblRef = new Label("Promedio " + PuntosEstadistica.formatearPuntos(refMedia));
+            lblRef.setStyle("-fx-font-size:10px; -fx-text-fill:" + COLOR_REFERENCIA +
+                            "; -fx-background-color:white; -fx-padding:0 2 0 2;");
+            lblRef.setLayoutX(x0ref + 4);
+            lblRef.setLayoutY(yRef - 14);
+            lblRef.setMouseTransparent(true);
 
-                lineaRefVisual = lineaRef;
-                hitRef.setOnMouseEntered(e -> {
-                    sobreLineaMedia = true;
-                    resaltarReferencia(new java.util.ArrayList<>(chartReparaciones.getData()));
-                });
-                hitRef.setOnMouseExited(e -> {
-                    sobreLineaMedia = false;
-                    restaurarSeries(new java.util.ArrayList<>(chartReparaciones.getData()));
-                });
+            lineaRefVisual = lineaRef;
+            hitRef.setOnMouseEntered(e -> {
+                sobreLineaMedia = true;
+                resaltarReferencia(new java.util.ArrayList<>(chartReparaciones.getData()));
+            });
+            hitRef.setOnMouseExited(e -> {
+                sobreLineaMedia = false;
+                restaurarSeries(new java.util.ArrayList<>(chartReparaciones.getData()));
+            });
 
-                plotArea.getChildren().addAll(lineaRef, lblRef, hitRef);
-                lineasReferencia.add(lineaRef);
-                lineasReferencia.add(lblRef);
-                lineasReferencia.add(hitRef);
-            }
+            plotArea.getChildren().addAll(lineaRef, lblRef, hitRef);
+            lineasReferencia.add(lineaRef);
+            lineasReferencia.add(lblRef);
+            lineasReferencia.add(hitRef);
         }
 
         actualizarVisibilidadMedia();
@@ -621,8 +628,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void actualizarVisibilidadReferencia() {
-        boolean visible = chkTodos.isSelected();
-        lineasReferencia.forEach(n -> n.setVisible(visible));
+        lineasReferencia.forEach(n -> n.setVisible(true));
     }
 
     private void actualizarVisibilidadMedia() {
@@ -630,12 +636,12 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lineasMedia.forEach(n -> n.setVisible(visible));
     }
 
-    private void actualizarVisibilidadActividad() {
-        boolean visible = chkActividad.isSelected();
-        for (XYChart.Series<String, Number> serie : chartReparaciones.getData()) {
-            if (serie.getNode() != null) serie.getNode().setVisible(visible);
-            serie.getData().forEach(d -> { if (d.getNode() != null) d.getNode().setVisible(visible); });
-        }
+    /** Nº de trabajos (normales + glass + pulidos) de un técnico (o "Equipo") en un periodo. */
+    private int trabajosDe(String tecnico, String periodo) {
+        return todosPuntos.stream()
+                .filter(p -> p.getPeriodo().equals(periodo)
+                        && ("Equipo".equals(tecnico) || p.getNombreTecnico().equals(tecnico)))
+                .mapToInt(p -> p.getnNormales() + p.getnGlass() + p.getnPulidos()).sum();
     }
 
     /** Aplica el color fijo de cada técnico a su línea, puntos y símbolo de leyenda. */
@@ -662,7 +668,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         ? "-fx-background-color: " + color + ", white;"
                         : "-fx-background-color: transparent, transparent;");
 
-                Tooltip tip = new Tooltip(d.getXValue() + "\n" + d.getYValue().intValue() + " reparaciones");
+                Tooltip tip = new Tooltip(PuntosEstadistica.textoTooltip(d.getXValue(), d.getYValue().doubleValue(),
+                        metricaPorDia(), trabajosDe(serie.getName(), d.getXValue())));
                 tip.setShowDelay(Duration.ZERO);
                 tip.setShowDuration(Duration.INDEFINITE);
                 tip.setHideDelay(Duration.millis(100));
@@ -684,7 +691,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 if (navegable) {
                     final XYChart.Series<String, Number> serieClick = serie;
                     nodo.setOnMouseClicked(e -> {
-                        String tecnico = "Todos".equals(serieClick.getName()) ? null : serieClick.getName();
+                        String tecnico = "Equipo".equals(serieClick.getName()) ? null : serieClick.getName();
                         java.time.LocalDate[] rango = periodoAFechas(d.getXValue());
                         navegacion.navegarAReparaciones(rango[0], rango[1], tecnico);
                     });
@@ -712,7 +719,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     if (!sobrePunto) {
                         Double m = mediaPorSerie.get(cercana);
                         if (m != null && m > 0) {
-                            tooltipMedia.setText(String.format("Media %s: %.1f rep.", cercana.getName(), m));
+                            String unidad = metricaPorDia() ? " puntos/día" : " puntos";
+                            tooltipMedia.setText("Media " + cercana.getName() + ": "
+                                    + PuntosEstadistica.formatearPuntos(m) + unidad);
                             tooltipMedia.show(chartReparaciones, e.getScreenX() + 12, e.getScreenY() - 20);
                         }
                     }
@@ -740,7 +749,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     simbolo.setStyle("-fx-background-color: " + color + ", white;");
             }
         });
-        actualizarVisibilidadActividad();
     }
 
     /**
@@ -841,9 +849,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         todosLosTecnicos.stream().filter(t -> t != null && t.isActivo())
                 .forEach(t -> nombresSeleccionadosTec.add(t.getNombre()));
         if (filtroTecHandle != null) filtroTecHandle.refresh();
-        chkTodos.setSelected(true);
-        chkMedia.setSelected(true);
-        chkActividad.setSelected(true);
+        chkEquipo.setSelected(true);
+        chkMedia.setSelected(false);
         actualizarTextoMenuTecnicos();
         recargarDatos();
     }
