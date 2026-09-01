@@ -53,8 +53,9 @@ import java.util.stream.Collectors;
  *   <li>Línea "Promedio" (naranja, discontinua, siempre visible) — promedio de ventana de la
  *       métrica activa sobre los técnicos (nunca sobre la serie "Equipo").</li>
  *   <li>Flechas de navegación de ventana — limitan los periodos visibles cuando hay muchos.</li>
- *   <li>Clic en vértice — navega al historial de reparaciones con el filtro de fecha y
- *       técnico pre-aplicado, vía callback {@link com.reparaciones.utils.Navegable}.</li>
+ *   <li>Clic en vértice — abre un popover con el desglose del periodo y un botón
+ *       "Ver en Historial" que navega con el filtro de fecha y técnico pre-aplicado,
+ *       vía callback {@link com.reparaciones.utils.Navegable}.</li>
  *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Equipo".</li>
  * </ul>
  *
@@ -719,11 +720,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 });
                 if (navegable) {
                     final XYChart.Series<String, Number> serieClick = serie;
-                    nodo.setOnMouseClicked(e -> {
-                        String tecnico = "Equipo".equals(serieClick.getName()) ? null : serieClick.getName();
-                        java.time.LocalDate[] rango = periodoAFechas(d.getXValue());
-                        navegacion.navegarAReparaciones(rango[0], rango[1], tecnico);
-                    });
+                    nodo.setOnMouseClicked(e ->
+                            mostrarPopoverDesglose(nodo, serieClick.getName(), d.getXValue()));
                 }
             }
         }
@@ -778,6 +776,49 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     simbolo.setStyle("-fx-background-color: " + color + ", white;");
             }
         });
+    }
+
+    /** Popover con el desglose del punto y salto opcional al Historial (spec §4). */
+    private void mostrarPopoverDesglose(javafx.scene.Node ancla, String nombreSerie, String periodo) {
+        boolean esEquipo = "Equipo".equals(nombreSerie);
+        PuntoEstadisticaPuntos datos = todosPuntos.stream()
+                .filter(p -> p.getPeriodo().equals(periodo)
+                        && (esEquipo || p.getNombreTecnico().equals(nombreSerie)))
+                .reduce((a, b) -> new PuntoEstadisticaPuntos(nombreSerie, periodo,
+                        a.getPuntos() + b.getPuntos(),
+                        a.getPuntosNormales() + b.getPuntosNormales(),
+                        a.getPuntosGlass() + b.getPuntosGlass(),
+                        a.getPuntosPulidos() + b.getPuntosPulidos(),
+                        a.getnNormales() + b.getnNormales(),
+                        a.getnGlass() + b.getnGlass(),
+                        a.getnPulidos() + b.getnPulidos(),
+                        a.getnSinPiezas() + b.getnSinPiezas()))
+                .orElse(null);
+        if (datos == null) return;
+
+        javafx.stage.Popup popup = new javafx.stage.Popup();
+        popup.setAutoHide(true);
+
+        Label titulo = new Label(nombreSerie + " — " + periodo);
+        titulo.setStyle("-fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label cuerpo = new Label(PuntosEstadistica.textoPopover(datos));
+        cuerpo.setStyle("-fx-text-fill: #2C3B54; -fx-font-size: 12px;");
+        Button verHistorial = new Button("Ver en Historial");
+        verHistorial.getStyleClass().add("btn-secondary");
+        verHistorial.setOnAction(ev -> {
+            popup.hide();
+            java.time.LocalDate[] rango =
+                    PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
+            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie);
+        });
+
+        VBox caja = new VBox(6, titulo, cuerpo, verHistorial);
+        caja.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;"
+                + " -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 12;"
+                + " -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 2);");
+        popup.getContent().add(caja);
+        var b = ancla.localToScreen(ancla.getBoundsInLocal());
+        popup.show(ancla, b.getMaxX() + 6, b.getMinY() - 10);
     }
 
     /**
@@ -1121,35 +1162,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     // ─── Navigation helpers ────────────────────────────────────────────────────
-
-    /**
-     * Convierte un periodo (según la granularidad activa) al rango de fechas que representa.
-     * Formatos: día="2026-05-12", semana="2026-W15", mes="2026-05"
-     */
-    private java.time.LocalDate[] periodoAFechas(String periodo) {
-        return switch (cmbGranularidad.getValue()) {
-            case "Día" -> {
-                java.time.LocalDate d = java.time.LocalDate.parse(periodo);
-                yield new java.time.LocalDate[]{d, d};
-            }
-            case "Mes" -> {
-                java.time.YearMonth ym = java.time.YearMonth.parse(periodo);
-                yield new java.time.LocalDate[]{ym.atDay(1), ym.atEndOfMonth()};
-            }
-            case "Año" -> {
-                int year = Integer.parseInt(periodo);
-                yield new java.time.LocalDate[]{
-                        java.time.LocalDate.of(year, 1, 1),
-                        java.time.LocalDate.of(year, 12, 31)};
-            }
-            default -> { // "2026-W15" → lunes–domingo de esa semana ISO
-                java.time.LocalDate lunes = java.time.LocalDate.parse(
-                        periodo + "-1",
-                        java.time.format.DateTimeFormatter.ISO_WEEK_DATE);
-                yield new java.time.LocalDate[]{lunes, lunes.plusDays(6)};
-            }
-        };
-    }
 
     /** Tarjetas del mes en curso (equipo, o el propio técnico si el rol es TECNICO). */
     private void cargarTarjetas() {
