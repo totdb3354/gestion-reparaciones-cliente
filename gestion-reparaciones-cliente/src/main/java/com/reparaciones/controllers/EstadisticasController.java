@@ -194,7 +194,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         // Registrar color de "Equipo" para que todo el sistema de colores/hover funcione automáticamente
         coloresPorNombre.put("Equipo", COLOR_EQUIPO);
-        chkEquipo.setSelected(true);
+        chkEquipo.setSelected(false); // apagada por defecto (ajuste smoke 2026-09-01)
         chkEquipo.selectedProperty().addListener((obs, o, n) -> renderVentana(ventanaOffset));
 
         chkMedia.setSelected(false);
@@ -1009,7 +1009,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         if (!com.reparaciones.Sesion.esAdminOSuperTecnico() && nombreTecnicoSesion != null)
             nombresSeleccionadosTec.add(nombreTecnicoSesion);
         if (filtroTecHandle != null) filtroTecHandle.refresh();
-        chkEquipo.setSelected(true);
+        chkEquipo.setSelected(false);
         chkMedia.setSelected(false);
         actualizarTextoMenuTecnicos();
         recargarDatos();

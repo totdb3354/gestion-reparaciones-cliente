@@ -75,7 +75,7 @@ La pestaña "Reparaciones" del sidebar de Estadísticas pasa a llamarse **"Técn
   - Días laborables **simples** (sin ponderar por horas de jornada; decisión usuario 2026-09-01). Festivos no descontados (simplificación conocida, como el Excel).
   - **Periodo en curso**: divide solo por los días laborables ya transcurridos (hoy incluido si es laborable), para no hundir la última semana/mes.
   - Granularidad Día: puntos/día del día = puntos (÷1); días no laborables con trabajo se muestran tal cual.
-- **Arranque limpio**: al abrir solo se pintan **Equipo (suma)** (serie negra, la actual "Todos" renombrada) y el **Promedio**. Los técnicos se añaden desde `+ Técnicos` (desplegable multiselección actual + **buscador de texto** arriba; activos primero, inactivos tras el separador, colores deterministas de siempre) y se quitan desde el mismo desplegable o **clicando su nombre en la leyenda** (quitar rápido; añadir, siempre desde el desplegable).
+- **Arranque limpio**: al abrir solo se pinta el **Promedio**; la serie **Equipo (suma)** (negra, la actual "Todos" renombrada) arranca **desmarcada** y se enciende con su checkbox (ajuste smoke 2026-09-01). Los técnicos se añaden desde `+ Técnicos` (desplegable multiselección actual + **buscador de texto** arriba; activos primero, inactivos tras el separador, colores deterministas de siempre) y se quitan desde el mismo desplegable o **clicando su nombre en la leyenda** (quitar rápido; añadir, siempre desde el desplegable).
 - **Promedio**: línea **discontinua horizontal** (paralela al eje X), naranja actual (`#C07800`), con etiqueta "Promedio". Valor = media por técnico y periodo de la métrica visible en la **ventana visible** (solo técnicos con actividad en ella). Se recalcula al cambiar granularidad, fechas, ventana o métrica. Es la "referencia" de hoy con nombre visible y en puntos; **siempre visible, sin checkbox propio** (es la vara de medir de la vista).
 - **"Ver medias"** (off por defecto): las líneas discontinuas de media por técnico actuales, solo de las series visibles. Los checkboxes **"Todos" y "Actividad" desaparecen** (redundantes con la selección explícita).
 - **Navegación temporal**: fuera el slider; **flechas ◀ ▶** que desplazan la ventana (misma ventana por granularidad: 30 días / 16 semanas / 12 meses / 5 años) con etiqueta del rango visible en medio ("16 sem · 18 may — 30 ago"). Flecha deshabilitada en el extremo. Al abrir, posicionado en lo más reciente.
@@ -116,7 +116,7 @@ El filtrado es **en cliente** (el endpoint devuelve a todos): coherente con el m
 ## 9. Smoke (borrador)
 
 1. Migración aplicada: tabla con 8 filas seed.
-2. Admin: vista abre con Equipo + Promedio solos; añadir 2 técnicos por desplegable (buscador) y quitar 1 por leyenda.
+2. Admin: vista abre solo con el Promedio (Equipo desmarcada); marcar "Equipo (suma)" la enciende; añadir 2 técnicos por desplegable (buscador) y quitar 1 por leyenda.
 3. Alternar Puntos / Puntos/día: eje, tooltip y tarjetas cambian; mes en curso no se hunde.
 4. Granularidades Día/Semana/Mes/Año + flechas ◀ ▶ (extremos deshabilitados, etiqueta de rango correcta).
 5. Clic en vértice: popover con desglose que cuadra a mano con 1-2 reparaciones conocidas (normal con 2 piezas, glass+marco, pulido, sin piezas); "Ver en Historial" aterriza con filtros bien puestos.
