@@ -170,7 +170,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         btnValores.setManaged(com.reparaciones.Sesion.esAdmin());
 
         cmbGranularidad.setItems(FXCollections.observableArrayList("Día", "Semana", "Mes", "Año"));
-        cmbGranularidad.setValue("Semana");
+        cmbGranularidad.setValue("Día"); // por defecto Día (ajuste smoke 2026-09-01)
         dpDesde.setValue(null);
         dpHasta.setValue(null);
 
