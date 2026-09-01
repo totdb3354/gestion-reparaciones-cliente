@@ -895,10 +895,19 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             popup.hide();
             java.time.LocalDate[] rango =
                     PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
-            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie);
+            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie, false);
         });
+        Button verImeis = new Button("Ver IMEIs");
+        verImeis.getStyleClass().add("btn-secondary");
+        verImeis.setOnAction(ev -> {
+            popup.hide();
+            java.time.LocalDate[] rango =
+                    PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
+            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie, true);
+        });
+        HBox botones = new HBox(8, verHistorial, verImeis);
 
-        VBox caja = new VBox(6, titulo, cuerpo, verHistorial);
+        VBox caja = new VBox(6, titulo, cuerpo, botones);
         caja.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;"
                 + " -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 12;"
                 + " -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 2);");

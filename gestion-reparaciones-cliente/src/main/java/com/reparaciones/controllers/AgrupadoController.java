@@ -914,6 +914,25 @@ public class AgrupadoController {
         actualizarTextoFiltroIncidencias();
     }
 
+    /**
+     * Filtro inicial desde Estadísticas (popover "Ver IMEIs"): fechas y técnico
+     * ya aplicados sobre el modo maestro — se ven los IMEIs con al menos un
+     * trabajo del técnico en el rango.
+     */
+    public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        volverAlMaestro();
+        if (tecnico != null) {
+            idsTecFiltro.clear();
+            tecnicosLista.stream().filter(t -> t.getNombre().equals(tecnico))
+                    .findFirst().ifPresent(t -> idsTecFiltro.add(t.getIdTec()));
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoFiltroTecnico();
+        }
+        filtroFechaDesde.setValue(desde);
+        filtroFechaHasta.setValue(hasta);
+        aplicarFiltros();
+    }
+
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();

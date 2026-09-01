@@ -98,6 +98,7 @@ public class MainController {
     private java.time.LocalDate filtroNavDesde;
     private java.time.LocalDate filtroNavHasta;
     private String              filtroNavTecnico;
+    private boolean             filtroNavImeis;
 
     /**
      * Inicializa la barra de navegación, muestra la vista de reparaciones por defecto
@@ -969,10 +970,11 @@ public class MainController {
 
                 // Pasar callback de navegación a EstadisticasController (solo primera carga)
                 if (ctrl instanceof EstadisticasController ec) {
-                    ec.setNavegacion((desde, hasta, tecnico) -> {
+                    ec.setNavegacion((desde, hasta, tecnico, aImeis) -> {
                         filtroNavDesde   = desde;
                         filtroNavHasta   = hasta;
                         filtroNavTecnico = tecnico;
+                        filtroNavImeis   = aImeis;
                         mostrarReparaciones();
                     });
                 }
@@ -985,15 +987,19 @@ public class MainController {
 
             // Filtro desde estadísticas: se aplica siempre que haya uno pendiente
             if (filtroNavDesde != null) {
-                if (ctrl instanceof ReparacionControllerSuperTecnico) {
-                    ((ReparacionControllerSuperTecnico) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
-                } else if (ctrl instanceof ReparacionControllerAdmin) {
-                    ((ReparacionControllerAdmin) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
-                } else if (ctrl instanceof ReparacionControllerTecnico) {
-                    ((ReparacionControllerTecnico) ctrl).setFiltroInicial(filtroNavDesde, filtroNavHasta);
+                if (ctrl instanceof ReparacionControllerSuperTecnico st) {
+                    if (filtroNavImeis) st.setFiltroInicialImeis(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                    else                st.setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                } else if (ctrl instanceof ReparacionControllerAdmin ad) {
+                    if (filtroNavImeis) ad.setFiltroInicialImeis(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                    else                ad.setFiltroInicial(filtroNavDesde, filtroNavHasta, filtroNavTecnico);
+                } else if (ctrl instanceof ReparacionControllerTecnico tc) {
+                    if (filtroNavImeis) tc.setFiltroInicialImeis(filtroNavDesde, filtroNavHasta);
+                    else                tc.setFiltroInicial(filtroNavDesde, filtroNavHasta);
                 }
                 filtroNavDesde = filtroNavHasta = null;
                 filtroNavTecnico = null;
+                filtroNavImeis = false;
             } else if (cached != null && controladorActivo != null) {
                 // Vista ya existente: refrescar datos sin tocar filtros
                 controladorActivo.recargar();
