@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.reparaciones.models.AsignacionActiva;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.PuntoEstadistica;
+import com.reparaciones.models.PuntoEstadisticaPuntos;
 import com.reparaciones.models.Reparacion;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.ApiClient;
@@ -304,6 +305,22 @@ public class ReparacionDAO {
         String path = "/api/reparaciones/estadisticas?granularidad=" + granularidad
                 + "&desde=" + desde + "&hasta=" + hasta;
         return ApiClient.getList(path, PuntoEstadistica.class);
+    }
+
+    /**
+     * Devuelve las estadísticas por puntos de dificultad agrupadas por técnico y periodo.
+     *
+     * @param granularidad {@code "dia"}, {@code "semana"}, {@code "mes"} o {@code "ano"}
+     * @param desde        fecha de inicio del rango
+     * @param hasta        fecha de fin del rango
+     * @return lista de puntos de estadística por puntos ordenados por periodo y técnico
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public List<PuntoEstadisticaPuntos> getEstadisticasPuntos(
+            String granularidad, LocalDate desde, LocalDate hasta) throws SQLException {
+        String path = "/api/reparaciones/estadisticas/puntos?granularidad=" + granularidad
+                + "&desde=" + desde + "&hasta=" + hasta;
+        return ApiClient.getList(path, PuntoEstadisticaPuntos.class);
     }
 
     // ── Escritura ─────────────────────────────────────────────────────────────
