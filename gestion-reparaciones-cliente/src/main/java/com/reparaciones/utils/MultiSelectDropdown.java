@@ -11,7 +11,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import javafx.util.Callback;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -120,7 +119,11 @@ public final class MultiSelectDropdown {
             Function<T, String> textoFiltro) {
 
         ListView<T> listView = getOrCreate(combo);
-        List<T> maestros = new ArrayList<>(items);
+        @SuppressWarnings("unchecked")
+        List<T> maestros = (List<T>) listView.getProperties()
+                .computeIfAbsent("maestros", k -> new java.util.ArrayList<T>());
+        maestros.clear();
+        maestros.addAll(items);
 
         if (combo.getUserData() == null) {
             combo.setUserData(listView);
