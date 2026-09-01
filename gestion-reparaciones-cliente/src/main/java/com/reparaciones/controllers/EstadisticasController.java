@@ -869,8 +869,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         dpDesde.setValue(null);
         dpHasta.setValue(null);
         nombresSeleccionadosTec.clear();
-        todosLosTecnicos.stream().filter(t -> t != null && t.isActivo())
-                .forEach(t -> nombresSeleccionadosTec.add(t.getNombre()));
+        // Arranque limpio: admin/supertécnico quedan sin selección (solo Equipo + Promedio);
+        // técnico raso siempre vuelve a verse solo a sí mismo, nunca al resto del equipo.
+        if (!com.reparaciones.Sesion.esAdminOSuperTecnico() && nombreTecnicoSesion != null)
+            nombresSeleccionadosTec.add(nombreTecnicoSesion);
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         chkEquipo.setSelected(true);
         chkMedia.setSelected(false);
