@@ -121,6 +121,7 @@ El filtrado es **en cliente** (el endpoint devuelve a todos): coherente con el m
 4. Granularidades Día/Semana/Mes/Año + flechas ◀ ▶ (extremos deshabilitados, etiqueta de rango correcta).
 5. Clic en vértice: popover con desglose que cuadra a mano con 1-2 reparaciones conocidas (normal con 2 piezas, glass+marco, pulido, sin piezas); "Ver en Historial" aterriza con filtros bien puestos.
 6. ⚙ Valores: subir `chasis` a 3 → gráfico y tarjetas se re-valoran; entrada en el Log; validación rechaza negativo/texto.
+6b. Regresión: abrir ⚙ Valores y Guardar SIN tocar nada → ninguna entrada nueva en el Log y pulido sigue en 0,25.
 7. Rol técnico: solo su línea + equipo + promedio; sin desplegable ni ⚙; tarjetas personales; clic solo en su serie.
 8. Rol supertécnico: todo menos ⚙.
 9. Cliente 0.16.1 contra el servidor nuevo: estadísticas viejas siguen funcionando.

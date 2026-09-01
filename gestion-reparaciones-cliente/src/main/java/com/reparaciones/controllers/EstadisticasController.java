@@ -241,7 +241,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         for (var e : ETIQUETA_CLAVE.entrySet()) {
             if (!porClave.containsKey(e.getKey())) continue;
             grid.add(new Label(e.getValue()), 0, fila);
-            TextField tf = new TextField(PuntosEstadistica.formatearPuntos(porClave.get(e.getKey())));
+            TextField tf = new TextField(PuntosEstadistica.formatearPuntosEdicion(porClave.get(e.getKey())));
             tf.setPrefWidth(80);
             campos.put(e.getKey(), tf);
             grid.add(tf, 1, fila++);
@@ -515,7 +515,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             double maxEquipo = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).max().orElse(0);
             maxVisible = Math.max(maxVisible, maxEquipo);
         }
-        ejeY.setUpperBound(Math.max(5, Math.ceil(maxVisible) + 1));
+        // La línea de Promedio también debe caber dentro del eje, no solo las series visibles
+        double promedioVentana = promedioVentanaActual(periodosVisibles);
+        ejeY.setUpperBound(Math.max(5, Math.ceil(Math.max(maxVisible, promedioVentana)) + 1));
         ejeY.setLabel(metricaPorDia() ? "Puntos/día" : "Puntos");
 
         Runnable render = () -> {
@@ -534,22 +536,36 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 dibujarLineasMedia(periodosVisibles, ts);
             });
 
-            for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
-                if (!(item instanceof Label lbl)) continue;
-                String nombre = lbl.getText();
-                boolean esTecnico = !"Equipo".equals(nombre);
-                lbl.setStyle(esTecnico ? "-fx-cursor: hand;" : "");
-                lbl.setOnMouseClicked(e -> {
-                    if (!esTecnico) return;
-                    nombresSeleccionadosTec.remove(nombre);
-                    if (filtroTecHandle != null) filtroTecHandle.refresh();
-                    actualizarTextoMenuTecnicos();
-                    renderVentana(ventanaOffset);
-                });
+            // Quitar técnico desde la leyenda con un clic: solo ADMIN/SUPERTECNICO — un técnico
+            // raso no puede auto-quitarse de su propia vista de estadísticas.
+            if (com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+                for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
+                    if (!(item instanceof Label lbl)) continue;
+                    String nombre = lbl.getText();
+                    boolean esTecnico = !"Equipo".equals(nombre);
+                    lbl.setStyle(esTecnico ? "-fx-cursor: hand;" : "");
+                    lbl.setOnMouseClicked(e -> {
+                        if (!esTecnico) return;
+                        nombresSeleccionadosTec.remove(nombre);
+                        if (filtroTecHandle != null) filtroTecHandle.refresh();
+                        actualizarTextoMenuTecnicos();
+                        renderVentana(ventanaOffset);
+                    });
+                }
             }
         };
         if (chartReparaciones.getScene() != null) render.run();
         else Platform.runLater(render);
+    }
+
+    /** Promedio de ventana (todos los técnicos, métrica activa) para los periodos visibles dados. */
+    private double promedioVentanaActual(Set<String> periodosVisibles) {
+        Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos) {
+            datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                        .put(p.getPeriodo(), valorDe(p));
+        }
+        return PuntosEstadistica.promedioVentana(datosVentana, new java.util.ArrayList<>(periodosVisibles));
     }
 
     private void dibujarLineasMedia(Set<String> periodosVisibles, List<XYChart.Series<String, Number>> todasSeries) {
@@ -644,13 +660,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         // Línea "Promedio": promedio de ventana de la métrica activa sobre los técnicos
         // (nunca sobre la serie "Equipo"); siempre visible salvo que no haya actividad.
-        Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
-        for (PuntoEstadisticaPuntos p : todosPuntos) {
-            datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
-                        .put(p.getPeriodo(), valorDe(p));
-        }
-        double refMedia = PuntosEstadistica.promedioVentana(
-                datosVentana, new java.util.ArrayList<>(periodosVisibles));
+        double refMedia = promedioVentanaActual(periodosVisibles);
 
         if (refMedia > 0) { // sin actividad → no se dibuja
             double x0ref = bg.getBoundsInParent().getMinX();

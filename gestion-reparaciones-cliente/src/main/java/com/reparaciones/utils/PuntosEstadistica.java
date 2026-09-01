@@ -94,6 +94,14 @@ public final class PuntosEstadistica {
                 .toPlainString().replace('.', ',');
     }
 
+    /** Formato de EDICIÓN: hasta 2 decimales sin ceros de cola (mínimo 1), coma. "0,25", "2,0". */
+    public static String formatearPuntosEdicion(double v) {
+        String s = BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString();
+        if (!s.contains(".")) s += ".0";
+        return s.replace('.', ',');
+    }
+
     public static String textoTooltip(String periodo, double valor, boolean porDia, int trabajos) {
         return porDia
                 ? periodo + "\n" + formatearPuntos(valor) + " puntos/día"
@@ -119,7 +127,7 @@ public final class PuntosEstadistica {
         }
         sb.append(linea);
         if (p.getnSinPiezas() > 0)
-            sb.append("\n").append(p.getnSinPiezas()).append(" sin piezas (0,5 c/u)");
+            sb.append("\n").append(p.getnSinPiezas()).append(" sin piezas");
         return sb.toString();
     }
 

@@ -85,6 +85,12 @@ class PuntosEstadisticaTest {
         assertEquals("3,3",  PuntosEstadistica.formatearPuntos(3.25)); // HALF_UP
     }
 
+    @Test void formatoEdicionConservaDosDecimales() {
+        assertEquals("0,25", PuntosEstadistica.formatearPuntosEdicion(0.25));
+        assertEquals("2,0",  PuntosEstadistica.formatearPuntosEdicion(2.0));
+        assertEquals("1,5",  PuntosEstadistica.formatearPuntosEdicion(1.5));
+    }
+
     // ── textos ────────────────────────────────────────────────────────────────
     @Test void tooltipConPuntosYTrabajos() {
         assertEquals("2026-W36\n14,5 puntos · 18 trabajos",
@@ -97,7 +103,7 @@ class PuntosEstadisticaTest {
         PuntoEstadisticaPuntos p = new PuntoEstadisticaPuntos("Marcos", "2026-W36",
                 14.5, 11.0, 2.0, 1.5, 9, 3, 6, 2);
         String texto = PuntosEstadistica.textoPopover(p);
-        assertEquals("14,5 puntos\n9 normales (11,0) · 3 glass (2,0) · 6 pulidos (1,5)\n2 sin piezas (0,5 c/u)",
+        assertEquals("14,5 puntos\n9 normales (11,0) · 3 glass (2,0) · 6 pulidos (1,5)\n2 sin piezas",
                 texto);
     }
 
