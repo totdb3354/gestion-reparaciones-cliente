@@ -19,12 +19,15 @@ import javafx.scene.chart.XYChart;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -68,6 +71,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     @FXML private Button   btnTabReparaciones;
     @FXML private Button   btnTabStock;
+    @FXML private Button   btnValores;
 
     @FXML private VBox     pnlReparaciones;
     @FXML private VBox     pnlStock;
@@ -162,6 +166,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     @FXML
     public void initialize() {
+        btnValores.setVisible(com.reparaciones.Sesion.esAdmin());
+        btnValores.setManaged(com.reparaciones.Sesion.esAdmin());
+
         cmbGranularidad.setItems(FXCollections.observableArrayList("Día", "Semana", "Mes", "Año"));
         cmbGranularidad.setValue("Semana");
         dpDesde.setValue(null);
@@ -200,6 +207,75 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         cmbModeloFiltro.valueProperty().addListener((obs, o, n) -> renderStockActual());
         chartStock.widthProperty().addListener((obs, o, w) -> ajustarAnchoBarras(w.doubleValue()));
         poblarFiltrosComponente();
+    }
+
+    /** Etiquetas legibles de las claves de Dificultad_puntos, en orden de mostrado. */
+    private static final java.util.LinkedHashMap<String, String> ETIQUETA_CLAVE = new java.util.LinkedHashMap<>();
+    static {
+        ETIQUETA_CLAVE.put("pantalla", "Pantalla");
+        ETIQUETA_CLAVE.put("bateria",  "Batería");
+        ETIQUETA_CLAVE.put("chasis",   "Chasis");
+        ETIQUETA_CLAVE.put("camara",   "Cámara");
+        ETIQUETA_CLAVE.put("glass",    "Glass");
+        ETIQUETA_CLAVE.put("marco",    "Marco");
+        ETIQUETA_CLAVE.put("otro",     "Otro / sin piezas");
+        ETIQUETA_CLAVE.put("pulido",   "Pulido");
+    }
+
+    @FXML
+    private void abrirModalValores() {
+        List<com.reparaciones.models.ValorDificultad> valores;
+        try {
+            valores = new com.reparaciones.dao.ValoresDificultadDAO().getAll();
+        } catch (SQLException e) { mostrarError(e); return; }
+        java.util.Map<String, Double> porClave = new java.util.HashMap<>();
+        valores.forEach(v -> porClave.put(v.getClave(), v.getPuntos()));
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Valores de dificultad");
+        dialog.setHeaderText("Puntos por tipo de trabajo");
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(12); grid.setVgap(8);
+        java.util.Map<String, TextField> campos = new java.util.LinkedHashMap<>();
+        int fila = 0;
+        for (var e : ETIQUETA_CLAVE.entrySet()) {
+            if (!porClave.containsKey(e.getKey())) continue;
+            grid.add(new Label(e.getValue()), 0, fila);
+            TextField tf = new TextField(PuntosEstadistica.formatearPuntos(porClave.get(e.getKey())));
+            tf.setPrefWidth(80);
+            campos.put(e.getKey(), tf);
+            grid.add(tf, 1, fila++);
+        }
+        Label aviso = new Label("Cambiar un valor re-valora también las estadísticas pasadas.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        grid.add(aviso, 0, fila, 2, 1);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // Validar sin cerrar el diálogo si hay campos inválidos
+        javafx.scene.control.Button ok =
+                (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            List<com.reparaciones.models.ValorDificultad> nuevos = new java.util.ArrayList<>();
+            boolean hayError = false;
+            for (var e : campos.entrySet()) {
+                var parsed = PuntosEstadistica.parsePuntos(e.getValue().getText());
+                if (parsed.isEmpty()) {
+                    e.getValue().setStyle("-fx-border-color: #C62828;");
+                    hayError = true;
+                } else {
+                    e.getValue().setStyle("");
+                    nuevos.add(new com.reparaciones.models.ValorDificultad(e.getKey(), parsed.get()));
+                }
+            }
+            if (hayError) { ev.consume(); return; }
+            try {
+                new com.reparaciones.dao.ValoresDificultadDAO().guardar(nuevos);
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); return; }
+            recargarDatos();
+            cargarTarjetas();
+        });
+        dialog.showAndWait();
     }
 
     /** Carga los técnicos de la BD, configura el MultiSelectComboBox con colores y separador. */
@@ -973,9 +1049,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         PREFIJO_TIPO.put("bat", "Batería");
         PREFIJO_TIPO.put("cha", "Chasis");
         PREFIJO_TIPO.put("cam", "Cámara");
-        PREFIJO_TIPO.put("lcd", "LCD");
+        PREFIJO_TIPO.put("lcd", "Pantalla");
         PREFIJO_TIPO.put("mc",  "Marco");
-        PREFIJO_TIPO.put("g",   "Pantalla");
+        PREFIJO_TIPO.put("g",   "Glass");
     }
 
     private static String tipoDeComponente(String sku) {

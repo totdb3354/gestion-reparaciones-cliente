@@ -7,7 +7,11 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-_(cambios para la próxima versión)_
+### Añadido
+- Estadísticas por puntos de dificultad: la pestaña "Técnicos" mide puntos (tabla editable por el admin en ⚙ Valores) con métricas Puntos y Puntos/día, tarjetas del mes, promedio del equipo, desplegable con buscador, flechas de navegación temporal y popover de desglose con salto al Historial.
+
+### Corregido
+- La pestaña Stock de Estadísticas etiquetaba los SKU `g` como "Pantalla" y `lcd` como "LCD"; ahora `g`=Glass y `lcd`=Pantalla, como el formulario de reparación.
 
 ## [0.16.1] - 2026-08-31
 
