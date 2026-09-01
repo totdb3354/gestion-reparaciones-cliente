@@ -5,11 +5,13 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import javafx.util.Callback;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -106,6 +108,44 @@ public final class MultiSelectDropdown {
         return new Handle(listView);
     }
 
+    // ── Overload custom + buscador (Estadísticas por puntos) ──────────────────
+
+    /** Igual que el overload custom, con un TextField de filtro sobre la lista.
+     *  {@code textoFiltro} extrae el texto buscable del item; item null (separador) siempre visible. */
+    public static <T> Handle setup(
+            MultiSelectComboBox<T> combo,
+            List<T> items,
+            Callback<ListView<T>, ListCell<T>> cellFactory,
+            StringProperty etiqueta,
+            Function<T, String> textoFiltro) {
+
+        ListView<T> listView = getOrCreate(combo);
+        List<T> maestros = new ArrayList<>(items);
+
+        if (combo.getUserData() == null) {
+            combo.setUserData(listView);
+            listView.setCellFactory(cellFactory);
+
+            TextField buscador = new TextField();
+            buscador.setPromptText("Buscar…");
+            buscador.textProperty().addListener((obs, o, texto) -> {
+                String t = texto == null ? "" : texto.trim().toLowerCase();
+                List<T> filtrados = t.isEmpty() ? maestros : maestros.stream()
+                        .filter(it -> it == null
+                                || textoFiltro.apply(it).toLowerCase().contains(t))
+                        .collect(java.util.stream.Collectors.toList());
+                listView.getItems().setAll(filtrados);
+                listView.setMaxHeight(Math.min(filtrados.size(), MAX_VISIBLE_ROWS) * ALTURA_FILA + RELLENO_LISTA);
+            });
+            setupPopupAndButton(combo, listView, etiqueta, buscador);
+        }
+
+        listView.getItems().setAll(maestros);
+        listView.setMaxHeight(Math.min(maestros.size(), MAX_VISIBLE_ROWS) * ALTURA_FILA + RELLENO_LISTA);
+        listView.refresh();
+        return new Handle(listView);
+    }
+
     // ── Helpers privados ──────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
@@ -122,6 +162,12 @@ public final class MultiSelectDropdown {
 
     private static <T> void setupPopupAndButton(
             MultiSelectComboBox<T> combo, ListView<T> listView, StringProperty etiqueta) {
+        setupPopupAndButton(combo, listView, etiqueta, null);
+    }
+
+    private static <T> void setupPopupAndButton(
+            MultiSelectComboBox<T> combo, ListView<T> listView, StringProperty etiqueta,
+            TextField buscador) {
 
         combo.setButtonCell(new ListCell<>() {
             {
@@ -134,7 +180,7 @@ public final class MultiSelectDropdown {
             }
         });
 
-        VBox contenedor = new VBox(listView);
+        VBox contenedor = buscador != null ? new VBox(4, buscador, listView) : new VBox(listView);
         contenedor.getStyleClass().addAll("combo-box-popup", "multi-select-popup");
         contenedor.setPrefWidth(combo.getPrefWidth());
         contenedor.setMaxWidth(combo.getPrefWidth());

@@ -93,7 +93,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     // nombre → color hex fijo por ID_TEC
     private final Map<String, String>   coloresPorNombre = new LinkedHashMap<>();
     // label del botón MultiSelectComboBox
-    private final StringProperty        etiquetaTecs = new SimpleStringProperty("Técnicos");
+    private final StringProperty        etiquetaTecs = new SimpleStringProperty("+ Técnicos");
     // ListView del popup de técnicos (null hasta que se carga)
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     // todos los técnicos cargados (activos + inactivos, null = separador)
@@ -214,7 +214,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         for (Tecnico t : activos) {
             coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
-            nombresSeleccionadosTec.add(t.getNombre());
             todosLosTecnicos.add(t);
         }
         if (!inactivos.isEmpty()) {
@@ -223,6 +222,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
                 todosLosTecnicos.add(t);
             }
+        }
+
+        if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+            if (nombreTecnicoSesion != null) nombresSeleccionadosTec.add(nombreTecnicoSesion);
+            menuTecnicos.setVisible(false);
+            menuTecnicos.setManaged(false);
+            return; // sin desplegable: no montar el MultiSelectDropdown
         }
 
         filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
@@ -266,7 +272,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     }
                 }
             },
-            etiquetaTecs);
+            etiquetaTecs,
+            t -> t == null ? "" : t.getNombre());
 
         actualizarTextoMenuTecnicos();
     }
@@ -441,6 +448,20 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 chartReparaciones.layout();
                 dibujarLineasMedia(periodosVisibles, ts);
             });
+
+            for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
+                if (!(item instanceof Label lbl)) continue;
+                String nombre = lbl.getText();
+                boolean esTecnico = !"Equipo".equals(nombre);
+                lbl.setStyle(esTecnico ? "-fx-cursor: hand;" : "");
+                lbl.setOnMouseClicked(e -> {
+                    if (!esTecnico) return;
+                    nombresSeleccionadosTec.remove(nombre);
+                    if (filtroTecHandle != null) filtroTecHandle.refresh();
+                    actualizarTextoMenuTecnicos();
+                    renderVentana(ventanaOffset);
+                });
+            }
         };
         if (chartReparaciones.getScene() != null) render.run();
         else Platform.runLater(render);
@@ -833,7 +854,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private void actualizarTextoMenuTecnicos() {
         long total = todosLosTecnicos.stream().filter(t -> t != null).count();
         long sel   = nombresSeleccionadosTec.size();
-        if (sel == 0 || sel == total)
+        if (sel == 0)
+            etiquetaTecs.set("+ Técnicos");
+        else if (sel == total)
             etiquetaTecs.set("Técnicos");
         else if (sel == 1)
             etiquetaTecs.set(nombresSeleccionadosTec.iterator().next());
