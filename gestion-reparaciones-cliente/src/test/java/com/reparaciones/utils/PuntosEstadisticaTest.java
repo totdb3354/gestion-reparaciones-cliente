@@ -180,6 +180,16 @@ class PuntosEstadisticaTest {
         assertEquals(100.0, t.puntosAnterior(), 0.001);
     }
 
+    @Test void tarjetasConMesAnteriorACeroNoDanLinea() {
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08", 0), fila("Marcos", "2026-09", 50));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
+        assertNull(t.pctPuntos());
+        assertNull(t.puntosAnterior());
+        assertNull(t.pctDia());
+    }
+
     @Test void textoObjetivoFormatea() {
         assertEquals("46% de agosto (890,0)", PuntosEstadistica.textoObjetivo(46, "agosto", 890.0));
     }

@@ -17,8 +17,9 @@ public class Tecnico {
     /** {@code true} si el técnico está activo. */
     private boolean activo;
 
-    /** {@code true} si cuenta en la vista de estadísticas (exclusión ronda 2, spec 2026-09-02). */
-    private boolean esEstadistica;
+    /** {@code true} si cuenta en la vista de estadísticas (exclusión ronda 2, spec 2026-09-02).
+     *  Un JSON sin el campo (servidor anterior a 0.16.2) cuenta como incluido. */
+    private Boolean esEstadistica;
 
     /**
      * @param idTec  clave primaria del técnico
@@ -53,8 +54,9 @@ public class Tecnico {
     /** @return {@code true} si el técnico está activo */
     public boolean isActivo() { return activo; }
 
-    /** @return {@code true} si cuenta en la vista de estadísticas */
-    public boolean isEsEstadistica() { return esEstadistica; }
+    /** @return {@code true} si cuenta en la vista de estadísticas; un JSON sin el campo
+     *  (servidor anterior a la 0.16.2) cuenta como incluido. */
+    public boolean isEsEstadistica() { return esEstadistica == null || esEstadistica; }
 
     /** Devuelve el nombre para uso en ComboBox y MenuButton. */
     @Override
