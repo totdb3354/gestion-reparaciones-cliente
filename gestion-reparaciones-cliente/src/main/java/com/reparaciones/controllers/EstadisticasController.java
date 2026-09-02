@@ -429,10 +429,11 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 .sorted()
                 .collect(Collectors.toList());
 
-        // Con filtro de fechas la ventana se ajusta al rango elegido: se ve entero,
-        // sin flechas (ajuste smoke 2026-09-01). Sin filtro, ventana estándar.
-        if ((dpDesde.getValue() != null || dpHasta.getValue() != null) && !todosPeriodos.isEmpty())
-            ventanaTamanio = todosPeriodos.size();
+        // El filtro de fechas acota el rango navegable; la ventana solo se ENCOGE para
+        // ajustarse a rangos cortos, nunca crece más del estándar — un rango largo se
+        // recorre con las flechas dentro del filtro (ajuste smoke 2026-09-02).
+        if (!todosPeriodos.isEmpty())
+            ventanaTamanio = Math.min(ventanaTamanio, todosPeriodos.size());
 
         configurarVentana();
     }
