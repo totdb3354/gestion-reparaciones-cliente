@@ -86,6 +86,7 @@ La pestaña "Reparaciones" del sidebar de Estadísticas pasa a llamarse **"Técn
 - **Clic en un vértice** → **popover de desglose** anclado al punto: "Marcos — sem 18-24 ago: **14,5 pts** = 9 normales (11,0) + 3 glass (2,0) + 6 pulidos (1,5) · 2 sin piezas", con botones **"Ver en Historial"** (la navegación actual, `setFiltroInicial` con fechas del periodo + técnico) y **"Ver IMEIs"** (ajuste smoke 2026-09-01: aterriza en el Agrupado por IMEI con las mismas fechas y técnico — se ven los IMEIs con al menos un trabajo suyo en el rango). Serie Equipo → desglose del equipo y navegación sin técnico. Promedio no clicable. En rol técnico solo su serie es clicable (regla actual).
 - **Modal "⚙ Valores"** (botón visible solo para ADMIN): tabla clave → puntos editable inline, validación (número ≥ 0, coma o punto decimal), Guardar → `PUT` → recarga del gráfico y tarjetas. Aviso fijo en el modal: "Cambiar un valor re-valora también las estadísticas pasadas".
 - **Tooltips de vértice**: "14,5 puntos · 18 trabajos" (o "2,9 puntos/día" en la otra métrica).
+- **Crosshair en el hover** (ajuste smoke 2026-09-02): al pasar por un vértice, además del resaltado de su serie, guías punteadas del punto a ambos ejes y la fecha del eje X en negrita con el color de la serie.
 - **Corrección de etiquetas**: `PREFIJO_TIPO` de la vista Stock corrige `g`→Glass, `lcd`→Pantalla (afecta al agrupado de la pestaña Stock, que hoy los muestra cruzados).
 
 ## 5. Roles y visibilidad

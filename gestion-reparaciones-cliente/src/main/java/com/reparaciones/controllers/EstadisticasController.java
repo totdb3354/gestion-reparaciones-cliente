@@ -116,6 +116,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private boolean sobreLineaMedia = false;
     // Líneas de media por técnico (para limpiarlas entre renders)
     private final java.util.List<Node> lineasMedia      = new java.util.ArrayList<>();
+    // Crosshair del hover sobre un vértice (guías a los ejes + fecha resaltada)
+    private final java.util.List<Node> lineasGuia       = new java.util.ArrayList<>();
     // Nodos de la línea de referencia del equipo (separados para control independiente)
     private final java.util.List<Node> lineasReferencia = new java.util.ArrayList<>();
     // Nodo visual de la línea de referencia (para participar en el sistema de highlight)
@@ -456,6 +458,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     /** Renderiza la ventana de periodos que empieza en `offset`. */
     private void renderVentana(int offset) {
         ventanaOffset = offset;
+        ocultarGuias(); // que un re-render no deje guías de crosshair huérfanas
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
@@ -819,11 +822,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     String cursor = navegable ? "; -fx-cursor: hand;" : ";";
                     nodo.setStyle("-fx-background-color: " + color + ", white" + cursor);
                     if (serieResaltada != serie) { serieResaltada = serie; resaltarSerie(serie, todasSeries); }
+                    mostrarGuias(nodo, d.getXValue(), color);
                 });
                 nodo.setOnMouseExited(e -> {
                     nodo.setStyle(puntosVisibles
                             ? "-fx-background-color: " + color + ", white;"
                             : "-fx-background-color: transparent, transparent;");
+                    ocultarGuias();
                 });
                 if (navegable) {
                     final XYChart.Series<String, Number> serieClick = serie;
@@ -1303,6 +1308,59 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         boolean sube = pct >= 0;
         lbl.setText((sube ? "▲ +" : "▼ ") + String.format("%.0f", pct) + "%");
         lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (sube ? "#2E7D32" : "#C62828") + ";");
+    }
+
+    /**
+     * Crosshair del hover sobre un vértice: guías punteadas del punto a ambos ejes
+     * y la fecha correspondiente del eje X en negrita con el color de la serie,
+     * para leer las coordenadas de un vistazo (ajuste smoke 2026-09-02).
+     */
+    private void mostrarGuias(Node nodo, String periodo, String color) {
+        ocultarGuias();
+        Node bg = chartReparaciones.lookup(".chart-plot-background");
+        if (bg == null || !(bg.getParent() instanceof javafx.scene.layout.Pane plotArea)) return;
+
+        javafx.geometry.Bounds nb = plotArea.sceneToLocal(nodo.localToScene(nodo.getBoundsInLocal()));
+        double cx = (nb.getMinX() + nb.getMaxX()) / 2;
+        double cy = (nb.getMinY() + nb.getMaxY()) / 2;
+        javafx.geometry.Bounds pb = bg.getBoundsInParent();
+
+        javafx.scene.shape.Line vertical   = new javafx.scene.shape.Line(cx, cy, cx, pb.getMaxY());
+        javafx.scene.shape.Line horizontal = new javafx.scene.shape.Line(pb.getMinX(), cy, cx, cy);
+        for (javafx.scene.shape.Line guia : java.util.List.of(vertical, horizontal)) {
+            guia.setStroke(javafx.scene.paint.Color.web(color));
+            guia.setStrokeWidth(1);
+            guia.getStrokeDashArray().addAll(4.0, 4.0);
+            guia.setOpacity(0.7);
+            guia.setMouseTransparent(true);
+            plotArea.getChildren().add(guia);
+            lineasGuia.add(guia);
+        }
+
+        // Fecha del eje X resaltada (los tick labels del eje son nodos Text con el texto del periodo)
+        for (Node n : ejeX.getChildrenUnmodifiable()) {
+            if (n instanceof javafx.scene.text.Text t && periodo.equals(t.getText())) {
+                t.getProperties().put("guia-fill", t.getFill());
+                t.setFill(javafx.scene.paint.Color.web(color));
+                t.setStyle("-fx-font-weight: bold;");
+                lineasGuia.add(t);
+                break;
+            }
+        }
+    }
+
+    /** Retira las guías del crosshair y restaura el estilo del tick label del eje X. */
+    private void ocultarGuias() {
+        for (Node n : lineasGuia) {
+            if (n instanceof javafx.scene.text.Text t) {
+                Object fill = t.getProperties().remove("guia-fill");
+                if (fill instanceof javafx.scene.paint.Paint p) t.setFill(p);
+                t.setStyle("");
+            } else if (n.getParent() instanceof javafx.scene.layout.Pane p) {
+                p.getChildren().remove(n);
+            }
+        }
+        lineasGuia.clear();
     }
 
     private void mostrarError(Exception e) {
