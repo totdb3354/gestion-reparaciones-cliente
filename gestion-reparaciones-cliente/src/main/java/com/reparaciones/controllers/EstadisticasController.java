@@ -619,9 +619,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lineaMediaPorSerie.clear();
         mediaPorSerie.clear();
 
-        // Precomputar suma total por periodo (reutilizado en "Equipo")
+        // Precomputar suma total por periodo (reutilizado en "Equipo"): excluye a los
+        // técnicos con ES_ESTADISTICA=0, igual que la propia serie "Equipo" del gráfico.
         Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
-        for (PuntoEstadisticaPuntos p : todosPuntos) {
+        for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
             if (periodosVisibles.contains(p.getPeriodo()))
                 sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
         }
@@ -789,11 +790,19 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lineasMedia.forEach(n -> n.setVisible(visible));
     }
 
-    /** Nº de trabajos (normales + glass + pulidos) de un técnico (o "Equipo") en un periodo. */
+    /**
+     * Nº de trabajos (normales + glass + pulidos) de un técnico (o "Equipo") en un periodo.
+     * Para "Equipo" se excluye a los técnicos con ES_ESTADISTICA=0 (exclusión total de la
+     * vista); un técnico individual siempre cuenta sus propios trabajos, esté excluido o no.
+     */
     private int trabajosDe(String tecnico, String periodo) {
-        return todosPuntos.stream()
+        boolean esEquipo = "Equipo".equals(tecnico);
+        List<PuntoEstadisticaPuntos> base = esEquipo
+                ? PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)
+                : todosPuntos;
+        return base.stream()
                 .filter(p -> p.getPeriodo().equals(periodo)
-                        && ("Equipo".equals(tecnico) || p.getNombreTecnico().equals(tecnico)))
+                        && (esEquipo || p.getNombreTecnico().equals(tecnico)))
                 .mapToInt(p -> p.getnNormales() + p.getnGlass() + p.getnPulidos()).sum();
     }
 
@@ -903,10 +912,16 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         });
     }
 
-    /** Popover con el desglose del punto y salto opcional al Historial (spec §4). */
+    /**
+     * Popover con el desglose del punto y salto opcional al Historial (spec §4). Para "Equipo"
+     * se excluye a los técnicos con ES_ESTADISTICA=0, igual que el resto de agregados de Equipo.
+     */
     private void mostrarPopoverDesglose(javafx.scene.Node ancla, String nombreSerie, String periodo) {
         boolean esEquipo = "Equipo".equals(nombreSerie);
-        PuntoEstadisticaPuntos datos = todosPuntos.stream()
+        List<PuntoEstadisticaPuntos> base = esEquipo
+                ? PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)
+                : todosPuntos;
+        PuntoEstadisticaPuntos datos = base.stream()
                 .filter(p -> p.getPeriodo().equals(periodo)
                         && (esEquipo || p.getNombreTecnico().equals(nombreSerie)))
                 .reduce((a, b) -> new PuntoEstadisticaPuntos(nombreSerie, periodo,
