@@ -40,7 +40,7 @@ Las dos tarjetas conservan su cifra grande actual (total del mes / tasa por día
 ## 3. Selector Puntos / Puntos·día + etiqueta de ventana
 
 - El toggle queda **deshabilitado (gris) cuando la granularidad es Día**, con tooltip **"En granularidad Día ambas métricas coinciden"**. La selección se conserva: al volver a Semana/Mes/Año el toggle se rehabilita con lo que estuviera marcado. Sin cambios de posición ni de layout.
-- **Etiqueta de la barra de navegación en Día**: pasa de "30 días · <rango>" a **"30 días con actividad · <rango>"** (tras el fix de huecos a 0, el eje X solo contiene días en los que alguien del equipo trabajó, y la cuenta no cuadra con el calendario). Semana/Mes/Año conservan sus etiquetas cortas actuales. (Cierra la micro-decisión "30 periodos vs 30 días con actividad".)
+- **Etiqueta de la barra de navegación**: hoy dice "N periodos · <rango>" en todas las granularidades (jerga). En Día pasa a **"30 días con actividad · <rango>"** (tras el fix de huecos a 0, el eje X solo contiene días en los que alguien del equipo trabajó, y la cuenta no cuadra con el calendario); el resto pasa a la unidad natural: "16 semanas", "12 meses", "5 años". (Cierra la micro-decisión "30 periodos vs 30 días con actividad".)
 
 ## 4. Exclusión de técnicos de estadísticas
 
