@@ -2,7 +2,8 @@
 
 Fecha: 2026-09-02
 Estado: **spec aprobada en brainstorm — pendiente plan de implementación**.
-Ramas: cliente **continúa en `feature/estadisticas-puntos`** (viva, sin mergear); servidor **rama nueva `feature/estadisticas-puntos-r2`** desde `main` del servidor (la ronda 1 del servidor ya está mergeada y desplegada).
+Línea: **hotfix — ajena a `main` del repo raíz** (la 0.17/F2b sigue su camino; como la ronda 1, cliente sobre `hotfix/0.16.1`, y el repo raíz NO se toca en `main`).
+Ramas: cliente **continúa en `feature/estadisticas-puntos`** (viva, sin mergear, nacida de `hotfix/0.16.1`); servidor **rama nueva `feature/estadisticas-puntos-r2`** desde `main` del servidor (el servidor no tiene línea hotfix: su `main` es lo desplegado; la ronda 1 ya está mergeada ahí).
 Spec madre: `2026-09-01-estadisticas-puntos-design.md` (sus tres PENDIENTES del smoke 2026-09-02 se resuelven aquí).
 
 ---
@@ -74,7 +75,7 @@ Las dos tarjetas conservan su cifra grande actual (total del mes / tasa por día
 
 ## 7. Ramas, entrega y compatibilidad
 
-- Cliente: sigue en `feature/estadisticas-puntos`. Servidor: `feature/estadisticas-puntos-r2` desde `main`. Merges `--no-ff` **solo con OK del usuario**.
+- Cliente: sigue en `feature/estadisticas-puntos` y mergea a **`hotfix/0.16.1`**, nunca a `main` del raíz (línea hotfix; `hotfix/0.16.1 → main` es un pendiente aparte que decidirá el usuario). Servidor: `feature/estadisticas-puntos-r2` desde `main` del servidor. Merges `--no-ff` **solo con OK del usuario**.
 - Orden: migración en preprod (usuario, vista previa) → merge servidor + deploy VM (OK usuario) + arranque validado → smoke → merge cliente a `hotfix/0.16.1` (OK usuario) → **la release 0.16.2 espera además a "facilitar la asignación de glass"** y se etiqueta cuando el usuario diga.
 - Clientes 0.16.1 conviven con el ALTER y el campo nuevo (columna DEFAULT 1 invisible; Gson ignora `esEstadistica`).
 
