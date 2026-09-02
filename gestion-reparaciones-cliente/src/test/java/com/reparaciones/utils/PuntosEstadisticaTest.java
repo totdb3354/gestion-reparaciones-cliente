@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -137,6 +138,20 @@ class PuntosEstadisticaTest {
         assertEquals(50.0, t.puntos(), 0.001);
         assertNull(t.deltaPuntosPct());
         assertNull(t.deltaPuntosDiaPct());
+    }
+
+    // ── sinExcluidos ──────────────────────────────────────────────────────────
+    @Test void sinExcluidosFiltraSoloLosExcluidos() {
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-09", 50), fila("Laura", "2026-09", 10));
+        List<PuntoEstadisticaPuntos> resultado = PuntosEstadistica.sinExcluidos(filas, Set.of("Laura"));
+        assertEquals(1, resultado.size());
+        assertEquals("Marcos", resultado.get(0).getNombreTecnico());
+    }
+
+    @Test void sinExcluidosConSetVacioDevuelveLaMismaLista() {
+        List<PuntoEstadisticaPuntos> filas = List.of(fila("Marcos", "2026-09", 50));
+        assertSame(filas, PuntosEstadistica.sinExcluidos(filas, Set.of()));
     }
 
     private static PuntoEstadisticaPuntos fila(String tec, String periodo, double puntos) {

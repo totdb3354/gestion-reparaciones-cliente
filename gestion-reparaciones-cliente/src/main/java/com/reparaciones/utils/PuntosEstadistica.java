@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Lógica pura de la vista de estadísticas por puntos (spec 2026-09-01):
@@ -75,6 +77,15 @@ public final class PuntosEstadistica {
         }
         if (tecnicosConActividad == 0 || periodosVisibles.isEmpty()) return 0;
         return suma / (tecnicosConActividad * periodosVisibles.size());
+    }
+
+    /** Filas sin los técnicos excluidos de estadísticas (ES_ESTADISTICA = 0). Set vacío → misma lista. */
+    public static List<PuntoEstadisticaPuntos> sinExcluidos(List<PuntoEstadisticaPuntos> filas,
+                                                            Set<String> nombresExcluidos) {
+        if (nombresExcluidos.isEmpty()) return filas;
+        return filas.stream()
+                .filter(f -> !nombresExcluidos.contains(f.getNombreTecnico()))
+                .collect(Collectors.toList());
     }
 
     /** Valida el texto del modal de valores: coma o punto, 0 ≤ v ≤ 99,99. */

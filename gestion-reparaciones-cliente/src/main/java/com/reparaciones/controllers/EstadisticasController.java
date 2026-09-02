@@ -102,6 +102,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
+    /** Técnicos con ES_ESTADISTICA=0: fuera de Promedio, Equipo, tarjetas y desplegable. */
+    private final Set<String> nombresExcluidos = new LinkedHashSet<>();
     // nombre → color hex fijo por ID_TEC
     private final Map<String, String>   coloresPorNombre = new LinkedHashMap<>();
     // label del botón MultiSelectComboBox
@@ -290,25 +292,34 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             return;
         }
 
+        // Re-entrante: el modal 👥 lo re-llama tras guardar exclusiones
+        todosLosTecnicos.clear();
+        nombresExcluidos.clear();
+        tecnicos.stream().filter(t -> !t.isEsEstadistica())
+                .map(Tecnico::getNombre).forEach(nombresExcluidos::add);
+
         Integer idTecSesion = com.reparaciones.Sesion.getIdTec();
         if (idTecSesion != null)
             nombreTecnicoSesion = tecnicos.stream()
                     .filter(t -> t.getIdTec() == idTecSesion)
                     .map(Tecnico::getNombre).findFirst().orElse(null);
 
-        List<Tecnico> activos   = tecnicos.stream().filter(Tecnico::isActivo).collect(Collectors.toList());
-        List<Tecnico> inactivos = tecnicos.stream().filter(t -> !t.isActivo()).collect(Collectors.toList());
-
-        for (Tecnico t : activos) {
+        // Colores para TODOS (un excluido sigue viendo su propia serie con su color)
+        for (Tecnico t : tecnicos)
             coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
-            todosLosTecnicos.add(t);
-        }
+
+        // El desplegable solo lista a los que cuentan en estadísticas
+        List<Tecnico> activos   = tecnicos.stream()
+                .filter(Tecnico::isActivo).filter(Tecnico::isEsEstadistica)
+                .collect(Collectors.toList());
+        List<Tecnico> inactivos = tecnicos.stream()
+                .filter(t -> !t.isActivo()).filter(Tecnico::isEsEstadistica)
+                .collect(Collectors.toList());
+
+        todosLosTecnicos.addAll(activos);
         if (!inactivos.isEmpty()) {
             todosLosTecnicos.add(null); // separador
-            for (Tecnico t : inactivos) {
-                coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
-                todosLosTecnicos.add(t);
-            }
+            todosLosTecnicos.addAll(inactivos);
         }
 
         if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
@@ -483,6 +494,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
 
         Set<String> seleccionados = new LinkedHashSet<>(nombresSeleccionadosTec);
+        List<PuntoEstadisticaPuntos> puntosEquipo =
+                PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos);
 
         // Valores visibles por técnico. Cada serie se construye recorriendo periodosVisibles
         // EN ORDEN y rellenando con 0 los periodos sin actividad (vacaciones, ausencias):
@@ -512,7 +525,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         if (chkEquipo.isSelected()) {
             Map<String, Double> sumaPorPeriodo = new java.util.LinkedHashMap<>();
             for (String p : periodosVisibles) sumaPorPeriodo.put(p, 0.0);
-            for (PuntoEstadisticaPuntos p : todosPuntos) {
+            for (PuntoEstadisticaPuntos p : puntosEquipo) {
                 if (periodosVisibles.contains(p.getPeriodo()))
                     sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
@@ -532,7 +545,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 .max().orElse(0);
         if (chkEquipo.isSelected()) {
             Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
-            for (PuntoEstadisticaPuntos p : todosPuntos) {
+            for (PuntoEstadisticaPuntos p : puntosEquipo) {
                 if (periodosVisibles.contains(p.getPeriodo()))
                     sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
@@ -585,7 +598,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     /** Promedio de ventana (todos los técnicos, métrica activa) para los periodos visibles dados. */
     private double promedioVentanaActual(Set<String> periodosVisibles) {
         Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
-        for (PuntoEstadisticaPuntos p : todosPuntos) {
+        for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
             datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
                         .put(p.getPeriodo(), valorDe(p));
         }
