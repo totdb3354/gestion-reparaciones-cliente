@@ -30,10 +30,12 @@
                 <HBox alignment="CENTER_LEFT" spacing="12">
                     <Label text="Puntos por técnico" styleClass="vista-titulo"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <RadioButton fx:id="rbPuntos" text="Puntos" selected="true"
-                                 style="-fx-font-weight: bold;"/>
-                    <RadioButton fx:id="rbPuntosDia" text="Puntos/día"
-                                 style="-fx-font-weight: bold;"/>
+                    <HBox fx:id="boxMetrica" spacing="12" alignment="CENTER_LEFT">
+                        <RadioButton fx:id="rbPuntos" text="Puntos" selected="true"
+                                     style="-fx-font-weight: bold;"/>
+                        <RadioButton fx:id="rbPuntosDia" text="Puntos/día"
+                                     style="-fx-font-weight: bold;"/>
+                    </HBox>
                     <Button fx:id="btnValores" text="⚙ Valores" styleClass="btn-secondary"
                             onAction="#abrirModalValores"/>
                     <Button fx:id="btnTecnicosEstadistica" text="👥 Técnicos" styleClass="btn-secondary"

@@ -84,6 +84,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private CategoryAxis     ejeX;
     @FXML private NumberAxis       ejeY;
     @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> menuTecnicos;
+    @FXML private HBox             boxMetrica;
     @FXML private RadioButton      rbPuntos;
     @FXML private RadioButton      rbPuntosDia;
     @FXML private CheckBox         chkEquipo;
@@ -131,6 +132,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private final Map<XYChart.Series<String, Number>, Double> mediaPorSerie = new LinkedHashMap<>();
     // Tooltip reutilizable para la media
     private final Tooltip tooltipMedia = new Tooltip();
+    // Tooltip del toggle de métrica cuando está deshabilitado en Día
+    private final Tooltip tooltipMetrica = new Tooltip("En granularidad Día ambas métricas coinciden");
 
     // Todos los puntos cargados de BD (sin filtrar por checkbox)
     private List<PuntoEstadisticaPuntos> todosPuntos   = List.of();
@@ -462,6 +465,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void recargarDatos() {
+        // En Día ambas métricas coinciden: toggle gris, selección conservada (spec ronda 2 §3)
+        boolean esDia = "Día".equals(cmbGranularidad.getValue());
+        rbPuntos.setDisable(esDia);
+        rbPuntosDia.setDisable(esDia);
+        if (esDia) Tooltip.install(boxMetrica, tooltipMetrica);
+        else       Tooltip.uninstall(boxMetrica, tooltipMetrica);
+
         // Sin fechas: usar todo el rango disponible (1900-01-01 → 2999-12-31)
         java.time.LocalDate desde = dpDesde.getValue() != null
                 ? dpDesde.getValue() : java.time.LocalDate.of(1900, 1, 1);
@@ -545,8 +555,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         int maxOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
         btnVentanaAnterior.setDisable(inicio == 0);
         btnVentanaSiguiente.setDisable(offset >= maxOffset);
-        lblRangoVentana.setText(tamanio + " periodos · "
-                + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
+        lblRangoVentana.setText(PuntosEstadistica.etiquetaVentana(tamanio, cmbGranularidad.getValue())
+                + " · " + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
 
         Set<String> seleccionados = new LinkedHashSet<>(nombresSeleccionadosTec);
         List<PuntoEstadisticaPuntos> puntosEquipo =

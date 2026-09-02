@@ -119,6 +119,18 @@ public final class PuntosEstadistica {
                 : periodo + "\n" + formatearPuntos(valor) + " puntos · " + trabajos + " trabajos";
     }
 
+    /** Etiqueta de la barra de navegación: la unidad según la granularidad de la UI.
+     *  En Día el eje solo tiene días en los que alguien trabajó, de ahí "con actividad". */
+    public static String etiquetaVentana(int n, String granularidad) {
+        String unidad = switch (granularidad) {
+            case "Día"    -> n == 1 ? "día con actividad" : "días con actividad";
+            case "Semana" -> n == 1 ? "semana" : "semanas";
+            case "Mes"    -> n == 1 ? "mes" : "meses";
+            default       -> n == 1 ? "año" : "años"; // "Año"
+        };
+        return n + " " + unidad;
+    }
+
     /** Desglose del popover; omite categorías a cero. */
     public static String textoPopover(PuntoEstadisticaPuntos p) {
         StringBuilder sb = new StringBuilder(formatearPuntos(p.getPuntos())).append(" puntos\n");

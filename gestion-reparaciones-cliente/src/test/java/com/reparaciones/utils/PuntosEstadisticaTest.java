@@ -114,6 +114,16 @@ class PuntosEstadisticaTest {
         assertEquals("2,0 puntos\n1 normales (2,0)", PuntosEstadistica.textoPopover(p));
     }
 
+    // ── etiquetaVentana ──────────────────────────────────────────────────────
+    @Test void etiquetaVentanaPorGranularidad() {
+        assertEquals("30 días con actividad", PuntosEstadistica.etiquetaVentana(30, "Día"));
+        assertEquals("1 día con actividad",   PuntosEstadistica.etiquetaVentana(1, "Día"));
+        assertEquals("16 semanas", PuntosEstadistica.etiquetaVentana(16, "Semana"));
+        assertEquals("1 semana",   PuntosEstadistica.etiquetaVentana(1, "Semana"));
+        assertEquals("12 meses",   PuntosEstadistica.etiquetaVentana(12, "Mes"));
+        assertEquals("5 años",     PuntosEstadistica.etiquetaVentana(5, "Año"));
+    }
+
     // ── tarjetas ──────────────────────────────────────────────────────────────
     @Test void tarjetasDelEquipoConObjetivo() {
         List<PuntoEstadisticaPuntos> filas = List.of(
