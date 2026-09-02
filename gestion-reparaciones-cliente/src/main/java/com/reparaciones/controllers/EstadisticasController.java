@@ -477,15 +477,27 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         Set<String> seleccionados = new LinkedHashSet<>(nombresSeleccionadosTec);
 
-        Map<String, XYChart.Series<String, Number>> series = new LinkedHashMap<>();
+        // Valores visibles por técnico. Cada serie se construye recorriendo periodosVisibles
+        // EN ORDEN y rellenando con 0 los periodos sin actividad (vacaciones, ausencias):
+        // así el eje de categorías queda siempre ordenado (sin esto, un técnico con hueco
+        // colaba sus fechas de vuelta en medio del eje) y un día sin trabajo se lee como 0,
+        // igual que en la serie Equipo y en el cálculo del Promedio.
+        Map<String, Map<String, Double>> valorPorTecnico = new LinkedHashMap<>();
         for (PuntoEstadisticaPuntos p : todosPuntos) {
             if (!seleccionados.contains(p.getNombreTecnico())) continue;
             if (!periodosVisibles.contains(p.getPeriodo()))    continue;
-            series.computeIfAbsent(p.getNombreTecnico(), nombre -> {
-                XYChart.Series<String, Number> s = new XYChart.Series<>();
-                s.setName(nombre);
-                return s;
-            }).getData().add(new XYChart.Data<>(p.getPeriodo(), valorDe(p)));
+            valorPorTecnico.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                           .put(p.getPeriodo(), valorDe(p));
+        }
+        Map<String, XYChart.Series<String, Number>> series = new LinkedHashMap<>();
+        for (String nombre : seleccionados) {
+            Map<String, Double> porPeriodo = valorPorTecnico.get(nombre);
+            if (porPeriodo == null) continue; // sin actividad en la ventana: no se pinta
+            XYChart.Series<String, Number> s = new XYChart.Series<>();
+            s.setName(nombre);
+            for (String periodo : periodosVisibles)
+                s.getData().add(new XYChart.Data<>(periodo, porPeriodo.getOrDefault(periodo, 0.0)));
+            series.put(nombre, s);
         }
 
         // Serie "Equipo": suma de TODOS los técnicos por periodo (independiente de checkboxes)
