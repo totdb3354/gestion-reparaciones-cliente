@@ -931,7 +931,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
             navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie, true);
         });
-        HBox botones = new HBox(8, verHistorial, verImeis);
+        HBox botones = new HBox(8, verImeis, verHistorial);
 
         VBox caja = new VBox(6, titulo, cuerpo, botones);
         caja.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;"
