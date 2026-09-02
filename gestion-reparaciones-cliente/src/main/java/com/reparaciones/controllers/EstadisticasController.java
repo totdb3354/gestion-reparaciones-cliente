@@ -439,11 +439,11 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     /** Configura la navegación de ventana y renderiza la más reciente. */
     private void configurarVentana() {
-        int maxOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
-        boolean hayNavegacion = maxOffset > 0;
-        hboxNavVentana.setVisible(hayNavegacion);
-        hboxNavVentana.setManaged(hayNavegacion);
-        ventanaOffset = maxOffset;                 // lo más reciente
+        // La barra está siempre visible; las flechas se deshabilitan cuando no hay
+        // nada que desplazar o al llegar a un extremo (ajuste smoke 2026-09-02).
+        hboxNavVentana.setVisible(true);
+        hboxNavVentana.setManaged(true);
+        ventanaOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio); // lo más reciente
         renderVentana(ventanaOffset);
     }
 
@@ -458,6 +458,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
+            btnVentanaAnterior.setDisable(true);
+            btnVentanaSiguiente.setDisable(true);
+            lblRangoVentana.setText("");
             return;
         }
         lblSinDatos.setVisible(false);
