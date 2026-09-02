@@ -1321,21 +1321,22 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
         } catch (SQLException e) { mostrarError(e); return; }
         String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
-        var t = PuntosEstadistica.calcularTarjetas(filas, mes, java.time.LocalDate.now(), tecnico);
+        var t = PuntosEstadistica.calcularTarjetas(
+                filas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
         String quien = tecnico == null ? "equipo" : "tú";
         lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
         lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
-        pintarDelta(lblCardPuntosDelta, t.deltaPuntosPct());
+        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
         lblCardDiaTitulo.setText("Puntos/día · " + t.mesLabel() + " · " + quien);
         lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosDia()));
-        pintarDelta(lblCardDiaDelta, t.deltaPuntosDiaPct());
+        pintarObjetivo(lblCardDiaDelta, t.pctDia(), t.mesAnteriorLabel(), t.diaAnterior());
     }
 
-    private void pintarDelta(Label lbl, Double pct) {
-        if (pct == null) { lbl.setText(""); return; }
-        boolean sube = pct >= 0;
-        lbl.setText((sube ? "▲ +" : "▼ ") + String.format("%.0f", pct) + "%");
-        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (sube ? "#2E7D32" : "#C62828") + ";");
+    /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */
+    private void pintarObjetivo(Label lbl, Integer pct, String mesAnterior, Double valorAnterior) {
+        if (pct == null) { lbl.setText(""); lbl.setStyle(""); return; }
+        lbl.setText(PuntosEstadistica.textoObjetivo(pct, mesAnterior, valorAnterior));
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (pct >= 100 ? "#2E7D32" : "#7A8A9A") + ";");
     }
 
     /**

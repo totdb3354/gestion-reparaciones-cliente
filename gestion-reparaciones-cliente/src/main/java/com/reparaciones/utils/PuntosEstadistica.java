@@ -144,22 +144,29 @@ public final class PuntosEstadistica {
 
     // ── Tarjetas resumen ──────────────────────────────────────────────────────
 
-    public record Tarjetas(String mesLabel, double puntos, double puntosDia,
-                           Double deltaPuntosPct, Double deltaPuntosDiaPct) {}
+    public record Tarjetas(String mesLabel, String mesAnteriorLabel, double puntos, double puntosDia,
+                           Integer pctPuntos, Double puntosAnterior, Integer pctDia, Double diaAnterior) {}
 
     /**
+     * Tarjetas en formato objetivo: % del mes anterior alcanzado (nunca delta rojo).
+     *
      * @param filasMensuales resultado del endpoint con granularidad mes cubriendo mes anterior y actual
-     * @param tecnicoONull   null = equipo entero; nombre = solo ese técnico
+     * @param tecnicoONull   null = equipo (sin excluidos); nombre = solo ese técnico (los excluidos
+     *                       se ignoran: la tarjeta personal del excluido sigue funcionando)
+     * @param excluidos      técnicos con ES_ESTADISTICA=0 (solo aplica a las tarjetas de equipo)
      */
     public static Tarjetas calcularTarjetas(List<PuntoEstadisticaPuntos> filasMensuales,
-                                            YearMonth mesActual, LocalDate hoy, String tecnicoONull) {
+                                            YearMonth mesActual, LocalDate hoy,
+                                            String tecnicoONull, Set<String> excluidos) {
+        List<PuntoEstadisticaPuntos> filas = tecnicoONull == null
+                ? sinExcluidos(filasMensuales, excluidos) : filasMensuales;
         YearMonth anterior = mesActual.minusMonths(1);
         String pActual = mesActual.toString();     // "2026-09"
         String pAnterior = anterior.toString();
 
         double puntosActual = 0, puntosAnterior = 0;
         boolean hayAnterior = false;
-        for (PuntoEstadisticaPuntos f : filasMensuales) {
+        for (PuntoEstadisticaPuntos f : filas) {
             if (tecnicoONull != null && !tecnicoONull.equals(f.getNombreTecnico())) continue;
             if (pActual.equals(f.getPeriodo()))   puntosActual   += f.getPuntos();
             if (pAnterior.equals(f.getPeriodo())) { puntosAnterior += f.getPuntos(); hayAnterior = true; }
@@ -168,14 +175,25 @@ public final class PuntosEstadistica {
         double diaActual = puntosActual
                 / Math.max(1, diasLaborables(mesActual.atDay(1),
                         mesActual.atEndOfMonth().isAfter(hoy) ? hoy : mesActual.atEndOfMonth()));
-        Double deltaPuntos = null, deltaDia = null;
+        Integer pctPuntos = null, pctDia = null;
+        Double totalAnterior = null, tasaAnterior = null;
         if (hayAnterior && puntosAnterior > 0) {
             double diaAnterior = puntosAnterior
                     / Math.max(1, diasLaborables(anterior.atDay(1), anterior.atEndOfMonth()));
-            deltaPuntos = (puntosActual - puntosAnterior) / puntosAnterior * 100;
-            deltaDia    = (diaActual - diaAnterior) / diaAnterior * 100;
+            pctPuntos = (int) Math.round(puntosActual / puntosAnterior * 100);
+            pctDia    = (int) Math.round(diaActual / diaAnterior * 100);
+            totalAnterior = puntosAnterior;
+            tasaAnterior  = diaAnterior;
         }
-        String mesLabel = mesActual.getMonth().getDisplayName(TextStyle.FULL, new Locale("es", "ES"));
-        return new Tarjetas(mesLabel, puntosActual, diaActual, deltaPuntos, deltaDia);
+        Locale es = new Locale("es", "ES");
+        return new Tarjetas(
+                mesActual.getMonth().getDisplayName(TextStyle.FULL, es),
+                anterior.getMonth().getDisplayName(TextStyle.FULL, es),
+                puntosActual, diaActual, pctPuntos, totalAnterior, pctDia, tasaAnterior);
+    }
+
+    /** "46% de agosto (890,0)" — la línea de objetivo de las tarjetas. */
+    public static String textoObjetivo(int pct, String mesAnterior, double valorAnterior) {
+        return pct + "% de " + mesAnterior + " (" + formatearPuntos(valorAnterior) + ")";
     }
 }
