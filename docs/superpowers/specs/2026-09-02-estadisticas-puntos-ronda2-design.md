@@ -1,7 +1,7 @@
 # Estadísticas por puntos — ronda 2 (0.16.2)
 
 Fecha: 2026-09-02
-Estado: **spec aprobada en brainstorm — pendiente plan de implementación**.
+Estado: **IMPLEMENTADA en feature/estadisticas-puntos (cliente) y feature/estadisticas-puntos-r2 (servidor) — pendiente migración preprod, smoke y merges (OK del usuario)**.
 Línea: **hotfix — ajena a `main` del repo raíz** (la 0.17/F2b sigue su camino; el repo raíz NO se toca en `main`). Rama de integración **nueva `hotfix/0.16.2`** (2026-09-02), creada desde el tip de `hotfix/0.16.1` (`0a75db0`, el mismo punto del que nació la feature); `hotfix/0.16.1` queda intacta como línea de la 0.16.1.
 Ramas: cliente **continúa en `feature/estadisticas-puntos`** (viva, sin mergear, nacida de ese mismo tip); servidor **rama nueva `feature/estadisticas-puntos-r2`** desde `main` del servidor (el servidor no tiene línea hotfix: su `main` es lo desplegado; la ronda 1 ya está mergeada ahí).
 Spec madre: `2026-09-01-estadisticas-puntos-design.md` (sus tres PENDIENTES del smoke 2026-09-02 se resuelven aquí).
