@@ -72,6 +72,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private Button   btnTabReparaciones;
     @FXML private Button   btnTabStock;
     @FXML private Button   btnValores;
+    @FXML private Button   btnTecnicosEstadistica;
 
     @FXML private VBox     pnlReparaciones;
     @FXML private VBox     pnlStock;
@@ -172,6 +173,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     public void initialize() {
         btnValores.setVisible(com.reparaciones.Sesion.esAdmin());
         btnValores.setManaged(com.reparaciones.Sesion.esAdmin());
+        btnTecnicosEstadistica.setVisible(com.reparaciones.Sesion.esAdmin());
+        btnTecnicosEstadistica.setManaged(com.reparaciones.Sesion.esAdmin());
 
         cmbGranularidad.setItems(FXCollections.observableArrayList("Día", "Semana", "Mes", "Año"));
         cmbGranularidad.setValue("Día"); // por defecto Día (ajuste smoke 2026-09-01)
@@ -277,6 +280,58 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 new com.reparaciones.dao.ValoresDificultadDAO().guardar(nuevos);
             } catch (SQLException ex) { ev.consume(); mostrarError(ex); return; }
             recargarDatos();
+            cargarTarjetas();
+        });
+        dialog.showAndWait();
+    }
+
+    /** Modal 👥: quién cuenta en la vista de estadísticas (spec ronda 2 §4). Solo ADMIN. */
+    @FXML
+    private void abrirModalTecnicos() {
+        List<Tecnico> tecnicos;
+        try {
+            tecnicos = new TecnicoDAO().getAll();
+        } catch (SQLException e) { mostrarError(e); return; }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Técnicos en estadísticas");
+        dialog.setHeaderText("Quién cuenta en la vista de estadísticas");
+        javafx.scene.layout.VBox caja = new javafx.scene.layout.VBox(6);
+        java.util.Map<Integer, CheckBox> checks = new java.util.LinkedHashMap<>();
+        java.util.Map<Integer, Boolean> estadoInicial = new java.util.HashMap<>();
+        List<Tecnico> orden = new java.util.ArrayList<>();
+        tecnicos.stream().filter(Tecnico::isActivo).forEach(orden::add);
+        tecnicos.stream().filter(t -> !t.isActivo()).forEach(orden::add);
+        for (Tecnico t : orden) {
+            CheckBox cb = new CheckBox(t.isActivo() ? t.getNombre() : t.getNombre() + " (inactivo)");
+            cb.setSelected(t.isEsEstadistica());
+            checks.put(t.getIdTec(), cb);
+            estadoInicial.put(t.getIdTec(), t.isEsEstadistica());
+            caja.getChildren().add(cb);
+        }
+        Label aviso = new Label("Los desmarcados no cuentan en Promedio, Equipo ni tarjetas.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        caja.getChildren().add(aviso);
+        dialog.getDialogPane().setContent(caja);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        javafx.scene.control.Button ok =
+                (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            try {
+                var usuarioDao = new com.reparaciones.dao.UsuarioDAO();
+                for (var e : checks.entrySet()) {
+                    boolean marcado = e.getValue().isSelected();
+                    if (marcado == estadoInicial.get(e.getKey())) continue; // solo cambios
+                    if (marcado) usuarioDao.incluirEstadisticas(e.getKey());
+                    else         usuarioDao.excluirEstadisticas(e.getKey());
+                }
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); return; }
+            cargarTecnicos(); // re-entrante: reconstruye desplegable y nombresExcluidos
+            nombresSeleccionadosTec.removeAll(nombresExcluidos);
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoMenuTecnicos();
+            renderVentana(ventanaOffset);
             cargarTarjetas();
         });
         dialog.showAndWait();
