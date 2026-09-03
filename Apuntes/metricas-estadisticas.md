@@ -22,6 +22,7 @@ Los ejemplos usan los valores seed de la tabla; el admin puede cambiarlos en ⚙
 | `pulido` | 0,25 | cada pulido completado |
 
 - Editable por el **admin** en ⚙ Valores; cada cambio deja entrada `EDITAR_PUNTOS` en el Log (`clave: antes → después`, solo lo que cambia).
+- **Valor vigente que difiere del seed**: `otro` = **0,25** (decisión de calibración 2026-09-03; pesa sobre todo en la línea de glass, donde ~⅓ de los trabajos llevan una acción "otro").
 - **Los puntos se calculan siempre con la tabla vigente**: cambiar un valor re-valora también el pasado (no hay histórico de versiones).
 - El mapeo prefijo→clave se evalúa en este orden: `bat`, `cha`, `cam`, `lcd`, `mc`, `g` — la `g` **siempre la última** (si no, "glass" se comería cualquier SKU que empiece por g). Prefijo que no casa → `otro`.
 
