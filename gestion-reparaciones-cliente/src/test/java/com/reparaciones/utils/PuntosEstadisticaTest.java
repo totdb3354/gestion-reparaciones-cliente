@@ -52,13 +52,19 @@ class PuntosEstadisticaTest {
     }
 
     // ── promedioVentana ───────────────────────────────────────────────────────
-    @Test void promedioSoloTecnicosConActividadYPeriodosVisibles() {
+    @Test void promedioEsPorTecnicoPeriodoTrabajado() {
         Map<String, Map<String, Double>> datos = Map.of(
                 "Marcos", Map.of("2026-W35", 10.0, "2026-W36", 20.0),
                 "Zara",   Map.of("2026-W36", 6.0),
                 "Luis",   Map.of());  // sin actividad → no cuenta
-        // 2 técnicos activos × 2 periodos; huecos = 0 → (10+20+0+6)/4 = 9,0
-        assertEquals(9.0, PuntosEstadistica.promedioVentana(datos, List.of("2026-W35", "2026-W36")), 0.001);
+        // 3 técnico-periodos trabajados → (10+20+6)/3 = 12,0 (las ausencias no diluyen)
+        assertEquals(12.0, PuntosEstadistica.promedioVentana(datos, List.of("2026-W35", "2026-W36")), 0.001);
+    }
+
+    @Test void promedioIgnoraPeriodosFueraDeLaVentana() {
+        Map<String, Map<String, Double>> datos = Map.of(
+                "Marcos", Map.of("2026-W35", 10.0, "2026-W30", 99.0));
+        assertEquals(10.0, PuntosEstadistica.promedioVentana(datos, List.of("2026-W35", "2026-W36")), 0.001);
     }
 
     @Test void promedioSinActividadEsCero() {

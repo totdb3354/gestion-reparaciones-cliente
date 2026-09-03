@@ -63,20 +63,23 @@ public final class PuntosEstadistica {
     }
 
     /**
-     * Media por técnico-periodo de la ventana: suma de valores de los técnicos con
-     * actividad (huecos = 0) ÷ (técnicos con actividad × periodos visibles). Sin actividad → 0.
+     * Media por técnico-periodo TRABAJADO de la ventana: suma de valores ÷ nº de
+     * técnico-periodos con actividad entre los visibles. Las ausencias no diluyen:
+     * la línea mide el ritmo de un periodo trabajado típico del equipo, y así el
+     * vértice de un día/semana se compara contra "lo que se trabaja" (ajuste smoke
+     * 2026-09-03; antes los huecos contaban como 0 y salía todo el mundo por encima).
+     * Sin actividad → 0.
      */
     public static double promedioVentana(Map<String, Map<String, Double>> valorPorTecnicoYPeriodo,
                                           List<String> periodosVisibles) {
         double suma = 0;
-        int tecnicosConActividad = 0;
-        for (Map<String, Double> porPeriodo : valorPorTecnicoYPeriodo.values()) {
-            double sumaTec = 0;
-            for (String p : periodosVisibles) sumaTec += porPeriodo.getOrDefault(p, 0.0);
-            if (sumaTec > 0) { suma += sumaTec; tecnicosConActividad++; }
-        }
-        if (tecnicosConActividad == 0 || periodosVisibles.isEmpty()) return 0;
-        return suma / (tecnicosConActividad * periodosVisibles.size());
+        int trabajados = 0;
+        for (Map<String, Double> porPeriodo : valorPorTecnicoYPeriodo.values())
+            for (String p : periodosVisibles) {
+                double v = porPeriodo.getOrDefault(p, 0.0);
+                if (v > 0) { suma += v; trabajados++; }
+            }
+        return trabajados == 0 ? 0 : suma / trabajados;
     }
 
     /** Filas sin los técnicos excluidos de estadísticas (ES_ESTADISTICA = 0). Set vacío → misma lista. */

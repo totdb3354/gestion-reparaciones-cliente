@@ -566,7 +566,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         // EN ORDEN y rellenando con 0 los periodos sin actividad (vacaciones, ausencias):
         // así el eje de categorías queda siempre ordenado (sin esto, un técnico con hueco
         // colaba sus fechas de vuelta en medio del eje) y un día sin trabajo se lee como 0,
-        // igual que en la serie Equipo y en el cálculo del Promedio.
+        // igual que en la serie Equipo. (El Promedio NO cuenta los huecos: mide el ritmo
+        // por periodo trabajado — ajuste smoke 2026-09-03.)
         Map<String, Map<String, Double>> valorPorTecnico = new LinkedHashMap<>();
         for (PuntoEstadisticaPuntos p : todosPuntos) {
             if (!seleccionados.contains(p.getNombreTecnico())) continue;
@@ -660,7 +661,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         else Platform.runLater(render);
     }
 
-    /** Promedio de ventana (todos los técnicos, métrica activa) para los periodos visibles dados. */
+    /** Promedio por periodo TRABAJADO de la ventana (técnicos que cuentan, métrica activa). */
     private double promedioVentanaActual(Set<String> periodosVisibles) {
         Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
