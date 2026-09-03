@@ -36,7 +36,7 @@ Decisiones de contexto: esto va en la **línea hotfix** (pocos cambios, la 0.17 
 
 **Reglas de puntuación** (solo trabajos terminados, `FECHA_FIN NOT NULL`, fecha = `DATE(FECHA_FIN)` como hoy):
 
-- **Reparación normal (R) y glass (G), regla única**: suma de puntos de sus **piezas usadas** (× `CANTIDAD`). Piezas con SKU puntúan por su clave; piezas "otro" (sin SKU) puntúan `otro`. Un glass solo (pieza `g`) da 0,50; glass+marco da 1,00.
+- **Reparación normal (R) y glass (G), regla única**: suma de puntos de sus **piezas usadas** — **cada fila de pieza puntúa UNA vez; la `CANTIDAD` no multiplica** (ajuste smoke 2026-09-03: cantidad>1 suele ser pieza rota o venida defectuosa, y multiplicar premiaba la rotura; además las acciones "otro" se guardan con `CANTIDAD=0` y puntuaban cero). Piezas con SKU puntúan por su clave; piezas "otro" (sin SKU) y las reutilizadas puntúan igual, una vez por fila. Un glass solo (pieza `g`) da 0,50; glass+marco da 1,00.
 - **Reparación sin ninguna pieza registrada** ("no formalizada") → `otro` (0,50) fija. Así el trabajo no queda a cero y el peso es ajustable.
 - **Pulido (P)** → `pulido` (0,25) fijo (los pulidos entran en estadísticas por primera vez).
 - "Pieza usada" = el mismo criterio que ya usa el cierre de reparación para descontar stock (filas reales de `Reparacion_componente`; las solicitudes puras no puntúan; reutilizadas e incidencias sí — pieza puesta es trabajo hecho). **El plan verificará el criterio exacto contra la query de cierre antes de escribir la del endpoint.**
