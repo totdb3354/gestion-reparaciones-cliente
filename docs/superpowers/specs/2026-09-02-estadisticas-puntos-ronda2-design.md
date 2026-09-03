@@ -30,7 +30,7 @@ Las dos tarjetas conservan su cifra grande actual (total del mes / tasa por día
 └────────────────────────┘ └────────────────────────┘
 ```
 
-- **Formato**: `<pct>% de <mes anterior> (<valor anterior>)`. Porcentaje **entero** (HALF_UP); el valor anterior con el formato de puntos habitual (coma decimal; en la tasa, un decimal). Nombre del mes dinámico.
+- **Formato**: `<pct>% de <mes anterior> (<valor anterior>)`. Porcentaje **entero truncado** (ajuste smoke 2026-09-03: con HALF_UP, 90,6 vs 90,7 marcaba "100%" en verde sin haber igualado; truncando, el 100 solo aparece al igualar de verdad); el valor anterior con el formato de puntos habitual (coma decimal; en la tasa, un decimal). Nombre del mes dinámico.
 - **Cálculo**: tarjeta Puntos → `total mes en curso ÷ total mes anterior completo`. Tarjeta Puntos/día → `tasa actual (÷ laborables transcurridos, hoy incluido) ÷ tasa del mes anterior (÷ todos sus laborables)`. En la tasa el % **oscila alrededor de 100** (no acumula): es "% del ritmo del mes pasado". Asumido: el desfase intradía (hoy cuenta entero en el divisor desde las 00:00) deprime la tasa a primera hora y se recupera durante el día.
 - **Color**: gris neutro (`#7A8A9A`, el de los subtítulos) mientras `< 100%`; **verde** (el del delta positivo actual de las tarjetas) al alcanzar/superar el 100%. **Nunca rojo**.
 - **Mes anterior sin datos** (arranque, técnico nuevo): la línea de objetivo no se muestra; queda solo la cifra del mes (igual que hoy con el delta).

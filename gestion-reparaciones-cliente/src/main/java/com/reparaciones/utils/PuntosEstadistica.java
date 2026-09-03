@@ -195,8 +195,11 @@ public final class PuntosEstadistica {
         if (hayAnterior && puntosAnterior > 0) {
             double diaAnterior = puntosAnterior
                     / Math.max(1, diasLaborables(anterior.atDay(1), anterior.atEndOfMonth()));
-            pctPuntos = (int) Math.round(puntosActual / puntosAnterior * 100);
-            pctDia    = (int) Math.round(diaActual / diaAnterior * 100);
+            // Truncado, no redondeo: "100%" solo cuando el objetivo está igualado de verdad
+            // (90,6 vs 90,7 redondeaba a 100% y pintaba verde — ajuste smoke 2026-09-03).
+            // El epsilon evita que un 105,0 calculado en coma flotante caiga a 104.
+            pctPuntos = (int) Math.floor(puntosActual / puntosAnterior * 100 + 1e-9);
+            pctDia    = (int) Math.floor(diaActual / diaAnterior * 100 + 1e-9);
             totalAnterior = puntosAnterior;
             tasaAnterior  = diaAnterior;
         }

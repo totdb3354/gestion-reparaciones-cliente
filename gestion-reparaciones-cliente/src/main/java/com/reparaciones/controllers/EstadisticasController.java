@@ -144,6 +144,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     // Offset de la ventana actualmente visible (0 = más antigua)
     private int ventanaOffset = 0;
 
+    /** Rango de la vara del Promedio (ajuste smoke 2026-09-03): fijo durante la navegación —
+     *  el rango del filtro de fechas si lo hay; sin filtro, la última ventana estándar. */
+    private List<String> periodosReferencia = List.of();
+
     // Ventanas por granularidad
     private static final int VENTANA_DIA    = 30;
     private static final int VENTANA_SEMANA = 16;
@@ -513,6 +517,15 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         if (!todosPeriodos.isEmpty())
             ventanaTamanio = Math.min(ventanaTamanio, todosPeriodos.size());
 
+        // Vara del Promedio (ajuste smoke 2026-09-03): FIJA mientras se navega con las flechas.
+        // Con filtro de fechas, el rango filtrado entero (la vara de esa época); sin filtro,
+        // la última ventana estándar de la granularidad (los 30 días / 16 semanas... recientes).
+        boolean hayFiltroFechas = dpDesde.getValue() != null || dpHasta.getValue() != null;
+        periodosReferencia = hayFiltroFechas
+                ? List.copyOf(todosPeriodos)
+                : List.copyOf(todosPeriodos.subList(
+                        Math.max(0, todosPeriodos.size() - ventanaTamanio), todosPeriodos.size()));
+
         configurarVentana();
     }
 
@@ -619,8 +632,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             maxVisible = Math.max(maxVisible, maxEquipo);
         }
         // La línea de Promedio también debe caber dentro del eje, no solo las series visibles
-        double promedioVentana = promedioVentanaActual(periodosVisibles);
-        ejeY.setUpperBound(Math.max(5, Math.ceil(Math.max(maxVisible, promedioVentana)) + 1));
+        double promedioRef = promedioVentanaActual(periodosReferencia);
+        ejeY.setUpperBound(Math.max(5, Math.ceil(Math.max(maxVisible, promedioRef)) + 1));
         ejeY.setLabel(metricaPorDia() ? "Puntos/día" : "Puntos");
 
         Runnable render = () -> {
@@ -661,14 +674,14 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         else Platform.runLater(render);
     }
 
-    /** Promedio por periodo TRABAJADO de la ventana (técnicos que cuentan, métrica activa). */
-    private double promedioVentanaActual(Set<String> periodosVisibles) {
+    /** Promedio por periodo TRABAJADO del rango dado (técnicos que cuentan, métrica activa). */
+    private double promedioVentanaActual(java.util.Collection<String> periodos) {
         Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
             datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
                         .put(p.getPeriodo(), valorDe(p));
         }
-        return PuntosEstadistica.promedioVentana(datosVentana, new java.util.ArrayList<>(periodosVisibles));
+        return PuntosEstadistica.promedioVentana(datosVentana, new java.util.ArrayList<>(periodos));
     }
 
     private void dibujarLineasMedia(Set<String> periodosVisibles, List<XYChart.Series<String, Number>> todasSeries) {
@@ -762,9 +775,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             lineaMediaPorSerie.put(serie, linea);
         }
 
-        // Línea "Promedio": promedio de ventana de la métrica activa sobre los técnicos
-        // (nunca sobre la serie "Equipo"); siempre visible salvo que no haya actividad.
-        double refMedia = promedioVentanaActual(periodosVisibles);
+        // Línea "Promedio": vara FIJA sobre el rango de referencia (filtro de fechas, o la
+        // última ventana estándar sin filtro) — no se mueve al navegar con las flechas
+        // (ajuste smoke 2026-09-03). Nunca incluye la serie "Equipo".
+        double refMedia = promedioVentanaActual(periodosReferencia);
 
         if (refMedia > 0) { // sin actividad → no se dibuja
             double x0ref = bg.getBoundsInParent().getMinX();
@@ -788,11 +802,12 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             bg.boundsInParentProperty().addListener((obs, o, b) -> {
                 hitRef.setStartX(b.getMinX()); hitRef.setEndX(b.getMaxX());
             });
+            // Mismo rango de referencia que la línea: quién supera la vara, estable al navegar
             List<String> porEncima = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
                     .filter(nombre -> {
                         double media = todosPuntos.stream()
                                 .filter(p -> p.getNombreTecnico().equals(nombre)
-                                          && periodosVisibles.contains(p.getPeriodo()))
+                                          && periodosReferencia.contains(p.getPeriodo()))
                                 .mapToDouble(this::valorDe)
                                 .average().orElse(0);
                         return media > refMedia;
@@ -801,7 +816,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     .filter(nombre -> {
                         double media = todosPuntos.stream()
                                 .filter(p -> p.getNombreTecnico().equals(nombre)
-                                          && periodosVisibles.contains(p.getPeriodo()))
+                                          && periodosReferencia.contains(p.getPeriodo()))
                                 .mapToDouble(this::valorDe)
                                 .average().orElse(0);
                         return media > 0 && media <= refMedia;
@@ -810,11 +825,14 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
             String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
             String unidadRef = metricaPorDia() ? "puntos/día" : "puntos";
+            String ambitoRef = (dpDesde.getValue() != null || dpHasta.getValue() != null)
+                    ? "rango filtrado"
+                    : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
             Tooltip tipRef = new Tooltip(String.format(
-                    "Promedio del equipo: %s %s%n" +
+                    "Promedio del equipo (%s): %s %s%n" +
                     "Por encima: %s%n" +
                     "Por debajo: %s",
-                    PuntosEstadistica.formatearPuntos(refMedia), unidadRef, encimaTxt, debajTxt));
+                    ambitoRef, PuntosEstadistica.formatearPuntos(refMedia), unidadRef, encimaTxt, debajTxt));
             tipRef.setShowDelay(Duration.ZERO);
             tipRef.setShowDuration(Duration.INDEFINITE);
             tipRef.setHideDelay(Duration.millis(100));

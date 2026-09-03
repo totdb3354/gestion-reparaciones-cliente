@@ -196,6 +196,22 @@ class PuntosEstadisticaTest {
         assertNull(t.pctDia());
     }
 
+    @Test void pctObjetivoTruncaSinLlegarAlCien() {
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08", 907), fila("Marcos", "2026-09", 906));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
+        assertEquals(99, t.pctPuntos());   // 906/907 = 99,89% → aún no iguala: nada de 100
+    }
+
+    @Test void pctObjetivoDaCienJustoAlIgualar() {
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08", 100), fila("Marcos", "2026-09", 100));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
+        assertEquals(100, t.pctPuntos());
+    }
+
     @Test void textoObjetivoFormatea() {
         assertEquals("46% de agosto (890,0)", PuntosEstadistica.textoObjetivo(46, "agosto", 890.0));
     }
