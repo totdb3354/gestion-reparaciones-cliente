@@ -416,7 +416,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     if (t == null) {
                         setGraphic(null); setText(null);
                         setMouseTransparent(true);
-                        setStyle("-fx-border-color: transparent transparent #AAAAAA transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 0 0; -fx-pref-height: 8;");
+                        // Línea de 1px centrada en la celda de alto fijo (30px) del dropdown
+                        setStyle("-fx-background-color: transparent, #AAAAAA; -fx-background-insets: 0, 14 8 15 8;");
                         return;
                     }
                     setMouseTransparent(false);

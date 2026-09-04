@@ -127,6 +127,11 @@ public final class MultiSelectDropdown {
 
         if (combo.getUserData() == null) {
             combo.setUserData(listView);
+            // Mismo fix que la variante estándar (bug "la lista sube sola al llegar al
+            // fondo"): sin fixedCellSize el VirtualFlow estima alturas y cada pasada de
+            // layout recoloca la vista una fila arriba. La fila separadora de Estadísticas
+            // dibuja ahora su línea centrada dentro del alto fijo (ver su cellFactory).
+            listView.setFixedCellSize(ALTURA_FILA);
             listView.setCellFactory(cellFactory);
 
             TextField buscador = new TextField();
