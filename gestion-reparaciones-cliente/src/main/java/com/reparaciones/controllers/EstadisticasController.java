@@ -1413,9 +1413,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
         lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
         pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
-        lblCardDiaTitulo.setText("Puntos/día · " + t.mesLabel() + " · " + quien);
-        lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosDia()));
-        pintarObjetivo(lblCardDiaDelta, t.pctDia(), t.mesAnteriorLabel(), t.diaEsperado());
+        lblCardDiaTitulo.setText("Puntos · hoy, " + t.diaHoyLabel() + " · " + quien);
+        lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosHoy()));
+        pintarObjetivo(lblCardDiaDelta, t.pctHoy(),
+                "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel(), t.objetivoHoy());
     }
 
     /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */

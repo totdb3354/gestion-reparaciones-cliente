@@ -159,19 +159,21 @@ public final class PuntosEstadistica {
 
     // ── Tarjetas resumen ──────────────────────────────────────────────────────
 
-    public record Tarjetas(String mesLabel, String mesAnteriorLabel, double puntos, double puntosDia,
-                           Integer pctPuntos, Double puntosAnterior, Integer pctDia, Double diaEsperado) {}
+    public record Tarjetas(String mesLabel, String mesAnteriorLabel, String diaHoyLabel,
+                           double puntos, double puntosHoy,
+                           Integer pctPuntos, Double puntosAnterior,
+                           Integer pctHoy, Double objetivoHoy) {}
 
     /**
-     * Tarjetas en formato objetivo: % del mes anterior alcanzado (nunca delta rojo).
-     *
-     * Tarjeta Puntos: acumulado actual vs total del mes anterior. Tarjeta Puntos/día:
-     * acumulado actual vs lo ESPERADO a estas alturas con la mezcla de días de semana
-     * del mes anterior — la media de los lunes para los lunes, la de los martes para
-     * los martes… (ajuste 2026-09-03: la media plana desinflaba el % cuando los días
-     * transcurridos eran de jornada corta; un día de semana sin datos el mes anterior
-     * cae a su media global por día trabajado). Los % van truncados con epsilon:
-     * "100%" solo al igualar de verdad.
+     * Tarjetas en formato objetivo, ambas con la misma mecánica a dos escalas
+     * (decisión smoke 2026-09-04): la del MES compara el acumulado contra el total
+     * del mes anterior; la del DÍA compara lo hecho HOY contra la media de ese día
+     * de semana en el mes anterior (los viernes contra los viernes — la referencia
+     * absorbe jornadas cortas sin mantener calendarios). El % del día arranca en 0
+     * cada mañana y se espera que alcance el 100% al cierre, igual que el del mes
+     * a fin de mes. Día de semana laborable sin muestras el mes anterior → media
+     * global por día trabajado; fin de semana sin muestras → sin línea de objetivo.
+     * Los % van truncados con epsilon: "100%" solo al igualar de verdad.
      *
      * @param filasDiarias resultado del endpoint con granularidad DÍA cubriendo mes anterior y actual
      * @param tecnicoONull null = equipo (sin excluidos); nombre = solo ese técnico (los excluidos
@@ -208,35 +210,33 @@ public final class PuntosEstadistica {
             }
         }
 
-        LocalDate finTranscurrido = mesActual.atEndOfMonth().isAfter(hoy) ? hoy : mesActual.atEndOfMonth();
-        int laborablesTranscurridos = Math.max(1, diasLaborables(mesActual.atDay(1), finTranscurrido));
-        double diaActual = puntosActual / laborablesTranscurridos;
+        double puntosHoy = porDia.getOrDefault(hoy, 0.0);
 
-        Integer pctPuntos = null, pctDia = null;
-        Double totalAnterior = null, tasaEsperada = null;
+        Integer pctPuntos = null, pctHoy = null;
+        Double totalAnterior = null, objetivoHoy = null;
         if (puntosAnterior > 0) {
             pctPuntos = (int) Math.floor(puntosActual / puntosAnterior * 100 + 1e-9);
             totalAnterior = puntosAnterior;
 
-            // Esperado hasta hoy: suma, por cada laborable transcurrido, de la media de
-            // ese día de semana en el mes anterior (sin muestras → media global diaria)
-            double mediaGlobal = puntosAnterior / diasTrabajadosAnterior;
-            double esperado = 0;
-            for (LocalDate d = mesActual.atDay(1); !d.isAfter(finTranscurrido); d = d.plusDays(1)) {
-                if (d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
-                double[] acc = porDiaSemana.get(d.getDayOfWeek());
-                esperado += (acc != null && acc[1] > 0) ? acc[0] / acc[1] : mediaGlobal;
+            DayOfWeek diaHoy = hoy.getDayOfWeek();
+            double[] acc = porDiaSemana.get(diaHoy);
+            boolean finde = diaHoy == DayOfWeek.SATURDAY || diaHoy == DayOfWeek.SUNDAY;
+            if (acc != null && acc[1] > 0) {
+                objetivoHoy = acc[0] / acc[1];
+            } else if (!finde) {
+                objetivoHoy = puntosAnterior / diasTrabajadosAnterior; // media global por día trabajado
             }
-            if (esperado > 0) {
-                pctDia = (int) Math.floor(puntosActual / esperado * 100 + 1e-9);
-                tasaEsperada = esperado / laborablesTranscurridos;
-            }
+            if (objetivoHoy != null && objetivoHoy > 0)
+                pctHoy = (int) Math.floor(puntosHoy / objetivoHoy * 100 + 1e-9);
+            else
+                objetivoHoy = null;
         }
         Locale es = new Locale("es", "ES");
         return new Tarjetas(
                 mesActual.getMonth().getDisplayName(TextStyle.FULL, es),
                 anterior.getMonth().getDisplayName(TextStyle.FULL, es),
-                puntosActual, diaActual, pctPuntos, totalAnterior, pctDia, tasaEsperada);
+                hoy.getDayOfWeek().getDisplayName(TextStyle.FULL, es),
+                puntosActual, puntosHoy, pctPuntos, totalAnterior, pctHoy, objetivoHoy);
     }
 
     /** "46% de agosto (890,0)" — la línea de objetivo de las tarjetas. */
