@@ -674,6 +674,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         else Platform.runLater(render);
     }
 
+    /** Ámbito de las varas (Promedio, x̄ y Por encima/Por debajo): filtro de fechas o última ventana. */
+    private String ambitoReferencia() {
+        return (dpDesde.getValue() != null || dpHasta.getValue() != null)
+                ? "rango filtrado"
+                : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
+    }
+
     /** Promedio por periodo TRABAJADO del rango dado (técnicos que cuentan, métrica activa). */
     private double promedioVentanaActual(java.util.Collection<String> periodos) {
         Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
@@ -700,9 +707,11 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         // Precomputar suma total por periodo (reutilizado en "Equipo"): excluye a los
         // técnicos con ES_ESTADISTICA=0, igual que la propia serie "Equipo" del gráfico.
+        // Sobre el RANGO DE REFERENCIA, como el Promedio y el Por encima/Por debajo:
+        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04).
         Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
-            if (periodosVisibles.contains(p.getPeriodo()))
+            if (periodosReferencia.contains(p.getPeriodo()))
                 sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
         }
 
@@ -715,7 +724,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             } else {
                 media = todosPuntos.stream()
                         .filter(p -> p.getNombreTecnico().equals(serie.getName())
-                                  && periodosVisibles.contains(p.getPeriodo()))
+                                  && periodosReferencia.contains(p.getPeriodo()))
                         .mapToDouble(this::valorDe)
                         .average().orElse(0);
             }
@@ -761,7 +770,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
             mediaPorSerie.put(serie, media);
             String unidadMedia = metricaPorDia() ? " puntos/día" : " puntos";
-            Tooltip tipMedia = new Tooltip("Media " + serie.getName() + ": "
+            Tooltip tipMedia = new Tooltip("Media " + serie.getName() + " (" + ambitoReferencia() + "): "
                     + PuntosEstadistica.formatearPuntos(media) + unidadMedia);
             tipMedia.setShowDelay(Duration.ZERO);
             tipMedia.setShowDuration(Duration.INDEFINITE);
@@ -825,9 +834,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
             String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
             String unidadRef = metricaPorDia() ? "puntos/día" : "puntos";
-            String ambitoRef = (dpDesde.getValue() != null || dpHasta.getValue() != null)
-                    ? "rango filtrado"
-                    : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
+            String ambitoRef = ambitoReferencia();
             Tooltip tipRef = new Tooltip(String.format(
                     "Promedio del equipo (%s): %s %s%n" +
                     "Por encima: %s%n" +
@@ -965,7 +972,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         Double m = mediaPorSerie.get(cercana);
                         if (m != null && m > 0) {
                             String unidad = metricaPorDia() ? " puntos/día" : " puntos";
-                            tooltipMedia.setText("Media " + cercana.getName() + ": "
+                            tooltipMedia.setText("Media " + cercana.getName() + " (" + ambitoReferencia() + "): "
                                     + PuntosEstadistica.formatearPuntos(m) + unidad);
                             tooltipMedia.show(chartReparaciones, e.getScreenX() + 12, e.getScreenY() - 20);
                         }

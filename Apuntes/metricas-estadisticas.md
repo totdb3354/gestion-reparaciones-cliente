@@ -91,7 +91,7 @@ Media personal **por periodo trabajado** de cada técnico sobre el **mismo rango
 
 Propiedad matemática: la línea es la media ponderada de esas medias personales (ponderada por días trabajados) → **siempre hay gente a ambos lados** (salvo empate total).
 
-Nota: las líneas **x̄ de "Ver medias"** son otra cosa a propósito: media de esa serie en la **ventana visible** (anotan lo que estás viendo), también por periodo trabajado.
+Las líneas **x̄ de "Ver medias"** usan el **mismo rango de referencia** (ajuste 2026-09-04: antes iban sobre la ventana visible y bailaban al navegar): media de esa serie por periodo trabajado del rango — coinciden con las medias que ordenan el "Por encima/Por debajo". Sus tooltips dicen el ámbito.
 
 ## 8. Exclusión de técnicos (👥 Técnicos, solo admin)
 
