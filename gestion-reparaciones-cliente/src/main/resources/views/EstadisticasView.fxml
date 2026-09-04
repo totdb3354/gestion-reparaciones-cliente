@@ -56,6 +56,14 @@
                             <Label fx:id="lblCardDiaDelta" style="-fx-font-size: 11px;"/>
                         </HBox>
                     </VBox>
+                    <VBox fx:id="cardImeis" spacing="2" visible="false" managed="false"
+                          style="-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 14;">
+                        <Label text="IMEIs típicos por técnico" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        <HBox spacing="6" alignment="BASELINE_LEFT">
+                            <Label fx:id="lblCardImeisValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
+                            <Label fx:id="lblCardImeisAmbito" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        </HBox>
+                    </VBox>
                 </HBox>
                 <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <Label text="Periodo:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>

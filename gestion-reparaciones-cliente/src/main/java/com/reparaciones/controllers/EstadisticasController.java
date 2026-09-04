@@ -99,6 +99,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private Label            lblCardDiaTitulo;
     @FXML private Label            lblCardDiaValor;
     @FXML private Label            lblCardDiaDelta;
+    @FXML private VBox             cardImeis;
+    @FXML private Label            lblCardImeisValor;
+    @FXML private Label            lblCardImeisAmbito;
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
@@ -541,6 +544,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
             lblRangoVentana.setText("");
+            cardImeis.setVisible(false);
+            cardImeis.setManaged(false);
             return;
         }
         lblSinDatos.setVisible(false);
@@ -643,6 +648,22 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         }
         final double mediaImeis = mediaImeisTmp;
 
+        // Tarjeta "IMEIs típicos por técnico": la media común arriba, una sola vez
+        // (decisión smoke 2026-09-04: los chips llevan solo lo de cada uno)
+        boolean hayMediaImeis = servidorConImeis && mediaImeis > 0;
+        cardImeis.setVisible(hayMediaImeis);
+        cardImeis.setManaged(hayMediaImeis);
+        if (hayMediaImeis) {
+            String unidad = switch (cmbGranularidad.getValue()) {
+                case "Día"    -> "por día trabajado";
+                case "Semana" -> "por semana trabajada";
+                case "Mes"    -> "por mes trabajado";
+                default       -> "por año trabajado";
+            };
+            lblCardImeisValor.setText(PuntosEstadistica.formatearPuntos(mediaImeis));
+            lblCardImeisAmbito.setText(unidad + " · " + ambitoReferencia());
+        }
+
         Runnable render = () -> {
             chartReparaciones.applyCss();
             chartReparaciones.layout();
@@ -680,14 +701,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 }
                 if (esTecnico && servidorConImeis) {
                     int lleva = imeisUltimoPeriodo.getOrDefault(nombre, 0);
-                    if (mediaImeis > 0) {
-                        lbl.setText(nombre + " · " + lleva + "/"
-                                + PuntosEstadistica.formatearPuntos(mediaImeis) + " IMEIs");
-                        if (lleva >= mediaImeis)
-                            lbl.setStyle(lbl.getStyle() + "-fx-text-fill: #2E7D32;");
-                    } else {
-                        lbl.setText(nombre + " · " + lleva + " IMEIs");
-                    }
+                    lbl.setText(nombre + " · " + lleva + " IMEIs");
+                    // Verde al alcanzar la media común (la de la tarjeta "IMEIs típicos")
+                    if (mediaImeis > 0 && lleva >= mediaImeis)
+                        lbl.setStyle(lbl.getStyle() + "-fx-text-fill: #2E7D32;");
                 }
             }
         };
