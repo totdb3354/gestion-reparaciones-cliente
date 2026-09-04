@@ -71,6 +71,8 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 
 ## 5. El gráfico
 
+- **Leyenda con IMEIs** (ajuste 2026-09-04): cada chip de técnico muestra "`nombre` · N IMEIs" = **IMEIs distintos que tocó en el último periodo visible** (hoy en Día, esta semana en Semana, este mes en Mes). Mismo criterio que el Agrupado por IMEI filtrado por técnico; un teléfono con varios trabajos cuenta 1; la cuenta la hace el servidor por periodo (campo aditivo `nImeis`; con servidor antiguo el sufijo no aparece). El detalle de *cuáles* son: popover → "Ver IMEIs". La vista/serie completa de IMEIs queda para la analítica web (F4).
+
 - **Serie por técnico**: sus puntos (o puntos/día) por periodo. Los periodos visibles en los que no trabajó se pintan a **0** (honesto, y evita que el eje de categorías se desordene con huecos).
 - **Serie Equipo (suma)**: suma por periodo de los técnicos **que cuentan** (sin excluidos). Checkbox propio, apagada por defecto.
 - **Eje X**: solo existen los periodos en los que **alguien** del equipo trabajó — por eso la etiqueta dice "**30 días con actividad**" (o "16 semanas", "12 meses", "5 años") y el rango de fechas abarca más calendario que 30 días.
