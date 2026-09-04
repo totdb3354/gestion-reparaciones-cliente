@@ -96,9 +96,11 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private Label            lblCardPuntosTitulo;
     @FXML private Label            lblCardPuntosValor;
     @FXML private Label            lblCardPuntosDelta;
+    @FXML private Label            lblCardPuntosEquipo;
     @FXML private Label            lblCardDiaTitulo;
     @FXML private Label            lblCardDiaValor;
     @FXML private Label            lblCardDiaDelta;
+    @FXML private Label            lblCardDiaEquipo;
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
@@ -1421,15 +1423,42 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         }
         var t = PuntosEstadistica.calcularTarjetas(
                 filasTarjetas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
-        String quien = tecnico == null ? "equipo"
-                : tecnico.equals(nombreTecnicoSesion) ? "tú" : tecnico;
+        boolean individual = tecnico != null;
+        boolean esTu = individual && tecnico.equals(nombreTecnicoSesion);
+        String quien = !individual ? "equipo" : esTu ? "tú" : tecnico;
+        // En modo individual, la línea de mejora habla en posesivo ("su agosto", "un viernes suyo")
+        String refMes = !individual ? t.mesAnteriorLabel()
+                : (esTu ? "tu " : "su ") + t.mesAnteriorLabel();
+        String refDia = !individual ? "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel()
+                : "un " + t.diaHoyLabel() + (esTu ? " tuyo" : " suyo");
         lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
         lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
-        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
+        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), refMes, t.puntosAnterior());
         lblCardDiaTitulo.setText("Puntos · hoy, " + t.diaHoyLabel() + " · " + quien);
         lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosHoy()));
-        pintarObjetivo(lblCardDiaDelta, t.pctHoy(),
-                "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel(), t.objetivoHoy());
+        pintarObjetivo(lblCardDiaDelta, t.pctHoy(), refDia, t.objetivoHoy());
+
+        // Segunda línea (solo individual): posición vs la media por técnico del equipo,
+        // mismo periodo contra mismo periodo (decisión smoke 2026-09-04)
+        if (individual) {
+            var oe = PuntosEstadistica.objetivoEquipo(
+                    filasTarjetas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
+            pintarObjetivoEquipo(lblCardPuntosEquipo, oe.pctMes(), "del equipo", oe.mediaMes());
+            pintarObjetivoEquipo(lblCardDiaEquipo, oe.pctHoy(), "del equipo hoy", oe.mediaHoy());
+        } else {
+            pintarObjetivoEquipo(lblCardPuntosEquipo, null, null, null);
+            pintarObjetivoEquipo(lblCardDiaEquipo, null, null, null);
+        }
+    }
+
+    /** Línea de posición vs equipo: visible solo en modo individual y con datos. */
+    private void pintarObjetivoEquipo(Label lbl, Integer pct, String sufijo, Double media) {
+        boolean visible = pct != null;
+        lbl.setVisible(visible);
+        lbl.setManaged(visible);
+        if (!visible) { lbl.setText(""); return; }
+        lbl.setText(PuntosEstadistica.textoEquipo(pct, sufijo, media));
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (pct >= 100 ? "#2E7D32" : "#7A8A9A") + ";");
     }
 
     /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */

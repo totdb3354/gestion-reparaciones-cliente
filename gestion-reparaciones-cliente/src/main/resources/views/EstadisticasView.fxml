@@ -48,6 +48,8 @@
                             <Label fx:id="lblCardPuntosValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
                             <Label fx:id="lblCardPuntosDelta" style="-fx-font-size: 11px;"/>
                         </HBox>
+                        <Label fx:id="lblCardPuntosEquipo" style="-fx-font-size: 11px;"
+                               visible="false" managed="false"/>
                     </VBox>
                     <VBox spacing="2" style="-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 14;">
                         <Label fx:id="lblCardDiaTitulo" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
@@ -55,6 +57,8 @@
                             <Label fx:id="lblCardDiaValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
                             <Label fx:id="lblCardDiaDelta" style="-fx-font-size: 11px;"/>
                         </HBox>
+                        <Label fx:id="lblCardDiaEquipo" style="-fx-font-size: 11px;"
+                               visible="false" managed="false"/>
                     </VBox>
                 </HBox>
                 <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
