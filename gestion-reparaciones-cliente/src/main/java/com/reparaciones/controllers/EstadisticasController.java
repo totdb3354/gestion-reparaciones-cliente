@@ -619,6 +619,15 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         ejeY.setUpperBound(Math.max(5, Math.ceil(Math.max(maxVisible, promedioRef)) + 1));
         ejeY.setLabel(metricaPorDia() ? "Puntos/día" : "Puntos");
 
+        // IMEIs distintos del último periodo visible, para el sufijo de la leyenda
+        // (campo aditivo del servidor; con un servidor sin él no se muestra sufijo)
+        String ultimoPeriodo = todosPeriodos.get(fin - 1);
+        boolean servidorConImeis = todosPuntos.stream().anyMatch(p -> p.getnImeis() != null);
+        Map<String, Integer> imeisUltimoPeriodo = new java.util.HashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos)
+            if (ultimoPeriodo.equals(p.getPeriodo()) && p.getnImeis() != null)
+                imeisUltimoPeriodo.put(p.getNombreTecnico(), p.getnImeis());
+
         Runnable render = () -> {
             chartReparaciones.applyCss();
             chartReparaciones.layout();
@@ -635,13 +644,16 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 dibujarLineasMedia(periodosVisibles, ts);
             });
 
-            // Quitar técnico desde la leyenda con un clic: solo ADMIN/SUPERTECNICO — un técnico
-            // raso no puede auto-quitarse de su propia vista de estadísticas.
-            if (com.reparaciones.Sesion.esAdminOSuperTecnico()) {
-                for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
-                    if (!(item instanceof Label lbl)) continue;
-                    String nombre = lbl.getText();
-                    boolean esTecnico = !"Equipo".equals(nombre);
+            // Leyenda: clic para quitar técnico (solo ADMIN/SUPERTECNICO) y sufijo con los
+            // IMEIs del último periodo visible (hoy / esta semana / este mes — ajuste smoke
+            // 2026-09-04). El nombre se captura ANTES de tocar el texto: el clic y los
+            // colores (que corren antes, en aplicarColores) siguen viendo el nombre limpio.
+            boolean puedeQuitar = com.reparaciones.Sesion.esAdminOSuperTecnico();
+            for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
+                if (!(item instanceof Label lbl)) continue;
+                String nombre = lbl.getText();
+                boolean esTecnico = !"Equipo".equals(nombre);
+                if (puedeQuitar) {
                     lbl.setStyle(esTecnico ? "-fx-cursor: hand;" : "");
                     lbl.setOnMouseClicked(e -> {
                         if (!esTecnico) return;
@@ -651,6 +663,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         renderVentana(ventanaOffset);
                     });
                 }
+                if (esTecnico && servidorConImeis)
+                    lbl.setText(nombre + " · " + imeisUltimoPeriodo.getOrDefault(nombre, 0) + " IMEIs");
             }
         };
         if (chartReparaciones.getScene() != null) render.run();

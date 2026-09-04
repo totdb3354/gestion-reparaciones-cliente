@@ -12,6 +12,7 @@ public class PuntoEstadisticaPuntos {
     private int    nGlass;
     private int    nPulidos;
     private int    nSinPiezas;
+    private Integer nImeis; // aditivo 2026-09-04; null si el servidor aún no lo envía
 
     public PuntoEstadisticaPuntos() {}
 
@@ -40,4 +41,7 @@ public class PuntoEstadisticaPuntos {
     public int    getnGlass()         { return nGlass; }
     public int    getnPulidos()       { return nPulidos; }
     public int    getnSinPiezas()     { return nSinPiezas; }
+
+    /** IMEIs distintos del técnico en el periodo; {@code null} contra un servidor sin el campo. */
+    public Integer getnImeis()        { return nImeis; }
 }
