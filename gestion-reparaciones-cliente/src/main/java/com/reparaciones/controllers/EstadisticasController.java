@@ -628,6 +628,21 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             if (ultimoPeriodo.equals(p.getPeriodo()) && p.getnImeis() != null)
                 imeisUltimoPeriodo.put(p.getNombreTecnico(), p.getnImeis());
 
+        // Referencia del chip: IMEIs típicos por técnico-periodo trabajado del rango de
+        // referencia (misma fórmula que el Promedio de puntos, sin excluidos). El chip
+        // queda "javi · 12/13 IMEIs" y en verde al alcanzarla.
+        double mediaImeisTmp = 0;
+        if (servidorConImeis) {
+            Map<String, Map<String, Double>> datosImeis = new LinkedHashMap<>();
+            for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos))
+                if (p.getnImeis() != null)
+                    datosImeis.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                              .put(p.getPeriodo(), p.getnImeis().doubleValue());
+            mediaImeisTmp = PuntosEstadistica.promedioVentana(
+                    datosImeis, new java.util.ArrayList<>(periodosReferencia));
+        }
+        final double mediaImeis = mediaImeisTmp;
+
         Runnable render = () -> {
             chartReparaciones.applyCss();
             chartReparaciones.layout();
@@ -663,8 +678,16 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         renderVentana(ventanaOffset);
                     });
                 }
-                if (esTecnico && servidorConImeis)
-                    lbl.setText(nombre + " · " + imeisUltimoPeriodo.getOrDefault(nombre, 0) + " IMEIs");
+                if (esTecnico && servidorConImeis) {
+                    int lleva = imeisUltimoPeriodo.getOrDefault(nombre, 0);
+                    if (mediaImeis > 0) {
+                        lbl.setText(nombre + " · " + lleva + "/" + Math.round(mediaImeis) + " IMEIs");
+                        if (lleva >= mediaImeis)
+                            lbl.setStyle(lbl.getStyle() + "-fx-text-fill: #2E7D32;");
+                    } else {
+                        lbl.setText(nombre + " · " + lleva + " IMEIs");
+                    }
+                }
             }
         };
         if (chartReparaciones.getScene() != null) render.run();
