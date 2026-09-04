@@ -1401,7 +1401,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         java.time.YearMonth mes = java.time.YearMonth.now();
         List<PuntoEstadisticaPuntos> filas;
         try {
-            filas = new ReparacionDAO().getEstadisticasPuntos("mes",
+            // Granularidad DÍA: la tarjeta Puntos/día necesita las medias por día de
+            // semana del mes anterior para igualar la mezcla de días (ajuste 2026-09-03)
+            filas = new ReparacionDAO().getEstadisticasPuntos("dia",
                     mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
         } catch (SQLException e) { mostrarError(e); return; }
         String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
@@ -1413,7 +1415,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
         lblCardDiaTitulo.setText("Puntos/día · " + t.mesLabel() + " · " + quien);
         lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosDia()));
-        pintarObjetivo(lblCardDiaDelta, t.pctDia(), t.mesAnteriorLabel(), t.diaAnterior());
+        pintarObjetivo(lblCardDiaDelta, t.pctDia(), t.mesAnteriorLabel(), t.diaEsperado());
     }
 
     /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */

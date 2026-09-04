@@ -63,7 +63,7 @@ Dos tarjetas: **Puntos · mes** (acumulado) y **Puntos/día · mes** (tasa), del
 
 - Línea de objetivo: **"`pct`% de `<mes anterior>` (`total anterior`)"** — el mes en curso como progreso hacia igualar el anterior, nunca como pérdida.
   - Tarjeta Puntos: `acumulado actual ÷ total del mes anterior completo` (sube hacia el 100% conforme avanza el mes).
-  - Tarjeta Puntos/día: `tasa actual ÷ tasa del mes anterior` (oscila alrededor de 100: es "% del ritmo del mes pasado").
+  - Tarjeta Puntos/día: `acumulado actual ÷ lo esperado a estas alturas` con la **mezcla de días de semana igualada** (ajuste 2026-09-03): lo esperado suma, por cada laborable transcurrido, la media de ese día de semana en el mes anterior — la media de los lunes para los lunes, etc. Así un arranque de mes sin viernes (jornada corta) no infla el %, ni lo desinfla cuando entren. Un día de semana sin datos el mes anterior cae a su media global por día trabajado. El valor entre paréntesis es la **tasa esperada** (esperado ÷ laborables transcurridos). Se autocalibra con los datos: absorbe jornadas y hábitos sin mantener ningún calendario (referencia de ~4-5 muestras por día de semana: algo ruidosa, asumido).
 - **% truncado, no redondeado**: 99,89% se muestra "99%" — el **100% solo aparece al igualar de verdad** (con redondeo, 90,6 sobre 90,7 marcaba 100% verde sin haber llegado).
 - Color: **gris** < 100%, **verde** ≥ 100%. **Nunca rojo.**
 - Mes anterior sin datos (o a cero) → la línea no se muestra.
@@ -101,7 +101,7 @@ Para perfiles que no reparan a jornada completa (logística, supertécnicos con 
 
 ## 9. Simplificaciones asumidas y backlog
 
-- Festivos no descontados; jornada por horas no ponderada.
+- Festivos no descontados; jornada por horas no ponderada. **Sesgo conocido del gráfico en Día**: los puntos siguen las horas de jornada — medido el 2026-09-03 (jun-sep, equipo): lunes 117,6 / martes 127,7 / miércoles 106,0 / jueves 108,3 / viernes 77,5 puntos por día, que dividido por sus horas (9/9/8/8/6) da un ritmo casi constante de ~13-14 puntos/hora. Regla práctica: **un viernes normal ≈ ⅔ de un lunes normal**; la vista Semana neutraliza el efecto sola (misma mezcla de días cada semana). La corrección fina (calendario de festivos, horario individual, días de trabajo por persona) es gestión de personal avanzada → candidata a la analítica web (F4).
 - Desfase intradía del divisor (§3).
 - El eje X (y "días con actividad") puede incluir días en los que solo trabajaron excluidos (raro; backlog).
 - Semanas de cambio de año: la etiqueta usa el año del lunes, no el weekBasedYear ISO (preexistente; backlog).

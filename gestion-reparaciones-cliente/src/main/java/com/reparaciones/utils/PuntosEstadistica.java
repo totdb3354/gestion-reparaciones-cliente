@@ -160,54 +160,83 @@ public final class PuntosEstadistica {
     // ── Tarjetas resumen ──────────────────────────────────────────────────────
 
     public record Tarjetas(String mesLabel, String mesAnteriorLabel, double puntos, double puntosDia,
-                           Integer pctPuntos, Double puntosAnterior, Integer pctDia, Double diaAnterior) {}
+                           Integer pctPuntos, Double puntosAnterior, Integer pctDia, Double diaEsperado) {}
 
     /**
      * Tarjetas en formato objetivo: % del mes anterior alcanzado (nunca delta rojo).
      *
-     * @param filasMensuales resultado del endpoint con granularidad mes cubriendo mes anterior y actual
-     * @param tecnicoONull   null = equipo (sin excluidos); nombre = solo ese técnico (los excluidos
-     *                       se ignoran: la tarjeta personal del excluido sigue funcionando)
-     * @param excluidos      técnicos con ES_ESTADISTICA=0 (solo aplica a las tarjetas de equipo)
+     * Tarjeta Puntos: acumulado actual vs total del mes anterior. Tarjeta Puntos/día:
+     * acumulado actual vs lo ESPERADO a estas alturas con la mezcla de días de semana
+     * del mes anterior — la media de los lunes para los lunes, la de los martes para
+     * los martes… (ajuste 2026-09-03: la media plana desinflaba el % cuando los días
+     * transcurridos eran de jornada corta; un día de semana sin datos el mes anterior
+     * cae a su media global por día trabajado). Los % van truncados con epsilon:
+     * "100%" solo al igualar de verdad.
+     *
+     * @param filasDiarias resultado del endpoint con granularidad DÍA cubriendo mes anterior y actual
+     * @param tecnicoONull null = equipo (sin excluidos); nombre = solo ese técnico (los excluidos
+     *                     se ignoran: la tarjeta personal del excluido sigue funcionando)
+     * @param excluidos    técnicos con ES_ESTADISTICA=0 (solo aplica a las tarjetas de equipo)
      */
-    public static Tarjetas calcularTarjetas(List<PuntoEstadisticaPuntos> filasMensuales,
+    public static Tarjetas calcularTarjetas(List<PuntoEstadisticaPuntos> filasDiarias,
                                             YearMonth mesActual, LocalDate hoy,
                                             String tecnicoONull, Set<String> excluidos) {
         List<PuntoEstadisticaPuntos> filas = tecnicoONull == null
-                ? sinExcluidos(filasMensuales, excluidos) : filasMensuales;
+                ? sinExcluidos(filasDiarias, excluidos) : filasDiarias;
         YearMonth anterior = mesActual.minusMonths(1);
-        String pActual = mesActual.toString();     // "2026-09"
-        String pAnterior = anterior.toString();
 
-        double puntosActual = 0, puntosAnterior = 0;
-        boolean hayAnterior = false;
+        // Total del ámbito (equipo o técnico) por día de calendario
+        Map<LocalDate, Double> porDia = new java.util.HashMap<>();
         for (PuntoEstadisticaPuntos f : filas) {
             if (tecnicoONull != null && !tecnicoONull.equals(f.getNombreTecnico())) continue;
-            if (pActual.equals(f.getPeriodo()))   puntosActual   += f.getPuntos();
-            if (pAnterior.equals(f.getPeriodo())) { puntosAnterior += f.getPuntos(); hayAnterior = true; }
+            porDia.merge(LocalDate.parse(f.getPeriodo()), f.getPuntos(), Double::sum);
         }
 
-        double diaActual = puntosActual
-                / Math.max(1, diasLaborables(mesActual.atDay(1),
-                        mesActual.atEndOfMonth().isAfter(hoy) ? hoy : mesActual.atEndOfMonth()));
+        double puntosActual = 0, puntosAnterior = 0;
+        int diasTrabajadosAnterior = 0;
+        Map<DayOfWeek, double[]> porDiaSemana = new java.util.EnumMap<>(DayOfWeek.class); // [suma, n]
+        for (var e : porDia.entrySet()) {
+            YearMonth ym = YearMonth.from(e.getKey());
+            if (ym.equals(mesActual)) {
+                puntosActual += e.getValue();
+            } else if (ym.equals(anterior)) {
+                puntosAnterior += e.getValue();
+                diasTrabajadosAnterior++;
+                double[] acc = porDiaSemana.computeIfAbsent(e.getKey().getDayOfWeek(), k -> new double[2]);
+                acc[0] += e.getValue();
+                acc[1]++;
+            }
+        }
+
+        LocalDate finTranscurrido = mesActual.atEndOfMonth().isAfter(hoy) ? hoy : mesActual.atEndOfMonth();
+        int laborablesTranscurridos = Math.max(1, diasLaborables(mesActual.atDay(1), finTranscurrido));
+        double diaActual = puntosActual / laborablesTranscurridos;
+
         Integer pctPuntos = null, pctDia = null;
-        Double totalAnterior = null, tasaAnterior = null;
-        if (hayAnterior && puntosAnterior > 0) {
-            double diaAnterior = puntosAnterior
-                    / Math.max(1, diasLaborables(anterior.atDay(1), anterior.atEndOfMonth()));
-            // Truncado, no redondeo: "100%" solo cuando el objetivo está igualado de verdad
-            // (90,6 vs 90,7 redondeaba a 100% y pintaba verde — ajuste smoke 2026-09-03).
-            // El epsilon evita que un 105,0 calculado en coma flotante caiga a 104.
+        Double totalAnterior = null, tasaEsperada = null;
+        if (puntosAnterior > 0) {
             pctPuntos = (int) Math.floor(puntosActual / puntosAnterior * 100 + 1e-9);
-            pctDia    = (int) Math.floor(diaActual / diaAnterior * 100 + 1e-9);
             totalAnterior = puntosAnterior;
-            tasaAnterior  = diaAnterior;
+
+            // Esperado hasta hoy: suma, por cada laborable transcurrido, de la media de
+            // ese día de semana en el mes anterior (sin muestras → media global diaria)
+            double mediaGlobal = puntosAnterior / diasTrabajadosAnterior;
+            double esperado = 0;
+            for (LocalDate d = mesActual.atDay(1); !d.isAfter(finTranscurrido); d = d.plusDays(1)) {
+                if (d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY) continue;
+                double[] acc = porDiaSemana.get(d.getDayOfWeek());
+                esperado += (acc != null && acc[1] > 0) ? acc[0] / acc[1] : mediaGlobal;
+            }
+            if (esperado > 0) {
+                pctDia = (int) Math.floor(puntosActual / esperado * 100 + 1e-9);
+                tasaEsperada = esperado / laborablesTranscurridos;
+            }
         }
         Locale es = new Locale("es", "ES");
         return new Tarjetas(
                 mesActual.getMonth().getDisplayName(TextStyle.FULL, es),
                 anterior.getMonth().getDisplayName(TextStyle.FULL, es),
-                puntosActual, diaActual, pctPuntos, totalAnterior, pctDia, tasaAnterior);
+                puntosActual, diaActual, pctPuntos, totalAnterior, pctDia, tasaEsperada);
     }
 
     /** "46% de agosto (890,0)" — la línea de objetivo de las tarjetas. */

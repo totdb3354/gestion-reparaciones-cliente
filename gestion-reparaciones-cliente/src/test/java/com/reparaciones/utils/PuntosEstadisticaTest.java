@@ -130,40 +130,64 @@ class PuntosEstadisticaTest {
         assertEquals("5 años",     PuntosEstadistica.etiquetaVentana(5, "Año"));
     }
 
-    // ── tarjetas ──────────────────────────────────────────────────────────────
+    // ── tarjetas (filas DIARIAS: la referencia de Puntos/día iguala la mezcla de días) ──
+    // 2026: septiembre empieza en martes; lunes de agosto = 3,10,17,24,31.
     @Test void tarjetasDelEquipoConObjetivo() {
+        // agosto: lunes 3 (60+40=100 equipo) y martes 4 (100) → total 200, media martes = 100
+        // hoy = martes 1/09 (1 laborable transcurrido) → esperado = media martes agosto = 100
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-08", 100), fila("Zara", "2026-08", 100),
-                fila("Marcos", "2026-09", 50),  fila("Zara", "2026-09", 60));
-        // hoy = 15/09/2026 → 11 laborables transcurridos; agosto 2026: 21 laborables
+                fila("Marcos", "2026-08-03", 60), fila("Zara", "2026-08-03", 40),
+                fila("Marcos", "2026-08-04", 100),
+                fila("Marcos", "2026-09-01", 50), fila("Zara", "2026-09-01", 60));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
-                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 1), null, Set.of());
         assertEquals("septiembre", t.mesLabel());
         assertEquals("agosto", t.mesAnteriorLabel());
         assertEquals(110.0, t.puntos(), 0.001);
-        assertEquals(10.0, t.puntosDia(), 0.001);           // 110 / 11
-        assertEquals(55, t.pctPuntos());                     // 110/200
+        assertEquals(110.0, t.puntosDia(), 0.001);    // 110 ÷ 1 laborable transcurrido
+        assertEquals(55, t.pctPuntos());              // 110/200
         assertEquals(200.0, t.puntosAnterior(), 0.001);
-        assertEquals(105, t.pctDia());                       // 10 / (200/21 = 9,52)
-        assertEquals(200.0 / 21, t.diaAnterior(), 0.001);
+        assertEquals(110, t.pctDia());                // 110 ÷ esperado 100
+        assertEquals(100.0, t.diaEsperado(), 0.001);  // tasa esperada: 100 ÷ 1
+    }
+
+    @Test void tarjetaDiaIgualaLaMezclaDeDiasDeSemana() {
+        // agosto: martes 4 = 100, viernes 7 = 40 (media global por día trabajado = 70)
+        // hoy = viernes 4/09; transcurridos mar-mié-jue-vie → esperado = 100+70+70+40 = 280
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08-04", 100), fila("Marcos", "2026-08-07", 40),
+                fila("Marcos", "2026-09-04", 70));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 4), null, Set.of());
+        assertEquals(25, t.pctDia());                 // 70 ÷ 280
+        assertEquals(70.0, t.diaEsperado(), 0.001);   // 280 ÷ 4 transcurridos
+    }
+
+    @Test void tarjetaDiaSinEseDiaEnElMesAnteriorCaeALaMediaGlobal() {
+        // agosto solo tiene un lunes (10); hoy martes 1/09 → esperado = media global = 10
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08-03", 10), fila("Marcos", "2026-09-01", 15));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 1), null, Set.of());
+        assertEquals(150, t.pctDia());                // 15 ÷ 10
     }
 
     @Test void tarjetasDeUnTecnicoYSinMesAnterior() {
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-09", 50), fila("Zara", "2026-09", 60));
+                fila("Marcos", "2026-09-01", 50), fila("Zara", "2026-09-01", 60));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), "Marcos", Set.of());
         assertEquals(50.0, t.puntos(), 0.001);
         assertNull(t.pctPuntos());
         assertNull(t.puntosAnterior());
         assertNull(t.pctDia());
-        assertNull(t.diaAnterior());
+        assertNull(t.diaEsperado());
     }
 
     @Test void tarjetasEquipoIgnoranALosExcluidos() {
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-08", 100), fila("Laura", "2026-08", 100),
-                fila("Marcos", "2026-09", 50),  fila("Laura", "2026-09", 60));
+                fila("Marcos", "2026-08-03", 100), fila("Laura", "2026-08-03", 100),
+                fila("Marcos", "2026-09-01", 50),  fila("Laura", "2026-09-01", 60));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of("Laura"));
         assertEquals(50.0, t.puntos(), 0.001);
@@ -172,23 +196,24 @@ class PuntosEstadisticaTest {
     }
 
     @Test void tarjetaPersonalDelExcluidoNoSeFiltra() {
-        List<PuntoEstadisticaPuntos> filas = List.of(fila("Laura", "2026-09", 60));
+        List<PuntoEstadisticaPuntos> filas = List.of(fila("Laura", "2026-09-01", 60));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), "Laura", Set.of("Laura"));
         assertEquals(60.0, t.puntos(), 0.001);
     }
 
     @Test void tarjetasConMesActualACeroDanCeroPorCiento() {
-        List<PuntoEstadisticaPuntos> filas = List.of(fila("Marcos", "2026-08", 100));
+        List<PuntoEstadisticaPuntos> filas = List.of(fila("Marcos", "2026-08-03", 100));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
         assertEquals(0, t.pctPuntos());
         assertEquals(100.0, t.puntosAnterior(), 0.001);
+        assertEquals(0, t.pctDia());
     }
 
     @Test void tarjetasConMesAnteriorACeroNoDanLinea() {
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-08", 0), fila("Marcos", "2026-09", 50));
+                fila("Marcos", "2026-08-03", 0), fila("Marcos", "2026-09-01", 50));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
         assertNull(t.pctPuntos());
@@ -198,7 +223,7 @@ class PuntosEstadisticaTest {
 
     @Test void pctObjetivoTruncaSinLlegarAlCien() {
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-08", 907), fila("Marcos", "2026-09", 906));
+                fila("Marcos", "2026-08-03", 907), fila("Marcos", "2026-09-01", 906));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
         assertEquals(99, t.pctPuntos());   // 906/907 = 99,89% → aún no iguala: nada de 100
@@ -206,7 +231,7 @@ class PuntosEstadisticaTest {
 
     @Test void pctObjetivoDaCienJustoAlIgualar() {
         List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-08", 100), fila("Marcos", "2026-09", 100));
+                fila("Marcos", "2026-08-03", 100), fila("Marcos", "2026-09-01", 100));
         PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
                 filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 15), null, Set.of());
         assertEquals(100, t.pctPuntos());
