@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>Radio "Puntos" / "Puntos/día" — métrica activa del gráfico.</li>
  *   <li>Checkbox "Equipo (suma)" — línea negra con la suma de todos los técnicos.</li>
- *   <li>Checkbox "Ver medias" — muestra/oculta las líneas de media discontinuas por técnico.</li>
+ *   <li>Checkbox "Ocultar medias" — las líneas x̄ discontinuas se ven por defecto (ajuste 2026-09-04).</li>
  *   <li>Línea "Promedio" (naranja, discontinua, siempre visible) — promedio de ventana de la
  *       métrica activa sobre los técnicos (nunca sobre la serie "Equipo").</li>
  *   <li>Flechas de navegación de ventana — limitan los periodos visibles cuando hay muchos.</li>
@@ -860,7 +860,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void actualizarVisibilidadMedia() {
-        boolean visible = chkMedia.isSelected();
+        boolean visible = !chkMedia.isSelected(); // "Ocultar medias": marcado = ocultas
         lineasMedia.forEach(n -> n.setVisible(visible));
     }
 

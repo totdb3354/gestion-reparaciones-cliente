@@ -67,7 +67,7 @@
                     <MultiSelectComboBox fx:id="menuTecnicos" prefWidth="160"/>
                     <CheckBox fx:id="chkEquipo" text="Equipo (suma)"
                               style="-fx-text-fill: #000000; -fx-font-weight: bold;"/>
-                    <CheckBox fx:id="chkMedia" text="Ver medias"
+                    <CheckBox fx:id="chkMedia" text="Ocultar medias"
                               style="-fx-font-weight: bold;"/>
                     <Button text="Limpiar filtros" onAction="#limpiarFiltros" styleClass="btn-secondary"/>
                 </FlowPane>
