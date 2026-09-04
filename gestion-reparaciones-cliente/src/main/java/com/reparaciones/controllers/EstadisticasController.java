@@ -681,7 +681,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 if (esTecnico && servidorConImeis) {
                     int lleva = imeisUltimoPeriodo.getOrDefault(nombre, 0);
                     if (mediaImeis > 0) {
-                        lbl.setText(nombre + " · " + lleva + "/" + Math.round(mediaImeis) + " IMEIs");
+                        lbl.setText(nombre + " · " + lleva + "/"
+                                + PuntosEstadistica.formatearPuntos(mediaImeis) + " IMEIs");
                         if (lleva >= mediaImeis)
                             lbl.setStyle(lbl.getStyle() + "-fx-text-fill: #2E7D32;");
                     } else {
