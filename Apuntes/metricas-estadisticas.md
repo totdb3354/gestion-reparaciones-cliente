@@ -74,16 +74,16 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 - **Serie por técnico**: sus puntos (o puntos/día) por periodo. Los periodos visibles en los que no trabajó se pintan a **0** (honesto, y evita que el eje de categorías se desordene con huecos).
 - **Serie Equipo (suma)**: suma por periodo de los técnicos **que cuentan** (sin excluidos). Checkbox propio, apagada por defecto.
 - **Eje X**: solo existen los periodos en los que **alguien** del equipo trabajó — por eso la etiqueta dice "**30 días con actividad**" (o "16 semanas", "12 meses", "5 años") y el rango de fechas abarca más calendario que 30 días.
-- Ventanas estándar por granularidad: 30 días / 16 semanas / 12 meses / 5 años; flechas ◀ ▶ para navegar; el filtro Desde/Hasta acota el rango navegable (la ventana se encoge para rangos cortos, nunca crece).
+- **Qué se muestra** (sin flechas de navegación — ajuste 2026-09-04): sin filtro, la última ventana estándar de la granularidad (30 días / 16 semanas / 12 meses / 5 años con actividad); con filtro Desde/Hasta, **el rango filtrado entero** (para rangos largos en Día, sube la granularidad). El pasado se consulta filtrando fechas — así lo mostrado y las varas siempre coinciden.
 
 ## 6. Promedio (la línea naranja discontinua)
 
 **Media por técnico-periodo TRABAJADO**: suma de puntos ÷ nº de pares (técnico, periodo) con actividad. **Las ausencias no diluyen** — la línea mide el ritmo de un día/semana trabajado típico del equipo, así que el vértice de un día se compara contra "lo que se trabaja". *(Hasta 2026-09-03 los huecos contaban como 0 en el denominador y todo el mundo salía "por encima".)*
 
-**Rango de referencia FIJO** (no cambia al navegar con las flechas):
-- Sin filtro de fechas → la **última ventana estándar** (los últimos 30 días con actividad, 16 semanas…). Retroceder compara los tramos viejos contra el ritmo **actual** — tramos enteros por debajo de la línea significan "entonces íbamos peor que ahora", y es información, no un fallo.
+**Rango de referencia = el rango mostrado** (desde el ajuste 2026-09-04, sin flechas, son siempre lo mismo):
+- Sin filtro de fechas → la **última ventana estándar** (los últimos 30 días con actividad, 16 semanas…).
 - Con filtro de fechas → **todo el rango filtrado**: para juzgar una época contra su propia media, se filtra esa época.
-- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad): 12,5 puntos".
+- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad): 12,5 puntos" / "(rango filtrado)".
 
 ## 7. Por encima / Por debajo (tooltip de la línea)
 

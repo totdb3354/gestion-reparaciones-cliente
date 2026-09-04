@@ -84,12 +84,8 @@
                 </StackPane>
                 <HBox fx:id="hboxNavVentana" visible="false" managed="false"
                       alignment="CENTER" spacing="10">
-                    <Button fx:id="btnVentanaAnterior" text="◀" onAction="#ventanaAnterior"
-                            styleClass="btn-secondary"/>
                     <Label fx:id="lblRangoVentana"
                            style="-fx-font-size: 12px; -fx-text-fill: #2C3B54;"/>
-                    <Button fx:id="btnVentanaSiguiente" text="▶" onAction="#ventanaSiguiente"
-                            styleClass="btn-secondary"/>
                 </HBox>
             </VBox>
 

@@ -91,8 +91,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private CheckBox         chkMedia;
     @FXML private Label            lblSinDatos;
     @FXML private HBox             hboxNavVentana;
-    @FXML private Button           btnVentanaAnterior;
-    @FXML private Button           btnVentanaSiguiente;
     @FXML private Label            lblRangoVentana;
 
     @FXML private Label            lblCardPuntosTitulo;
@@ -511,37 +509,28 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 .sorted()
                 .collect(Collectors.toList());
 
-        // El filtro de fechas acota el rango navegable; la ventana solo se ENCOGE para
-        // ajustarse a rangos cortos, nunca crece más del estándar — un rango largo se
-        // recorre con las flechas dentro del filtro (ajuste smoke 2026-09-02).
-        if (!todosPeriodos.isEmpty())
-            ventanaTamanio = Math.min(ventanaTamanio, todosPeriodos.size());
-
-        // Vara del Promedio (ajuste smoke 2026-09-03): FIJA mientras se navega con las flechas.
-        // Con filtro de fechas, el rango filtrado entero (la vara de esa época); sin filtro,
-        // la última ventana estándar de la granularidad (los 30 días / 16 semanas... recientes).
+        // Sin flechas de navegación (ajuste smoke 2026-09-04): lo mostrado ES el rango
+        // elegido. Con filtro de fechas se pinta el rango filtrado ENTERO (para rangos
+        // largos en Día, la lectura cómoda es subir la granularidad); sin filtro, la
+        // última ventana estándar de la granularidad (los 30 días / 16 sem... recientes).
         boolean hayFiltroFechas = dpDesde.getValue() != null || dpHasta.getValue() != null;
-        periodosReferencia = hayFiltroFechas
-                ? List.copyOf(todosPeriodos)
-                : List.copyOf(todosPeriodos.subList(
-                        Math.max(0, todosPeriodos.size() - ventanaTamanio), todosPeriodos.size()));
+        if (!todosPeriodos.isEmpty())
+            ventanaTamanio = hayFiltroFechas ? todosPeriodos.size()
+                                             : Math.min(ventanaTamanio, todosPeriodos.size());
+
+        // La vara (Promedio, x̄, Por encima/Por debajo) es SIEMPRE la del rango mostrado.
+        periodosReferencia = List.copyOf(todosPeriodos.subList(
+                Math.max(0, todosPeriodos.size() - ventanaTamanio), todosPeriodos.size()));
 
         configurarVentana();
     }
 
-    /** Configura la navegación de ventana y renderiza la más reciente. */
+    /** Muestra el rango elegido (el tramo más reciente disponible; con filtro, entero). */
     private void configurarVentana() {
-        // La barra está siempre visible; las flechas se deshabilitan cuando no hay
-        // nada que desplazar o al llegar a un extremo (ajuste smoke 2026-09-02).
         hboxNavVentana.setVisible(true);
         hboxNavVentana.setManaged(true);
-        ventanaOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio); // lo más reciente
+        ventanaOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
         renderVentana(ventanaOffset);
-    }
-
-    @FXML private void ventanaAnterior()  { renderVentana(Math.max(0, ventanaOffset - 1)); }
-    @FXML private void ventanaSiguiente() {
-        renderVentana(Math.min(Math.max(0, todosPeriodos.size() - ventanaTamanio), ventanaOffset + 1));
     }
 
     /** Renderiza la ventana de periodos que empieza en `offset`. */
@@ -551,8 +540,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
-            btnVentanaAnterior.setDisable(true);
-            btnVentanaSiguiente.setDisable(true);
             lblRangoVentana.setText("");
             return;
         }
@@ -564,10 +551,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         Set<String> periodosVisibles = new LinkedHashSet<>(todosPeriodos.subList(inicio, fin));
 
-        // Actualizar navegación de ventana
-        int maxOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
-        btnVentanaAnterior.setDisable(inicio == 0);
-        btnVentanaSiguiente.setDisable(offset >= maxOffset);
         lblRangoVentana.setText(PuntosEstadistica.etiquetaVentana(tamanio, cmbGranularidad.getValue())
                 + " · " + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
 
