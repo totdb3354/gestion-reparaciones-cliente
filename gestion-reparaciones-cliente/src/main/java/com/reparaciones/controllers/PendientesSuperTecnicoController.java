@@ -113,8 +113,9 @@ public class PendientesSuperTecnicoController {
     private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
-    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
-    private static final class EntradaAsignacion {
+    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD).
+     *  Package-private (no private) para que el test del helper puro {@link #propagarModelo} pueda construirla. */
+    static final class EntradaAsignacion {
         final String imei;
         TipoTrabajo tipo = TipoTrabajo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
         String modeloCode;                       // código interno del modelo, o null si falta
@@ -154,6 +155,20 @@ public class PendientesSuperTecnicoController {
     /** Deriva el tipo de trabajo del prefijo del {@code ID_REP}. Delega en {@link TipoTrabajo#desde}. */
     static TipoTrabajo tipoDe(String idRep) {
         return TipoTrabajo.desde(idRep);
+    }
+
+    /**
+     * Modelo vivo del modal: copia {@code code} a TODAS las entradas de {@code imei} en las dos pilas
+     * (rojas y verdes). Devuelve cuántas entradas ha tocado. Puro (sin UI) para poder testearlo; el modal
+     * lo envuelve en {@code decidirModelo} y repinta la pila después. {@code imei == null} → 0.
+     */
+    static int propagarModelo(String imei, String code,
+                              List<EntradaAsignacion> pilaRep, List<EntradaAsignacion> pilaGlass) {
+        if (imei == null) return 0;
+        int n = 0;
+        for (EntradaAsignacion x : pilaRep)   if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        for (EntradaAsignacion x : pilaGlass) if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        return n;
     }
 
     @FXML
