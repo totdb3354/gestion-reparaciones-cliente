@@ -1793,6 +1793,11 @@ public class PendientesSuperTecnicoController {
         // Última decisión MANUAL de cliente por IMEI en este modal; prevalece sobre la precarga de BD.
         // Valor: cliente real, o SIN_CLIENTE (sentinel) = "sin cliente"; ausente = sin decisión manual.
         final java.util.Map<String, Cliente> clienteManual = new java.util.HashMap<>();
+        // Modelo vivo: último modelo conocido por IMEI en este modal (lookup con éxito o decisión manual).
+        // Lo alimentan decidirModelo (put) y el lookup (putIfAbsent: nunca pisa una decisión manual); lo
+        // consumen la siembra al escanear y la propagación entre las colas Reparación/Glass. Por-IMEI, sin
+        // default para los siguientes IMEIs (un modelo "pegajoso" entre teléfonos distintos no tiene sentido).
+        final java.util.Map<String, String> modeloPorImei = new java.util.HashMap<>();
         // Cliente por defecto para los próximos IMEIs que se escaneen (persiste como defTecnicos, no como
         // clienteManual que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
         // se aplica solo si la precarga de BD no aporta nada (la BD prevalece). Null = sin default aún.
@@ -2007,6 +2012,18 @@ public class PendientesSuperTecnicoController {
             popupModelo.hide();
             if (renderPila[0] != null) renderPila[0].run();
             validarForm.run();
+        };
+        // ── Modelo vivo (calcado del cliente pegajoso, solo la parte por-IMEI) ─────────────────
+        // Decisión MANUAL de modelo para la entrada cargada: confirma en el formulario, la recuerda para los
+        // IMEIs que se escaneen después y la copia a todas las entradas del mismo IMEI en las dos colas
+        // (rojas y verdes). El lookup NO pasa por aquí: sigue llamando a confirmarModelo.
+        java.util.function.Consumer<String> decidirModelo = code -> {
+            EntradaAsignacion e = actual[0];
+            confirmarModelo.accept(code);
+            if (e == null || code == null || code.isEmpty()) return;
+            modeloPorImei.put(e.imei, code);
+            propagarModelo(e.imei, code, pilaRep, pilaGlass);
+            if (renderPila[0] != null) renderPila[0].run();
         };
 
         renderPila[0] = () -> {
@@ -2245,7 +2262,11 @@ public class PendientesSuperTecnicoController {
             validarForm.run();
         });
         tfModelo.setOnAction(e -> {
-            if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0));
+            // Guard: con un modelo ya confirmado y el texto sin tocar, Enter no re-decide. Antes re-confirmaba
+            // modelosFiltrados.get(0) = el PRIMER modelo de toda la lista (confirmar resetea el filtro a "todos").
+            String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
+            if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) return;
+            if (!modelosFiltrados.isEmpty()) decidirModelo.accept(modelosFiltrados.get(0));
         });
         tfModelo.focusedProperty().addListener((obs, o, focused) -> {
             if (!focused) javafx.application.Platform.runLater(() -> {
@@ -2259,7 +2280,7 @@ public class PendientesSuperTecnicoController {
                         .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(texto))
                         .findFirst().orElse(null);
                 if (exacto != null) {
-                    confirmarModelo.accept(exacto);
+                    decidirModelo.accept(exacto);
                 } else {
                     actualizandoModelo[0] = true;
                     tfModelo.setText(modeloSel[0] != null ? FormularioReparacionController.traducirModelo(modeloSel[0]) : "");
@@ -2270,12 +2291,12 @@ public class PendientesSuperTecnicoController {
         });
         listaModelos.setOnMouseClicked(e -> {
             String sel = listaModelos.getSelectionModel().getSelectedItem();
-            if (sel != null) confirmarModelo.accept(sel);
+            if (sel != null) decidirModelo.accept(sel);
         });
         listaModelos.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 String sel = listaModelos.getSelectionModel().getSelectedItem();
-                if (sel != null) confirmarModelo.accept(sel);
+                if (sel != null) decidirModelo.accept(sel);
             }
         });
 
