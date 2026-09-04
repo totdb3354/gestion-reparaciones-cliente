@@ -253,42 +253,6 @@ class PuntosEstadisticaTest {
         assertEquals(100, t.pctPuntos());
     }
 
-    // ── objetivoEquipo (línea de posición de las tarjetas individuales) ──────
-    @Test void objetivoEquipoComparaMismoPeriodo() {
-        // septiembre, hoy 1/09: Marcos 60 y Zara 40 → media por técnico 50 (mes y hoy)
-        List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-09-01", 60), fila("Zara", "2026-09-01", 40));
-        var o = PuntosEstadistica.objetivoEquipo(
-                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 1), "Marcos", Set.of());
-        assertEquals(120, o.pctMes());               // 60 ÷ 50
-        assertEquals(50.0, o.mediaMes(), 0.001);
-        assertEquals(120, o.pctHoy());
-        assertEquals(50.0, o.mediaHoy(), 0.001);
-    }
-
-    @Test void objetivoEquipoHoySinActividadNoDaLinea() {
-        List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-09-01", 60), fila("Zara", "2026-09-01", 40));
-        var o = PuntosEstadistica.objetivoEquipo(
-                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 2), "Marcos", Set.of());
-        assertEquals(120, o.pctMes());
-        assertNull(o.pctHoy());
-        assertNull(o.mediaHoy());
-    }
-
-    @Test void objetivoEquipoExcluyeDelEquipoPeroNoDelTecnico() {
-        // Laura excluida: el equipo que cuenta es solo Marcos (media 60); Laura hizo 30 → 50%
-        List<PuntoEstadisticaPuntos> filas = List.of(
-                fila("Marcos", "2026-09-01", 60), fila("Laura", "2026-09-01", 30));
-        var o = PuntosEstadistica.objetivoEquipo(
-                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 1), "Laura", Set.of("Laura"));
-        assertEquals(50, o.pctMes());                // 30 ÷ media del equipo que cuenta (60)
-    }
-
-    @Test void textoEquipoFormatea() {
-        assertEquals("96% del equipo (54,6)", PuntosEstadistica.textoEquipo(96, "del equipo", 54.6));
-    }
-
     @Test void textoObjetivoFormatea() {
         assertEquals("46% de agosto (890,0)", PuntosEstadistica.textoObjetivo(46, "agosto", 890.0));
     }

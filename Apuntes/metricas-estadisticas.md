@@ -59,12 +59,11 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 
 ## 4. Tarjetas del mes (formato objetivo)
 
-Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 2026-09-04). **Ámbito**: el equipo por defecto; con **exactamente un técnico seleccionado** en el desplegable, las tarjetas pasan a ser suyas (su mes anterior, sus días de semana) y el título lo dice ("· Diego"); rol TECNICO siempre ve las propias ("· tú"):
+Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 2026-09-04), del equipo — o del propio técnico si el rol es TECNICO (contra su propio histórico):
 
 - **Puntos · mes**: acumulado del mes en curso; objetivo = `acumulado ÷ total del mes anterior completo`. Sube hacia el 100% conforme avanza el mes.
 - **Puntos · hoy (`<día>`)**: lo hecho HOY; objetivo = `puntos de hoy ÷ media de ese día de semana en el mes anterior` — "los viernes contra los viernes". Arranca en 0% cada mañana y se espera alcanzar el 100% al cierre del día, igual que la del mes a fin de mes. La referencia por día de semana **absorbe las jornadas cortas sola** (la media de los viernes ya es de 6 horas) sin mantener ningún calendario; se autocalibra con los datos (~4-5 muestras por día de semana: algo ruidosa, asumido). Día laborable sin muestras el mes anterior → media global por día trabajado; fin de semana sin muestras → sin línea de objetivo (solo la cifra).
 - Línea de objetivo: **"`pct`% de `<referencia>` (`valor`)"** — progreso hacia igualar, nunca pérdida.
-- **Modo individual, segunda línea "% del equipo"** (decisión 2026-09-04): posición del técnico respecto a la **media de puntos por técnico del equipo en el MISMO periodo** — mes: sus puntos del mes vs la media por técnico del equipo ese mes; día: sus puntos de hoy vs la media por técnico de hoy. Mismo periodo contra mismo periodo = posición; la línea 1 (vs su propio histórico) = mejora. Equipo = los que cuentan, con actividad, él incluido; sin actividad del periodo la línea se oculta. Cada línea colorea la suya (gris <100 / verde ≥100).
 - **% truncado, no redondeado**: 99,89% se muestra "99%" — el **100% solo aparece al igualar de verdad** (con redondeo, 90,6 sobre 90,7 marcaba 100% verde sin haber llegado).
 - Color: **gris** < 100%, **verde** ≥ 100%. **Nunca rojo.**
 - Mes anterior sin datos (o a cero) → la línea no se muestra.

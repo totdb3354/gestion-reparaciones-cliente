@@ -96,11 +96,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private Label            lblCardPuntosTitulo;
     @FXML private Label            lblCardPuntosValor;
     @FXML private Label            lblCardPuntosDelta;
-    @FXML private Label            lblCardPuntosEquipo;
     @FXML private Label            lblCardDiaTitulo;
     @FXML private Label            lblCardDiaValor;
     @FXML private Label            lblCardDiaDelta;
-    @FXML private Label            lblCardDiaEquipo;
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
@@ -147,10 +145,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     /** Rango de la vara del Promedio (ajuste smoke 2026-09-03): fijo durante la navegación —
      *  el rango del filtro de fechas si lo hay; sin filtro, la última ventana estándar. */
     private List<String> periodosReferencia = List.of();
-
-    /** Datos diarios de las tarjetas (mes anterior + actual), cacheados para que cambiar
-     *  la selección de técnicos re-pinte las tarjetas sin llamada HTTP. */
-    private List<PuntoEstadisticaPuntos> filasTarjetas;
 
     // Ventanas por granularidad
     private static final int VENTANA_DIA    = 30;
@@ -543,7 +537,6 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private void renderVentana(int offset) {
         ventanaOffset = offset;
         ocultarGuias(); // que un re-render no deje guías de crosshair huérfanas
-        actualizarTarjetas(); // el ámbito de las tarjetas sigue a la selección de técnicos
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
@@ -1393,72 +1386,27 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     // ─── Navigation helpers ────────────────────────────────────────────────────
 
-    /** Pide los datos diarios de las tarjetas (mes anterior + actual) y las pinta. */
+    /** Tarjetas del mes en curso (equipo, o el propio técnico si el rol es TECNICO). */
     private void cargarTarjetas() {
         java.time.YearMonth mes = java.time.YearMonth.now();
+        List<PuntoEstadisticaPuntos> filas;
         try {
-            // Granularidad DÍA: la tarjeta del día necesita las medias por día de
-            // semana del mes anterior (ajuste 2026-09-03)
-            filasTarjetas = new ReparacionDAO().getEstadisticasPuntos("dia",
+            // Granularidad DÍA: la tarjeta Puntos/día necesita las medias por día de
+            // semana del mes anterior para igualar la mezcla de días (ajuste 2026-09-03)
+            filas = new ReparacionDAO().getEstadisticasPuntos("dia",
                     mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
         } catch (SQLException e) { mostrarError(e); return; }
-        actualizarTarjetas();
-    }
-
-    /**
-     * Pinta las tarjetas del ámbito actual sin volver a llamar al servidor.
-     * Ámbito (ajuste smoke 2026-09-04): con EXACTAMENTE un técnico seleccionado en el
-     * desplegable, las tarjetas son SUYAS (objetivo individual: su mes anterior y sus
-     * días de semana); si no, las del equipo. Rol técnico: siempre las propias ("tú").
-     */
-    private void actualizarTarjetas() {
-        if (filasTarjetas == null) return;
-        java.time.YearMonth mes = java.time.YearMonth.now();
-        String tecnico;
-        if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
-            tecnico = nombreTecnicoSesion;
-        } else {
-            tecnico = nombresSeleccionadosTec.size() == 1
-                    ? nombresSeleccionadosTec.iterator().next() : null;
-        }
+        String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
         var t = PuntosEstadistica.calcularTarjetas(
-                filasTarjetas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
-        boolean individual = tecnico != null;
-        boolean esTu = individual && tecnico.equals(nombreTecnicoSesion);
-        String quien = !individual ? "equipo" : esTu ? "tú" : tecnico;
-        // En modo individual, la línea de mejora habla en posesivo ("su agosto", "un viernes suyo")
-        String refMes = !individual ? t.mesAnteriorLabel()
-                : (esTu ? "tu " : "su ") + t.mesAnteriorLabel();
-        String refDia = !individual ? "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel()
-                : "un " + t.diaHoyLabel() + (esTu ? " tuyo" : " suyo");
+                filas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
+        String quien = tecnico == null ? "equipo" : "tú";
         lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
         lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
-        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), refMes, t.puntosAnterior());
+        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
         lblCardDiaTitulo.setText("Puntos · hoy, " + t.diaHoyLabel() + " · " + quien);
         lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosHoy()));
-        pintarObjetivo(lblCardDiaDelta, t.pctHoy(), refDia, t.objetivoHoy());
-
-        // Segunda línea (solo individual): posición vs la media por técnico del equipo,
-        // mismo periodo contra mismo periodo (decisión smoke 2026-09-04)
-        if (individual) {
-            var oe = PuntosEstadistica.objetivoEquipo(
-                    filasTarjetas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
-            pintarObjetivoEquipo(lblCardPuntosEquipo, oe.pctMes(), "del equipo", oe.mediaMes());
-            pintarObjetivoEquipo(lblCardDiaEquipo, oe.pctHoy(), "del equipo hoy", oe.mediaHoy());
-        } else {
-            pintarObjetivoEquipo(lblCardPuntosEquipo, null, null, null);
-            pintarObjetivoEquipo(lblCardDiaEquipo, null, null, null);
-        }
-    }
-
-    /** Línea de posición vs equipo: visible solo en modo individual y con datos. */
-    private void pintarObjetivoEquipo(Label lbl, Integer pct, String sufijo, Double media) {
-        boolean visible = pct != null;
-        lbl.setVisible(visible);
-        lbl.setManaged(visible);
-        if (!visible) { lbl.setText(""); return; }
-        lbl.setText(PuntosEstadistica.textoEquipo(pct, sufijo, media));
-        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (pct >= 100 ? "#2E7D32" : "#7A8A9A") + ";");
+        pintarObjetivo(lblCardDiaDelta, t.pctHoy(),
+                "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel(), t.objetivoHoy());
     }
 
     /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */
