@@ -146,6 +146,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
      *  el rango del filtro de fechas si lo hay; sin filtro, la última ventana estándar. */
     private List<String> periodosReferencia = List.of();
 
+    /** Datos diarios de las tarjetas (mes anterior + actual), cacheados para que cambiar
+     *  la selección de técnicos re-pinte las tarjetas sin llamada HTTP. */
+    private List<PuntoEstadisticaPuntos> filasTarjetas;
+
     // Ventanas por granularidad
     private static final int VENTANA_DIA    = 30;
     private static final int VENTANA_SEMANA = 16;
@@ -537,6 +541,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private void renderVentana(int offset) {
         ventanaOffset = offset;
         ocultarGuias(); // que un re-render no deje guías de crosshair huérfanas
+        actualizarTarjetas(); // el ámbito de las tarjetas sigue a la selección de técnicos
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
@@ -1386,20 +1391,38 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     // ─── Navigation helpers ────────────────────────────────────────────────────
 
-    /** Tarjetas del mes en curso (equipo, o el propio técnico si el rol es TECNICO). */
+    /** Pide los datos diarios de las tarjetas (mes anterior + actual) y las pinta. */
     private void cargarTarjetas() {
         java.time.YearMonth mes = java.time.YearMonth.now();
-        List<PuntoEstadisticaPuntos> filas;
         try {
-            // Granularidad DÍA: la tarjeta Puntos/día necesita las medias por día de
-            // semana del mes anterior para igualar la mezcla de días (ajuste 2026-09-03)
-            filas = new ReparacionDAO().getEstadisticasPuntos("dia",
+            // Granularidad DÍA: la tarjeta del día necesita las medias por día de
+            // semana del mes anterior (ajuste 2026-09-03)
+            filasTarjetas = new ReparacionDAO().getEstadisticasPuntos("dia",
                     mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
         } catch (SQLException e) { mostrarError(e); return; }
-        String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
+        actualizarTarjetas();
+    }
+
+    /**
+     * Pinta las tarjetas del ámbito actual sin volver a llamar al servidor.
+     * Ámbito (ajuste smoke 2026-09-04): con EXACTAMENTE un técnico seleccionado en el
+     * desplegable, las tarjetas son SUYAS (objetivo individual: su mes anterior y sus
+     * días de semana); si no, las del equipo. Rol técnico: siempre las propias ("tú").
+     */
+    private void actualizarTarjetas() {
+        if (filasTarjetas == null) return;
+        java.time.YearMonth mes = java.time.YearMonth.now();
+        String tecnico;
+        if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+            tecnico = nombreTecnicoSesion;
+        } else {
+            tecnico = nombresSeleccionadosTec.size() == 1
+                    ? nombresSeleccionadosTec.iterator().next() : null;
+        }
         var t = PuntosEstadistica.calcularTarjetas(
-                filas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
-        String quien = tecnico == null ? "equipo" : "tú";
+                filasTarjetas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
+        String quien = tecnico == null ? "equipo"
+                : tecnico.equals(nombreTecnicoSesion) ? "tú" : tecnico;
         lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
         lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
         pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());

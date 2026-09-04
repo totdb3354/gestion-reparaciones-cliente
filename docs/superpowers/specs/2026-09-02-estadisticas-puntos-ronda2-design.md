@@ -35,6 +35,7 @@ Las dos tarjetas conservan su cifra grande actual (total del mes / tasa por día
 - **Color**: gris neutro (`#7A8A9A`, el de los subtítulos) mientras `< 100%`; **verde** (el del delta positivo actual de las tarjetas) al alcanzar/superar el 100%. **Nunca rojo**.
 - **Mes anterior sin datos** (arranque, técnico nuevo): la línea de objetivo no se muestra; queda solo la cifra del mes (igual que hoy con el delta).
 - **Rol técnico**: mismo formato con **sus** cifras contra su propio mes anterior (regla actual de tarjetas personales).
+- **Ámbito por selección** (ajuste smoke 2026-09-04): para admin/supertécnico, con **exactamente un técnico seleccionado** en el desplegable las tarjetas pasan a ser de ese técnico (título "· nombre"); en cualquier otro caso, del equipo. Los datos de tarjetas se cachean y el cambio de selección re-pinta sin llamada HTTP.
 - Todo en cliente (`PuntosEstadistica` + `EstadisticasController`); la llamada al endpoint (mes anterior + actual, granularidad mes) no cambia. Los excluidos de estadísticas (§4) no cuentan en las tarjetas de equipo.
 
 ## 3. Selector Puntos / Puntos·día + etiqueta de ventana
