@@ -4,9 +4,10 @@ import com.reparaciones.dao.ComponenteDAO;
 import com.reparaciones.dao.ReparacionDAO;
 import com.reparaciones.dao.TecnicoDAO;
 import com.reparaciones.models.Componente;
-import com.reparaciones.models.PuntoEstadistica;
+import com.reparaciones.models.PuntoEstadisticaPuntos;
 import com.reparaciones.models.Tecnico;
 import com.reparaciones.utils.Alertas;
+import com.reparaciones.utils.PuntosEstadistica;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -18,12 +19,16 @@ import javafx.scene.chart.XYChart;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.Slider;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -40,20 +45,21 @@ import java.util.stream.Collectors;
 
 /**
  * Controlador de la vista de estadísticas.
- * <p>Muestra un gráfico de líneas ({@code LineChart}) con las reparaciones finalizadas
- * por técnico a lo largo del tiempo, con granularidades: día, semana, mes y año.</p>
+ * <p>Muestra un gráfico de líneas ({@code LineChart}) con los puntos de dificultad
+ * conseguidos por técnico a lo largo del tiempo, con granularidades: día, semana, mes y año.</p>
  *
  * <p><b>Funcionalidades principales:</b></p>
  * <ul>
- *   <li>Checkbox "Todos" — línea negra con la suma de todos los técnicos.</li>
- *   <li>Checkbox "Actividad" — muestra/oculta las líneas continuas de datos.</li>
- *   <li>Checkbox "Media" — muestra/oculta las líneas de media discontinuas por técnico.</li>
- *   <li>Línea de referencia (gris punteada) — media del total / nTécnicos, para evaluar
- *       la performance individual respecto al benchmark del equipo.</li>
- *   <li>Ventana deslizante (slider) — limita los puntos visibles en periodos con muchos datos.</li>
- *   <li>Clic en vértice — navega al historial de reparaciones con el filtro de fecha y
- *       técnico pre-aplicado, vía callback {@link com.reparaciones.utils.Navegable}.</li>
- *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Todos".</li>
+ *   <li>Radio "Puntos" / "Puntos/día" — métrica activa del gráfico.</li>
+ *   <li>Checkbox "Equipo (suma)" — línea negra con la suma de todos los técnicos.</li>
+ *   <li>Checkbox "Ocultar medias" — las líneas x̄ discontinuas se ven por defecto (ajuste 2026-09-04).</li>
+ *   <li>Línea "Promedio" (naranja, discontinua, siempre visible) — promedio de ventana de la
+ *       métrica activa sobre los técnicos (nunca sobre la serie "Equipo").</li>
+ *   <li>Flechas de navegación de ventana — limitan los periodos visibles cuando hay muchos.</li>
+ *   <li>Clic en vértice — abre un popover con el desglose del periodo y un botón
+ *       "Ver en Historial" que navega con el filtro de fecha y técnico pre-aplicado,
+ *       vía callback {@link com.reparaciones.utils.Navegable}.</li>
+ *   <li>Los técnicos inactivos no tienen línea individual pero sí cuentan en "Equipo".</li>
  * </ul>
  *
  * <p>El doble {@code Platform.runLater} en el flujo de renderizado garantiza que el eje Y
@@ -65,6 +71,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     @FXML private Button   btnTabReparaciones;
     @FXML private Button   btnTabStock;
+    @FXML private Button   btnValores;
+    @FXML private Button   btnTecnicosEstadistica;
 
     @FXML private VBox     pnlReparaciones;
     @FXML private VBox     pnlStock;
@@ -76,21 +84,33 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @FXML private CategoryAxis     ejeX;
     @FXML private NumberAxis       ejeY;
     @FXML private com.reparaciones.utils.MultiSelectComboBox<Tecnico> menuTecnicos;
-    @FXML private CheckBox         chkTodos;
+    @FXML private HBox             boxMetrica;
+    @FXML private RadioButton      rbPuntos;
+    @FXML private RadioButton      rbPuntosDia;
+    @FXML private CheckBox         chkEquipo;
     @FXML private CheckBox         chkMedia;
-    @FXML private CheckBox         chkActividad;
     @FXML private Label            lblSinDatos;
-    @FXML private HBox             hboxSlider;
-    @FXML private Slider           sliderVentana;
-    @FXML private Label            lblSliderDesde;
-    @FXML private Label            lblSliderHasta;
+    @FXML private HBox             hboxNavVentana;
+    @FXML private Label            lblRangoVentana;
+
+    @FXML private Label            lblCardPuntosTitulo;
+    @FXML private Label            lblCardPuntosValor;
+    @FXML private Label            lblCardPuntosDelta;
+    @FXML private Label            lblCardDiaTitulo;
+    @FXML private Label            lblCardDiaValor;
+    @FXML private Label            lblCardDiaDelta;
+    @FXML private VBox             cardImeis;
+    @FXML private Label            lblCardImeisValor;
+    @FXML private Label            lblCardImeisAmbito;
 
     // nombres de técnicos actualmente visibles en el gráfico
     private final Set<String>           nombresSeleccionadosTec = new LinkedHashSet<>();
+    /** Técnicos con ES_ESTADISTICA=0: fuera de Promedio, Equipo, tarjetas y desplegable. */
+    private final Set<String> nombresExcluidos = new LinkedHashSet<>();
     // nombre → color hex fijo por ID_TEC
     private final Map<String, String>   coloresPorNombre = new LinkedHashMap<>();
     // label del botón MultiSelectComboBox
-    private final StringProperty        etiquetaTecs = new SimpleStringProperty("Técnicos");
+    private final StringProperty        etiquetaTecs = new SimpleStringProperty("+ Técnicos");
     // ListView del popup de técnicos (null hasta que se carga)
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroTecHandle;
     // todos los técnicos cargados (activos + inactivos, null = separador)
@@ -101,6 +121,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private boolean sobreLineaMedia = false;
     // Líneas de media por técnico (para limpiarlas entre renders)
     private final java.util.List<Node> lineasMedia      = new java.util.ArrayList<>();
+    // Crosshair del hover sobre un vértice (guías a los ejes + fecha resaltada)
+    private final java.util.List<Node> lineasGuia       = new java.util.ArrayList<>();
     // Nodos de la línea de referencia del equipo (separados para control independiente)
     private final java.util.List<Node> lineasReferencia = new java.util.ArrayList<>();
     // Nodo visual de la línea de referencia (para participar en el sistema de highlight)
@@ -111,13 +133,21 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private final Map<XYChart.Series<String, Number>, Double> mediaPorSerie = new LinkedHashMap<>();
     // Tooltip reutilizable para la media
     private final Tooltip tooltipMedia = new Tooltip();
+    // Tooltip del toggle de métrica cuando está deshabilitado en Día
+    private final Tooltip tooltipMetrica = new Tooltip("En granularidad Día ambas métricas coinciden");
 
     // Todos los puntos cargados de BD (sin filtrar por checkbox)
-    private List<PuntoEstadistica> todosPuntos   = List.of();
+    private List<PuntoEstadisticaPuntos> todosPuntos   = List.of();
     // Periodos únicos ordenados
     private List<String>           todosPeriodos = List.of();
     // Tamaño de la ventana visible según granularidad
     private int ventanaTamanio = 30;
+    // Offset de la ventana actualmente visible (0 = más antigua)
+    private int ventanaOffset = 0;
+
+    /** Rango de la vara del Promedio (ajuste smoke 2026-09-03): fijo durante la navegación —
+     *  el rango del filtro de fechas si lo hay; sin filtro, la última ventana estándar. */
+    private List<String> periodosReferencia = List.of();
 
     // Ventanas por granularidad
     private static final int VENTANA_DIA    = 30;
@@ -125,9 +155,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private static final int VENTANA_MES    = 12;
     private static final int VENTANA_ANO    =  5;
 
-    // Color fijo para la serie "Todos" (suma de todos los técnicos)
-    private static final String COLOR_TODOS       = "#000000";
-    // Color de la línea de referencia (benchmark del equipo)
+    // Color fijo para la serie "Equipo" (suma de todos los técnicos)
+    private static final String COLOR_EQUIPO      = "#000000";
+    // Color de la línea de referencia (Promedio del equipo)
     private static final String COLOR_REFERENCIA  = "#C07800";
 
     // Callback de navegación inyectado por MainController
@@ -149,13 +179,20 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     @FXML
     public void initialize() {
+        btnValores.setVisible(com.reparaciones.Sesion.esAdmin());
+        btnValores.setManaged(com.reparaciones.Sesion.esAdmin());
+        btnTecnicosEstadistica.setVisible(com.reparaciones.Sesion.esAdmin());
+        btnTecnicosEstadistica.setManaged(com.reparaciones.Sesion.esAdmin());
+
         cmbGranularidad.setItems(FXCollections.observableArrayList("Día", "Semana", "Mes", "Año"));
-        cmbGranularidad.setValue("Semana");
+        cmbGranularidad.setValue("Día"); // por defecto Día (ajuste smoke 2026-09-01)
         dpDesde.setValue(null);
         dpHasta.setValue(null);
 
-        sliderVentana.valueProperty().addListener((obs, oldVal, newVal) ->
-                renderVentana(newVal.intValue()));
+        ToggleGroup grupoMetrica = new ToggleGroup();
+        rbPuntos.setToggleGroup(grupoMetrica);
+        rbPuntosDia.setToggleGroup(grupoMetrica);
+        grupoMetrica.selectedToggleProperty().addListener((obs, o, n) -> renderVentana(ventanaOffset));
 
         tooltipMedia.setShowDelay(Duration.ZERO);
         tooltipMedia.setShowDuration(Duration.INDEFINITE);
@@ -170,26 +207,142 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         cargarTecnicos();
 
-        // Registrar color de "Todos" para que todo el sistema de colores/hover funcione automáticamente
-        coloresPorNombre.put("Todos", COLOR_TODOS);
-        chkTodos.setSelected(true);
-        chkTodos.selectedProperty().addListener((obs, o, n) -> {
-            renderVentana((int) sliderVentana.getValue());
-            actualizarVisibilidadReferencia();
-        });
+        // Registrar color de "Equipo" para que todo el sistema de colores/hover funcione automáticamente
+        coloresPorNombre.put("Equipo", COLOR_EQUIPO);
+        chkEquipo.setSelected(false); // apagada por defecto (ajuste smoke 2026-09-01)
+        chkEquipo.selectedProperty().addListener((obs, o, n) -> renderVentana(ventanaOffset));
 
-        chkMedia.setSelected(true);
+        chkMedia.setSelected(false);
         chkMedia.selectedProperty().addListener((obs, o, n) -> actualizarVisibilidadMedia());
 
-        chkActividad.setSelected(true);
-        chkActividad.selectedProperty().addListener((obs, o, n) -> actualizarVisibilidadActividad());
-
         recargarDatos();
+        cargarTarjetas();
 
         // ── Stock ──────────────────────────────────────────────────────────────
         cmbModeloFiltro.valueProperty().addListener((obs, o, n) -> renderStockActual());
         chartStock.widthProperty().addListener((obs, o, w) -> ajustarAnchoBarras(w.doubleValue()));
         poblarFiltrosComponente();
+    }
+
+    /** Etiquetas legibles de las claves de Dificultad_puntos, en orden de mostrado. */
+    private static final java.util.LinkedHashMap<String, String> ETIQUETA_CLAVE = new java.util.LinkedHashMap<>();
+    static {
+        ETIQUETA_CLAVE.put("pantalla", "Pantalla");
+        ETIQUETA_CLAVE.put("bateria",  "Batería");
+        ETIQUETA_CLAVE.put("chasis",   "Chasis");
+        ETIQUETA_CLAVE.put("camara",   "Cámara");
+        ETIQUETA_CLAVE.put("glass",    "Glass");
+        ETIQUETA_CLAVE.put("marco",    "Marco");
+        ETIQUETA_CLAVE.put("otro",     "Otro / sin piezas");
+        ETIQUETA_CLAVE.put("pulido",   "Pulido");
+    }
+
+    @FXML
+    private void abrirModalValores() {
+        List<com.reparaciones.models.ValorDificultad> valores;
+        try {
+            valores = new com.reparaciones.dao.ValoresDificultadDAO().getAll();
+        } catch (SQLException e) { mostrarError(e); return; }
+        java.util.Map<String, Double> porClave = new java.util.HashMap<>();
+        valores.forEach(v -> porClave.put(v.getClave(), v.getPuntos()));
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Valores de dificultad");
+        dialog.setHeaderText("Puntos por tipo de trabajo");
+        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+        grid.setHgap(12); grid.setVgap(8);
+        java.util.Map<String, TextField> campos = new java.util.LinkedHashMap<>();
+        int fila = 0;
+        for (var e : ETIQUETA_CLAVE.entrySet()) {
+            if (!porClave.containsKey(e.getKey())) continue;
+            grid.add(new Label(e.getValue()), 0, fila);
+            TextField tf = new TextField(PuntosEstadistica.formatearPuntosEdicion(porClave.get(e.getKey())));
+            tf.setPrefWidth(80);
+            campos.put(e.getKey(), tf);
+            grid.add(tf, 1, fila++);
+        }
+        Label aviso = new Label("Cambiar un valor re-valora también las estadísticas pasadas.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        grid.add(aviso, 0, fila, 2, 1);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // Validar sin cerrar el diálogo si hay campos inválidos
+        javafx.scene.control.Button ok =
+                (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            List<com.reparaciones.models.ValorDificultad> nuevos = new java.util.ArrayList<>();
+            boolean hayError = false;
+            for (var e : campos.entrySet()) {
+                var parsed = PuntosEstadistica.parsePuntos(e.getValue().getText());
+                if (parsed.isEmpty()) {
+                    e.getValue().setStyle("-fx-border-color: #C62828;");
+                    hayError = true;
+                } else {
+                    e.getValue().setStyle("");
+                    nuevos.add(new com.reparaciones.models.ValorDificultad(e.getKey(), parsed.get()));
+                }
+            }
+            if (hayError) { ev.consume(); return; }
+            try {
+                new com.reparaciones.dao.ValoresDificultadDAO().guardar(nuevos);
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); return; }
+            recargarDatos();
+            cargarTarjetas();
+        });
+        dialog.showAndWait();
+    }
+
+    /** Modal 👥: quién cuenta en la vista de estadísticas (spec ronda 2 §4). Solo ADMIN. */
+    @FXML
+    private void abrirModalTecnicos() {
+        List<Tecnico> tecnicos;
+        try {
+            tecnicos = new TecnicoDAO().getAll();
+        } catch (SQLException e) { mostrarError(e); return; }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Técnicos en estadísticas");
+        dialog.setHeaderText("Quién cuenta en la vista de estadísticas");
+        javafx.scene.layout.VBox caja = new javafx.scene.layout.VBox(6);
+        java.util.Map<Integer, CheckBox> checks = new java.util.LinkedHashMap<>();
+        java.util.Map<Integer, Boolean> estadoInicial = new java.util.HashMap<>();
+        List<Tecnico> orden = new java.util.ArrayList<>();
+        tecnicos.stream().filter(Tecnico::isActivo).forEach(orden::add);
+        tecnicos.stream().filter(t -> !t.isActivo()).forEach(orden::add);
+        for (Tecnico t : orden) {
+            CheckBox cb = new CheckBox(t.isActivo() ? t.getNombre() : t.getNombre() + " (inactivo)");
+            cb.setSelected(t.isEsEstadistica());
+            checks.put(t.getIdTec(), cb);
+            estadoInicial.put(t.getIdTec(), t.isEsEstadistica());
+            caja.getChildren().add(cb);
+        }
+        Label aviso = new Label("Los desmarcados no cuentan en Promedio, Equipo ni tarjetas.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        caja.getChildren().add(aviso);
+        dialog.getDialogPane().setContent(caja);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        javafx.scene.control.Button ok =
+                (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            try {
+                var usuarioDao = new com.reparaciones.dao.UsuarioDAO();
+                for (var e : checks.entrySet()) {
+                    boolean marcado = e.getValue().isSelected();
+                    if (marcado == estadoInicial.get(e.getKey())) continue; // solo cambios
+                    if (marcado) usuarioDao.incluirEstadisticas(e.getKey());
+                    else         usuarioDao.excluirEstadisticas(e.getKey());
+                }
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); return; }
+            cargarTecnicos(); // re-entrante: reconstruye desplegable y nombresExcluidos
+            nombresSeleccionadosTec.removeAll(nombresExcluidos);
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoMenuTecnicos();
+            renderVentana(ventanaOffset);
+            cargarTarjetas();
+        });
+        dialog.showAndWait();
     }
 
     /** Carga los técnicos de la BD, configura el MultiSelectComboBox con colores y separador. */
@@ -202,26 +355,41 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             return;
         }
 
+        // Re-entrante: el modal 👥 lo re-llama tras guardar exclusiones
+        todosLosTecnicos.clear();
+        nombresExcluidos.clear();
+        tecnicos.stream().filter(t -> !t.isEsEstadistica())
+                .map(Tecnico::getNombre).forEach(nombresExcluidos::add);
+
         Integer idTecSesion = com.reparaciones.Sesion.getIdTec();
         if (idTecSesion != null)
             nombreTecnicoSesion = tecnicos.stream()
                     .filter(t -> t.getIdTec() == idTecSesion)
                     .map(Tecnico::getNombre).findFirst().orElse(null);
 
-        List<Tecnico> activos   = tecnicos.stream().filter(Tecnico::isActivo).collect(Collectors.toList());
-        List<Tecnico> inactivos = tecnicos.stream().filter(t -> !t.isActivo()).collect(Collectors.toList());
-
-        for (Tecnico t : activos) {
+        // Colores para TODOS (un excluido sigue viendo su propia serie con su color)
+        for (Tecnico t : tecnicos)
             coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
-            nombresSeleccionadosTec.add(t.getNombre());
-            todosLosTecnicos.add(t);
-        }
+
+        // El desplegable solo lista a los que cuentan en estadísticas
+        List<Tecnico> activos   = tecnicos.stream()
+                .filter(Tecnico::isActivo).filter(Tecnico::isEsEstadistica)
+                .collect(Collectors.toList());
+        List<Tecnico> inactivos = tecnicos.stream()
+                .filter(t -> !t.isActivo()).filter(Tecnico::isEsEstadistica)
+                .collect(Collectors.toList());
+
+        todosLosTecnicos.addAll(activos);
         if (!inactivos.isEmpty()) {
             todosLosTecnicos.add(null); // separador
-            for (Tecnico t : inactivos) {
-                coloresPorNombre.put(t.getNombre(), generarColor(t.getIdTec()));
-                todosLosTecnicos.add(t);
-            }
+            todosLosTecnicos.addAll(inactivos);
+        }
+
+        if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+            if (nombreTecnicoSesion != null) nombresSeleccionadosTec.add(nombreTecnicoSesion);
+            menuTecnicos.setVisible(false);
+            menuTecnicos.setManaged(false);
+            return; // sin desplegable: no montar el MultiSelectDropdown
         }
 
         filtroTecHandle = com.reparaciones.utils.MultiSelectDropdown.setup(
@@ -239,7 +407,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         else nombresSeleccionadosTec.add(nombre);
                         filtroTecHandle.refresh();
                         actualizarTextoMenuTecnicos();
-                        renderVentana((int) sliderVentana.getValue());
+                        renderVentana(ventanaOffset);
                     });
                 }
                 @Override protected void updateItem(Tecnico t, boolean empty) {
@@ -248,7 +416,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     if (t == null) {
                         setGraphic(null); setText(null);
                         setMouseTransparent(true);
-                        setStyle("-fx-border-color: transparent transparent #AAAAAA transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 0 0; -fx-pref-height: 8;");
+                        // Línea de 1px centrada en la celda de alto fijo (30px) del dropdown
+                        setStyle("-fx-background-color: transparent, #AAAAAA; -fx-background-insets: 0, 14 8 15 8;");
                         return;
                     }
                     setMouseTransparent(false);
@@ -265,7 +434,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     }
                 }
             },
-            etiquetaTecs);
+            etiquetaTecs,
+            t -> t == null ? "" : t.getNombre());
 
         actualizarTextoMenuTecnicos();
     }
@@ -284,6 +454,16 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 (int) (c.getBlue()  * 255));
     }
 
+    private boolean metricaPorDia() { return rbPuntosDia.isSelected(); }
+
+    /** Valor del punto según la métrica activa. */
+    private double valorDe(PuntoEstadisticaPuntos p) {
+        return metricaPorDia()
+                ? PuntosEstadistica.puntosDia(p.getPuntos(), p.getPeriodo(),
+                        cmbGranularidad.getValue(), java.time.LocalDate.now())
+                : p.getPuntos();
+    }
+
     /** Recarga datos de BD y reinicia la ventana. Llamado al cambiar fechas o granularidad. */
     @FXML
     private void recargarGrafico() {
@@ -291,6 +471,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void recargarDatos() {
+        // En Día ambas métricas coinciden: toggle gris, selección conservada (spec ronda 2 §3)
+        boolean esDia = "Día".equals(cmbGranularidad.getValue());
+        rbPuntos.setDisable(esDia);
+        rbPuntosDia.setDisable(esDia);
+        if (esDia) Tooltip.install(boxMetrica, tooltipMetrica);
+        else       Tooltip.uninstall(boxMetrica, tooltipMetrica);
+
         // Sin fechas: usar todo el rango disponible (1900-01-01 → 2999-12-31)
         java.time.LocalDate desde = dpDesde.getValue() != null
                 ? dpDesde.getValue() : java.time.LocalDate.of(1900, 1, 1);
@@ -312,7 +499,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         };
 
         try {
-            todosPuntos = new ReparacionDAO().getEstadisticasPorTecnico(
+            todosPuntos = new ReparacionDAO().getEstadisticasPuntos(
                     granularidad, desde, hasta);
         } catch (SQLException e) {
             mostrarError(e);
@@ -321,42 +508,45 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         // Periodos únicos ordenados (de todos los técnicos)
         todosPeriodos = todosPuntos.stream()
-                .map(PuntoEstadistica::getPeriodo)
+                .map(PuntoEstadisticaPuntos::getPeriodo)
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
 
-        configurarSlider();
+        // Sin flechas de navegación (ajuste smoke 2026-09-04): lo mostrado ES el rango
+        // elegido. Con filtro de fechas se pinta el rango filtrado ENTERO (para rangos
+        // largos en Día, la lectura cómoda es subir la granularidad); sin filtro, la
+        // última ventana estándar de la granularidad (los 30 días / 16 sem... recientes).
+        boolean hayFiltroFechas = dpDesde.getValue() != null || dpHasta.getValue() != null;
+        if (!todosPeriodos.isEmpty())
+            ventanaTamanio = hayFiltroFechas ? todosPeriodos.size()
+                                             : Math.min(ventanaTamanio, todosPeriodos.size());
+
+        // La vara (Promedio, x̄, Por encima/Por debajo) es SIEMPRE la del rango mostrado.
+        periodosReferencia = List.copyOf(todosPeriodos.subList(
+                Math.max(0, todosPeriodos.size() - ventanaTamanio), todosPeriodos.size()));
+
+        configurarVentana();
     }
 
-    /** Configura el slider según el total de periodos y el tamaño de ventana. */
-    private void configurarSlider() {
-        if (todosPeriodos.size() <= ventanaTamanio) {
-            hboxSlider.setVisible(false);
-            hboxSlider.setManaged(false);
-            sliderVentana.setValue(0);
-            renderVentana(0); // setValue(0) no dispara el listener si ya era 0
-            return;
-        }
-
-        int maxOffset = todosPeriodos.size() - ventanaTamanio;
-        hboxSlider.setVisible(true);
-        hboxSlider.setManaged(true);
-        sliderVentana.setMin(0);
-        sliderVentana.setMax(maxOffset);
-        sliderVentana.setMajorTickUnit(1);
-        sliderVentana.setBlockIncrement(1);
-        sliderVentana.setSnapToTicks(true);
-        // Posicionar al final (datos más recientes); si ya era maxOffset, forzar render
-        if (sliderVentana.getValue() == maxOffset) renderVentana(maxOffset);
-        else sliderVentana.setValue(maxOffset);
+    /** Muestra el rango elegido (el tramo más reciente disponible; con filtro, entero). */
+    private void configurarVentana() {
+        hboxNavVentana.setVisible(true);
+        hboxNavVentana.setManaged(true);
+        ventanaOffset = Math.max(0, todosPeriodos.size() - ventanaTamanio);
+        renderVentana(ventanaOffset);
     }
 
     /** Renderiza la ventana de periodos que empieza en `offset`. */
     private void renderVentana(int offset) {
+        ventanaOffset = offset;
+        ocultarGuias(); // que un re-render no deje guías de crosshair huérfanas
         if (todosPeriodos.isEmpty()) {
             chartReparaciones.getData().clear();
             lblSinDatos.setVisible(true);
+            lblRangoVentana.setText("");
+            cardImeis.setVisible(false);
+            cardImeis.setManaged(false);
             return;
         }
         lblSinDatos.setVisible(false);
@@ -367,56 +557,113 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
         Set<String> periodosVisibles = new LinkedHashSet<>(todosPeriodos.subList(inicio, fin));
 
-        // Actualizar etiquetas del slider
-        lblSliderDesde.setText(todosPeriodos.get(inicio));
-        lblSliderHasta.setText(todosPeriodos.get(fin - 1));
+        lblRangoVentana.setText(PuntosEstadistica.etiquetaVentana(tamanio, cmbGranularidad.getValue())
+                + " · " + todosPeriodos.get(inicio) + " — " + todosPeriodos.get(fin - 1));
 
         Set<String> seleccionados = new LinkedHashSet<>(nombresSeleccionadosTec);
+        List<PuntoEstadisticaPuntos> puntosEquipo =
+                PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos);
 
-        Map<String, XYChart.Series<String, Number>> series = new LinkedHashMap<>();
-        for (PuntoEstadistica p : todosPuntos) {
+        // Valores visibles por técnico. Cada serie se construye recorriendo periodosVisibles
+        // EN ORDEN y rellenando con 0 los periodos sin actividad (vacaciones, ausencias):
+        // así el eje de categorías queda siempre ordenado (sin esto, un técnico con hueco
+        // colaba sus fechas de vuelta en medio del eje) y un día sin trabajo se lee como 0,
+        // igual que en la serie Equipo. (El Promedio NO cuenta los huecos: mide el ritmo
+        // por periodo trabajado — ajuste smoke 2026-09-03.)
+        Map<String, Map<String, Double>> valorPorTecnico = new LinkedHashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos) {
             if (!seleccionados.contains(p.getNombreTecnico())) continue;
             if (!periodosVisibles.contains(p.getPeriodo()))    continue;
-            series.computeIfAbsent(p.getNombreTecnico(), nombre -> {
-                XYChart.Series<String, Number> s = new XYChart.Series<>();
-                s.setName(nombre);
-                return s;
-            }).getData().add(new XYChart.Data<>(p.getPeriodo(), p.getCantidad()));
+            valorPorTecnico.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                           .put(p.getPeriodo(), valorDe(p));
+        }
+        Map<String, XYChart.Series<String, Number>> series = new LinkedHashMap<>();
+        for (String nombre : seleccionados) {
+            Map<String, Double> porPeriodo = valorPorTecnico.get(nombre);
+            if (porPeriodo == null) continue; // sin actividad en la ventana: no se pinta
+            XYChart.Series<String, Number> s = new XYChart.Series<>();
+            s.setName(nombre);
+            for (String periodo : periodosVisibles)
+                s.getData().add(new XYChart.Data<>(periodo, porPeriodo.getOrDefault(periodo, 0.0)));
+            series.put(nombre, s);
         }
 
-        // Serie "Todos": suma de TODOS los técnicos por periodo (independiente de checkboxes)
+        // Serie "Equipo": suma de TODOS los técnicos por periodo (independiente de checkboxes)
         List<XYChart.Series<String, Number>> listaFinal = new java.util.ArrayList<>(series.values());
-        if (chkTodos.isSelected()) {
-            Map<String, Integer> sumaPorPeriodo = new java.util.LinkedHashMap<>();
-            for (String p : periodosVisibles) sumaPorPeriodo.put(p, 0);
-            for (PuntoEstadistica p : todosPuntos) {
+        if (chkEquipo.isSelected()) {
+            Map<String, Double> sumaPorPeriodo = new java.util.LinkedHashMap<>();
+            for (String p : periodosVisibles) sumaPorPeriodo.put(p, 0.0);
+            for (PuntoEstadisticaPuntos p : puntosEquipo) {
                 if (periodosVisibles.contains(p.getPeriodo()))
-                    sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+                    sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
-            XYChart.Series<String, Number> serieTodos = new XYChart.Series<>();
-            serieTodos.setName("Todos");
-            sumaPorPeriodo.forEach((periodo, cantidad) ->
-                    serieTodos.getData().add(new XYChart.Data<>(periodo, cantidad)));
-            listaFinal.add(serieTodos);
+            XYChart.Series<String, Number> serieEquipo = new XYChart.Series<>();
+            serieEquipo.setName("Equipo");
+            sumaPorPeriodo.forEach((periodo, valor) ->
+                    serieEquipo.getData().add(new XYChart.Data<>(periodo, valor)));
+            listaFinal.add(serieEquipo);
         }
         chartReparaciones.getData().setAll(listaFinal);
 
-        // Eje Y: siempre enteros, upper = máximo visible + 1 de margen (mínimo 5)
-        int maxVisible = todosPuntos.stream()
+        // Eje Y: upper = máximo visible + 1 de margen (mínimo 5)
+        double maxVisible = todosPuntos.stream()
                 .filter(p -> seleccionados.contains(p.getNombreTecnico())
                           && periodosVisibles.contains(p.getPeriodo()))
-                .mapToInt(PuntoEstadistica::getCantidad)
+                .mapToDouble(this::valorDe)
                 .max().orElse(0);
-        if (chkTodos.isSelected()) {
-            Map<String, Integer> sumaPorPeriodo = new java.util.HashMap<>();
-            for (PuntoEstadistica p : todosPuntos) {
+        if (chkEquipo.isSelected()) {
+            Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
+            for (PuntoEstadisticaPuntos p : puntosEquipo) {
                 if (periodosVisibles.contains(p.getPeriodo()))
-                    sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+                    sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
             }
-            int maxTodos = sumaPorPeriodo.values().stream().mapToInt(Integer::intValue).max().orElse(0);
-            maxVisible = Math.max(maxVisible, maxTodos);
+            double maxEquipo = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).max().orElse(0);
+            maxVisible = Math.max(maxVisible, maxEquipo);
         }
-        ejeY.setUpperBound(Math.max(5, maxVisible + 1));
+        // La línea de Promedio también debe caber dentro del eje, no solo las series visibles
+        double promedioRef = promedioVentanaActual(periodosReferencia);
+        ejeY.setUpperBound(Math.max(5, Math.ceil(Math.max(maxVisible, promedioRef)) + 1));
+        ejeY.setLabel(metricaPorDia() ? "Puntos/día" : "Puntos");
+
+        // IMEIs distintos del último periodo visible, para el sufijo de la leyenda
+        // (campo aditivo del servidor; con un servidor sin él no se muestra sufijo)
+        String ultimoPeriodo = todosPeriodos.get(fin - 1);
+        boolean servidorConImeis = todosPuntos.stream().anyMatch(p -> p.getnImeis() != null);
+        Map<String, Integer> imeisUltimoPeriodo = new java.util.HashMap<>();
+        for (PuntoEstadisticaPuntos p : todosPuntos)
+            if (ultimoPeriodo.equals(p.getPeriodo()) && p.getnImeis() != null)
+                imeisUltimoPeriodo.put(p.getNombreTecnico(), p.getnImeis());
+
+        // Referencia del chip: IMEIs típicos por técnico-periodo trabajado del rango de
+        // referencia (misma fórmula que el Promedio de puntos, sin excluidos). El chip
+        // queda "javi · 12/13 IMEIs" y en verde al alcanzarla.
+        double mediaImeisTmp = 0;
+        if (servidorConImeis) {
+            Map<String, Map<String, Double>> datosImeis = new LinkedHashMap<>();
+            for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos))
+                if (p.getnImeis() != null)
+                    datosImeis.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                              .put(p.getPeriodo(), p.getnImeis().doubleValue());
+            mediaImeisTmp = PuntosEstadistica.promedioVentana(
+                    datosImeis, new java.util.ArrayList<>(periodosReferencia));
+        }
+        final double mediaImeis = mediaImeisTmp;
+
+        // Tarjeta "IMEIs típicos por técnico": la media común arriba, una sola vez
+        // (decisión smoke 2026-09-04: los chips llevan solo lo de cada uno)
+        boolean hayMediaImeis = servidorConImeis && mediaImeis > 0;
+        cardImeis.setVisible(hayMediaImeis);
+        cardImeis.setManaged(hayMediaImeis);
+        if (hayMediaImeis) {
+            String unidad = switch (cmbGranularidad.getValue()) {
+                case "Día"    -> "por día trabajado";
+                case "Semana" -> "por semana trabajada";
+                case "Mes"    -> "por mes trabajado";
+                default       -> "por año trabajado";
+            };
+            lblCardImeisValor.setText(PuntosEstadistica.formatearPuntos(mediaImeis));
+            lblCardImeisAmbito.setText(unidad + " · " + ambitoReferencia());
+        }
 
         Runnable render = () -> {
             chartReparaciones.applyCss();
@@ -433,9 +680,54 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 chartReparaciones.layout();
                 dibujarLineasMedia(periodosVisibles, ts);
             });
+
+            // Leyenda: clic para quitar técnico (solo ADMIN/SUPERTECNICO) y sufijo con los
+            // IMEIs del último periodo visible (hoy / esta semana / este mes — ajuste smoke
+            // 2026-09-04). El nombre se captura ANTES de tocar el texto: el clic y los
+            // colores (que corren antes, en aplicarColores) siguen viendo el nombre limpio.
+            boolean puedeQuitar = com.reparaciones.Sesion.esAdminOSuperTecnico();
+            for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
+                if (!(item instanceof Label lbl)) continue;
+                String nombre = lbl.getText();
+                boolean esTecnico = !"Equipo".equals(nombre);
+                if (puedeQuitar) {
+                    lbl.setStyle(esTecnico ? "-fx-cursor: hand;" : "");
+                    lbl.setOnMouseClicked(e -> {
+                        if (!esTecnico) return;
+                        nombresSeleccionadosTec.remove(nombre);
+                        if (filtroTecHandle != null) filtroTecHandle.refresh();
+                        actualizarTextoMenuTecnicos();
+                        renderVentana(ventanaOffset);
+                    });
+                }
+                if (esTecnico && servidorConImeis) {
+                    int lleva = imeisUltimoPeriodo.getOrDefault(nombre, 0);
+                    lbl.setText(nombre + " · " + lleva + " IMEIs");
+                    // Verde al alcanzar la media común (la de la tarjeta "IMEIs típicos")
+                    if (mediaImeis > 0 && lleva >= mediaImeis)
+                        lbl.setStyle(lbl.getStyle() + "-fx-text-fill: #2E7D32;");
+                }
+            }
         };
         if (chartReparaciones.getScene() != null) render.run();
         else Platform.runLater(render);
+    }
+
+    /** Ámbito de las varas (Promedio, x̄ y Por encima/Por debajo): filtro de fechas o última ventana. */
+    private String ambitoReferencia() {
+        return (dpDesde.getValue() != null || dpHasta.getValue() != null)
+                ? "rango filtrado"
+                : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
+    }
+
+    /** Promedio por periodo TRABAJADO del rango dado (técnicos que cuentan, métrica activa). */
+    private double promedioVentanaActual(java.util.Collection<String> periodos) {
+        Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
+        for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
+            datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
+                        .put(p.getPeriodo(), valorDe(p));
+        }
+        return PuntosEstadistica.promedioVentana(datosVentana, new java.util.ArrayList<>(periodos));
     }
 
     private void dibujarLineasMedia(Set<String> periodosVisibles, List<XYChart.Series<String, Number>> todasSeries) {
@@ -452,24 +744,27 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         lineaMediaPorSerie.clear();
         mediaPorSerie.clear();
 
-        // Precomputar suma total por periodo (reutilizado en "Todos" y en la referencia)
-        Map<String, Integer> sumaPorPeriodo = new java.util.HashMap<>();
-        for (PuntoEstadistica p : todosPuntos) {
-            if (periodosVisibles.contains(p.getPeriodo()))
-                sumaPorPeriodo.merge(p.getPeriodo(), p.getCantidad(), Integer::sum);
+        // Precomputar suma total por periodo (reutilizado en "Equipo"): excluye a los
+        // técnicos con ES_ESTADISTICA=0, igual que la propia serie "Equipo" del gráfico.
+        // Sobre el RANGO DE REFERENCIA, como el Promedio y el Por encima/Por debajo:
+        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04).
+        Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
+        for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
+            if (periodosReferencia.contains(p.getPeriodo()))
+                sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
         }
 
         for (XYChart.Series<String, Number> serie : chartReparaciones.getData()) {
             String color = coloresPorNombre.getOrDefault(serie.getName(), "#888888");
 
             double media;
-            if ("Todos".equals(serie.getName())) {
-                media = sumaPorPeriodo.values().stream().mapToInt(Integer::intValue).average().orElse(0);
+            if ("Equipo".equals(serie.getName())) {
+                media = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
             } else {
                 media = todosPuntos.stream()
                         .filter(p -> p.getNombreTecnico().equals(serie.getName())
-                                  && periodosVisibles.contains(p.getPeriodo()))
-                        .mapToInt(PuntoEstadistica::getCantidad)
+                                  && periodosReferencia.contains(p.getPeriodo()))
+                        .mapToDouble(this::valorDe)
                         .average().orElse(0);
             }
 
@@ -505,7 +800,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             hitLinea.setOnMouseEntered(e -> { sobreLineaMedia = true;  serieResaltada = serieRef; resaltarSerie(serieRef, todasSeries); });
             hitLinea.setOnMouseExited (e -> { sobreLineaMedia = false; serieResaltada = null;     restaurarSeries(todasSeries); });
 
-            Label lbl = new Label(String.format("x̄ %.1f", media));
+            Label lbl = new Label("x̄ " + PuntosEstadistica.formatearPuntos(media));
             lbl.setStyle("-fx-font-size:10px; -fx-text-fill:" + color +
                          "; -fx-background-color:white; -fx-padding:0 2 0 2;");
             lbl.setLayoutX(x0 + 4);
@@ -513,7 +808,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             lbl.setMouseTransparent(true);
 
             mediaPorSerie.put(serie, media);
-            Tooltip tipMedia = new Tooltip(String.format("Media %s: %.1f rep.", serie.getName(), media));
+            String unidadMedia = metricaPorDia() ? " puntos/día" : " puntos";
+            Tooltip tipMedia = new Tooltip("Media " + serie.getName() + " (" + ambitoReferencia() + "): "
+                    + PuntosEstadistica.formatearPuntos(media) + unidadMedia);
             tipMedia.setShowDelay(Duration.ZERO);
             tipMedia.setShowDuration(Duration.INDEFINITE);
             tipMedia.setHideDelay(Duration.millis(100));
@@ -526,94 +823,88 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             lineaMediaPorSerie.put(serie, linea);
         }
 
-        // Línea de referencia: media de las medias individuales de cada técnico
-        // (solo periodos activos de cada uno, más justo con técnicos nuevos o con ausencias)
-        int nTecnicos = (int) todosLosTecnicos.stream().filter(t -> t != null).count();
-        if (nTecnicos > 0 && !sumaPorPeriodo.isEmpty()) {
-            double refMedia = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                    .mapToDouble(nombre -> todosPuntos.stream()
-                            .filter(p -> p.getNombreTecnico().equals(nombre)
-                                      && periodosVisibles.contains(p.getPeriodo()))
-                            .mapToInt(PuntoEstadistica::getCantidad)
-                            .average().orElse(0))
-                    .filter(m -> m > 0)
-                    .average().orElse(0);
+        // Línea "Promedio": vara FIJA sobre el rango de referencia (filtro de fechas, o la
+        // última ventana estándar sin filtro) — no se mueve al navegar con las flechas
+        // (ajuste smoke 2026-09-03). Nunca incluye la serie "Equipo".
+        double refMedia = promedioVentanaActual(periodosReferencia);
 
-            if (refMedia > 0) {
-                double x0ref = bg.getBoundsInParent().getMinX();
-                double x1ref = bg.getBoundsInParent().getMaxX();
-                double yRef  = plotArea.sceneToLocal(0,
-                        ejeY.localToScene(0, ejeY.getDisplayPosition(refMedia)).getY()).getY();
+        if (refMedia > 0) { // sin actividad → no se dibuja
+            double x0ref = bg.getBoundsInParent().getMinX();
+            double x1ref = bg.getBoundsInParent().getMaxX();
+            double yRef  = plotArea.sceneToLocal(0,
+                    ejeY.localToScene(0, ejeY.getDisplayPosition(refMedia)).getY()).getY();
 
-                javafx.scene.shape.Line lineaRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
-                lineaRef.setStroke(javafx.scene.paint.Color.web(COLOR_REFERENCIA));
-                lineaRef.setStrokeWidth(1.8);
-                lineaRef.getStrokeDashArray().addAll(10.0, 4.0, 2.0, 4.0);
-                lineaRef.setOpacity(0.85);
-                lineaRef.setMouseTransparent(true);
-                bg.boundsInParentProperty().addListener((obs, o, b) -> {
-                    lineaRef.setStartX(b.getMinX()); lineaRef.setEndX(b.getMaxX());
-                });
+            javafx.scene.shape.Line lineaRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
+            lineaRef.setStroke(javafx.scene.paint.Color.web(COLOR_REFERENCIA));
+            lineaRef.setStrokeWidth(1.8);
+            lineaRef.getStrokeDashArray().addAll(10.0, 4.0, 2.0, 4.0);
+            lineaRef.setOpacity(0.85);
+            lineaRef.setMouseTransparent(true);
+            bg.boundsInParentProperty().addListener((obs, o, b) -> {
+                lineaRef.setStartX(b.getMinX()); lineaRef.setEndX(b.getMaxX());
+            });
 
-                javafx.scene.shape.Line hitRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
-                hitRef.setStroke(javafx.scene.paint.Color.color(0, 0, 0, 0.01));
-                hitRef.setStrokeWidth(12);
-                bg.boundsInParentProperty().addListener((obs, o, b) -> {
-                    hitRef.setStartX(b.getMinX()); hitRef.setEndX(b.getMaxX());
-                });
-                List<String> porEncima = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                        .filter(nombre -> {
-                            double media = todosPuntos.stream()
-                                    .filter(p -> p.getNombreTecnico().equals(nombre)
-                                              && periodosVisibles.contains(p.getPeriodo()))
-                                    .mapToInt(PuntoEstadistica::getCantidad)
-                                    .average().orElse(0);
-                            return media > refMedia;
-                        }).collect(Collectors.toList());
-                List<String> porDebajo = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
-                        .filter(nombre -> {
-                            double media = todosPuntos.stream()
-                                    .filter(p -> p.getNombreTecnico().equals(nombre)
-                                              && periodosVisibles.contains(p.getPeriodo()))
-                                    .mapToInt(PuntoEstadistica::getCantidad)
-                                    .average().orElse(0);
-                            return media > 0 && media <= refMedia;
-                        }).collect(Collectors.toList());
+            javafx.scene.shape.Line hitRef = new javafx.scene.shape.Line(x0ref, yRef, x1ref, yRef);
+            hitRef.setStroke(javafx.scene.paint.Color.color(0, 0, 0, 0.01));
+            hitRef.setStrokeWidth(12);
+            bg.boundsInParentProperty().addListener((obs, o, b) -> {
+                hitRef.setStartX(b.getMinX()); hitRef.setEndX(b.getMaxX());
+            });
+            // Mismo rango de referencia que la línea: quién supera la vara, estable al navegar
+            List<String> porEncima = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
+                    .filter(nombre -> {
+                        double media = todosPuntos.stream()
+                                .filter(p -> p.getNombreTecnico().equals(nombre)
+                                          && periodosReferencia.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorDe)
+                                .average().orElse(0);
+                        return media > refMedia;
+                    }).collect(Collectors.toList());
+            List<String> porDebajo = todosLosTecnicos.stream().filter(t -> t != null).map(Tecnico::getNombre)
+                    .filter(nombre -> {
+                        double media = todosPuntos.stream()
+                                .filter(p -> p.getNombreTecnico().equals(nombre)
+                                          && periodosReferencia.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorDe)
+                                .average().orElse(0);
+                        return media > 0 && media <= refMedia;
+                    }).collect(Collectors.toList());
 
-                String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
-                String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
-                Tooltip tipRef = new Tooltip(String.format(
-                        "Referencia del equipo: %.1f rep./técnico%n" +
-                        "(media de medias individuales)%n" +
-                        "Por encima: %s%n" +
-                        "Por debajo: %s", refMedia, encimaTxt, debajTxt));
-                tipRef.setShowDelay(Duration.ZERO);
-                tipRef.setShowDuration(Duration.INDEFINITE);
-                tipRef.setHideDelay(Duration.millis(100));
-                Tooltip.install(hitRef, tipRef);
+            String encimaTxt = porEncima.isEmpty() ? "—" : String.join(", ", porEncima);
+            String debajTxt  = porDebajo.isEmpty() ? "—" : String.join(", ", porDebajo);
+            String unidadRef = metricaPorDia() ? "puntos/día" : "puntos";
+            String ambitoRef = ambitoReferencia();
+            Tooltip tipRef = new Tooltip(String.format(
+                    "Promedio del equipo (%s): %s %s%n" +
+                    "Por encima: %s%n" +
+                    "Por debajo: %s",
+                    ambitoRef, PuntosEstadistica.formatearPuntos(refMedia), unidadRef, encimaTxt, debajTxt));
+            tipRef.setShowDelay(Duration.ZERO);
+            tipRef.setShowDuration(Duration.INDEFINITE);
+            tipRef.setHideDelay(Duration.millis(100));
+            Tooltip.install(hitRef, tipRef);
 
-                Label lblRef = new Label(String.format("ref. %.1f", refMedia));
-                lblRef.setStyle("-fx-font-size:10px; -fx-text-fill:" + COLOR_REFERENCIA +
-                                "; -fx-background-color:white; -fx-padding:0 2 0 2;");
-                lblRef.setLayoutX(x0ref + 4);
-                lblRef.setLayoutY(yRef - 14);
-                lblRef.setMouseTransparent(true);
+            Label lblRef = new Label("Promedio " + PuntosEstadistica.formatearPuntos(refMedia));
+            lblRef.setStyle("-fx-font-size:10px; -fx-text-fill:" + COLOR_REFERENCIA +
+                            "; -fx-background-color:white; -fx-padding:0 2 0 2;");
+            lblRef.setLayoutX(x0ref + 4);
+            lblRef.setLayoutY(yRef - 14);
+            lblRef.setMouseTransparent(true);
 
-                lineaRefVisual = lineaRef;
-                hitRef.setOnMouseEntered(e -> {
-                    sobreLineaMedia = true;
-                    resaltarReferencia(new java.util.ArrayList<>(chartReparaciones.getData()));
-                });
-                hitRef.setOnMouseExited(e -> {
-                    sobreLineaMedia = false;
-                    restaurarSeries(new java.util.ArrayList<>(chartReparaciones.getData()));
-                });
+            lineaRefVisual = lineaRef;
+            hitRef.setOnMouseEntered(e -> {
+                sobreLineaMedia = true;
+                resaltarReferencia(new java.util.ArrayList<>(chartReparaciones.getData()));
+            });
+            hitRef.setOnMouseExited(e -> {
+                sobreLineaMedia = false;
+                restaurarSeries(new java.util.ArrayList<>(chartReparaciones.getData()));
+            });
 
-                plotArea.getChildren().addAll(lineaRef, lblRef, hitRef);
-                lineasReferencia.add(lineaRef);
-                lineasReferencia.add(lblRef);
-                lineasReferencia.add(hitRef);
-            }
+            plotArea.getChildren().addAll(lineaRef, lblRef, hitRef);
+            lineasReferencia.add(lineaRef);
+            lineasReferencia.add(lblRef);
+            lineasReferencia.add(hitRef);
         }
 
         actualizarVisibilidadMedia();
@@ -621,21 +912,28 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     private void actualizarVisibilidadReferencia() {
-        boolean visible = chkTodos.isSelected();
-        lineasReferencia.forEach(n -> n.setVisible(visible));
+        lineasReferencia.forEach(n -> n.setVisible(true));
     }
 
     private void actualizarVisibilidadMedia() {
-        boolean visible = chkMedia.isSelected();
+        boolean visible = !chkMedia.isSelected(); // "Ocultar medias": marcado = ocultas
         lineasMedia.forEach(n -> n.setVisible(visible));
     }
 
-    private void actualizarVisibilidadActividad() {
-        boolean visible = chkActividad.isSelected();
-        for (XYChart.Series<String, Number> serie : chartReparaciones.getData()) {
-            if (serie.getNode() != null) serie.getNode().setVisible(visible);
-            serie.getData().forEach(d -> { if (d.getNode() != null) d.getNode().setVisible(visible); });
-        }
+    /**
+     * Nº de trabajos (normales + glass + pulidos) de un técnico (o "Equipo") en un periodo.
+     * Para "Equipo" se excluye a los técnicos con ES_ESTADISTICA=0 (exclusión total de la
+     * vista); un técnico individual siempre cuenta sus propios trabajos, esté excluido o no.
+     */
+    private int trabajosDe(String tecnico, String periodo) {
+        boolean esEquipo = "Equipo".equals(tecnico);
+        List<PuntoEstadisticaPuntos> base = esEquipo
+                ? PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)
+                : todosPuntos;
+        return base.stream()
+                .filter(p -> p.getPeriodo().equals(periodo)
+                        && (esEquipo || p.getNombreTecnico().equals(tecnico)))
+                .mapToInt(p -> p.getnNormales() + p.getnGlass() + p.getnPulidos()).sum();
     }
 
     /** Aplica el color fijo de cada técnico a su línea, puntos y símbolo de leyenda. */
@@ -662,7 +960,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         ? "-fx-background-color: " + color + ", white;"
                         : "-fx-background-color: transparent, transparent;");
 
-                Tooltip tip = new Tooltip(d.getXValue() + "\n" + d.getYValue().intValue() + " reparaciones");
+                Tooltip tip = new Tooltip(PuntosEstadistica.textoTooltip(d.getXValue(), d.getYValue().doubleValue(),
+                        metricaPorDia(), trabajosDe(serie.getName(), d.getXValue())));
                 tip.setShowDelay(Duration.ZERO);
                 tip.setShowDuration(Duration.INDEFINITE);
                 tip.setHideDelay(Duration.millis(100));
@@ -675,19 +974,18 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     String cursor = navegable ? "; -fx-cursor: hand;" : ";";
                     nodo.setStyle("-fx-background-color: " + color + ", white" + cursor);
                     if (serieResaltada != serie) { serieResaltada = serie; resaltarSerie(serie, todasSeries); }
+                    mostrarGuias(nodo, d.getXValue(), color);
                 });
                 nodo.setOnMouseExited(e -> {
                     nodo.setStyle(puntosVisibles
                             ? "-fx-background-color: " + color + ", white;"
                             : "-fx-background-color: transparent, transparent;");
+                    ocultarGuias();
                 });
                 if (navegable) {
                     final XYChart.Series<String, Number> serieClick = serie;
-                    nodo.setOnMouseClicked(e -> {
-                        String tecnico = "Todos".equals(serieClick.getName()) ? null : serieClick.getName();
-                        java.time.LocalDate[] rango = periodoAFechas(d.getXValue());
-                        navegacion.navegarAReparaciones(rango[0], rango[1], tecnico);
-                    });
+                    nodo.setOnMouseClicked(e ->
+                            mostrarPopoverDesglose(nodo, serieClick.getName(), d.getXValue()));
                 }
             }
         }
@@ -712,7 +1010,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     if (!sobrePunto) {
                         Double m = mediaPorSerie.get(cercana);
                         if (m != null && m > 0) {
-                            tooltipMedia.setText(String.format("Media %s: %.1f rep.", cercana.getName(), m));
+                            String unidad = metricaPorDia() ? " puntos/día" : " puntos";
+                            tooltipMedia.setText("Media " + cercana.getName() + " (" + ambitoReferencia() + "): "
+                                    + PuntosEstadistica.formatearPuntos(m) + unidad);
                             tooltipMedia.show(chartReparaciones, e.getScreenX() + 12, e.getScreenY() - 20);
                         }
                     }
@@ -740,7 +1040,64 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     simbolo.setStyle("-fx-background-color: " + color + ", white;");
             }
         });
-        actualizarVisibilidadActividad();
+    }
+
+    /**
+     * Popover con el desglose del punto y salto opcional al Historial (spec §4). Para "Equipo"
+     * se excluye a los técnicos con ES_ESTADISTICA=0, igual que el resto de agregados de Equipo.
+     */
+    private void mostrarPopoverDesglose(javafx.scene.Node ancla, String nombreSerie, String periodo) {
+        boolean esEquipo = "Equipo".equals(nombreSerie);
+        List<PuntoEstadisticaPuntos> base = esEquipo
+                ? PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)
+                : todosPuntos;
+        PuntoEstadisticaPuntos datos = base.stream()
+                .filter(p -> p.getPeriodo().equals(periodo)
+                        && (esEquipo || p.getNombreTecnico().equals(nombreSerie)))
+                .reduce((a, b) -> new PuntoEstadisticaPuntos(nombreSerie, periodo,
+                        a.getPuntos() + b.getPuntos(),
+                        a.getPuntosNormales() + b.getPuntosNormales(),
+                        a.getPuntosGlass() + b.getPuntosGlass(),
+                        a.getPuntosPulidos() + b.getPuntosPulidos(),
+                        a.getnNormales() + b.getnNormales(),
+                        a.getnGlass() + b.getnGlass(),
+                        a.getnPulidos() + b.getnPulidos(),
+                        a.getnSinPiezas() + b.getnSinPiezas()))
+                .orElse(null);
+        if (datos == null) return;
+
+        javafx.stage.Popup popup = new javafx.stage.Popup();
+        popup.setAutoHide(true);
+
+        Label titulo = new Label(nombreSerie + " — " + periodo);
+        titulo.setStyle("-fx-font-weight: bold; -fx-text-fill: #2C3B54;");
+        Label cuerpo = new Label(PuntosEstadistica.textoPopover(datos));
+        cuerpo.setStyle("-fx-text-fill: #2C3B54; -fx-font-size: 12px;");
+        Button verHistorial = new Button("Ver en Historial");
+        verHistorial.getStyleClass().add("btn-secondary");
+        verHistorial.setOnAction(ev -> {
+            popup.hide();
+            java.time.LocalDate[] rango =
+                    PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
+            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie, false);
+        });
+        Button verImeis = new Button("Ver IMEIs");
+        verImeis.getStyleClass().add("btn-secondary");
+        verImeis.setOnAction(ev -> {
+            popup.hide();
+            java.time.LocalDate[] rango =
+                    PuntosEstadistica.periodoAFechas(periodo, cmbGranularidad.getValue());
+            navegacion.navegarAReparaciones(rango[0], rango[1], esEquipo ? null : nombreSerie, true);
+        });
+        HBox botones = new HBox(8, verImeis, verHistorial);
+
+        VBox caja = new VBox(6, titulo, cuerpo, botones);
+        caja.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0;"
+                + " -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 12;"
+                + " -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 2);");
+        popup.getContent().add(caja);
+        var b = ancla.localToScreen(ancla.getBoundsInLocal());
+        popup.show(ancla, b.getMaxX() + 6, b.getMinY() - 10);
     }
 
     /**
@@ -825,7 +1182,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     private void actualizarTextoMenuTecnicos() {
         long total = todosLosTecnicos.stream().filter(t -> t != null).count();
         long sel   = nombresSeleccionadosTec.size();
-        if (sel == 0 || sel == total)
+        if (sel == 0)
+            etiquetaTecs.set("+ Técnicos");
+        else if (sel == total)
             etiquetaTecs.set("Técnicos");
         else if (sel == 1)
             etiquetaTecs.set(nombresSeleccionadosTec.iterator().next());
@@ -838,12 +1197,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         dpDesde.setValue(null);
         dpHasta.setValue(null);
         nombresSeleccionadosTec.clear();
-        todosLosTecnicos.stream().filter(t -> t != null && t.isActivo())
-                .forEach(t -> nombresSeleccionadosTec.add(t.getNombre()));
+        // Arranque limpio: admin/supertécnico quedan sin selección (solo Equipo + Promedio);
+        // técnico raso siempre vuelve a verse solo a sí mismo, nunca al resto del equipo.
+        if (!com.reparaciones.Sesion.esAdminOSuperTecnico() && nombreTecnicoSesion != null)
+            nombresSeleccionadosTec.add(nombreTecnicoSesion);
         if (filtroTecHandle != null) filtroTecHandle.refresh();
-        chkTodos.setSelected(true);
-        chkMedia.setSelected(true);
-        chkActividad.setSelected(true);
+        chkEquipo.setSelected(false);
+        chkMedia.setSelected(false);
         actualizarTextoMenuTecnicos();
         recargarDatos();
     }
@@ -870,7 +1230,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     @Override
     public void recargar() {
         if (pnlStock.isVisible()) renderStockActual();
-        else                      recargarDatos();
+        else {
+            recargarDatos();
+            cargarTarjetas();
+        }
     }
 
     @Override
@@ -889,9 +1252,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         PREFIJO_TIPO.put("bat", "Batería");
         PREFIJO_TIPO.put("cha", "Chasis");
         PREFIJO_TIPO.put("cam", "Cámara");
-        PREFIJO_TIPO.put("lcd", "LCD");
+        PREFIJO_TIPO.put("lcd", "Pantalla");
         PREFIJO_TIPO.put("mc",  "Marco");
-        PREFIJO_TIPO.put("g",   "Pantalla");
+        PREFIJO_TIPO.put("g",   "Glass");
     }
 
     private static String tipoDeComponente(String sku) {
@@ -1079,33 +1442,87 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
     // ─── Navigation helpers ────────────────────────────────────────────────────
 
+    /** Tarjetas del mes en curso (equipo, o el propio técnico si el rol es TECNICO). */
+    private void cargarTarjetas() {
+        java.time.YearMonth mes = java.time.YearMonth.now();
+        List<PuntoEstadisticaPuntos> filas;
+        try {
+            // Granularidad DÍA: la tarjeta Puntos/día necesita las medias por día de
+            // semana del mes anterior para igualar la mezcla de días (ajuste 2026-09-03)
+            filas = new ReparacionDAO().getEstadisticasPuntos("dia",
+                    mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
+        } catch (SQLException e) { mostrarError(e); return; }
+        String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
+        var t = PuntosEstadistica.calcularTarjetas(
+                filas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
+        String quien = tecnico == null ? "equipo" : "tú";
+        lblCardPuntosTitulo.setText("Puntos · " + t.mesLabel() + " · " + quien);
+        lblCardPuntosValor.setText(PuntosEstadistica.formatearPuntos(t.puntos()));
+        pintarObjetivo(lblCardPuntosDelta, t.pctPuntos(), t.mesAnteriorLabel(), t.puntosAnterior());
+        lblCardDiaTitulo.setText("Puntos · hoy, " + t.diaHoyLabel() + " · " + quien);
+        lblCardDiaValor.setText(PuntosEstadistica.formatearPuntos(t.puntosHoy()));
+        pintarObjetivo(lblCardDiaDelta, t.pctHoy(),
+                "un " + t.diaHoyLabel() + " de " + t.mesAnteriorLabel(), t.objetivoHoy());
+    }
+
+    /** Línea de objetivo: "46% de agosto (890,0)" — gris hasta el 100%, verde al alcanzarlo. Nunca rojo. */
+    private void pintarObjetivo(Label lbl, Integer pct, String mesAnterior, Double valorAnterior) {
+        if (pct == null) { lbl.setText(""); lbl.setStyle(""); return; }
+        lbl.setText(PuntosEstadistica.textoObjetivo(pct, mesAnterior, valorAnterior));
+        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (pct >= 100 ? "#2E7D32" : "#7A8A9A") + ";");
+    }
+
     /**
-     * Convierte un periodo (según la granularidad activa) al rango de fechas que representa.
-     * Formatos: día="2026-05-12", semana="2026-W15", mes="2026-05"
+     * Crosshair del hover sobre un vértice: guías punteadas del punto a ambos ejes
+     * y la fecha correspondiente del eje X en negrita con el color de la serie,
+     * para leer las coordenadas de un vistazo (ajuste smoke 2026-09-02).
      */
-    private java.time.LocalDate[] periodoAFechas(String periodo) {
-        return switch (cmbGranularidad.getValue()) {
-            case "Día" -> {
-                java.time.LocalDate d = java.time.LocalDate.parse(periodo);
-                yield new java.time.LocalDate[]{d, d};
+    private void mostrarGuias(Node nodo, String periodo, String color) {
+        ocultarGuias();
+        Node bg = chartReparaciones.lookup(".chart-plot-background");
+        if (bg == null || !(bg.getParent() instanceof javafx.scene.layout.Pane plotArea)) return;
+
+        javafx.geometry.Bounds nb = plotArea.sceneToLocal(nodo.localToScene(nodo.getBoundsInLocal()));
+        double cx = (nb.getMinX() + nb.getMaxX()) / 2;
+        double cy = (nb.getMinY() + nb.getMaxY()) / 2;
+        javafx.geometry.Bounds pb = bg.getBoundsInParent();
+
+        javafx.scene.shape.Line vertical   = new javafx.scene.shape.Line(cx, cy, cx, pb.getMaxY());
+        javafx.scene.shape.Line horizontal = new javafx.scene.shape.Line(pb.getMinX(), cy, cx, cy);
+        for (javafx.scene.shape.Line guia : java.util.List.of(vertical, horizontal)) {
+            guia.setStroke(javafx.scene.paint.Color.web(color));
+            guia.setStrokeWidth(1);
+            guia.getStrokeDashArray().addAll(4.0, 4.0);
+            guia.setOpacity(0.7);
+            guia.setMouseTransparent(true);
+            plotArea.getChildren().add(guia);
+            lineasGuia.add(guia);
+        }
+
+        // Fecha del eje X resaltada (los tick labels del eje son nodos Text con el texto del periodo)
+        for (Node n : ejeX.getChildrenUnmodifiable()) {
+            if (n instanceof javafx.scene.text.Text t && periodo.equals(t.getText())) {
+                t.getProperties().put("guia-fill", t.getFill());
+                t.setFill(javafx.scene.paint.Color.web(color));
+                t.setStyle("-fx-font-weight: bold;");
+                lineasGuia.add(t);
+                break;
             }
-            case "Mes" -> {
-                java.time.YearMonth ym = java.time.YearMonth.parse(periodo);
-                yield new java.time.LocalDate[]{ym.atDay(1), ym.atEndOfMonth()};
+        }
+    }
+
+    /** Retira las guías del crosshair y restaura el estilo del tick label del eje X. */
+    private void ocultarGuias() {
+        for (Node n : lineasGuia) {
+            if (n instanceof javafx.scene.text.Text t) {
+                Object fill = t.getProperties().remove("guia-fill");
+                if (fill instanceof javafx.scene.paint.Paint p) t.setFill(p);
+                t.setStyle("");
+            } else if (n.getParent() instanceof javafx.scene.layout.Pane p) {
+                p.getChildren().remove(n);
             }
-            case "Año" -> {
-                int year = Integer.parseInt(periodo);
-                yield new java.time.LocalDate[]{
-                        java.time.LocalDate.of(year, 1, 1),
-                        java.time.LocalDate.of(year, 12, 31)};
-            }
-            default -> { // "2026-W15" → lunes–domingo de esa semana ISO
-                java.time.LocalDate lunes = java.time.LocalDate.parse(
-                        periodo + "-1",
-                        java.time.format.DateTimeFormatter.ISO_WEEK_DATE);
-                yield new java.time.LocalDate[]{lunes, lunes.plusDays(6)};
-            }
-        };
+        }
+        lineasGuia.clear();
     }
 
     private void mostrarError(Exception e) {

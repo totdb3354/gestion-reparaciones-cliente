@@ -13,7 +13,7 @@
     <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
     <left>
         <VBox styleClass="stock-sidebar" spacing="0">
-            <Button fx:id="btnTabReparaciones" text="Reparaciones" maxWidth="Infinity"
+            <Button fx:id="btnTabReparaciones" text="Técnicos" maxWidth="Infinity"
                     styleClass="stock-sidebar-btn-active" onAction="#mostrarReparaciones"/>
             <Button fx:id="btnTabStock"        text="Stock"        maxWidth="Infinity"
                     styleClass="stock-sidebar-btn"        onAction="#mostrarStock"/>
@@ -28,7 +28,42 @@
             <!-- ══ Panel: Estadísticas de Reparaciones ══════════════════════════ -->
             <VBox fx:id="pnlReparaciones" spacing="12" visible="true" managed="true">
                 <HBox alignment="CENTER_LEFT" spacing="12">
-                    <Label text="Reparaciones por técnico" styleClass="vista-titulo"/>
+                    <Label text="Puntos por técnico" styleClass="vista-titulo"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox fx:id="boxMetrica" spacing="12" alignment="CENTER_LEFT">
+                        <RadioButton fx:id="rbPuntos" text="Puntos" selected="true"
+                                     style="-fx-font-weight: bold;"/>
+                        <RadioButton fx:id="rbPuntosDia" text="Puntos/día"
+                                     style="-fx-font-weight: bold;"/>
+                    </HBox>
+                    <Button fx:id="btnValores" text="⚙ Valores" styleClass="btn-secondary"
+                            onAction="#abrirModalValores"/>
+                    <Button fx:id="btnTecnicosEstadistica" text="👥 Técnicos" styleClass="btn-secondary"
+                            onAction="#abrirModalTecnicos"/>
+                </HBox>
+                <HBox spacing="12">
+                    <VBox spacing="2" style="-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 14;">
+                        <Label fx:id="lblCardPuntosTitulo" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        <HBox spacing="6" alignment="BASELINE_LEFT">
+                            <Label fx:id="lblCardPuntosValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
+                            <Label fx:id="lblCardPuntosDelta" style="-fx-font-size: 11px;"/>
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="2" style="-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 14;">
+                        <Label fx:id="lblCardDiaTitulo" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        <HBox spacing="6" alignment="BASELINE_LEFT">
+                            <Label fx:id="lblCardDiaValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
+                            <Label fx:id="lblCardDiaDelta" style="-fx-font-size: 11px;"/>
+                        </HBox>
+                    </VBox>
+                    <VBox fx:id="cardImeis" spacing="2" visible="false" managed="false"
+                          style="-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 14;">
+                        <Label text="IMEIs típicos por técnico" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        <HBox spacing="6" alignment="BASELINE_LEFT">
+                            <Label fx:id="lblCardImeisValor" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2C3B54;"/>
+                            <Label fx:id="lblCardImeisAmbito" style="-fx-font-size: 11px; -fx-text-fill: #7A8A9A;"/>
+                        </HBox>
+                    </VBox>
                 </HBox>
                 <FlowPane hgap="12" vgap="6" alignment="CENTER_LEFT">
                     <Label text="Periodo:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
@@ -38,11 +73,9 @@
                     <Label text="Hasta:" style="-fx-font-size:13px; -fx-text-fill:#2C3B54;"/>
                     <DatePicker fx:id="dpHasta" prefWidth="140"/>
                     <MultiSelectComboBox fx:id="menuTecnicos" prefWidth="160"/>
-                    <CheckBox fx:id="chkTodos" text="Todos"
+                    <CheckBox fx:id="chkEquipo" text="Equipo (suma)"
                               style="-fx-text-fill: #000000; -fx-font-weight: bold;"/>
-                    <CheckBox fx:id="chkActividad" text="Actividad"
-                              style="-fx-font-weight: bold;"/>
-                    <CheckBox fx:id="chkMedia" text="Media"
+                    <CheckBox fx:id="chkMedia" text="Ocultar medias"
                               style="-fx-font-weight: bold;"/>
                     <Button text="Limpiar filtros" onAction="#limpiarFiltros" styleClass="btn-secondary"/>
                 </FlowPane>
@@ -51,19 +84,16 @@
                                style="-fx-background-color: white; -fx-background-radius: 6;
                                       -fx-border-color: #C2C8D0; -fx-border-radius: 6;">
                         <xAxis><CategoryAxis fx:id="ejeX" label="Periodo" tickLabelRotation="-45"/></xAxis>
-                        <yAxis><NumberAxis fx:id="ejeY" label="Reparaciones" minorTickCount="0" autoRanging="false" lowerBound="0" upperBound="10" tickUnit="1"/></yAxis>
+                        <yAxis><NumberAxis fx:id="ejeY" label="Puntos" minorTickCount="0" autoRanging="false" lowerBound="0" upperBound="10" tickUnit="1"/></yAxis>
                     </LineChart>
                     <Label fx:id="lblSinDatos" text="Sin datos en el rango seleccionado"
                            visible="false"
                            style="-fx-font-size:14px; -fx-text-fill:#7A8A9A;"/>
                 </StackPane>
-<HBox fx:id="hboxSlider" visible="false" managed="false"
-                      alignment="CENTER_LEFT" spacing="8">
-                    <Label fx:id="lblSliderDesde" style="-fx-font-size:11px; -fx-text-fill:#7A8A9A; -fx-min-width:70px;"/>
-                    <Slider fx:id="sliderVentana" HBox.hgrow="ALWAYS"
-                            min="0" max="1" value="0" blockIncrement="1"
-                            snapToTicks="true" showTickMarks="false"/>
-                    <Label fx:id="lblSliderHasta" style="-fx-font-size:11px; -fx-text-fill:#7A8A9A; -fx-min-width:70px; -fx-alignment:CENTER_RIGHT;"/>
+                <HBox fx:id="hboxNavVentana" visible="false" managed="false"
+                      alignment="CENTER" spacing="10">
+                    <Label fx:id="lblRangoVentana"
+                           style="-fx-font-size: 12px; -fx-text-fill: #2C3B54;"/>
                 </HBox>
             </VBox>
 

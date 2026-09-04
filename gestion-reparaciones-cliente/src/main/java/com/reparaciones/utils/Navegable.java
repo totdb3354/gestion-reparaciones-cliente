@@ -14,11 +14,13 @@ import java.time.LocalDate;
 public interface Navegable {
 
     /**
-     * Navega a la vista de historial de reparaciones con los filtros indicados ya aplicados.
+     * Navega a la vista de reparaciones con los filtros indicados ya aplicados.
      *
      * @param desde   fecha de inicio del filtro (inclusive)
      * @param hasta   fecha de fin del filtro (inclusive)
      * @param tecnico nombre del técnico a filtrar, o {@code null} para mostrar todos
+     * @param aImeis  {@code true} aterriza en el apartado Agrupado por IMEI;
+     *                {@code false} en el Historial
      */
-    void navegarAReparaciones(LocalDate desde, LocalDate hasta, String tecnico);
+    void navegarAReparaciones(LocalDate desde, LocalDate hasta, String tecnico, boolean aImeis);
 }

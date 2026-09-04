@@ -17,15 +17,30 @@ public class Tecnico {
     /** {@code true} si el técnico está activo. */
     private boolean activo;
 
+    /** {@code true} si cuenta en la vista de estadísticas (exclusión ronda 2, spec 2026-09-02).
+     *  Un JSON sin el campo (servidor anterior a 0.16.2) cuenta como incluido. */
+    private Boolean esEstadistica;
+
     /**
      * @param idTec  clave primaria del técnico
      * @param nombre nombre visible
      * @param activo {@code true} si está activo
      */
     public Tecnico(int idTec, String nombre, boolean activo) {
-        this.idTec  = idTec;
-        this.nombre = nombre;
-        this.activo = activo;
+        this(idTec, nombre, activo, true);
+    }
+
+    /**
+     * @param idTec         clave primaria del técnico
+     * @param nombre        nombre visible
+     * @param activo        {@code true} si está activo
+     * @param esEstadistica {@code true} si cuenta en la vista de estadísticas
+     */
+    public Tecnico(int idTec, String nombre, boolean activo, boolean esEstadistica) {
+        this.idTec         = idTec;
+        this.nombre        = nombre;
+        this.activo        = activo;
+        this.esEstadistica = esEstadistica;
     }
 
     /** @return clave primaria del técnico */
@@ -38,6 +53,10 @@ public class Tecnico {
 
     /** @return {@code true} si el técnico está activo */
     public boolean isActivo() { return activo; }
+
+    /** @return {@code true} si cuenta en la vista de estadísticas; un JSON sin el campo
+     *  (servidor anterior a la 0.16.2) cuenta como incluido. */
+    public boolean isEsEstadistica() { return esEstadistica == null || esEstadistica; }
 
     /** Devuelve el nombre para uso en ComboBox y MenuButton. */
     @Override

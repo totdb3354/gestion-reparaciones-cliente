@@ -986,6 +986,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         filtroFechaHasta.setValue(hasta);
     }
 
+    /** "Ver IMEIs" desde Estadísticas: abre el Agrupado con fechas y técnico aplicados. */
+    public void setFiltroInicialImeis(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        mostrarAgrupado();
+        agrupadoController.setFiltroInicial(desde, hasta, tecnico);
+    }
+
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();

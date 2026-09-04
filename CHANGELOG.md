@@ -7,7 +7,17 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-_(cambios para la próxima versión)_
+### Added
+- Estadísticas por puntos de dificultad: la pestaña "Técnicos" mide puntos (tabla editable por el admin en ⚙ Valores) con métricas Puntos y Puntos/día, tarjetas del mes, promedio del equipo, desplegable con buscador, flechas de navegación temporal y popover de desglose con salto al Historial.
+- **👥 Técnicos en estadísticas** (solo admin, junto a ⚙ Valores): panel para excluir de la vista de Técnicos a quienes no reparan a jornada completa; el excluido sale de Promedio, Equipo, tarjetas y desplegable (pero sigue viéndose a sí mismo). Acciones `EXCLUIR_ESTADISTICAS` / `INCLUIR_ESTADISTICAS` en el log.
+
+### Changed
+- **Tarjetas resumen en formato objetivo**: en vez del delta ▲/▼ (que salía rojo enorme a principios de mes), muestran "% de <mes anterior> (total)" — gris hasta el 100%, verde al superarlo, nunca rojo.
+- El selector **Puntos / Puntos·día** se deshabilita en granularidad Día (ambas métricas coinciden); la selección se conserva al cambiar de granularidad.
+- La etiqueta de la ventana dice la unidad real: "30 días con actividad", "16 semanas", "12 meses", "5 años" (antes "N periodos").
+
+### Fixed
+- La pestaña Stock de Estadísticas etiquetaba los SKU `g` como "Pantalla" y `lcd` como "LCD"; ahora `g`=Glass y `lcd`=Pantalla, como el formulario de reparación.
 
 ## [0.16.1] - 2026-08-31
 

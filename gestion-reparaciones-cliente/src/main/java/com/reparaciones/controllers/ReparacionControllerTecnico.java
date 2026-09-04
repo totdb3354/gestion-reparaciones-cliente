@@ -904,6 +904,12 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         filtroFechaHasta.setValue(hasta);
     }
 
+    /** "Ver IMEIs" desde Estadísticas: abre el Agrupado con las fechas aplicadas (sus datos ya son solo suyos). */
+    public void setFiltroInicialImeis(java.time.LocalDate desde, java.time.LocalDate hasta) {
+        mostrarAgrupado();
+        agrupadoController.setFiltroInicial(desde, hasta, null);
+    }
+
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();
