@@ -2089,8 +2089,13 @@ public class PendientesSuperTecnicoController {
                 javafx.application.Platform.runLater(() -> {
                     e.buscando = false;
                     if (res != null && !res.isEmpty()) {
-                        e.modeloCode = res;
-                        if (actual[0] == e) confirmarModelo.accept(res);
+                        // Modelo vivo: recuerda el resultado (sin pisar una decisión manual) y aplícalo solo si la
+                        // entrada sigue sin modelo (una decisión manual desde la otra cola pudo llegar en vuelo).
+                        modeloPorImei.putIfAbsent(e.imei, res);
+                        if (!e.tieneModelo()) {
+                            e.modeloCode = res;
+                            if (actual[0] == e) confirmarModelo.accept(res);
+                        }
                     } else if (actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
@@ -2211,6 +2216,12 @@ public class PendientesSuperTecnicoController {
             Cliente m = clienteManual.get(e.imei);
             if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
         };
+        // Modelo vivo: si el modal ya conoce el modelo de este IMEI (lookup con éxito o decisión manual en
+        // cualquier cola), la entrada nace con él y lanzarLookup se la salta (tieneModelo()).
+        java.util.function.Consumer<EntradaAsignacion> sembrarModeloEntrada = e -> {
+            String m = modeloPorImei.get(e.imei);
+            if (m != null && !m.isEmpty()) e.modeloCode = m;
+        };
         // aplicarClienteDefaultEntrada está declarada más arriba (antes de cargarEntrada[0], que la usa).
         java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
             Cliente m = clienteManual.get(fila.imei);
@@ -2312,6 +2323,7 @@ public class PendientesSuperTecnicoController {
             e.seq = ++seqCounter[0];
             sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
             aplicarClienteDefaultEntrada.accept(e);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+            sembrarModeloEntrada.accept(e);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -2344,6 +2356,7 @@ public class PendientesSuperTecnicoController {
                     en.seq = ++seqCounter[0];
                     sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
                     aplicarClienteDefaultEntrada.accept(en);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+                    sembrarModeloEntrada.accept(en);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
