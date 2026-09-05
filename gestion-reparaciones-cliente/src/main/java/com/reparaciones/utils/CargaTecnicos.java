@@ -60,8 +60,9 @@ public final class CargaTecnicos {
         public double pctTotal() { return pctHecho + pctPendiente; }
     }
 
-    /** Fracción de jornada de 9h que consume una asignación (0 si no computa). */
-    private static double fraccion9h(ReparacionResumen r, boolean esAbierta, boolean soloPedidos) {
+    /** Fracción de jornada de 9h que consume una asignación (0 si no computa). Package-private: la
+     *  reutiliza {@link PrediccionGlass}, que compara estas fracciones sin escalarlas al día. */
+    static double fraccion9h(ReparacionResumen r, boolean esAbierta, boolean soloPedidos) {
         if (soloPedidos && (r.getCliente() == null || r.getCliente().isEmpty())) return 0;
         if (esAbierta && enEsperaDePieza(r)) return 0;   // solicitud pendiente libera carga
         TipoTrabajo tipo = TipoTrabajo.desde(r.getIdRep());
