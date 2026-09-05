@@ -8,6 +8,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import static com.reparaciones.utils.TipoTrabajo.GLASS;
+import static com.reparaciones.utils.TipoTrabajo.REPARACION;
+import static com.reparaciones.utils.PrediccionGlass.VerdeEnModal;
+
 /** Elección del técnico de la glass automática (spec 2026-09-05-glass-prediccion, §4). El helper no recibe
  *  el día de la semana: compara fracciones de 9h sin escalar, así que un sábado reparte igual que un martes. */
 class PrediccionGlassTest {
@@ -58,7 +62,7 @@ class PrediccionGlassTest {
     }
 
     @Test void conGlassVerdeDeEseImeiEnElModalQuedaFuera() {
-        List<PrediccionGlass.GlassEnModal> verdes = List.of(new PrediccionGlass.GlassEnModal(IMEI, 1, true));
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(new PrediccionGlass.VerdeEnModal(IMEI, 1, GLASS, false, true));
         assertSame(JHONA, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes, IMEI, true));
     }
 
@@ -79,7 +83,7 @@ class PrediccionGlassTest {
     @Test void lasVerdesDelModalDesplazanLaEleccion() {
         // Sin verdes empatan a 0 → javi por alfabeto; con una verde ya a javi → jhona
         assertSame(JAVI, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), List.of(), IMEI, true));
-        List<PrediccionGlass.GlassEnModal> verdes = List.of(new PrediccionGlass.GlassEnModal("222222222222222", 1, true));
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(new PrediccionGlass.VerdeEnModal("222222222222222", 1, GLASS, false, true));
         assertSame(JHONA, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes, IMEI, true));
     }
 
@@ -93,7 +97,7 @@ class PrediccionGlassTest {
     }
 
     @Test void verdeDelModalSinClienteSoloCuentaEnTotal() {
-        List<PrediccionGlass.GlassEnModal> verdes = List.of(new PrediccionGlass.GlassEnModal("222222222222222", 1, false));
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(new PrediccionGlass.VerdeEnModal("222222222222222", 1, GLASS, false, false));
         assertSame(JAVI,  PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes, IMEI, true));    // ignorada → empate → javi
         assertSame(JHONA, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes, IMEI, false));   // cuenta → jhona
     }
@@ -108,8 +112,39 @@ class PrediccionGlassTest {
 
     @Test void cargaSumaFraccionesCrudasDe9h() {
         List<ReparacionResumen> abiertas = List.of(asig("AG1", "222222222222222", 1, "WEB"), asig("A2", "333333333333333", 1, "WEB"));
-        List<PrediccionGlass.GlassEnModal> verdes = List.of(new PrediccionGlass.GlassEnModal("444444444444444", 1, true));
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(new PrediccionGlass.VerdeEnModal("444444444444444", 1, GLASS, false, true));
         assertEquals(2.0 / CargaTecnicos.TOPE_GLASS_9H + 1.0 / CargaTecnicos.TOPE_NORMALES_9H,
                 PrediccionGlass.carga(1, abiertas, List.of(), verdes, true), 1e-12);
+    }
+
+    @Test void lasReparacionesVerdesDelModalTambienCuentan() {
+        // javi: 3 reparaciones verdes del modal con cliente (otros IMEIs); jhona: nada → jhona gana (3/25 > 0)
+        List<PrediccionGlass.VerdeEnModal> verdes1 = List.of(
+                new PrediccionGlass.VerdeEnModal("222222222222222", 1, REPARACION, false, true),
+                new PrediccionGlass.VerdeEnModal("333333333333333", 1, REPARACION, false, true),
+                new PrediccionGlass.VerdeEnModal("444444444444444", 1, REPARACION, false, true));
+        assertSame(JHONA, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes1, IMEI, true));
+
+        // jhona: 1 glass verde (1/17 ≈ 0,0588); javi: 1 reparación verde (1/25 = 0,04) → javi gana
+        List<PrediccionGlass.VerdeEnModal> verdes2 = List.of(
+                new PrediccionGlass.VerdeEnModal("555555555555555", 1, REPARACION, false, true),
+                new PrediccionGlass.VerdeEnModal("666666666666666", 2, GLASS, false, true));
+        assertSame(JAVI, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes2, IMEI, true));
+    }
+
+    @Test void unaReparacionVerdeDelMismoImeiNoExcluye() {
+        // javi: reparación verde del mismo IMEI; jhona: reparación verde de otro IMEI → misma carga (1/25) → empate → javi por alfabeto
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(
+                new PrediccionGlass.VerdeEnModal(IMEI, 1, REPARACION, false, true),
+                new PrediccionGlass.VerdeEnModal("222222222222222", 2, REPARACION, false, true));
+        assertSame(JAVI, PrediccionGlass.elegir(List.of(JAVI, JHONA), List.of(), List.of(), verdes, IMEI, true));
+    }
+
+    @Test void chasisVerdePesaComoChasis() {
+        List<PrediccionGlass.VerdeEnModal> verdes = List.of(
+                new VerdeEnModal("222222222222222", 1, REPARACION, true, true),
+                new VerdeEnModal("333333333333333", 1, GLASS, false, true));
+        assertEquals(1.0 / CargaTecnicos.TOPE_CHASIS_9H + 1.0 / CargaTecnicos.TOPE_GLASS_9H,
+                PrediccionGlass.carga(1, List.of(), List.of(), verdes, true), 1e-12);
     }
 }

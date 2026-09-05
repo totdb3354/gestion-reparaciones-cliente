@@ -2389,13 +2389,15 @@ public class PendientesSuperTecnicoController {
             fila.sinCliente = sinDef;
         };
 
-        // Glass verdes del modal, tal como las ve PrediccionGlass (una por técnico de cada entrada verde).
-        java.util.function.Supplier<List<com.reparaciones.utils.PrediccionGlass.GlassEnModal>> verdesGlassModal = () -> {
-            List<com.reparaciones.utils.PrediccionGlass.GlassEnModal> out = new ArrayList<>();
-            for (EntradaAsignacion x : pilaGlass)
-                if (x.asignada)
-                    for (Tecnico t : x.tecnicos)
-                        out.add(new com.reparaciones.utils.PrediccionGlass.GlassEnModal(x.imei, t.getIdTec(), x.cliente != null));
+        // Entradas verdes del modal (reparación y glass, sin guardar), tal como las pesa PrediccionGlass: una por técnico.
+        java.util.function.Supplier<List<com.reparaciones.utils.PrediccionGlass.VerdeEnModal>> verdesModal = () -> {
+            List<com.reparaciones.utils.PrediccionGlass.VerdeEnModal> out = new ArrayList<>();
+            for (List<EntradaAsignacion> pila : List.of(pilaRep, pilaGlass))
+                for (EntradaAsignacion x : pila)
+                    if (x.asignada)
+                        for (Tecnico t : x.tecnicos)
+                            out.add(new com.reparaciones.utils.PrediccionGlass.VerdeEnModal(
+                                    x.imei, t.getIdTec(), x.tipo, x.esChasis, x.cliente != null));
             return out;
         };
         // Invariante del modal (spec 2026-09-05, §2 reglas 2-6): casilla "Lleva glass" marcada ⇔ hay glass de ese IMEI en
@@ -2407,7 +2409,7 @@ public class PendientesSuperTecnicoController {
         java.util.function.Consumer<EntradaAsignacion> predecirGlass = g -> {
             if (g.asignada || !g.tecnicos.isEmpty()) return;   // ya asignada a mano o en configuración: no se toca
             Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
-                    tecnicosModal, datos, cerradasHoy, verdesGlassModal.get(), g.imei, g.cliente != null);
+                    tecnicosModal, datos, cerradasHoy, verdesModal.get(), g.imei, g.cliente != null);
             if (t != null) { g.tecnicos.add(t); g.asignada = true; g.auto = true; }   // sin candidato: se queda roja
         };
         // Crea la glass pendiente del IMEI de la reparación e (si no la hay); si la reparación ya está verde, la predice ya.
