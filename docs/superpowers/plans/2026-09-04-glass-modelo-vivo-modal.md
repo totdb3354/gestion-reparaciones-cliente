@@ -546,6 +546,9 @@ Lanzar el cliente: `mvn -f gestion-reparaciones-cliente/pom.xml javafx:run` (con
 11. (review final) Teclear el nombre exacto de un modelo y hacer clic en "Asignar →" → el modelo se decide y se guarda pero la entrada **no** se asigna; el segundo clic asigna (vía de pérdida de foco).
 12. (review final) Elegir modelo a mano, quitar la entrada con ✕ y volver a escanear el mismo IMEI en el mismo modal → nace con modelo. Ese IMEI aparece ya en Inventario (fila de `Telefono` sin asignación): efecto aceptado, verlo una vez.
 13. (review final) Elegir el modelo A e inmediatamente el B en el mismo IMEI → `SELECT MODELO` da B.
+14. (smoke) Asignar en Reparación al técnico R, pasar a Glass y escanear → ningún técnico marcado (o el último asignado en Glass, si lo hubo); volver a Reparación y escanear → R propuesto.
+
+Extra del smoke (2026-09-05, un commit tras el fix wave): técnico pegajoso POR COLA (`defTecnicos` pasa a `Map<TipoTrabajo, List<Tecnico>>`; spec regla 8 y §3.j).
 
 Fix wave del review final (2026-09-05, un commit tras la Task 4): brief en `.superpowers/sdd/final-fix-brief.md` — la siembra ya no salta la precarga del cliente de BD (solo la mitad de modelo), Enter con campo vacío no decide, guard de origen en la vía de pérdida de foco.
 

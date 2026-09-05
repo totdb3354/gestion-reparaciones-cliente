@@ -1659,7 +1659,11 @@ public class PendientesSuperTecnicoController {
         List<EntradaAsignacion> pilaGlass = new ArrayList<>();
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
-        List<Tecnico> defTecnicos = new ArrayList<>();
+        // Técnico "pegajoso" POR COLA (Reparación y Glass por separado; pulido tiene su propio selector arriba):
+        // el último técnico asignado en una cola se propone en las entradas nuevas de ESA cola, no de la otra.
+        final Map<TipoTrabajo, List<Tecnico>> defTecnicos = new java.util.EnumMap<>(TipoTrabajo.class);
+        defTecnicos.put(TipoTrabajo.REPARACION, new ArrayList<>());
+        defTecnicos.put(TipoTrabajo.GLASS, new ArrayList<>());
         long[] seqCounter = { 0 };
         TipoTrabajo[] tipoActual = { TipoTrabajo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
         // Cola de la categoría activa (rep/glass); pulido va aparte en lotePulido.
@@ -2187,7 +2191,7 @@ public class PendientesSuperTecnicoController {
             tfModelo.setText(e.tieneModelo() ? FormularioReparacionController.traducirModelo(e.modeloCode) : "");
             modelosFiltrados.setPredicate(s -> true);
             actualizandoModelo[0] = false;
-            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos;
+            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos.getOrDefault(e.tipo, List.of());   // pegajoso de SU cola
             java.util.Set<Integer> ids = base.stream().map(Tecnico::getIdTec).collect(java.util.stream.Collectors.toSet());
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
@@ -2271,7 +2275,8 @@ public class PendientesSuperTecnicoController {
             propagarCliente[0].accept(e.imei, e.cliente, e.sinCliente);
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
-            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);   // los técnicos se mantienen entre IMEIs de la MISMA cola (rep y glass por separado)
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();

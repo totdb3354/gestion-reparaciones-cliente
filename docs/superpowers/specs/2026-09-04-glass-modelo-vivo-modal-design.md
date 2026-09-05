@@ -25,6 +25,7 @@ Relación: primer bloque de "facilitar la asignación de glass", cuarto punto de
 5. **El modelo que llega solo del lookup automático NO se guarda hasta Guardar** (como hoy). El lookup es repetible y persistirlo al escanear crearía filas de teléfono para IMEIs que solo se escanearon y se quitaron de la cola.
 6. **No hay "modelo pegajoso"** entre IMEIs distintos. Del cliente se copia la propagación por IMEI y la siembra, **no** el default para los IMEIs siguientes (`clienteDefaultModal`): un modelo pegajoso entre teléfonos distintos no tiene sentido.
 7. **Pulido no participa**: no tiene modelo en el modal.
+8. **Técnico pegajoso por cola** (añadido en el smoke, 2026-09-05): el último técnico asignado en Reparación solo se propone en las entradas nuevas de Reparación, y el de Glass solo en Glass. Antes había una sola memoria y el técnico de reparación se arrastraba a la cola Glass, cuando no tiene por qué reparar la glass la misma persona. Pulido conserva su selector propio (ya iba por separado).
 
 ## 3. Mecánica en el modal (solo cliente)
 
@@ -60,6 +61,8 @@ h. **Guardar, borrar entrada de la cola, `asignarActual`, `defTecnicos`**: sin c
 
 i. **Vía de pérdida de foco (hardening, review final)**: el callback corre diferido (`runLater`); se captura `origen = actual[0]` al perder el foco y el callback no decide si `actual[0]` ya es otra entrada. El análisis del review indica que el caso no era alcanzable (el clic en una fila de la pila ejecuta `cargarEntrada` síncrono, que reemplaza el texto antes del callback), pero deja la invariante explícita por dos líneas.
 
+j. **`defTecnicos` por cola** (regla 8): pasa de una `List<Tecnico>` única a `Map<TipoTrabajo, List<Tecnico>>` (`EnumMap` con `REPARACION` y `GLASS`). `cargarEntrada` propone `defTecnicos.get(e.tipo)` a la entrada sin técnicos y `asignarActual` actualiza la lista de `e.tipo`. Pulido no usa `defTecnicos`.
+
 ## 4. Servidor
 
 **Sin cambios, sin migración, sin bump de gitlink.** `POST /api/telefonos` (`TelefonoController.insertar`, `:72`) ya existe con la semántica necesaria (upsert; modelo con COALESCE; cliente intacto si no se manda). El modal es del SuperTécnico y el endpoint no restringe el modelo por rol, así que no cambia la autorización.
@@ -94,6 +97,7 @@ i. **Vía de pérdida de foco (hardening, review final)**: el callback corre dif
   11. (review final) Teclear el nombre exacto de un modelo y hacer clic en "Asignar →" → el modelo se decide y se guarda pero la entrada **no** se asigna; el segundo clic asigna (vía de pérdida de foco).
   12. (review final) Elegir modelo a mano, quitar la entrada con ✕ y volver a escanear el mismo IMEI en el mismo modal → nace con modelo. Ese IMEI aparece ya en Inventario (fila de `Telefono` sin asignación): efecto aceptado, verlo una vez.
   13. (review final) Elegir el modelo A e inmediatamente el B en el mismo IMEI → `SELECT MODELO` da B.
+  14. (smoke) Asignar en Reparación al técnico R, pasar a Glass y escanear → ningún técnico marcado (o el último asignado en Glass, si lo hubo); volver a Reparación y escanear → R propuesto.
 
 ## 7. Fuera de alcance
 
