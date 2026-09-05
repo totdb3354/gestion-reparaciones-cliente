@@ -116,8 +116,8 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
 - Sin habilitados / todos excluidos → glass roja; contador "Glass (n)" en rojo; Guardar bloqueado hasta asignarla a mano o quitarla.
 - Falla la carga de técnicos al abrir el modal (`tecnicosModal` vacío) → sin candidatos → roja.
 - Otro usuario crea una glass del mismo IMEI+técnico entre abrir el modal y Guardar → aviso de duplicado de siempre; la reparación se crea igual.
-- Desmarcar la casilla tras editar la glass a mano → la glass se queda (ya es manual).
-- ✕ en la reparación con glass manual → la glass se queda.
+- Desmarcar la casilla tras editar la glass a mano → la glass se va igualmente (casilla ⇔ glass, regla 2).
+- ✕ en la reparación con glass manual → la glass se va igualmente (regla 6); ✕ en la glass → la reparación se queda y se desmarca.
 - Cambio de cliente/modelo en la reparación tras nacer la glass → se propaga, sigue automática.
 - Fin de semana → reparte por fracción cruda, sin empates artificiales.
 - Servidor viejo → nadie habilitado → siempre roja; diálogo avisa.

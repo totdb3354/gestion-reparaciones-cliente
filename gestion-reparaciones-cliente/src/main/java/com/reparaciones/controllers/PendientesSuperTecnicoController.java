@@ -128,7 +128,7 @@ public class PendientesSuperTecnicoController {
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
         boolean buscando;                        // true mientras el lookup está en vuelo
         long seq;                                // orden de la última acción (escaneo/asignación): mayor = más reciente = más arriba
-        boolean llevaGlass;                      // solo tipo Reparación: al Asignar nace (o se retira) la glass automática del IMEI
+        boolean llevaGlass;                      // solo tipo Reparación: marcada ⇔ hay glass de este IMEI en la cola Glass (se crea/retira al marcar)
         boolean auto;                            // solo tipo Glass: nacida por predicción y aún no editada a mano ("Guardar cambios" la vuelve manual)
 
         EntradaAsignacion(String imei) { this.imei = imei; }
@@ -2169,7 +2169,7 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
-                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.REPARACION && tecnicoGlassAbierta(e.imei) == null) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
                     if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
@@ -2180,7 +2180,7 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
-                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.REPARACION && tecnicoGlassAbierta(e.imei) == null) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
                     if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
@@ -2467,8 +2467,8 @@ public class PendientesSuperTecnicoController {
                     crearGlassDe.accept(e);   // por si venía marcada de nacimiento (con glass ya en la cola no crea nada)
                     EntradaAsignacion g = glassDe.apply(e.imei);
                     if (g != null) { if (!g.tieneModelo()) g.modeloCode = e.modeloCode; predecirGlass.accept(g); }
-                } else {
-                    quitarGlassDe.accept(e.imei);
+                } else if (!chkLlevaGlass.isDisabled()) {
+                    quitarGlassDe.accept(e.imei);   // casilla deshabilitada (glass abierta en BD): la glass de la cola no está vinculada
                 }
             } else if (e.tipo == TipoTrabajo.GLASS) {
                 e.auto = false;   // "Guardar cambios" (o asignar a mano una roja): la glass pasa a ser del usuario
