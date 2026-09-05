@@ -113,8 +113,9 @@ public class PendientesSuperTecnicoController {
     private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
-    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
-    private static final class EntradaAsignacion {
+    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD).
+     *  Package-private (no private) para que el test del helper puro {@link #propagarModelo} pueda construirla. */
+    static final class EntradaAsignacion {
         final String imei;
         TipoTrabajo tipo = TipoTrabajo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
         String modeloCode;                       // código interno del modelo, o null si falta
@@ -154,6 +155,20 @@ public class PendientesSuperTecnicoController {
     /** Deriva el tipo de trabajo del prefijo del {@code ID_REP}. Delega en {@link TipoTrabajo#desde}. */
     static TipoTrabajo tipoDe(String idRep) {
         return TipoTrabajo.desde(idRep);
+    }
+
+    /**
+     * Modelo vivo del modal: copia {@code code} a TODAS las entradas de {@code imei} en las dos pilas
+     * (rojas y verdes). Devuelve cuántas entradas ha tocado. Puro (sin UI) para poder testearlo; el modal
+     * lo envuelve en {@code decidirModelo} y repinta la pila después. {@code imei == null} → 0.
+     */
+    static int propagarModelo(String imei, String code,
+                              List<EntradaAsignacion> pilaRep, List<EntradaAsignacion> pilaGlass) {
+        if (imei == null) return 0;
+        int n = 0;
+        for (EntradaAsignacion x : pilaRep)   if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        for (EntradaAsignacion x : pilaGlass) if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        return n;
     }
 
     @FXML
@@ -1644,7 +1659,11 @@ public class PendientesSuperTecnicoController {
         List<EntradaAsignacion> pilaGlass = new ArrayList<>();
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
-        List<Tecnico> defTecnicos = new ArrayList<>();
+        // Técnico "pegajoso" POR COLA (Reparación y Glass por separado; pulido tiene su propio selector arriba):
+        // el último técnico asignado en una cola se propone en las entradas nuevas de ESA cola, no de la otra.
+        final Map<TipoTrabajo, List<Tecnico>> defTecnicos = new java.util.EnumMap<>(TipoTrabajo.class);
+        defTecnicos.put(TipoTrabajo.REPARACION, new ArrayList<>());
+        defTecnicos.put(TipoTrabajo.GLASS, new ArrayList<>());
         long[] seqCounter = { 0 };
         TipoTrabajo[] tipoActual = { TipoTrabajo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
         // Cola de la categoría activa (rep/glass); pulido va aparte en lotePulido.
@@ -1778,8 +1797,13 @@ public class PendientesSuperTecnicoController {
         // Última decisión MANUAL de cliente por IMEI en este modal; prevalece sobre la precarga de BD.
         // Valor: cliente real, o SIN_CLIENTE (sentinel) = "sin cliente"; ausente = sin decisión manual.
         final java.util.Map<String, Cliente> clienteManual = new java.util.HashMap<>();
-        // Cliente por defecto para los próximos IMEIs que se escaneen (persiste como defTecnicos, no como
-        // clienteManual que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
+        // Modelo vivo: último modelo conocido por IMEI en este modal (lookup con éxito o decisión manual).
+        // Lo alimentan decidirModelo (put) y el lookup (putIfAbsent: nunca pisa una decisión manual); lo
+        // consumen la siembra al escanear y la propagación entre las colas Reparación/Glass. Por-IMEI, sin
+        // default para los siguientes IMEIs (un modelo "pegajoso" entre teléfonos distintos no tiene sentido).
+        final java.util.Map<String, String> modeloPorImei = new java.util.HashMap<>();
+        // Cliente por defecto para los próximos IMEIs que se escaneen (un solo default para todo el modal,
+        // a diferencia de defTecnicos, que es por cola, y de clienteManual, que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
         // se aplica solo si la precarga de BD no aporta nada (la BD prevalece). Null = sin default aún.
         final Cliente[] clienteDefaultModal = { null };
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
@@ -1993,6 +2017,30 @@ public class PendientesSuperTecnicoController {
             if (renderPila[0] != null) renderPila[0].run();
             validarForm.run();
         };
+        // ── Modelo vivo (calcado del cliente pegajoso, solo la parte por-IMEI) ─────────────────
+        // Decisión MANUAL de modelo para la entrada cargada: confirma en el formulario, la recuerda para los
+        // IMEIs que se escaneen después y la copia a todas las entradas del mismo IMEI en las dos colas
+        // (rojas y verdes). El lookup NO pasa por aquí: sigue llamando a confirmarModelo.
+        // Guardado inmediato del modelo del IMEI: upsert de teléfono de DOS argumentos (modelo sí; el cliente
+        // queda intacto por COALESCE en el servidor; sin entrada de log). En hilo aparte, como el lookup.
+        // Si falla: una línea en stderr y nada más — Guardar vuelve a mandar el modelo con la asignación.
+        java.util.function.BiConsumer<String, String> persistirModelo = (imei, code) -> {
+            Thread t = new Thread(() -> {
+                try { telefonoDAO.insertar(imei, code); }
+                catch (Exception ex) { System.err.println("[asignación] No se pudo guardar el modelo de " + imei + ": " + ex.getMessage()); }
+            });
+            t.setDaemon(true);
+            t.start();
+        };
+        java.util.function.Consumer<String> decidirModelo = code -> {
+            EntradaAsignacion e = actual[0];
+            confirmarModelo.accept(code);
+            if (e == null || code == null || code.isEmpty()) return;
+            modeloPorImei.put(e.imei, code);
+            propagarModelo(e.imei, code, pilaRep, pilaGlass);
+            if (renderPila[0] != null) renderPila[0].run();
+            persistirModelo.accept(e.imei, code);
+        };
 
         renderPila[0] = () -> {
             boxRojo.getChildren().clear();
@@ -2042,24 +2090,35 @@ public class PendientesSuperTecnicoController {
 
         lanzarLookup[0] = () -> {
             EntradaAsignacion e = actual[0];
-            if (e == null || e.tieneModelo() || e.modeloBuscado) return;
+            if (e == null || e.modeloBuscado) return;
+            // Modelo vivo: una entrada sembrada (o propagada) ya tiene modelo → se salta SOLO la mitad de modelo
+            // (sin "Buscando...", sin getModelo). La precarga del cliente de BD sigue corriendo una vez por
+            // entrada: la BD manda sobre el cliente "pegajoso" también en las entradas sembradas.
+            final boolean buscarModelo = !e.tieneModelo();
             e.modeloBuscado = true;
-            e.buscando = true;
-            tfModelo.setPromptText("Buscando...");
-            renderPila[0].run();
+            if (buscarModelo) {
+                e.buscando = true;
+                tfModelo.setPromptText("Buscando...");
+                renderPila[0].run();
+            }
             Thread t = new Thread(() -> {
                 String modelo = null;
                 Integer idCli = null;
-                try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {}
+                if (buscarModelo) { try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {} }
                 try { idCli = telefonoDAO.getClienteId(e.imei); } catch (Exception ignore) {}
                 String res = modelo;
                 Integer idCliRes = idCli;
                 javafx.application.Platform.runLater(() -> {
                     e.buscando = false;
                     if (res != null && !res.isEmpty()) {
-                        e.modeloCode = res;
-                        if (actual[0] == e) confirmarModelo.accept(res);
-                    } else if (actual[0] == e) {
+                        // Modelo vivo: recuerda el resultado (sin pisar una decisión manual) y aplícalo solo si la
+                        // entrada sigue sin modelo (una decisión manual desde la otra cola pudo llegar en vuelo).
+                        modeloPorImei.putIfAbsent(e.imei, res);
+                        if (!e.tieneModelo()) {
+                            e.modeloCode = res;
+                            if (actual[0] == e) confirmarModelo.accept(res);
+                        }
+                    } else if (buscarModelo && actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
                     // Precargar el cliente que el IMEI ya tuviera en BD: la BD manda siempre, salvo que haya
@@ -2132,7 +2191,7 @@ public class PendientesSuperTecnicoController {
             tfModelo.setText(e.tieneModelo() ? FormularioReparacionController.traducirModelo(e.modeloCode) : "");
             modelosFiltrados.setPredicate(s -> true);
             actualizandoModelo[0] = false;
-            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos;
+            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos.getOrDefault(e.tipo, List.of());   // pegajoso de SU cola
             java.util.Set<Integer> ids = base.stream().map(Tecnico::getIdTec).collect(java.util.stream.Collectors.toSet());
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
@@ -2179,6 +2238,12 @@ public class PendientesSuperTecnicoController {
             Cliente m = clienteManual.get(e.imei);
             if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
         };
+        // Modelo vivo: si el modal ya conoce el modelo de este IMEI (lookup con éxito o decisión manual en
+        // cualquier cola), la entrada nace con él y lanzarLookup se la salta (tieneModelo()).
+        java.util.function.Consumer<EntradaAsignacion> sembrarModeloEntrada = e -> {
+            String m = modeloPorImei.get(e.imei);
+            if (m != null && !m.isEmpty()) e.modeloCode = m;
+        };
         // aplicarClienteDefaultEntrada está declarada más arriba (antes de cargarEntrada[0], que la usa).
         java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
             Cliente m = clienteManual.get(fila.imei);
@@ -2210,7 +2275,8 @@ public class PendientesSuperTecnicoController {
             propagarCliente[0].accept(e.imei, e.cliente, e.sinCliente);
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
-            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);   // los técnicos se mantienen entre IMEIs de la MISMA cola (rep y glass por separado)
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();
@@ -2230,11 +2296,19 @@ public class PendientesSuperTecnicoController {
             validarForm.run();
         });
         tfModelo.setOnAction(e -> {
-            if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0));
+            // Guard: con un modelo ya confirmado y el texto sin tocar, Enter no re-decide. Antes re-confirmaba
+            // modelosFiltrados.get(0) = el PRIMER modelo de toda la lista (confirmar resetea el filtro a "todos").
+            String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
+            if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) return;
+            if (texto.isEmpty()) return;   // campo vacío (p. ej. tras un lookup fallido): Enter no decide el primer modelo del catálogo
+            if (!modelosFiltrados.isEmpty()) decidirModelo.accept(modelosFiltrados.get(0));
         });
         tfModelo.focusedProperty().addListener((obs, o, focused) -> {
-            if (!focused) javafx.application.Platform.runLater(() -> {
+            if (focused) return;
+            final EntradaAsignacion origen = actual[0];   // hardening: el callback diferido no decide sobre otra entrada
+            javafx.application.Platform.runLater(() -> {
                 popupModelo.hide();
+                if (actual[0] != origen) return;
                 String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
                 if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) {
                     modelosFiltrados.setPredicate(s -> true);
@@ -2244,7 +2318,7 @@ public class PendientesSuperTecnicoController {
                         .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(texto))
                         .findFirst().orElse(null);
                 if (exacto != null) {
-                    confirmarModelo.accept(exacto);
+                    decidirModelo.accept(exacto);
                 } else {
                     actualizandoModelo[0] = true;
                     tfModelo.setText(modeloSel[0] != null ? FormularioReparacionController.traducirModelo(modeloSel[0]) : "");
@@ -2255,12 +2329,12 @@ public class PendientesSuperTecnicoController {
         });
         listaModelos.setOnMouseClicked(e -> {
             String sel = listaModelos.getSelectionModel().getSelectedItem();
-            if (sel != null) confirmarModelo.accept(sel);
+            if (sel != null) decidirModelo.accept(sel);
         });
         listaModelos.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 String sel = listaModelos.getSelectionModel().getSelectedItem();
-                if (sel != null) confirmarModelo.accept(sel);
+                if (sel != null) decidirModelo.accept(sel);
             }
         });
 
@@ -2276,6 +2350,7 @@ public class PendientesSuperTecnicoController {
             e.seq = ++seqCounter[0];
             sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
             aplicarClienteDefaultEntrada.accept(e);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+            sembrarModeloEntrada.accept(e);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -2308,6 +2383,7 @@ public class PendientesSuperTecnicoController {
                     en.seq = ++seqCounter[0];
                     sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
                     aplicarClienteDefaultEntrada.accept(en);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+                    sembrarModeloEntrada.accept(en);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
@@ -2329,6 +2405,21 @@ public class PendientesSuperTecnicoController {
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
+        // Técnico pegajoso: se memoriza en cuanto lo MARCAS, no solo al pulsar Asignar (sin modelo detectado no
+        // se puede pulsar Asignar y la marca se perdía al picar el siguiente IMEI). La entrada pendiente (roja)
+        // también recuerda sus marcas para no perderlas al cambiar de IMEI. setOnAction solo salta con la acción
+        // del usuario (clic/teclado), no con los setSelected programáticos de cargarEntrada/recomputeOcupados.
+        Runnable memorizarTecnicos = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null) return;
+            List<Tecnico> sel = new ArrayList<>();
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                if (checkboxes.get(i).isSelected() && !checkboxes.get(i).isDisabled()) sel.add(tecnicosModal.get(i));
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);
+            if (!e.asignada) { e.tecnicos.clear(); e.tecnicos.addAll(sel); }   // la verde solo cambia con "Guardar cambios"
+        };
+        checkboxes.forEach(cb -> cb.setOnAction(ev -> memorizarTecnicos.run()));
         btnAsignar.setOnAction(ev -> asignarActual.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
@@ -2421,10 +2512,26 @@ public class PendientesSuperTecnicoController {
                     "Descartar", ventana::close);
         });
 
-        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        // Pantallas pequeñas (portátil con escalado de Windows): el contenido va dentro de un ScrollPane y la
+        // ventana se limita a la zona visible de la pantalla, para que la barra de título y Guardar no se salgan.
+        // En pantallas grandes no cambia nada: la altura preferida cabe y el scroll no aparece.
+        javafx.scene.control.ScrollPane raiz = new javafx.scene.control.ScrollPane(contenido);
+        raiz.setFitToWidth(true);
+        raiz.setFocusTraversable(false);
+        raiz.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        raiz.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        raiz.setStyle("-fx-background-color: #DDE1E7; -fx-background: #DDE1E7; -fx-padding: 0;");
+        javafx.geometry.Rectangle2D visible = javafx.stage.Screen.getPrimary().getVisualBounds();
+        double altoMax = Math.max(ventana.getMinHeight(), visible.getHeight() - 24);
+        ventana.setMaxHeight(altoMax);
+        javafx.scene.Scene scene = new javafx.scene.Scene(raiz);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
         renderPila[0].run();
+        ventana.setOnShown(ev -> {
+            if (ventana.getHeight() > altoMax) ventana.setHeight(altoMax);
+            ventana.centerOnScreen();
+        });
         javafx.application.Platform.runLater(tfScan::requestFocus);
         ventana.showAndWait();
     }

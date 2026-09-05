@@ -541,5 +541,15 @@ Lanzar el cliente: `mvn -f gestion-reparaciones-cliente/pom.xml javafx:run` (con
 6. Pegado múltiple con IMEIs ya conocidos por el modal → nacen con modelo.
 7. Enter en el campo con el modelo ya confirmado → no cambia nada.
 8. Guardar → asignaciones y modelos correctos; sin regresión en cliente pegajoso ni en pulido.
+9. (review final) Asignar 2 IMEIs del cliente D (pegajoso = D), escanear en Reparación un IMEI X que en BD tiene cliente C, **no** asignarlo, pasar a Glass y escanear X → la entrada de Glass muestra **C**, no D.
+10. (review final) Entrada cargada con el campo de modelo vacío (lookup fallido) → Enter → no pasa nada; sin fila nueva en `Telefono`.
+11. (review final) Teclear el nombre exacto de un modelo y hacer clic en "Asignar →" → el modelo se decide y se guarda pero la entrada **no** se asigna; el segundo clic asigna (vía de pérdida de foco).
+12. (review final) Elegir modelo a mano, quitar la entrada con ✕ y volver a escanear el mismo IMEI en el mismo modal → nace con modelo. Ese IMEI aparece ya en Inventario (fila de `Telefono` sin asignación): efecto aceptado, verlo una vez.
+13. (review final) Elegir el modelo A e inmediatamente el B en el mismo IMEI → `SELECT MODELO` da B.
+14. (smoke) Asignar en Reparación al técnico R, pasar a Glass y escanear → ningún técnico marcado (o el último asignado en Glass, si lo hubo); volver a Reparación y escanear → R propuesto.
+
+Extra del smoke (2026-09-05, un commit tras el fix wave): técnico pegajoso POR COLA (`defTecnicos` pasa a `Map<TipoTrabajo, List<Tecnico>>`; spec regla 8 y §3.j).
+
+Fix wave del review final (2026-09-05, un commit tras la Task 4): brief en `.superpowers/sdd/final-fix-brief.md` — la siembra ya no salta la precarga del cliente de BD (solo la mitad de modelo), Enter con campo vacío no decide, guard de origen en la vía de pérdida de foco.
 
 Tras el smoke: **merge `--no-ff` a `hotfix/0.16.2` solo con OK explícito del usuario** (fuera de este plan). No push, no tag.
