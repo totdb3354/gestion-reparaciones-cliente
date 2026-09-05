@@ -1,7 +1,7 @@
 # Facilitar la asignación de glass — bloque 1: modelo vivo en el modal de asignación (0.16.2)
 
 Fecha: 2026-09-04
-Estado: **DISEÑO APROBADO por el usuario (brainstorm 2026-09-04) — pendiente plan e implementación.**
+Estado: **IMPLEMENTADA en `feature/glass-modelo-vivo` (2026-09-05, 4 tareas + fix wave del review final) — pendiente smoke del usuario y merge a `hotfix/0.16.2` con su OK.** Ajustes del review final incorporados a §2.3, §3.d, §3.g, §3.i y §6.
 Línea: **hotfix — ajena a `main` del repo raíz.** Rama de integración `hotfix/0.16.2` (tip `77ffbb9`, merge de estadísticas ronda 2). El repo raíz NO se toca en `main`.
 Ramas: cliente **rama nueva `feature/glass-modelo-vivo`** desde `hotfix/0.16.2`. Servidor: **sin cambios** (el `main` desplegado, `b1b1816`, ya sirve; sin migración ni bump de gitlink por este bloque).
 Relación: primer bloque de "facilitar la asignación de glass", cuarto punto de la ronda 2 de la 0.16.2 (ver `2026-09-02-estadisticas-puntos-ronda2-design.md`, §1). El **bloque 2 — predicción de la glass a partir de la reparación normal —** se brainstormea aparte cuando este esté codificado y tendrá su propia spec. La release sigue siendo la 0.16.2.
@@ -20,7 +20,7 @@ Relación: primer bloque de "facilitar la asignación de glass", cuarto punto de
 
 1. **El modelo pertenece al IMEI, no a la entrada.** En el modal, todas las entradas de un mismo IMEI (Reparación y Glass, rojas y verdes) muestran siempre el mismo modelo.
 2. **Decisión manual = guardado inmediato + propagación.** Al elegir o cambiar el modelo a mano en cualquier cola, se manda al instante a BD (upsert de teléfono) y se copia a todas las entradas de ese IMEI. La última decisión manda.
-3. **Escanear un IMEI que el modal ya conoce** (por lookup con éxito o por decisión manual) crea la entrada **ya con modelo y sin lanzar búsqueda**. Si no lo conoce, busca como hoy.
+3. **Escanear un IMEI que el modal ya conoce** (por lookup con éxito o por decisión manual) crea la entrada **ya con modelo y sin búsqueda de modelo** (ni "Buscando…" ni lookup externo). La **precarga del cliente de BD sigue corriendo una vez por entrada**, como hoy: la BD manda sobre el cliente pegajoso también en las entradas sembradas (hallazgo del review final, 2026-09-05). Si no conoce el modelo, busca como hoy.
 4. **Guardar no cambia.** Sigue persistiendo modelo, cliente y asignaciones de todas las entradas verdes. El guardado temprano es un adelanto, no un sustituto: si fallara, Guardar lo vuelve a mandar.
 5. **El modelo que llega solo del lookup automático NO se guarda hasta Guardar** (como hoy). El lookup es repetible y persistirlo al escanear crearía filas de teléfono para IMEIs que solo se escanearon y se quitaron de la cola.
 6. **No hay "modelo pegajoso"** entre IMEIs distintos. Del cliente se copia la propagación por IMEI y la siembra, **no** el default para los IMEIs siguientes (`clienteDefaultModal`): un modelo pegajoso entre teléfonos distintos no tiene sentido.
@@ -48,15 +48,17 @@ b. **`decidirModelo`** (`Consumer<String>` nuevo, envuelve a `confirmarModelo`):
 
 c. **`propagarModelo(imei, code)`**: recorre `pilaRep` y `pilaGlass` y copia `modeloCode` a **todas** las entradas de ese IMEI (rojas y verdes), luego `renderPila`. La entrada cargada es la que originó la decisión, así que el campo ya está al día; las demás entradas del IMEI están en la otra cola y se pintan al cargarse.
 
-d. **Sembrar al escanear**: en las dos vías de escaneo, tras crear la entrada y sembrar el cliente: `if (modeloPorImei.containsKey(imei)) e.modeloCode = modeloPorImei.get(imei)`. El lookup ya no se lanza para esa entrada (`tieneModelo()`).
+d. **Sembrar al escanear**: en las dos vías de escaneo, tras crear la entrada y sembrar el cliente: `if (modeloPorImei.containsKey(imei)) e.modeloCode = modeloPorImei.get(imei)`. `lanzarLookup` se salta **solo la mitad de modelo** cuando la entrada ya lo tiene (`buscarModelo = !e.tieneModelo()`: sin "Buscando…", sin `getModelo`, sin prompt "No encontrado"), pero sigue haciendo la **precarga del cliente** (`getClienteId`) una vez por entrada (`modeloBuscado`). Motivo (review final): el lookup también carga el cliente de BD que pisa al pegajoso; saltarlo entero dejaba que un cliente pegajoso de otro IMEI se quedara pintado en la entrada sembrada y acabara en `Telefono` al Guardar.
 
 e. **`persistirModelo(imei, code)`**: en un hilo aparte (mismo patrón que el lookup), `telefonoDAO.insertar(imei, code)` — la versión de **dos argumentos** (`TelefonoDAO.java:48`): `POST /api/telefonos` con `imei` y `modelo`, **sin `idCli` ni `clienteExplicito`**. En el servidor eso hace `MODELO = COALESCE(?, MODELO)` e `ID_CLI = COALESCE(NULL, ID_CLI)`: fija el modelo y **no toca el cliente**; no escribe en el log (solo lo hace con cliente). Si falla: una línea en `System.err` y nada más (sin diálogo ni indicador); Guardar lo persiste igual.
 
 f. **Lookup en vuelo vs decisión manual**: al volver el lookup (`:2060`), el resultado **solo se aplica si la entrada sigue sin modelo** (`!e.tieneModelo()`). Hoy pisa incondicionalmente; con propagación, una decisión manual en la otra cola puede haber llegado mientras el lookup estaba en vuelo y no debe perderse. Además `modeloPorImei.putIfAbsent(imei, res)`.
 
-g. **Micro-fix colateral (una línea, incluido)**: Enter en el campo con el modelo ya confirmado y el texto sin cambiar (`tfModelo.setOnAction`, `:2232`) hoy re-confirma `modelosFiltrados.get(0)`, que tras un confirm es el **primer modelo de toda la lista** (el filtro se resetea a "todos"). Era una rareza inocua; con guardado inmediato pasaría a BD. Guard: si `modeloSel != null` y el texto coincide con `traducirModelo(modeloSel)`, no hacer nada.
+g. **Micro-fix colateral (una línea, incluido)**: Enter en el campo con el modelo ya confirmado y el texto sin cambiar (`tfModelo.setOnAction`, `:2232`) hoy re-confirma `modelosFiltrados.get(0)`, que tras un confirm es el **primer modelo de toda la lista** (el filtro se resetea a "todos"). Era una rareza inocua; con guardado inmediato pasaría a BD. Guard: si `modeloSel != null` y el texto coincide con `traducirModelo(modeloSel)`, no hacer nada. **Y si el texto está vacío, tampoco** (review final): tras un lookup fallido el campo está vacío y el filtro es "todos", así que Enter decidía el primer modelo del catálogo (`6s`), que ahora se propagaría y se guardaría en BD.
 
 h. **Guardar, borrar entrada de la cola, `asignarActual`, `defTecnicos`**: sin cambios.
+
+i. **Vía de pérdida de foco (hardening, review final)**: el callback corre diferido (`runLater`); se captura `origen = actual[0]` al perder el foco y el callback no decide si `actual[0]` ya es otra entrada. El análisis del review indica que el caso no era alcanzable (el clic en una fila de la pila ejecuta `cargarEntrada` síncrono, que reemplaza el texto antes del callback), pero deja la invariante explícita por dos líneas.
 
 ## 4. Servidor
 
@@ -87,6 +89,11 @@ h. **Guardar, borrar entrada de la cola, `asignarActual`, `defTecnicos`**: sin c
   6. Pegado múltiple con IMEIs ya conocidos por el modal → nacen con modelo.
   7. Enter en el campo con el modelo ya confirmado → no cambia nada (§3.g).
   8. Guardar → asignaciones y modelos correctos; sin regresión en cliente pegajoso ni en pulido.
+  9. (review final) Asignar 2 IMEIs del cliente D (pegajoso = D), escanear en Reparación un IMEI X que en BD tiene cliente C, **no** asignarlo, pasar a Glass y escanear X → la entrada de Glass muestra **C**, no D.
+  10. (review final) Entrada cargada con el campo de modelo vacío (lookup fallido) → Enter → no pasa nada; sin fila nueva en `Telefono`.
+  11. (review final) Teclear el nombre exacto de un modelo y hacer clic en "Asignar →" → el modelo se decide y se guarda pero la entrada **no** se asigna; el segundo clic asigna (vía de pérdida de foco).
+  12. (review final) Elegir modelo a mano, quitar la entrada con ✕ y volver a escanear el mismo IMEI en el mismo modal → nace con modelo. Ese IMEI aparece ya en Inventario (fila de `Telefono` sin asignación): efecto aceptado, verlo una vez.
+  13. (review final) Elegir el modelo A e inmediatamente el B en el mismo IMEI → `SELECT MODELO` da B.
 
 ## 7. Fuera de alcance
 
