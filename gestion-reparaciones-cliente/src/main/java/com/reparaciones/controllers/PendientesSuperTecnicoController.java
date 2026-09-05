@@ -2086,15 +2086,21 @@ public class PendientesSuperTecnicoController {
 
         lanzarLookup[0] = () -> {
             EntradaAsignacion e = actual[0];
-            if (e == null || e.tieneModelo() || e.modeloBuscado) return;
+            if (e == null || e.modeloBuscado) return;
+            // Modelo vivo: una entrada sembrada (o propagada) ya tiene modelo → se salta SOLO la mitad de modelo
+            // (sin "Buscando...", sin getModelo). La precarga del cliente de BD sigue corriendo una vez por
+            // entrada: la BD manda sobre el cliente "pegajoso" también en las entradas sembradas.
+            final boolean buscarModelo = !e.tieneModelo();
             e.modeloBuscado = true;
-            e.buscando = true;
-            tfModelo.setPromptText("Buscando...");
-            renderPila[0].run();
+            if (buscarModelo) {
+                e.buscando = true;
+                tfModelo.setPromptText("Buscando...");
+                renderPila[0].run();
+            }
             Thread t = new Thread(() -> {
                 String modelo = null;
                 Integer idCli = null;
-                try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {}
+                if (buscarModelo) { try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {} }
                 try { idCli = telefonoDAO.getClienteId(e.imei); } catch (Exception ignore) {}
                 String res = modelo;
                 Integer idCliRes = idCli;
@@ -2108,7 +2114,7 @@ public class PendientesSuperTecnicoController {
                             e.modeloCode = res;
                             if (actual[0] == e) confirmarModelo.accept(res);
                         }
-                    } else if (actual[0] == e) {
+                    } else if (buscarModelo && actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
                     // Precargar el cliente que el IMEI ya tuviera en BD: la BD manda siempre, salvo que haya
@@ -2289,11 +2295,15 @@ public class PendientesSuperTecnicoController {
             // modelosFiltrados.get(0) = el PRIMER modelo de toda la lista (confirmar resetea el filtro a "todos").
             String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
             if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) return;
+            if (texto.isEmpty()) return;   // campo vacío (p. ej. tras un lookup fallido): Enter no decide el primer modelo del catálogo
             if (!modelosFiltrados.isEmpty()) decidirModelo.accept(modelosFiltrados.get(0));
         });
         tfModelo.focusedProperty().addListener((obs, o, focused) -> {
-            if (!focused) javafx.application.Platform.runLater(() -> {
+            if (focused) return;
+            final EntradaAsignacion origen = actual[0];   // hardening: el callback diferido no decide sobre otra entrada
+            javafx.application.Platform.runLater(() -> {
                 popupModelo.hide();
+                if (actual[0] != origen) return;
                 String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
                 if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) {
                     modelosFiltrados.setPredicate(s -> true);
