@@ -904,6 +904,54 @@ public class PendientesSuperTecnicoController {
         return new CargaTecnicos.DiaTecnico(0, 0, vacio, vacio, sinJornada);
     }
 
+    /** Diálogo "Técnicos de glass": quién entra en la glass automática del modal de asignación (spec
+     *  2026-09-05-glass-prediccion, §3.3). SuperTécnico edita (solo se mandan los cambios); Admin (soloLectura)
+     *  solo mira. El modal de asignación lee los técnicos al abrirse, así que no hay nada que recargar aquí. */
+    @FXML
+    private void abrirTecnicosGlass() {
+        List<Tecnico> lista;
+        try { lista = tecnicoDAO.getAllActivos(); }
+        catch (SQLException e) { mostrarError(e); return; }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Técnicos de glass");
+        dialog.setHeaderText("A quién se le asigna la glass automáticamente");
+        VBox caja = new VBox(6);
+        Map<Integer, CheckBox> checks = new java.util.LinkedHashMap<>();
+        Map<Integer, Boolean> estadoInicial = new HashMap<>();
+        for (Tecnico t : lista) {
+            CheckBox cb = new CheckBox(t.getNombre());
+            cb.setSelected(t.isEsGlass());
+            cb.setDisable(soloLectura);
+            checks.put(t.getIdTec(), cb);
+            estadoInicial.put(t.getIdTec(), t.isEsGlass());
+            caja.getChildren().add(cb);
+        }
+        Label aviso = new Label("Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí\n"
+                + "con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        caja.getChildren().add(aviso);
+        dialog.getDialogPane().setContent(caja);
+
+        if (soloLectura) {
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.showAndWait();
+            return;
+        }
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            try {
+                for (Map.Entry<Integer, CheckBox> e : checks.entrySet()) {
+                    boolean marcado = e.getValue().isSelected();
+                    if (marcado == estadoInicial.get(e.getKey())) continue;   // solo cambios
+                    tecnicoDAO.setGlass(e.getKey(), marcado);
+                }
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); }   // p. ej. 404 con servidor anterior: el diálogo no cierra
+        });
+        dialog.showAndWait();
+    }
+
     /** Abre la ventana "Carga de técnicos": toggle Pedidos|Total (Pedidos por defecto), una fila
      *  por técnico activo con barra hecho+pendiente y colores por nivel (spec
      *  2026-07-09-carga-capacidad-diaria). El porcentaje es la única métrica: no hay cifra en

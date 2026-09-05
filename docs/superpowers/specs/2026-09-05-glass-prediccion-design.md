@@ -61,7 +61,7 @@ ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE;
   - Título "Técnicos de glass", cabecera "A quién se le asigna la glass automáticamente".
   - Una `CheckBox` por **técnico activo** (nombre), marcada según `isEsGlass()`.
   - Nota al pie: "Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano."
-  - Aceptar manda **solo los cambios** (un PATCH por técnico cambiado); si alguno falla, muestra el error y el diálogo no cierra. Tras aceptar, recarga los técnicos de la vista (`tecnicos`) para que el modal de asignación vea el flag nuevo.
+  - Aceptar manda **solo los cambios** (un PATCH por técnico cambiado); si alguno falla, muestra el error y el diálogo no cierra. El modal de asignación carga los técnicos al abrirse (`getAllActivos`), así que ve el flag nuevo sin recargar la vista.
   - **Admin** (`setSoloLectura`): mismo botón y mismo diálogo, casillas deshabilitadas, solo "Cerrar". El servidor lo blinda igualmente (403).
 - `LogController`: `HABILITAR_GLASS`, `DESHABILITAR_GLASS` en la lista de acciones del filtro, junto a las de estadísticas.
 - **Etiqueta "glass"** en el modal de asignación: en la lista de técnicos (`etiquetaConCargaNodo`), una pastilla pequeña con la paleta del tipo Glass (`TipoTrabajo.GLASS.colorFondo()/colorTexto()`) junto al nombre de los habilitados, **solo cuando la cola activa es Glass** (en Reparación no aporta). No filtra ni marca nada: solo orienta al cambiar a mano una glass automática.
@@ -125,7 +125,7 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
 
 ## 7. Pruebas
 
-- **Cliente**: JUnit de `PrediccionGlass` (TDD): sin habilitados → null; habilitado con glass abierta de ese IMEI → excluido; habilitado con glass verde de ese IMEI en el modal → excluido; menor carga gana; las verdes del modal desplazan la elección (dos glass seguidas van a técnicos distintos si empataban); IMEI con cliente ignora la carga sin cliente; IMEI sin cliente la cuenta; empate → alfabético; jornada 0 (sábado) reparte igual que un martes; inactivo con flag → fuera. Suite del cliente verde (191 en `f04e823`).
+- **Cliente**: JUnit de `PrediccionGlass` (TDD): sin habilitados → null; habilitado con glass abierta de ese IMEI → excluido; habilitado con glass verde de ese IMEI en el modal → excluido; menor carga gana; las verdes del modal desplazan la elección (dos glass seguidas van a técnicos distintos si empataban); IMEI con cliente ignora la carga sin cliente; IMEI sin cliente la cuenta; empate → alfabético; (la elección no recibe el día: compara fracciones sin escalar, así que el sábado no es un caso aparte; el smoke 16 lo verifica); inactivo con flag → fuera. Suite del cliente verde (191 en `f04e823`).
 - **Servidor**: sin test nuevo (calca los endpoints de estadísticas, sin test). Arranque del contexto verificado (`mvn spring-boot:run` o test de contexto manual) antes de proponer el merge.
 - **Smoke manual** (preproducción; SuperTécnico salvo donde se indica), incluye los casos límite del §6:
   1. Diálogo "Técnicos de glass": marcar dos, Aceptar, reabrir → persisten; `SELECT ID_TEC, NOMBRE, ES_GLASS FROM Tecnico` coincide; vista Log muestra `HABILITAR_GLASS` con el nombre. **Admin**: ve el botón y el diálogo, casillas deshabilitadas, solo Cerrar.
