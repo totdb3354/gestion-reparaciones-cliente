@@ -1802,8 +1802,8 @@ public class PendientesSuperTecnicoController {
         // consumen la siembra al escanear y la propagación entre las colas Reparación/Glass. Por-IMEI, sin
         // default para los siguientes IMEIs (un modelo "pegajoso" entre teléfonos distintos no tiene sentido).
         final java.util.Map<String, String> modeloPorImei = new java.util.HashMap<>();
-        // Cliente por defecto para los próximos IMEIs que se escaneen (persiste como defTecnicos, no como
-        // clienteManual que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
+        // Cliente por defecto para los próximos IMEIs que se escaneen (un solo default para todo el modal,
+        // a diferencia de defTecnicos, que es por cola, y de clienteManual, que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
         // se aplica solo si la precarga de BD no aporta nada (la BD prevalece). Null = sin default aún.
         final Cliente[] clienteDefaultModal = { null };
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
