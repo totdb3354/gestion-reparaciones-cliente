@@ -33,4 +33,25 @@ class TecnicoTest {
     void toString_devuelveNombre() {
         assertEquals("Daniel García", new Tecnico(1, "Daniel García", true).toString());
     }
+
+    @Test
+    void esGlass_porDefectoFalse() {
+        assertFalse(new Tecnico(1, "Daniel García", true).isEsGlass());
+        assertFalse(new Tecnico(1, "Daniel García", true, true).isEsGlass());
+    }
+
+    @Test
+    void esGlass_constructorCompleto() {
+        assertTrue(new Tecnico(1, "Daniel García", true, true, true).isEsGlass());
+        assertFalse(new Tecnico(1, "Daniel García", true, true, false).isEsGlass());
+    }
+
+    @Test
+    void esGlass_jsonSinElCampoCuentaComoNoHabilitado() {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        Tecnico viejo = gson.fromJson("{\"idTec\":1,\"nombre\":\"Javi\",\"activo\":true}", Tecnico.class);
+        Tecnico nuevo = gson.fromJson("{\"idTec\":1,\"nombre\":\"Javi\",\"activo\":true,\"esGlass\":true}", Tecnico.class);
+        assertFalse(viejo.isEsGlass());
+        assertTrue(nuevo.isEsGlass());
+    }
 }

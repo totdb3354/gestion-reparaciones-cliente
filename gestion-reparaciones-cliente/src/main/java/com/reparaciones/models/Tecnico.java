@@ -21,6 +21,10 @@ public class Tecnico {
      *  Un JSON sin el campo (servidor anterior a 0.16.2) cuenta como incluido. */
     private Boolean esEstadistica;
 
+    /** {@code true} si entra en la glass automática del modal de asignación (spec 2026-09-05-glass-prediccion).
+     *  Un JSON sin el campo (servidor anterior a la 0.16.2) cuenta como NO habilitado. */
+    private Boolean esGlass;
+
     /**
      * @param idTec  clave primaria del técnico
      * @param nombre nombre visible
@@ -37,10 +41,18 @@ public class Tecnico {
      * @param esEstadistica {@code true} si cuenta en la vista de estadísticas
      */
     public Tecnico(int idTec, String nombre, boolean activo, boolean esEstadistica) {
+        this(idTec, nombre, activo, esEstadistica, false);
+    }
+
+    /**
+     * @param esGlass {@code true} si está habilitado para la glass automática del modal de asignación
+     */
+    public Tecnico(int idTec, String nombre, boolean activo, boolean esEstadistica, boolean esGlass) {
         this.idTec         = idTec;
         this.nombre        = nombre;
         this.activo        = activo;
         this.esEstadistica = esEstadistica;
+        this.esGlass       = esGlass;
     }
 
     /** @return clave primaria del técnico */
@@ -57,6 +69,10 @@ public class Tecnico {
     /** @return {@code true} si cuenta en la vista de estadísticas; un JSON sin el campo
      *  (servidor anterior a la 0.16.2) cuenta como incluido. */
     public boolean isEsEstadistica() { return esEstadistica == null || esEstadistica; }
+
+    /** @return {@code true} si está habilitado para la glass automática; sin el campo (servidor
+     *  anterior a la 0.16.2) cuenta como no habilitado. */
+    public boolean isEsGlass() { return esGlass != null && esGlass; }
 
     /** Devuelve el nombre para uso en ComboBox y MenuButton. */
     @Override
