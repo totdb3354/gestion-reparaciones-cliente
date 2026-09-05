@@ -2017,6 +2017,17 @@ public class PendientesSuperTecnicoController {
         // Decisión MANUAL de modelo para la entrada cargada: confirma en el formulario, la recuerda para los
         // IMEIs que se escaneen después y la copia a todas las entradas del mismo IMEI en las dos colas
         // (rojas y verdes). El lookup NO pasa por aquí: sigue llamando a confirmarModelo.
+        // Guardado inmediato del modelo del IMEI: upsert de teléfono de DOS argumentos (modelo sí; el cliente
+        // queda intacto por COALESCE en el servidor; sin entrada de log). En hilo aparte, como el lookup.
+        // Si falla: una línea en stderr y nada más — Guardar vuelve a mandar el modelo con la asignación.
+        java.util.function.BiConsumer<String, String> persistirModelo = (imei, code) -> {
+            Thread t = new Thread(() -> {
+                try { telefonoDAO.insertar(imei, code); }
+                catch (Exception ex) { System.err.println("[asignación] No se pudo guardar el modelo de " + imei + ": " + ex.getMessage()); }
+            });
+            t.setDaemon(true);
+            t.start();
+        };
         java.util.function.Consumer<String> decidirModelo = code -> {
             EntradaAsignacion e = actual[0];
             confirmarModelo.accept(code);
@@ -2024,6 +2035,7 @@ public class PendientesSuperTecnicoController {
             modeloPorImei.put(e.imei, code);
             propagarModelo(e.imei, code, pilaRep, pilaGlass);
             if (renderPila[0] != null) renderPila[0].run();
+            persistirModelo.accept(e.imei, code);
         };
 
         renderPila[0] = () -> {
