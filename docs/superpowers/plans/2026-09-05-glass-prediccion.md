@@ -1189,7 +1189,7 @@ git log --oneline hotfix/0.16.2..feature/glass-prediccion     # 5 commits (Tasks
 1. Diálogo "Técnicos de glass": marcar dos, Aceptar, reabrir → persisten; `SELECT ID_TEC, NOMBRE, ES_GLASS FROM Tecnico` coincide; vista Log muestra `HABILITAR_GLASS` con el nombre. **Admin**: ve el botón y el diálogo, casillas deshabilitadas, solo Cerrar.
 2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; pastilla "1" en el botón Glass.
 3. Seis IMEIs seguidos con glass → se reparten entre los habilitados (no van todos al mismo); el orden coincide con la carga.
-4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra "Carga técnicos" con cada toggle).
+4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra "Carga técnicos" con cada toggle). Ojo: el % de pantalla va redondeado a entero y en fin de semana vale 0 para todos; dos técnicos con el mismo % no tienen por qué empatar para la predicción.
 5. Sin habilitados (desmarcar todos) → glass roja, contador rojo, Guardar bloqueado; asignarla a mano desbloquea; también quitarla con ✕.
 6. IMEI con glass ya abierta en BD → casilla deshabilitada con "ya tiene glass: X"; no nace nada.
 7. IMEI ya escaneado en Glass (roja) → marcar la casilla en Reparación y Asignar → no nace segunda entrada, la roja sigue intacta.
@@ -1202,5 +1202,7 @@ git log --oneline hotfix/0.16.2..feature/glass-prediccion     # 5 commits (Tasks
 14. Cerrar el modal con glass auto sin guardar → nada en BD (salvo el modelo manual del bloque 1).
 15. Pegajoso de Glass: tras nacer una auto para javi, escanear un IMEI en Glass a mano → no propone a javi por la auto (solo el último asignado a mano en esa cola).
 16. Sábado (o `JORNADA_HORAS` a 0 en un test rápido): reparte entre habilitados, no siempre al primero.
+17. (review final) Quitar a mano con ✕ la glass auto en la cola Glass y después "Guardar cambios" en la reparación con la casilla aún marcada → la glass vuelve a nacer (la casilla manda). Esperado; verlo una vez.
+18. (review final) Con 4+ verdes en una cola, la lista verde (filas a dos líneas) hace scroll antes; si queda corta, subir `scrollVerde.setMaxHeight(220)` a ~290.
 
 - [ ] **Step 8: Con el smoke OK, pedir al usuario el OK para `merge --no-ff` de `feature/glass-prediccion` a `hotfix/0.16.2`** (sin push; la release 0.16.2 hará después el bump del gitlink al `main` del servidor de la Task 3 y el tag). Anotar el estado en `.superpowers/sdd/progress.md`.

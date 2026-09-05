@@ -23,10 +23,10 @@ Relación: segundo y último bloque de "facilitar la asignación de glass" (0.16
 2. **Al pulsar "Asignar →"** en Reparación con la casilla marcada nace en la cola Glass una entrada del mismo IMEI. Las validaciones son **las mismas de Asignar** (modelo elegido + algún técnico de reparación): no hay validación extra para la glass, el técnico de glass lo pone la predicción. La entrada nace con el **mismo modelo** (modelo vivo del bloque 1) y el **mismo cliente / sin-cliente** de la reparación, **sin comentario** (el comentario son instrucciones para el técnico de reparación), sin chasis, sin urgente.
 3. **Nace verde y marcada como automática** cuando la predicción elige técnico. **Nace roja** (sin técnico, pendiente) cuando la predicción no puede elegir (ningún habilitado activo, o todos los habilitados excluidos por ya tener glass de ese IMEI). Una roja bloquea Guardar como cualquier otra, hasta que se resuelva a mano.
 4. **No nace** si ese IMEI ya está en la cola Glass (roja o verde): no se crea otra ni se toca la existente. **La casilla se deshabilita** con la nota "ya tiene glass: <técnico>" cuando el IMEI ya tiene una glass abierta en BD (visible en la tabla de Asignaciones): el teléfono ya está cubierto.
-5. **En la cola Glass**, las filas verdes muestran además el **nombre de sus técnicos**; las automáticas llevan una pastilla **"auto"**. Cargar una automática, cambiar lo que sea y "Guardar cambios" la convierte en manual (pierde la pastilla y ya no la retira nadie más que el usuario).
+5. **En la pila**, las filas verdes muestran además, en una segunda línea, el **nombre de sus técnicos** (en las dos colas: sale de la misma fila compartida); las automáticas llevan una pastilla **"auto"**. Cargar una automática, cambiar lo que sea y "Guardar cambios" la convierte en manual (pierde la pastilla y ya no la retira nadie más que el usuario).
 6. **Deshacer**: editar la reparación verde ("Guardar cambios") con la casilla **desmarcada**, o quitar la reparación de la cola con ✕, **retira su glass automática** si sigue siendo automática; si ya es manual, se queda. Marcar la casilla al editar una reparación verde que no la tenía crea la glass entonces (regla 2). Quitar la glass con ✕ no toca la reparación.
 7. **Cambiar el cliente o el modelo** en la reparación después de nacer la glass se propaga a la glass por IMEI (mecanismos del bloque 1 y del cliente por IMEI) y **no** le quita la marca automática.
-8. **Botones de cola con contadores**: "Reparación (3)", "Glass (2)", "Pulido (1)"; la cifra va en rojo si esa cola tiene alguna entrada pendiente (roja). Así se ve desde Reparación que en Glass ha nacido algo y por qué Guardar está bloqueado si nació roja. Con 0 entradas no se muestra la cifra.
+8. **Botones de cola con contadores**: cada botón (Reparación / Glass / Pulido) lleva a su derecha una pastilla con el número de entradas de esa cola; la pastilla va en rojo si esa cola tiene alguna entrada pendiente (roja, o pulido sin técnico) y en gris si no. Así se ve desde Reparación que en Glass ha nacido algo y por qué Guardar está bloqueado si nació roja. Con 0 entradas no hay pastilla.
 9. **Guardar no cambia**: cada verde se persiste como hoy, con la regla de duplicado técnico+IMEI+categoría y el aviso de conflictos.
 10. **Pulido no participa.** El mismo técnico puede ir en reparación y en glass del mismo IMEI (categorías distintas), como hoy.
 11. **Cerrar el modal** descarta todo, incluido lo automático (nada de este bloque toca BD antes de Guardar; el modelo manual del bloque 1 sigue con su guardado temprano).
@@ -129,9 +129,9 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
 - **Servidor**: sin test nuevo (calca los endpoints de estadísticas, sin test). Arranque del contexto verificado (`mvn spring-boot:run` o test de contexto manual) antes de proponer el merge.
 - **Smoke manual** (preproducción; SuperTécnico salvo donde se indica), incluye los casos límite del §6:
   1. Diálogo "Técnicos de glass": marcar dos, Aceptar, reabrir → persisten; `SELECT ID_TEC, NOMBRE, ES_GLASS FROM Tecnico` coincide; vista Log muestra `HABILITAR_GLASS` con el nombre. **Admin**: ve el botón y el diálogo, casillas deshabilitadas, solo Cerrar.
-  2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; "Glass (1)" en el botón de cola.
+  2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; pastilla "1" en el botón Glass.
   3. Seis IMEIs seguidos con glass → se reparten entre los habilitados (no van todos al mismo); el orden coincide con lo esperado por la carga.
-  4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra la ventana "Carga técnicos" con cada toggle).
+  4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra la ventana "Carga técnicos" con cada toggle). Ojo: el % de pantalla va redondeado a entero y en fin de semana vale 0 para todos; dos técnicos con el mismo % no tienen por qué empatar para la predicción, que compara la fracción exacta.
   5. Sin habilitados (desmarcar todos) → glass roja, contador en rojo, Guardar bloqueado; asignarla a mano desbloquea; también quitarla con ✕.
   6. IMEI con glass ya abierta en BD → casilla deshabilitada con "ya tiene glass: X"; no nace nada.
   7. IMEI ya escaneado en Glass (roja) → marcar la casilla en Reparación y Asignar → no nace segunda entrada, la roja sigue intacta.
@@ -144,6 +144,8 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
   14. Cerrar el modal con glass auto sin guardar → nada en BD (salvo el modelo manual del bloque 1).
   15. Pegajoso de Glass: tras nacer una auto para javi, escanear un IMEI en Glass a mano → no propone a javi por la auto (solo el último asignado a mano en esa cola).
   16. Sábado (o simular jornada 0 en test): reparte entre habilitados, no siempre al primero.
+  17. (review final) Quitar a mano con ✕ la glass auto en la cola Glass y después "Guardar cambios" en la reparación con la casilla aún marcada → la glass **vuelve a nacer** (la casilla manda). Comportamiento esperado; verlo una vez y decidir si molesta.
+  18. (review final) Con 4+ verdes en una cola, la lista verde (filas a dos líneas) hace scroll antes que antes; si se queda corta, subir el alto máximo del scroll verde.
 
 ## 8. Fuera de alcance
 
