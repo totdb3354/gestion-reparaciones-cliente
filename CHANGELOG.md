@@ -16,7 +16,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 - El selector **Puntos / Puntos·día** se deshabilita en granularidad Día (ambas métricas coinciden); la selección se conserva al cambiar de granularidad.
 - La etiqueta de la ventana dice la unidad real: "30 días con actividad", "16 semanas", "12 meses", "5 años" (antes "N periodos").
 - **Modelo compartido en el modal de asignación**: el modelo es del IMEI, no de cada cola. Al elegirlo o cambiarlo a mano se guarda al instante y todas las entradas de ese IMEI (Reparación y Glass) lo muestran; un IMEI que el modal ya conoce nace con modelo al escanearlo, sin volver a buscar. Antes, un modelo elegido a mano en Reparación había que volver a elegirlo al asignar la glass del mismo teléfono.
-- **Técnico propuesto por cola en el modal de asignación**: el último técnico asignado en Reparación solo se propone en Reparación y el de Glass solo en Glass (antes se arrastraba de una cola a la otra; no tiene por qué reparar la glass la misma persona). Pulido ya tenía su selector propio.
+- **Técnico propuesto por cola en el modal de asignación**: el último técnico asignado en Reparación solo se propone en Reparación y el de Glass solo en Glass (antes se arrastraba de una cola a la otra; no tiene por qué reparar la glass la misma persona). Pulido ya tenía su selector propio. Además el técnico **se recuerda en cuanto lo marcas**, no solo al pulsar Asignar: si el modelo no se detecta y pasas al siguiente IMEI, la marca ya no se pierde, y la entrada pendiente conserva sus técnicos al volver a ella.
 
 ### Fixed
 - La pestaña Stock de Estadísticas etiquetaba los SKU `g` como "Pantalla" y `lcd` como "LCD"; ahora `g`=Glass y `lcd`=Pantalla, como el formulario de reparación.

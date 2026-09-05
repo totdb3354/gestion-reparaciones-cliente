@@ -2405,6 +2405,21 @@ public class PendientesSuperTecnicoController {
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
+        // Técnico pegajoso: se memoriza en cuanto lo MARCAS, no solo al pulsar Asignar (sin modelo detectado no
+        // se puede pulsar Asignar y la marca se perdía al picar el siguiente IMEI). La entrada pendiente (roja)
+        // también recuerda sus marcas para no perderlas al cambiar de IMEI. setOnAction solo salta con la acción
+        // del usuario (clic/teclado), no con los setSelected programáticos de cargarEntrada/recomputeOcupados.
+        Runnable memorizarTecnicos = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null) return;
+            List<Tecnico> sel = new ArrayList<>();
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                if (checkboxes.get(i).isSelected() && !checkboxes.get(i).isDisabled()) sel.add(tecnicosModal.get(i));
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);
+            if (!e.asignada) { e.tecnicos.clear(); e.tecnicos.addAll(sel); }   // la verde solo cambia con "Guardar cambios"
+        };
+        checkboxes.forEach(cb -> cb.setOnAction(ev -> memorizarTecnicos.run()));
         btnAsignar.setOnAction(ev -> asignarActual.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
