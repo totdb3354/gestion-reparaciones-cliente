@@ -2169,7 +2169,8 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
-                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei) && x.auto);
+                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -2179,7 +2180,8 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
-                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei) && x.auto);
+                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -2396,33 +2398,49 @@ public class PendientesSuperTecnicoController {
                         out.add(new com.reparaciones.utils.PrediccionGlass.GlassEnModal(x.imei, t.getIdTec(), x.cliente != null));
             return out;
         };
-        // Glass automática (spec 2026-09-05-glass-prediccion): al asignar una reparación con "Lleva glass" nace en la
-        // cola Glass una entrada del mismo IMEI, verde con el técnico que elige PrediccionGlass (roja si no puede elegir).
-        // Sin la casilla, retira la glass de ese IMEI solo si sigue siendo automática (editada a mano = del usuario).
-        // No toca defTecnicos (no es una decisión del usuario) ni relanza el lookup (modelo y cliente vienen de la
-        // reparación, cuyo cliente ya es decisión manual en clienteManual al llegar aquí).
-        java.util.function.Consumer<EntradaAsignacion> sincronizarGlassAuto = e -> {
-            EntradaAsignacion existente = pilaGlass.stream().filter(x -> x.imei.equals(e.imei)).findFirst().orElse(null);
-            if (e.llevaGlass) {
-                if (existente != null) return;   // ya hay glass de ese IMEI en la cola (roja o verde): no se toca
-                EntradaAsignacion g = new EntradaAsignacion(e.imei);
-                g.tipo = TipoTrabajo.GLASS;
-                g.modeloCode = e.modeloCode;
-                g.cliente = e.cliente;
-                g.sinCliente = e.sinCliente;
-                g.comentario = "";
-                g.seq = ++seqCounter[0];
-                g.modeloBuscado = true;
-                g.auto = true;
-                Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
-                        tecnicosModal, datos, cerradasHoy, verdesGlassModal.get(), e.imei, e.cliente != null);
-                if (t != null) { g.tecnicos.add(t); g.asignada = true; }
-                pilaGlass.add(g);
-            } else if (existente != null && existente.auto) {
-                pilaGlass.remove(existente);
-                if (actual[0] == existente) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
-            }
+        // Invariante del modal (spec 2026-09-05, §2 reglas 2-6): casilla "Lleva glass" marcada ⇔ hay glass de ese IMEI en
+        // la cola Glass, en los dos sentidos. La casilla crea/retira la glass al instante; Asignar solo rellena con la
+        // predicción una glass que siga roja y sin técnicos. No toca defTecnicos (no es decisión del usuario) ni relanza
+        // el lookup (modelo y cliente vienen de la reparación; el modelo se iguala al Asignar si a la glass le faltaba).
+        java.util.function.Function<String, EntradaAsignacion> glassDe = imei ->
+                pilaGlass.stream().filter(x -> x.imei.equals(imei)).findFirst().orElse(null);
+        java.util.function.Consumer<EntradaAsignacion> predecirGlass = g -> {
+            if (g.asignada || !g.tecnicos.isEmpty()) return;   // ya asignada a mano o en configuración: no se toca
+            Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
+                    tecnicosModal, datos, cerradasHoy, verdesGlassModal.get(), g.imei, g.cliente != null);
+            if (t != null) { g.tecnicos.add(t); g.asignada = true; g.auto = true; }   // sin candidato: se queda roja
         };
+        // Crea la glass pendiente del IMEI de la reparación e (si no la hay); si la reparación ya está verde, la predice ya.
+        java.util.function.Consumer<EntradaAsignacion> crearGlassDe = e -> {
+            if (glassDe.apply(e.imei) != null) return;
+            EntradaAsignacion g = new EntradaAsignacion(e.imei);
+            g.tipo = TipoTrabajo.GLASS;
+            g.modeloCode = e.tieneModelo() ? e.modeloCode : modeloPorImei.get(e.imei);
+            g.cliente = e.cliente;
+            g.sinCliente = e.sinCliente;
+            g.comentario = "";
+            g.seq = ++seqCounter[0];
+            g.modeloBuscado = true;
+            pilaGlass.add(g);
+            if (e.asignada) predecirGlass.accept(g);
+        };
+        java.util.function.Consumer<String> quitarGlassDe = imei -> pilaGlass.removeIf(x -> x.imei.equals(imei));
+        // Al escanear: una reparación de un IMEI que ya está en Glass nace marcada; una glass de un IMEI que está en
+        // Reparación marca esa reparación. Con glass abierta en BD la casilla está deshabilitada y no se marca nada.
+        java.util.function.Consumer<EntradaAsignacion> vincularGlass = e -> {
+            if (tecnicoGlassAbierta(e.imei) != null) return;
+            if (e.tipo == TipoTrabajo.REPARACION) e.llevaGlass = glassDe.apply(e.imei) != null;
+            else if (e.tipo == TipoTrabajo.GLASS)
+                for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = true;
+        };
+        // La casilla actúa al marcarla (solo clic del usuario, como memorizarTecnicos): crea o retira la glass al instante.
+        chkLlevaGlass.setOnAction(ev -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null || e.tipo != TipoTrabajo.REPARACION) return;
+            e.llevaGlass = chkLlevaGlass.isSelected();
+            if (e.llevaGlass) crearGlassDe.accept(e); else quitarGlassDe.accept(e.imei);
+            renderPila[0].run();
+        });
 
         Runnable asignarActual = () -> {
             EntradaAsignacion e = actual[0];
@@ -2445,7 +2463,13 @@ public class PendientesSuperTecnicoController {
             def.clear(); def.addAll(sel);   // los técnicos se mantienen entre IMEIs de la MISMA cola (rep y glass por separado)
             if (e.tipo == TipoTrabajo.REPARACION) {
                 e.llevaGlass = chkLlevaGlass.isSelected() && !chkLlevaGlass.isDisabled();
-                sincronizarGlassAuto.accept(e);
+                if (e.llevaGlass) {
+                    crearGlassDe.accept(e);   // por si venía marcada de nacimiento (con glass ya en la cola no crea nada)
+                    EntradaAsignacion g = glassDe.apply(e.imei);
+                    if (g != null) { if (!g.tieneModelo()) g.modeloCode = e.modeloCode; predecirGlass.accept(g); }
+                } else {
+                    quitarGlassDe.accept(e.imei);
+                }
             } else if (e.tipo == TipoTrabajo.GLASS) {
                 e.auto = false;   // "Guardar cambios" (o asignar a mano una roja): la glass pasa a ser del usuario
             }
@@ -2523,6 +2547,7 @@ public class PendientesSuperTecnicoController {
             sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
             aplicarClienteDefaultEntrada.accept(e);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
             sembrarModeloEntrada.accept(e);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
+            vincularGlass.accept(e);           // invariante casilla ⇔ glass entre colas
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -2556,6 +2581,7 @@ public class PendientesSuperTecnicoController {
                     sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
                     aplicarClienteDefaultEntrada.accept(en);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
                     sembrarModeloEntrada.accept(en);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
+                    vincularGlass.accept(en);          // invariante casilla ⇔ glass entre colas
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
