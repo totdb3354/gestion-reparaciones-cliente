@@ -878,6 +878,21 @@ public class PendientesSuperTecnicoController {
         return "#0D47A1";
     }
 
+    /** Contador de una cola del modal en su botón de tipo: pastilla "N" a la derecha del texto, roja si hay
+     *  entradas pendientes (rojas / pulido sin técnico), gris si no; sin pastilla con 0 entradas
+     *  (spec 2026-09-05-glass-prediccion, regla 8: que se vea desde Reparación lo que nace en Glass). */
+    private static void pintarContadorCola(ToggleButton tb, int total, int pendientes) {
+        if (total == 0) { tb.setGraphic(null); return; }
+        Label pill = new Label(String.valueOf(total));
+        pill.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        pill.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 7 1 7;"
+                + (pendientes > 0 ? " -fx-background-color: #FDE2E1; -fx-text-fill: #C0392B;"
+                                  : " -fx-background-color: #E8EAF0; -fx-text-fill: #586376;"));
+        tb.setGraphic(pill);
+        tb.setContentDisplay(ContentDisplay.RIGHT);
+        tb.setGraphicTextGap(6);
+    }
+
     /** Carga del día de un técnico ausente del mapa (sin asignaciones que cuenten): todo a 0,
      *  con el mismo {@code sinJornada} que tendría cualquier otro técnico hoy. */
     private CargaTecnicos.DiaTecnico diaDe(Map<Integer, CargaTecnicos.DiaTecnico> mapa, int idTec) {
@@ -1156,6 +1171,13 @@ public class PendientesSuperTecnicoController {
      *  ilegibles — los estilos inline de esta etiqueta ganan a las reglas :selected/:hover del
      *  stylesheet, así que el conmutado hay que hacerlo aquí, no por CSS. */
     private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada) {
+        return etiquetaConCargaNodo(t, resaltada, false);
+    }
+
+    /** Variante con la pastilla "glass" (paleta del tipo Glass) tras el porcentaje: la usa el modal de
+     *  asignación en la cola Glass para señalar a los habilitados de la glass automática (spec 2026-09-05, §3.3).
+     *  No filtra ni marca nada: solo orienta al cambiar a mano una glass automática. */
+    private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada, boolean marcarGlass) {
         double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
 
         String colorNombre       = resaltada ? "#FAFAFA" : "#2C3B54";
@@ -1172,6 +1194,13 @@ public class PendientesSuperTecnicoController {
 
         HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos);
         caja.setAlignment(Pos.CENTER_LEFT);
+        if (marcarGlass) {
+            Label pillGlass = new Label("glass");
+            pillGlass.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+            pillGlass.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
+                    + " -fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";");
+            caja.getChildren().add(pillGlass);
+        }
         return caja;
     }
 
@@ -1270,8 +1299,28 @@ public class PendientesSuperTecnicoController {
 
         // El contenido (IMEI + modelo) crece y se RECORTA limpio (sin "...") si no cabe;
         // la ✕ va fuera del recorte, pegada a la derecha → siempre visible.
-        HBox contenido = new HBox(8, lblImei, badgeTipo, estado);
+        // Línea 1: IMEI + tipo + modelo (como siempre). Línea 2 (solo verdes): pastilla "auto" si la eligió el
+        // programa + nombres de sus técnicos, para supervisar la glass automática de un vistazo (spec 2026-09-05).
+        HBox linea1 = new HBox(8, lblImei, badgeTipo, estado);
+        linea1.setAlignment(Pos.CENTER_LEFT);
+        VBox contenido = new VBox(3, linea1);
         contenido.setAlignment(Pos.CENTER_LEFT);
+        if (e.asignada && !e.tecnicos.isEmpty()) {
+            HBox linea2 = new HBox(6);
+            linea2.setAlignment(Pos.CENTER_LEFT);
+            if (e.auto) {
+                Label badgeAuto = new Label("auto");
+                badgeAuto.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                badgeAuto.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
+                        + " -fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";");
+                linea2.getChildren().add(badgeAuto);
+            }
+            Label lblTecs = new Label(e.tecnicos.stream().map(Tecnico::getNombre)
+                    .collect(java.util.stream.Collectors.joining(", ")));
+            lblTecs.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #586376;");
+            linea2.getChildren().add(lblTecs);
+            contenido.getChildren().add(linea2);
+        }
         contenido.setMinWidth(0);
         HBox.setHgrow(contenido, javafx.scene.layout.Priority.ALWAYS);
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
@@ -2091,7 +2140,7 @@ public class PendientesSuperTecnicoController {
             lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
             scrollRojo.setPrefHeight(nRojo == 0 ? 34 : Math.min(nRojo, 5) * 39 + 4);
-            scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 39 + 4);
+            scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 57 + 4);   // dos líneas por fila verde (ajustar si en el smoke queda corto)
             // Totales globales (rep + glass) para la barra inferior y el botón Guardar.
             int nRojoGlobal  = (int) (pilaRep.stream().filter(x -> !x.asignada).count()
                                     + pilaGlass.stream().filter(x -> !x.asignada).count());
@@ -2106,6 +2155,9 @@ public class PendientesSuperTecnicoController {
                     + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
             btnGuardar.setText("Guardar (" + (nVerdeGlobal + nPul) + ")");
             btnGuardar.setDisable(nRojoGlobal != 0 || pulidoSinTecnico > 0 || (nVerdeGlobal + nPul) == 0);
+            pintarContadorCola(tbRep,    pilaRep.size(),   (int) pilaRep.stream().filter(x -> !x.asignada).count());
+            pintarContadorCola(tbGlass,  pilaGlass.size(), (int) pilaGlass.stream().filter(x -> !x.asignada).count());
+            pintarContadorCola(tbPulido, nPul,             pulidoSinTecnico);
         };
 
         lanzarLookup[0] = () -> {
@@ -2519,6 +2571,11 @@ public class PendientesSuperTecnicoController {
             richArea.setVisible(!pulido);  richArea.setManaged(!pulido);
             pulidoPane.setVisible(pulido); pulidoPane.setManaged(pulido);
             if (!pulido) tipoActual[0] = (n == tbGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
+            // Etiqueta "glass" junto a los habilitados, solo en la cola Glass (los checkboxes se construyen una vez).
+            boolean colaGlass = !pulido && tipoActual[0] == TipoTrabajo.GLASS;
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                checkboxes.get(i).setGraphic(etiquetaConCargaNodo(tecnicosModal.get(i), false,
+                        colaGlass && tecnicosModal.get(i).isEsGlass()));
             // El detalle cargado pertenece a la cola vieja: al cambiar de cola, se limpia.
             actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—");
             if (renderPila[0] != null) renderPila[0].run();
