@@ -1,7 +1,7 @@
 # Facilitar la asignación de glass — bloque 1: modelo vivo en el modal de asignación (0.16.2)
 
 Fecha: 2026-09-04
-Estado: **IMPLEMENTADA en `feature/glass-modelo-vivo` (2026-09-05, 4 tareas + fix wave del review final) — pendiente smoke del usuario y merge a `hotfix/0.16.2` con su OK.** Ajustes del review final incorporados a §2.3, §3.d, §3.g, §3.i y §6.
+Estado: **CERRADA y MERGEADA en `hotfix/0.16.2` (merge `--no-ff` `2211b7b`, 2026-09-05, visto bueno del usuario tras el smoke; suite 191; rama feature borrada; sin push).** Ajustes del review final incorporados a §2.3, §3.d, §3.g, §3.i y §6; extras del smoke en la regla 8 y §3.j (técnico pegajoso por cola y memorizado al marcar) y en el CHANGELOG (modal en pantallas pequeñas).
 Línea: **hotfix — ajena a `main` del repo raíz.** Rama de integración `hotfix/0.16.2` (tip `77ffbb9`, merge de estadísticas ronda 2). El repo raíz NO se toca en `main`.
 Ramas: cliente **rama nueva `feature/glass-modelo-vivo`** desde `hotfix/0.16.2`. Servidor: **sin cambios** (el `main` desplegado, `b1b1816`, ya sirve; sin migración ni bump de gitlink por este bloque).
 Relación: primer bloque de "facilitar la asignación de glass", cuarto punto de la ronda 2 de la 0.16.2 (ver `2026-09-02-estadisticas-puntos-ronda2-design.md`, §1). El **bloque 2 — predicción de la glass a partir de la reparación normal —** se brainstormea aparte cuando este esté codificado y tendrá su propia spec. La release sigue siendo la 0.16.2.
