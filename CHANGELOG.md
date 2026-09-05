@@ -21,6 +21,7 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 ### Fixed
 - La pestaña Stock de Estadísticas etiquetaba los SKU `g` como "Pantalla" y `lcd` como "LCD"; ahora `g`=Glass y `lcd`=Pantalla, como el formulario de reparación.
 - En el modal de asignación, pulsar Enter en el campo de modelo con un modelo ya confirmado re-seleccionaba el primer modelo de la lista.
+- El modal de asignación no cabía en pantallas pequeñas (portátil con escalado): la barra de título se salía por arriba y Guardar quedaba pegado a la barra de tareas. Ahora se limita a la zona visible de la pantalla, se centra y el contenido hace scroll si hace falta.
 
 ## [0.16.1] - 2026-08-31
 

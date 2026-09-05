@@ -2497,10 +2497,26 @@ public class PendientesSuperTecnicoController {
                     "Descartar", ventana::close);
         });
 
-        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        // Pantallas pequeñas (portátil con escalado de Windows): el contenido va dentro de un ScrollPane y la
+        // ventana se limita a la zona visible de la pantalla, para que la barra de título y Guardar no se salgan.
+        // En pantallas grandes no cambia nada: la altura preferida cabe y el scroll no aparece.
+        javafx.scene.control.ScrollPane raiz = new javafx.scene.control.ScrollPane(contenido);
+        raiz.setFitToWidth(true);
+        raiz.setFocusTraversable(false);
+        raiz.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        raiz.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        raiz.setStyle("-fx-background-color: #DDE1E7; -fx-background: #DDE1E7; -fx-padding: 0;");
+        javafx.geometry.Rectangle2D visible = javafx.stage.Screen.getPrimary().getVisualBounds();
+        double altoMax = Math.max(ventana.getMinHeight(), visible.getHeight() - 24);
+        ventana.setMaxHeight(altoMax);
+        javafx.scene.Scene scene = new javafx.scene.Scene(raiz);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
         renderPila[0].run();
+        ventana.setOnShown(ev -> {
+            if (ventana.getHeight() > altoMax) ventana.setHeight(altoMax);
+            ventana.centerOnScreen();
+        });
         javafx.application.Platform.runLater(tfScan::requestFocus);
         ventana.showAndWait();
     }
