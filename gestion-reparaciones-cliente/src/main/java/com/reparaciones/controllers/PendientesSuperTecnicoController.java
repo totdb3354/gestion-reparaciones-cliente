@@ -2437,12 +2437,15 @@ public class PendientesSuperTecnicoController {
             else if (e.tipo == TipoTrabajo.GLASS)
                 for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = true;
         };
-        // La casilla actúa al marcarla (solo clic del usuario, como memorizarTecnicos): crea o retira la glass al instante.
+        // La casilla actúa al marcarla (solo clic del usuario, como memorizarTecnicos). En una reparación pendiente es solo
+        // una intención, como chasis: la glass nace al pulsar Asignar, ya verde con técnico. En una verde (edición) la crea
+        // y la predice en el acto. Desmarcar retira la glass de ese IMEI esté como esté.
         chkLlevaGlass.setOnAction(ev -> {
             EntradaAsignacion e = actual[0];
             if (e == null || e.tipo != TipoTrabajo.REPARACION) return;
             e.llevaGlass = chkLlevaGlass.isSelected();
-            if (e.llevaGlass) crearGlassDe.accept(e); else quitarGlassDe.accept(e.imei);
+            if (!e.llevaGlass) quitarGlassDe.accept(e.imei);
+            else if (e.asignada) crearGlassDe.accept(e);
             renderPila[0].run();
         });
 
