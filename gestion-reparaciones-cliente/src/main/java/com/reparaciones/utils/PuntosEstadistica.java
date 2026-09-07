@@ -55,6 +55,23 @@ public final class PuntosEstadistica {
         return Math.max(n, 0);
     }
 
+    /**
+     * "El fin de semana suma, no promedia" (spec 2026-09-07): en granularidad Día, un sábado o
+     * domingo no cuenta como periodo TRABAJADO en las medias (Promedio, media por técnico, IMEIs
+     * típicos, media global de las tarjetas), aunque sus puntos sigan sumando en los totales.
+     * En Semana/Mes/Año todo periodo es laborable (el finde va dentro).
+     */
+    public static boolean esLaborable(String periodo, String granularidad) {
+        if (!"Día".equals(granularidad)) return true;
+        DayOfWeek d = LocalDate.parse(periodo).getDayOfWeek();
+        return d != DayOfWeek.SATURDAY && d != DayOfWeek.SUNDAY;
+    }
+
+    /** Los periodos que pasan {@link #esLaborable}, en el mismo orden. */
+    public static List<String> soloLaborables(java.util.Collection<String> periodos, String granularidad) {
+        return periodos.stream().filter(p -> esLaborable(p, granularidad)).collect(Collectors.toList());
+    }
+
     /** Puntos ÷ laborables del periodo; el periodo en curso corta en hoy; divisor mínimo 1. */
     public static double puntosDia(double puntos, String periodo, String granularidad, LocalDate hoy) {
         LocalDate[] rango = periodoAFechas(periodo, granularidad);
@@ -172,7 +189,8 @@ public final class PuntosEstadistica {
      * absorbe jornadas cortas sin mantener calendarios). El % del día arranca en 0
      * cada mañana y se espera que alcance el 100% al cierre, igual que el del mes
      * a fin de mes. Día de semana laborable sin muestras el mes anterior → media
-     * global por día trabajado; fin de semana sin muestras → sin línea de objetivo.
+     * global por día trabajado (solo L–V en el divisor: el finde suma, no promedia);
+     * fin de semana sin muestras → sin línea de objetivo.
      * Los % van truncados con epsilon: "100%" solo al igualar de verdad.
      *
      * @param filasDiarias resultado del endpoint con granularidad DÍA cubriendo mes anterior y actual
@@ -195,6 +213,7 @@ public final class PuntosEstadistica {
         }
 
         double puntosActual = 0, puntosAnterior = 0;
+        double puntosLaborablesAnterior = 0;   // solo L–V: base de la media global por día trabajado
         int diasTrabajadosAnterior = 0;
         Map<DayOfWeek, double[]> porDiaSemana = new java.util.EnumMap<>(DayOfWeek.class); // [suma, n]
         for (var e : porDia.entrySet()) {
@@ -203,7 +222,13 @@ public final class PuntosEstadistica {
                 puntosActual += e.getValue();
             } else if (ym.equals(anterior)) {
                 puntosAnterior += e.getValue();
-                diasTrabajadosAnterior++;
+                // El finde suma en el total pero no promedia (spec 2026-09-07): la media global por
+                // día trabajado se calcula solo con los días laborables, en numerador y divisor.
+                DayOfWeek dow = e.getKey().getDayOfWeek();
+                if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
+                    puntosLaborablesAnterior += e.getValue();
+                    diasTrabajadosAnterior++;
+                }
                 double[] acc = porDiaSemana.computeIfAbsent(e.getKey().getDayOfWeek(), k -> new double[2]);
                 acc[0] += e.getValue();
                 acc[1]++;
@@ -223,8 +248,8 @@ public final class PuntosEstadistica {
             boolean finde = diaHoy == DayOfWeek.SATURDAY || diaHoy == DayOfWeek.SUNDAY;
             if (acc != null && acc[1] > 0) {
                 objetivoHoy = acc[0] / acc[1];
-            } else if (!finde) {
-                objetivoHoy = puntosAnterior / diasTrabajadosAnterior; // media global por día trabajado
+            } else if (!finde && diasTrabajadosAnterior > 0) {
+                objetivoHoy = puntosLaborablesAnterior / diasTrabajadosAnterior; // media global por día laborable trabajado
             }
             if (objetivoHoy != null && objetivoHoy > 0)
                 pctHoy = (int) Math.floor(puntosHoy / objetivoHoy * 100 + 1e-9);
