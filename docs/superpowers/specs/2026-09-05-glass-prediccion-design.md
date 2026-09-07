@@ -43,7 +43,7 @@ ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE;
 
 - Aditiva, default a 0: **nadie habilitado hasta que el SuperTécnico lo marque**. Cero impacto en lo existente.
 - `crear_bd.sql` en sync (columna tras `ES_ESTADISTICA`), `docs/schema.md` y `docs/api_contract.md` al día.
-- MER (`Apuntes/Tabla BBDD(Corregido).drawio`): pendiente junto con `ES_ESTADISTICA` (dos columnas en `Tecnico`), en la misma nota que ya lleva el usuario para la release.
+- MER (`Apuntes/Tabla BBDD(Corregido).drawio`, fuera del repo): `ES_ESTADISTICA` y `ES_GLASS` añadidas a `Tecnico` el 2026-09-07; el resto de tablas ya coincidía con `crear_bd.sql`.
 - La aplica el usuario en preprod (vista previa → ALTER → verificación).
 
 ### 3.2 Servidor (rama `feature/glass-habilitados`)
