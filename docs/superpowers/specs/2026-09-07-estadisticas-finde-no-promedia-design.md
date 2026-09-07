@@ -3,7 +3,7 @@
 Fecha: 2026-09-07
 Estado: **APROBADA por el usuario (2026-09-07, al ver un sábado de horas extra tirando de las medias).** Ajuste de la ronda 2 de estadísticas por puntos; cambio pequeño de cliente, una tarea.
 Línea: hotfix `hotfix/0.16.2`. Rama **`feature/estadisticas-finde-no-promedia`** desde `hotfix/0.16.2`. Servidor: **sin cambios**.
-Relación: `2026-09-02-estadisticas-puntos-ronda2-design.md` (Promedio por técnico-periodo trabajado, IMEIs típicos, tarjetas). Diccionario: `Apuntes/metricas-estadisticas.md` (se actualiza en la misma rama).
+Relación: `2026-09-02-estadisticas-puntos-ronda2-design.md` (Promedio por técnico-periodo trabajado, IMEIs típicos, tarjetas). Diccionario: `gestion-reparaciones-cliente/docs/metricas-estadisticas.md` (se actualiza en la misma rama).
 
 ---
 
@@ -39,7 +39,7 @@ Un sábado con unas horas de trabajo (horas extra) entra hoy en la vista Día co
 - `dibujarLineasMedia`: la suma por periodo de Equipo y la media por técnico se calculan sobre `soloLaborables(periodosReferencia, granularidad)`.
 - `ambitoReferencia()`: en "Día" añade ", L–V" a la etiqueta de ventana (no al "rango filtrado"… también: "rango filtrado, L–V").
 
-`Apuntes/metricas-estadisticas.md`: regla nueva "Fin de semana: suma, no promedia" en §3 (Puntos/día), §6 (Promedio), el apartado de IMEIs típicos y las tarjetas (§4). `CHANGELOG.md` `[Unreleased]` → Changed.
+`gestion-reparaciones-cliente/docs/metricas-estadisticas.md`: regla nueva "Fin de semana: suma, no promedia" en §3 (Puntos/día), §6 (Promedio), el apartado de IMEIs típicos y las tarjetas (§4). `CHANGELOG.md` `[Unreleased]` → Changed.
 
 ## 4. Pruebas
 
