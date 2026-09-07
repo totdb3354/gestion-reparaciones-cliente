@@ -13,7 +13,6 @@ Thumbs.db
 # Claude Code — configuración local y planes
 .claude/
 .codegraph/
-docs/superpowers/
 .superpowers/
 
 # Configuración local — contiene la IP/URL de producción
