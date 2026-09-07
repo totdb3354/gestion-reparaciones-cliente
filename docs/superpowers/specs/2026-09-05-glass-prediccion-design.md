@@ -60,7 +60,7 @@ ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE;
 - **Botón "Técnicos de glass"** (`btn-secondary`) en la cabecera de la vista Asignaciones (`PendientesSuperTecnicoView.fxml`, fila del título, a la izquierda de "Carga técnicos"). Abre un `Dialog` calcado de `EstadisticasController.abrirModalTecnicos`:
   - Título "Técnicos de glass", cabecera "A quién se le asigna la glass automáticamente".
   - Una `CheckBox` por **técnico activo** (nombre), marcada según `isEsGlass()`.
-  - Nota al pie: "Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano."
+  - Nota al pie: "Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga hoy (cuentan sus reparaciones y sus glass). Si no hay ninguno, la glass queda pendiente para asignarla a mano."
   - Aceptar manda **solo los cambios** (un PATCH por técnico cambiado); si alguno falla, muestra el error y el diálogo no cierra. El modal de asignación carga los técnicos al abrirse (`getAllActivos`), así que ve el flag nuevo sin recargar la vista.
   - **Admin** (`setSoloLectura`): mismo botón y mismo diálogo, casillas deshabilitadas, solo "Cerrar". El servidor lo blinda igualmente (403).
 - `LogController`: `HABILITAR_GLASS`, `DESHABILITAR_GLASS` en la lista de acciones del filtro, junto a las de estadísticas.

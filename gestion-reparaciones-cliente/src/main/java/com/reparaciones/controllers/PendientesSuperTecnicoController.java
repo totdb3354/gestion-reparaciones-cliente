@@ -928,7 +928,7 @@ public class PendientesSuperTecnicoController {
             caja.getChildren().add(cb);
         }
         Label aviso = new Label("Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí\n"
-                + "con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano.");
+                + "con menos carga hoy (cuentan sus reparaciones y sus glass). Si no hay ninguno, la glass queda pendiente para asignarla a mano.");
         aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
         caja.getChildren().add(aviso);
         dialog.getDialogPane().setContent(caja);
