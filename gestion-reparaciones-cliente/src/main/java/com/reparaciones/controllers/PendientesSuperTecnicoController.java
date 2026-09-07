@@ -2407,7 +2407,9 @@ public class PendientesSuperTecnicoController {
         java.util.function.Function<String, EntradaAsignacion> glassDe = imei ->
                 pilaGlass.stream().filter(x -> x.imei.equals(imei)).findFirst().orElse(null);
         java.util.function.Consumer<EntradaAsignacion> predecirGlass = g -> {
-            if (g.asignada || !g.tecnicos.isEmpty()) return;   // ya asignada a mano o en configuración: no se toca
+            // Automática sin revisar: se recalcula con la carga de ahora (p. ej. tras cambiar el técnico de la reparación).
+            if (g.auto) { g.tecnicos.clear(); g.asignada = false; g.auto = false; }
+            if (g.asignada || !g.tecnicos.isEmpty()) return;   // asignada a mano o en configuración: no se toca
             Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
                     tecnicosModal, datos, cerradasHoy, verdesModal.get(), g.imei, g.cliente != null);
             if (t != null) { g.tecnicos.add(t); g.asignada = true; g.auto = true; }   // sin candidato: se queda roja
