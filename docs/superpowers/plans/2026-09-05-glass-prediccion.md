@@ -22,7 +22,7 @@ Spec: `docs/superpowers/specs/2026-09-05-glass-prediccion-design.md` (commit `82
   - Suite cliente: `mvn -q -o -f gestion-reparaciones-cliente/pom.xml test` (base **191 tests** en `f04e823`). Una clase: `-Dtest=PrediccionGlassTest`.
 - **Merge, push, despliegue, migración y tag: solo con OK explícito del usuario.** Claude **no hace SSH** a la VM: prepara comandos y el usuario los ejecuta (Task 3).
 - **Migración aditiva** `ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE` y **se aplica ANTES de levantar el backend nuevo** (el nuevo `SELECT` la lee; el backend viejo la ignora).
-- Textos exactos de UI (spec §2, §3.3): casilla **"Lleva glass"**; nota **"ya tiene glass: <técnico>"**; pastilla **"auto"**; pastilla **"glass"**; botón **"Técnicos de glass"**; diálogo título **"Técnicos de glass"**, cabecera **"A quién se le asigna la glass automáticamente"**, nota al pie **"Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano."** Acciones de log **`HABILITAR_GLASS`** / **`DESHABILITAR_GLASS`**, detalle `ID_TEC: n, NOMBRE: <nombre>`.
+- Textos exactos de UI (spec §2, §3.3): casilla **"Lleva glass"**; nota **"ya tiene glass: <técnico>"**; pastilla **"auto"**; pastilla **"glass"**; botón **"Técnicos de glass"**; diálogo título **"Técnicos de glass"**, cabecera **"A quién se le asigna la glass automáticamente"**, nota al pie **"Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga hoy (cuentan sus reparaciones y sus glass). Si no hay ninguno, la glass queda pendiente para asignarla a mano."** Acciones de log **`HABILITAR_GLASS`** / **`DESHABILITAR_GLASS`**, detalle `ID_TEC: n, NOMBRE: <nombre>`.
 - **Glass automática**: nace SOLO desde `asignarActual` de una reparación; sin comentario; `modeloBuscado = true`; no toca `defTecnicos` (pegajoso); no nace si el IMEI ya está en `pilaGlass`; se retira al desmarcar/✕ SOLO si `auto == true`; "Guardar cambios" sobre una glass la deja `auto = false`. **Pulido no participa.**
 - Los números de línea de este plan son del tip **`f04e823`** (= `825d080` en código) y **se desplazan con cada tarea**: localizar siempre por el texto exacto (grep) antes de editar.
 
@@ -1189,7 +1189,7 @@ git log --oneline hotfix/0.16.2..feature/glass-prediccion     # 5 commits (Tasks
 1. Diálogo "Técnicos de glass": marcar dos, Aceptar, reabrir → persisten; `SELECT ID_TEC, NOMBRE, ES_GLASS FROM Tecnico` coincide; vista Log muestra `HABILITAR_GLASS` con el nombre. **Admin**: ve el botón y el diálogo, casillas deshabilitadas, solo Cerrar.
 2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; pastilla "1" en el botón Glass.
 3. Seis IMEIs seguidos con glass → se reparten entre los habilitados (no van todos al mismo); el orden coincide con la carga.
-4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra "Carga técnicos" con cada toggle).
+4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra "Carga técnicos" con cada toggle). Ojo: el % de pantalla va redondeado a entero y en fin de semana vale 0 para todos; dos técnicos con el mismo % no tienen por qué empatar para la predicción.
 5. Sin habilitados (desmarcar todos) → glass roja, contador rojo, Guardar bloqueado; asignarla a mano desbloquea; también quitarla con ✕.
 6. IMEI con glass ya abierta en BD → casilla deshabilitada con "ya tiene glass: X"; no nace nada.
 7. IMEI ya escaneado en Glass (roja) → marcar la casilla en Reparación y Asignar → no nace segunda entrada, la roja sigue intacta.
@@ -1202,5 +1202,142 @@ git log --oneline hotfix/0.16.2..feature/glass-prediccion     # 5 commits (Tasks
 14. Cerrar el modal con glass auto sin guardar → nada en BD (salvo el modelo manual del bloque 1).
 15. Pegajoso de Glass: tras nacer una auto para javi, escanear un IMEI en Glass a mano → no propone a javi por la auto (solo el último asignado a mano en esa cola).
 16. Sábado (o `JORNADA_HORAS` a 0 en un test rápido): reparte entre habilitados, no siempre al primero.
+17. (review final) Quitar a mano con ✕ la glass auto en la cola Glass y después "Guardar cambios" en la reparación con la casilla aún marcada → la glass vuelve a nacer (la casilla manda). Esperado; verlo una vez.
+18. (review final) Con 4+ verdes en una cola, la lista verde (filas a dos líneas) hace scroll antes; si queda corta, subir `scrollVerde.setMaxHeight(220)` a ~290.
 
 - [ ] **Step 8: Con el smoke OK, pedir al usuario el OK para `merge --no-ff` de `feature/glass-prediccion` a `hotfix/0.16.2`** (sin push; la release 0.16.2 hará después el bump del gitlink al `main` del servidor de la Task 3 y el tag). Anotar el estado en `.superpowers/sdd/progress.md`.
+
+---
+
+### Task 9: Cliente — invariante "casilla ⇔ glass en la cola" (revisión de reglas 2-6 de la spec, 2026-09-05)
+
+**Contexto:** tras el review final el usuario decidió que la casilla y la glass de la cola deben ser consistentes en los dos sentidos y en todo momento (spec §2 reglas 2-6 y §5, revisadas). Sustituye la mecánica de la Task 6 (`sincronizarGlassAuto`, retirada solo de las `auto`, nacimiento solo en Asignar).
+
+**Files:**
+- Modify: `gestion-reparaciones-cliente/src/main/java/com/reparaciones/controllers/PendientesSuperTecnicoController.java` (solo `abrirFormularioAsignacion`: `renderPila` `onRemove`, bloque `sincronizarGlassAuto` → lambdas nuevas, `asignarActual`, `intentarAnadir`, pegado múltiple, `chkLlevaGlass.setOnAction`)
+- Modify: `CHANGELOG.md` (bullet Added de la glass automática)
+
+**Interfaces:**
+- Consumes: `EntradaAsignacion.llevaGlass/auto`, `tecnicoGlassAbierta(imei)`, `verdesGlassModal`, `modeloPorImei`, `PrediccionGlass.elegir(...)` (Tasks 5-6).
+- Produces: lambdas locales `glassDe`, `predecirGlass`, `crearGlassDe`, `quitarGlassDe`, `vincularGlass`.
+
+- [ ] **Step 1: Sustituir `sincronizarGlassAuto` por las lambdas de la invariante**
+
+Localizar (grep) el bloque que empieza en el comentario `// Glass automática (spec 2026-09-05-glass-prediccion): al asignar una reparación con "Lleva glass" nace en la` y termina en la llave `};` que cierra `sincronizarGlassAuto` (justo antes de `Runnable asignarActual = () -> {`). Sustituir TODO ese bloque (comentario incluido; `verdesGlassModal`, justo encima, se conserva) por:
+
+```java
+        // Invariante del modal (spec 2026-09-05, §2 reglas 2-6): casilla "Lleva glass" marcada ⇔ hay glass de ese IMEI en
+        // la cola Glass, en los dos sentidos. La casilla crea/retira la glass al instante; Asignar solo rellena con la
+        // predicción una glass que siga roja y sin técnicos. No toca defTecnicos (no es decisión del usuario) ni relanza
+        // el lookup (modelo y cliente vienen de la reparación; el modelo se iguala al Asignar si a la glass le faltaba).
+        java.util.function.Function<String, EntradaAsignacion> glassDe = imei ->
+                pilaGlass.stream().filter(x -> x.imei.equals(imei)).findFirst().orElse(null);
+        java.util.function.Consumer<EntradaAsignacion> predecirGlass = g -> {
+            if (g.asignada || !g.tecnicos.isEmpty()) return;   // ya asignada a mano o en configuración: no se toca
+            Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
+                    tecnicosModal, datos, cerradasHoy, verdesGlassModal.get(), g.imei, g.cliente != null);
+            if (t != null) { g.tecnicos.add(t); g.asignada = true; g.auto = true; }   // sin candidato: se queda roja
+        };
+        // Crea la glass pendiente del IMEI de la reparación e (si no la hay); si la reparación ya está verde, la predice ya.
+        java.util.function.Consumer<EntradaAsignacion> crearGlassDe = e -> {
+            if (glassDe.apply(e.imei) != null) return;
+            EntradaAsignacion g = new EntradaAsignacion(e.imei);
+            g.tipo = TipoTrabajo.GLASS;
+            g.modeloCode = e.tieneModelo() ? e.modeloCode : modeloPorImei.get(e.imei);
+            g.cliente = e.cliente;
+            g.sinCliente = e.sinCliente;
+            g.comentario = "";
+            g.seq = ++seqCounter[0];
+            g.modeloBuscado = true;
+            pilaGlass.add(g);
+            if (e.asignada) predecirGlass.accept(g);
+        };
+        java.util.function.Consumer<String> quitarGlassDe = imei -> pilaGlass.removeIf(x -> x.imei.equals(imei));
+        // Al escanear: una reparación de un IMEI que ya está en Glass nace marcada; una glass de un IMEI que está en
+        // Reparación marca esa reparación. Con glass abierta en BD la casilla está deshabilitada y no se marca nada.
+        java.util.function.Consumer<EntradaAsignacion> vincularGlass = e -> {
+            if (tecnicoGlassAbierta(e.imei) != null) return;
+            if (e.tipo == TipoTrabajo.REPARACION) e.llevaGlass = glassDe.apply(e.imei) != null;
+            else if (e.tipo == TipoTrabajo.GLASS)
+                for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = true;
+        };
+        // La casilla actúa al marcarla (solo clic del usuario, como memorizarTecnicos): crea o retira la glass al instante.
+        chkLlevaGlass.setOnAction(ev -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null || e.tipo != TipoTrabajo.REPARACION) return;
+            e.llevaGlass = chkLlevaGlass.isSelected();
+            if (e.llevaGlass) crearGlassDe.accept(e); else quitarGlassDe.accept(e.imei);
+            renderPila[0].run();
+        });
+```
+
+- [ ] **Step 2: `asignarActual`**
+
+Sustituir el bloque:
+
+```java
+            if (e.tipo == TipoTrabajo.REPARACION) {
+                e.llevaGlass = chkLlevaGlass.isSelected() && !chkLlevaGlass.isDisabled();
+                sincronizarGlassAuto.accept(e);
+            } else if (e.tipo == TipoTrabajo.GLASS) {
+```
+
+por:
+
+```java
+            if (e.tipo == TipoTrabajo.REPARACION) {
+                e.llevaGlass = chkLlevaGlass.isSelected() && !chkLlevaGlass.isDisabled();
+                if (e.llevaGlass) {
+                    crearGlassDe.accept(e);   // por si venía marcada de nacimiento (con glass ya en la cola no crea nada)
+                    EntradaAsignacion g = glassDe.apply(e.imei);
+                    if (g != null) { if (!g.tieneModelo()) g.modeloCode = e.modeloCode; predecirGlass.accept(g); }
+                } else {
+                    quitarGlassDe.accept(e.imei);
+                }
+            } else if (e.tipo == TipoTrabajo.GLASS) {
+```
+
+- [ ] **Step 3: `onRemove` (los dos, rojos y verdes) en `renderPila`**
+
+Sustituir cada línea `if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei) && x.auto);` por estas dos (`renderPila` se declara antes que las lambdas nuevas, así que aquí va inline):
+
+```java
+                    if (e.tipo == TipoTrabajo.REPARACION) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
+```
+
+- [ ] **Step 4: Escaneo**
+
+En `intentarAnadir`, tras `sembrarModeloEntrada.accept(e);    // modelo vivo: …` añadir:
+
+```java
+            vincularGlass.accept(e);           // invariante casilla ⇔ glass entre colas
+```
+
+En el pegado múltiple, tras `sembrarModeloEntrada.accept(en);    // modelo vivo: …` añadir:
+
+```java
+                    vincularGlass.accept(en);          // invariante casilla ⇔ glass entre colas
+```
+
+(`intentarAnadir` y el pegado se declaran después de las lambdas nuevas, así que capturan `vincularGlass` sin problema.)
+
+- [ ] **Step 5: CHANGELOG**
+
+En `CHANGELOG.md`, `[Unreleased]` → `### Added`, sustituir el bullet que empieza por `- **Glass automática al asignar la reparación**:` por:
+
+```markdown
+- **Glass automática al asignar la reparación**: en el modal de asignación, la reparación tiene una casilla **"Lleva glass"** (como "Reparación de chasis"). Al marcarla aparece al instante en la cola Glass una entrada del mismo IMEI (pendiente, con su modelo y su cliente) y al pulsar Asignar en la reparación se asigna sola al técnico habilitado para glass con **menos carga** (Pedidos si el teléfono tiene cliente, Total si es stock; empate por nombre), con la pastilla **"auto"**; si no hay técnico disponible se queda pendiente para asignarla a mano. Casilla y glass van siempre a la par: desmarcar la casilla o quitar la reparación retira la glass, quitar la glass desmarca la casilla, y escanear el mismo IMEI en la otra cola enlaza las dos entradas.
+```
+
+- [ ] **Step 6: Compilar, suite y commit**
+
+```bash
+export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH="$JAVA_HOME/bin:/c/Users/dev/tools/apache-maven-3.9.16/bin:$PATH"
+cd /c/Users/dev/Documents/ProgramaReparaciones
+mvn -o -f gestion-reparaciones-cliente/pom.xml test 2>&1 | grep -E "Tests run:.*Fail|BUILD|ERROR.*java" | tail -3
+git add gestion-reparaciones-cliente/src/main/java/com/reparaciones/controllers/PendientesSuperTecnicoController.java CHANGELOG.md
+git commit -m "feat(cliente): casilla 'Lleva glass' y glass de la cola siempre a la par (crea/retira al marcar, X en la glass desmarca, escaneo cruzado enlaza; Asignar solo predice la roja)"
+```
+
+Expected: `Tests run: 207, Failures: 0`, BUILD SUCCESS. Sin referencias restantes a `sincronizarGlassAuto` (`grep -c sincronizarGlassAuto` = 0).

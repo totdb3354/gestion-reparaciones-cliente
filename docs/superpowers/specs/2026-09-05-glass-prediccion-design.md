@@ -1,7 +1,7 @@
 # Facilitar la asignación de glass — bloque 2: glass automática al asignar la reparación (0.16.2)
 
 Fecha: 2026-09-05
-Estado: **APROBADA por el usuario (brainstorm en sesión, 2026-09-05).** Pendiente: plan de implementación (writing-plans) y ejecución subagent-driven.
+Estado: **APROBADA por el usuario (brainstorm en sesión, 2026-09-05); codificada (plan de 8 tareas, review final "Ready to merge"). Reglas 2-6 y §5 revisadas el 2026-09-05 (decisión del usuario al ver el resultado): invariante "casilla ⇔ glass en la cola" en los dos sentidos, implementada como Task 9 del plan.** Servidor mergeado y desplegado (`main` `1559a72`).
 Línea: **hotfix — ajena a `main` del repo raíz.** Rama de integración `hotfix/0.16.2` (tip `f04e823`, bloque 1 mergeado). El repo raíz NO se toca en `main`.
 Ramas:
 - Cliente: **rama nueva `feature/glass-prediccion`** desde `hotfix/0.16.2`.
@@ -20,13 +20,13 @@ Relación: segundo y último bloque de "facilitar la asignación de glass" (0.16
 ## 2. Comportamiento (reglas)
 
 1. **Casilla "Lleva glass"** en el formulario del modal, debajo de "Reparación de chasis", **solo visible en la cola Reparación**. Se comporta como chasis: por IMEI, se resetea entre teléfonos, no es pegajosa y no hace nada hasta pulsar Asignar.
-2. **Al pulsar "Asignar →"** en Reparación con la casilla marcada nace en la cola Glass una entrada del mismo IMEI. Las validaciones son **las mismas de Asignar** (modelo elegido + algún técnico de reparación): no hay validación extra para la glass, el técnico de glass lo pone la predicción. La entrada nace con el **mismo modelo** (modelo vivo del bloque 1) y el **mismo cliente / sin-cliente** de la reparación, **sin comentario** (el comentario son instrucciones para el técnico de reparación), sin chasis, sin urgente.
-3. **Nace verde y marcada como automática** cuando la predicción elige técnico. **Nace roja** (sin técnico, pendiente) cuando la predicción no puede elegir (ningún habilitado activo, o todos los habilitados excluidos por ya tener glass de ese IMEI). Una roja bloquea Guardar como cualquier otra, hasta que se resuelva a mano.
-4. **No nace** si ese IMEI ya está en la cola Glass (roja o verde): no se crea otra ni se toca la existente. **La casilla se deshabilita** con la nota "ya tiene glass: <técnico>" cuando el IMEI ya tiene una glass abierta en BD (visible en la tabla de Asignaciones): el teléfono ya está cubierto.
-5. **En la cola Glass**, las filas verdes muestran además el **nombre de sus técnicos**; las automáticas llevan una pastilla **"auto"**. Cargar una automática, cambiar lo que sea y "Guardar cambios" la convierte en manual (pierde la pastilla y ya no la retira nadie más que el usuario).
-6. **Deshacer**: editar la reparación verde ("Guardar cambios") con la casilla **desmarcada**, o quitar la reparación de la cola con ✕, **retira su glass automática** si sigue siendo automática; si ya es manual, se queda. Marcar la casilla al editar una reparación verde que no la tenía crea la glass entonces (regla 2). Quitar la glass con ✕ no toca la reparación.
+2. **Invariante del modal (revisión 2026-09-05 y 2026-09-07, decisiones del usuario): en una reparación verde, casilla marcada ⇔ hay glass de ese IMEI en la cola Glass**, en los dos sentidos y en todo momento (única excepción: regla 4). En una reparación **pendiente (roja)** la casilla es solo una intención, como chasis: **no crea nada hasta pulsar Asignar**, y entonces la glass **nace directamente verde** con el técnico elegido (regla 3), con el modelo y el cliente de la reparación, **sin comentario**, sin chasis, sin urgente. Si la reparación ya está **verde** (se marca al editarla), la glass nace y se predice en el acto. **Desmarcarla retira la glass** de ese IMEI, esté como esté (roja, verde automática o editada a mano). (El 2026-09-05 se probó que naciera roja al marcar; el usuario lo descartó el 2026-09-07: "que nazca en verde al bajar la reparación".)
+3. **Al pulsar "Asignar →"** en la reparación (mismas validaciones de hoy: modelo + algún técnico; nada extra para la glass), si su glass sigue **roja y sin técnicos marcados** la predicción la rellena: **verde con el técnico elegido y pastilla "auto"**; si no hay candidato (ningún habilitado activo, o todos con glass de ese IMEI) se queda **roja** y bloquea Guardar como cualquier otra. Si el usuario ya la había asignado a mano (verde) o ya le había marcado técnicos, no se toca. Reeditar la reparación verde ("Guardar cambios", p. ej. cambiando su técnico) **vuelve a predecir** la glass si sigue siendo automática (sin revisar), con la carga de ese momento (smoke 2026-09-07); una glass editada a mano no se toca. El modelo de la glass se iguala al de la reparación si le faltaba.
+4. **La casilla se deshabilita** con la nota "ya tiene glass: <técnico>" cuando el IMEI ya tiene una glass abierta en BD (visible en la tabla de Asignaciones): el teléfono ya está cubierto; no crea nada, y una glass escaneada a mano para ese IMEI no marca la casilla (única excepción a la invariante).
+5. **En la pila**, las filas verdes muestran además, en una segunda línea, el **nombre de sus técnicos** (en las dos colas: sale de la misma fila compartida); la pastilla **"auto"** significa "técnico elegido por el programa y aún no revisado": "Guardar cambios" sobre la glass la quita. La pastilla ya no marca el vínculo con la reparación: el vínculo es por IMEI.
+6. **✕ en la reparación retira su glass** (esté como esté). **✕ en la glass desmarca la casilla** de la reparación de ese IMEI, y la reparación se queda. **Escanear a mano** una glass para un IMEI que está en Reparación **marca** la casilla de esa reparación; escanear una reparación de un IMEI que ya está en Glass **nace marcada**. Una glass sola, sin reparación en la cola, es válida y no dispara nada.
 7. **Cambiar el cliente o el modelo** en la reparación después de nacer la glass se propaga a la glass por IMEI (mecanismos del bloque 1 y del cliente por IMEI) y **no** le quita la marca automática.
-8. **Botones de cola con contadores**: "Reparación (3)", "Glass (2)", "Pulido (1)"; la cifra va en rojo si esa cola tiene alguna entrada pendiente (roja). Así se ve desde Reparación que en Glass ha nacido algo y por qué Guardar está bloqueado si nació roja. Con 0 entradas no se muestra la cifra.
+8. **Botones de cola con contadores**: cada botón (Reparación / Glass / Pulido) lleva a su derecha una pastilla con el número de entradas de esa cola; la pastilla va en rojo si esa cola tiene alguna entrada pendiente (roja, o pulido sin técnico) y en gris si no. Así se ve desde Reparación que en Glass ha nacido algo y por qué Guardar está bloqueado si nació roja. Con 0 entradas no hay pastilla.
 9. **Guardar no cambia**: cada verde se persiste como hoy, con la regla de duplicado técnico+IMEI+categoría y el aviso de conflictos.
 10. **Pulido no participa.** El mismo técnico puede ir en reparación y en glass del mismo IMEI (categorías distintas), como hoy.
 11. **Cerrar el modal** descarta todo, incluido lo automático (nada de este bloque toca BD antes de Guardar; el modelo manual del bloque 1 sigue con su guardado temprano).
@@ -43,7 +43,7 @@ ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE;
 
 - Aditiva, default a 0: **nadie habilitado hasta que el SuperTécnico lo marque**. Cero impacto en lo existente.
 - `crear_bd.sql` en sync (columna tras `ES_ESTADISTICA`), `docs/schema.md` y `docs/api_contract.md` al día.
-- MER (`Apuntes/Tabla BBDD(Corregido).drawio`): pendiente junto con `ES_ESTADISTICA` (dos columnas en `Tecnico`), en la misma nota que ya lleva el usuario para la release.
+- MER (`Apuntes/Tabla BBDD(Corregido).drawio`, fuera del repo): `ES_ESTADISTICA` y `ES_GLASS` añadidas a `Tecnico` el 2026-09-07; el resto de tablas ya coincidía con `crear_bd.sql`.
 - La aplica el usuario en preprod (vista previa → ALTER → verificación).
 
 ### 3.2 Servidor (rama `feature/glass-habilitados`)
@@ -60,8 +60,8 @@ ALTER TABLE Tecnico ADD COLUMN ES_GLASS BOOLEAN NOT NULL DEFAULT FALSE;
 - **Botón "Técnicos de glass"** (`btn-secondary`) en la cabecera de la vista Asignaciones (`PendientesSuperTecnicoView.fxml`, fila del título, a la izquierda de "Carga técnicos"). Abre un `Dialog` calcado de `EstadisticasController.abrirModalTecnicos`:
   - Título "Técnicos de glass", cabecera "A quién se le asigna la glass automáticamente".
   - Una `CheckBox` por **técnico activo** (nombre), marcada según `isEsGlass()`.
-  - Nota al pie: "Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga de glass hoy. Si no hay ninguno, la glass queda pendiente para asignarla a mano."
-  - Aceptar manda **solo los cambios** (un PATCH por técnico cambiado); si alguno falla, muestra el error y el diálogo no cierra. Tras aceptar, recarga los técnicos de la vista (`tecnicos`) para que el modal de asignación vea el flag nuevo.
+  - Nota al pie: "Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí con menos carga hoy (cuentan sus reparaciones y sus glass). Si no hay ninguno, la glass queda pendiente para asignarla a mano."
+  - Aceptar manda **solo los cambios** (un PATCH por técnico cambiado); si alguno falla, muestra el error y el diálogo no cierra. El modal de asignación carga los técnicos al abrirse (`getAllActivos`), así que ve el flag nuevo sin recargar la vista.
   - **Admin** (`setSoloLectura`): mismo botón y mismo diálogo, casillas deshabilitadas, solo "Cerrar". El servidor lo blinda igualmente (403).
 - `LogController`: `HABILITAR_GLASS`, `DESHABILITAR_GLASS` en la lista de acciones del filtro, junto a las de estadísticas.
 - **Etiqueta "glass"** en el modal de asignación: en la lista de técnicos (`etiquetaConCargaNodo`), una pastilla pequeña con la paleta del tipo Glass (`TipoTrabajo.GLASS.colorFondo()/colorTexto()`) junto al nombre de los habilitados, **solo cuando la cola activa es Glass** (en Reparación no aporta). No filtra ni marca nada: solo orienta al cambiar a mano una glass automática.
@@ -78,12 +78,12 @@ Helper nuevo **`utils/PrediccionGlass`** (clase final con método estático, sin
 **Entrada:**
 - técnicos activos del modal (`Tecnico` con `isEsGlass()`),
 - asignaciones abiertas (`datos`) y completadas hoy (`cerradasHoy`) que la vista ya tiene cargadas (las mismas de "Carga técnicos"),
-- glass **verdes del modal** (`pilaGlass` con `asignada`): por cada una, sus técnicos y si tiene cliente,
+- entradas **verdes del modal** (`pilaRep` y `pilaGlass` con `asignada`): por cada una, sus técnicos, tipo, chasis y si tiene cliente,
 - IMEI que se asigna y si **tiene cliente** (la entrada de reparación en el momento de Asignar: cliente de BD o elegido; "— Sin cliente —" explícito cuenta como sin cliente).
 
 **Pasos:**
 1. **Candidatos** = activos con `esGlass` que **no** tengan glass abierta de ese IMEI en BD (`tecnicosOcupados(imei, GLASS)`, la misma exclusión que hoy deshabilita casillas en la cola Glass) ni una glass verde de ese IMEI en el modal.
-2. **Carga de cada candidato**, en **fracción de jornada de 9h sin escalar** (la misma fórmula de `CargaTecnicos.fraccion9h`: glass 1/17, chasis 1/8, normal 1/25, por cerrar 1/12 de su tipo, solicitud de pieza pendiente 0, pulido 0): hecho hoy + pendiente en BD **+ las glass verdes del modal** que ya le tocaron (1/17 cada una). **Alcance**: IMEI con cliente → **Pedidos** (solo asignaciones y verdes con cliente); IMEI sin cliente → **Total** (todo).
+2. **Carga de cada candidato**, en **fracción de jornada de 9h sin escalar** (la misma fórmula de `CargaTecnicos.fraccion9h`: glass 1/17, chasis 1/8, normal 1/25, por cerrar 1/12 de su tipo, solicitud de pieza pendiente 0, pulido 0): hecho hoy + pendiente en BD **+ las entradas verdes del modal** (reparación y glass, sin guardar) que ya le tocaron, con su peso (normal 1/25, chasis 1/8, glass 1/17). **Alcance**: IMEI con cliente → **Pedidos** (solo asignaciones y verdes con cliente); IMEI sin cliente → **Total** (todo).
 3. **Gana la menor carga**; empate → orden alfabético del nombre (`compareToIgnoreCase`). Sin candidatos → `null` (la glass nace roja).
 
 **Por qué la fracción sin escalar y no el %:** el % de pantalla es fracción × 9/horas × 100; el factor es común a todos y no cambia el orden entre semana, pero en fin de semana la jornada es 0 y todos los % valen 0, con lo que la glass iría siempre al primero por alfabeto. Con la fracción cruda se reparte igual cualquier día. `CargaTecnicos.fraccion9h` es privada: se hace package-visible o se expone un equivalente estático (sin cambiar `calcularDia`).
@@ -98,13 +98,12 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
 - `tecnicosOcupados(imei, tipo)` (`:1225`): se reutiliza para la exclusión de candidatos y para la regla 4 (glass abierta en BD → `!tecnicosOcupados(imei, GLASS).isEmpty()`; el nombre de la nota sale de la primera fila `AG` de `datos` con ese IMEI).
 - `crearFilaPila` (`:1233`): para entradas verdes, tras el modelo, etiqueta con los nombres de `e.tecnicos` (unidos por ", ", dentro del `contenido` recortable); si `e.auto`, pastilla "auto" (fuente 9.5px, paleta del tipo Glass, `USE_PREF_SIZE`).
 - `chkChasis` (`:1955`): debajo, `CheckBox chkLlevaGlass = new CheckBox("Lleva glass")`, mismo estilo; `Label lblGlassNota` (11px, gris) para "ya tiene glass: X". En `cargarEntrada` (`:2180`): visible/managed solo si `e.tipo == REPARACION`; `setSelected(e.llevaGlass)`; deshabilitada + nota si el IMEI tiene glass abierta en BD (y en ese caso `e.llevaGlass = false`).
-- `asignarActual` (`:2261`): tras fijar `e.asignada = true` y el pegajoso, si `e.tipo == REPARACION`:
-  - `e.llevaGlass = chkLlevaGlass.isSelected() && !chkLlevaGlass.isDisabled()`;
-  - si `llevaGlass` y no hay entrada de ese IMEI en `pilaGlass`: crear `EntradaAsignacion g` con `tipo = GLASS`, `modeloCode = e.modeloCode`, `cliente/sinCliente = e.cliente/e.sinCliente`, `comentario = ""`, `seq = ++seqCounter`, `modeloBuscado = true` (no relanzar el lookup: el modelo ya viene de la reparación, y al Asignar la reparación su cliente ya es decisión manual en `clienteManual`, así que la precarga de cliente de BD no aportaría nada), `auto = true`; técnico = `PrediccionGlass.elegir(...)`; si no es `null`, `g.tecnicos = [t]`, `g.asignada = true`; si es `null`, `g.asignada = false` (roja); `pilaGlass.add(g)`.
-  - si `!llevaGlass` (edición de una verde que desmarca) y hay en `pilaGlass` una entrada de ese IMEI con `auto == true`: quitarla.
-  - `renderPila` ya corre después.
-- `asignarActual` para una entrada de tipo Glass (edición "Guardar cambios" de una automática): `e.auto = false`.
-- `onRemove` de una reparación (`renderPila`, `:2047`): además de quitarla de su pila, quitar de `pilaGlass` la entrada de ese IMEI con `auto == true`, si existe.
+- Lambdas nuevas antes de `asignarActual` (revisión invariante; todas capturan locales ya declarados): `glassDe(imei)` (entrada de ese IMEI en `pilaGlass` o `null`); `predecirGlass(g)` (si `g` no está asignada y no tiene técnicos: `PrediccionGlass.elegir(tecnicosModal, datos, cerradasHoy, verdesModal, g.imei, g.cliente != null)`; con técnico → `g.tecnicos = [t]`, `asignada = true`, `auto = true`; sin técnico, se queda roja); `crearGlassDe(e)` (si no existe: `tipo = GLASS`, `modeloCode = e.modeloCode` o, si falta, el de `modeloPorImei`, `cliente/sinCliente` de `e`, `comentario = ""`, `seq = ++seqCounter`, `modeloBuscado = true` (sin lookup: modelo y cliente vienen de la reparación), `pilaGlass.add`; si `e.asignada` → `predecirGlass`); `quitarGlassDe(imei)` (`pilaGlass.removeIf`); `vincularGlass(e)` (al escanear: sin glass abierta en BD, una reparación nace con `llevaGlass = glassDe(imei) != null` y una glass pone `llevaGlass = true` en la reparación de ese IMEI).
+- `chkLlevaGlass.setOnAction` (solo clic del usuario, como `memorizarTecnicos`): `e = actual[0]` de tipo Reparación → `e.llevaGlass = isSelected()`; desmarcada → `quitarGlassDe(e.imei)`; marcada y `e.asignada` (edición de una verde) → `crearGlassDe(e)` (crea y predice); marcada en una roja → nada hasta Asignar; `renderPila`.
+- `asignarActual`, tras el pegajoso, si `e.tipo == REPARACION`: `e.llevaGlass = isSelected() && !isDisabled()`; marcada → `crearGlassDe(e)` (por si venía marcada de nacimiento), `g = glassDe(e.imei)`, `if (!g.tieneModelo()) g.modeloCode = e.modeloCode`, `predecirGlass(g)`; desmarcada → `quitarGlassDe(e.imei)`. `renderPila` ya corre después.
+- `asignarActual` para una entrada de tipo Glass: `e.auto = false`.
+- `onRemove` en `renderPila` (rojos y verdes): reparación → `pilaGlass.removeIf(imei)`; glass → `llevaGlass = false` en la reparación de ese IMEI en `pilaRep`.
+- `intentarAnadir` y el pegado múltiple: tras `sembrarModeloEntrada`, `vincularGlass(e)`.
 - `tgTipo`/`selectorTipo` (`:1687-1703`, listener `:2444`): texto de los toggles con contador por cola, actualizado desde `renderPila` (lee `pilaRep`, `pilaGlass`, `lotePulido`); cifra en rojo (`-fx-text-fill` del rojo de `lblRojo`) si esa cola tiene rojas. Los toggles siguen siendo los mismos nodos (no se recrean).
 - `etiquetaConCargaNodo` (`:1156`): parámetro extra `boolean mostrarGlass` (o variante) para la pastilla "glass"; en el modal se pasa `tipoActual[0] == GLASS && t.isEsGlass()`. Como los checkboxes se construyen una vez, el nodo de cada uno se refresca al cambiar de cola (en el listener de `tgTipo`, mismo sitio donde se limpia el detalle).
 - Guardar (`:2467`): sin cambios (las automáticas verdes se persisten como cualquier glass verde).
@@ -117,26 +116,26 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
 - Sin habilitados / todos excluidos → glass roja; contador "Glass (n)" en rojo; Guardar bloqueado hasta asignarla a mano o quitarla.
 - Falla la carga de técnicos al abrir el modal (`tecnicosModal` vacío) → sin candidatos → roja.
 - Otro usuario crea una glass del mismo IMEI+técnico entre abrir el modal y Guardar → aviso de duplicado de siempre; la reparación se crea igual.
-- Desmarcar la casilla tras editar la glass a mano → la glass se queda (ya es manual).
-- ✕ en la reparación con glass manual → la glass se queda.
+- Desmarcar la casilla tras editar la glass a mano → la glass se va igualmente (casilla ⇔ glass, regla 2).
+- ✕ en la reparación con glass manual → la glass se va igualmente (regla 6); ✕ en la glass → la reparación se queda y se desmarca.
 - Cambio de cliente/modelo en la reparación tras nacer la glass → se propaga, sigue automática.
 - Fin de semana → reparte por fracción cruda, sin empates artificiales.
 - Servidor viejo → nadie habilitado → siempre roja; diálogo avisa.
 
 ## 7. Pruebas
 
-- **Cliente**: JUnit de `PrediccionGlass` (TDD): sin habilitados → null; habilitado con glass abierta de ese IMEI → excluido; habilitado con glass verde de ese IMEI en el modal → excluido; menor carga gana; las verdes del modal desplazan la elección (dos glass seguidas van a técnicos distintos si empataban); IMEI con cliente ignora la carga sin cliente; IMEI sin cliente la cuenta; empate → alfabético; jornada 0 (sábado) reparte igual que un martes; inactivo con flag → fuera. Suite del cliente verde (191 en `f04e823`).
+- **Cliente**: JUnit de `PrediccionGlass` (TDD): sin habilitados → null; habilitado con glass abierta de ese IMEI → excluido; habilitado con glass verde de ese IMEI en el modal → excluido; menor carga gana; las verdes del modal desplazan la elección (dos glass seguidas van a técnicos distintos si empataban); IMEI con cliente ignora la carga sin cliente; IMEI sin cliente la cuenta; empate → alfabético; (la elección no recibe el día: compara fracciones sin escalar, así que el sábado no es un caso aparte; el smoke 16 lo verifica); inactivo con flag → fuera. Suite del cliente verde (191 en `f04e823`).
 - **Servidor**: sin test nuevo (calca los endpoints de estadísticas, sin test). Arranque del contexto verificado (`mvn spring-boot:run` o test de contexto manual) antes de proponer el merge.
 - **Smoke manual** (preproducción; SuperTécnico salvo donde se indica), incluye los casos límite del §6:
   1. Diálogo "Técnicos de glass": marcar dos, Aceptar, reabrir → persisten; `SELECT ID_TEC, NOMBRE, ES_GLASS FROM Tecnico` coincide; vista Log muestra `HABILITAR_GLASS` con el nombre. **Admin**: ve el botón y el diálogo, casillas deshabilitadas, solo Cerrar.
-  2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; "Glass (1)" en el botón de cola.
+  2. Reparación con "Lleva glass" → Asignar → en Glass hay una verde "auto" con el mismo modelo y cliente, sin comentario, al técnico de menos carga; la fila muestra su nombre; pastilla "1" en el botón Glass.
   3. Seis IMEIs seguidos con glass → se reparten entre los habilitados (no van todos al mismo); el orden coincide con lo esperado por la carga.
-  4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra la ventana "Carga técnicos" con cada toggle).
+  4. IMEI con cliente vs sin cliente → el elegido cambia según Pedidos/Total (comprobar contra la ventana "Carga técnicos" con cada toggle). Ojo: el % de pantalla va redondeado a entero y en fin de semana vale 0 para todos; dos técnicos con el mismo % no tienen por qué empatar para la predicción, que compara la fracción exacta.
   5. Sin habilitados (desmarcar todos) → glass roja, contador en rojo, Guardar bloqueado; asignarla a mano desbloquea; también quitarla con ✕.
   6. IMEI con glass ya abierta en BD → casilla deshabilitada con "ya tiene glass: X"; no nace nada.
-  7. IMEI ya escaneado en Glass (roja) → marcar la casilla en Reparación y Asignar → no nace segunda entrada, la roja sigue intacta.
-  8. Editar la glass auto en Glass ("Guardar cambios") → pierde "auto"; luego desmarcar la casilla en la reparación → la glass se queda; ✕ en la reparación → la glass se queda.
-  9. Glass auto sin tocar → desmarcar la casilla (editar la reparación verde) → desaparece; otra vez con ✕ en la reparación → desaparece.
+  7. IMEI ya escaneado en Glass (roja) → escanearlo en Reparación → nace con la casilla marcada; Asignar → la roja de Glass se rellena con la predicción (verde "auto"); desmarcar → la glass desaparece.
+  8. Marcar la casilla en una reparación **roja** → en Glass no aparece nada todavía; Asignar la reparación → la glass nace directamente verde "auto" (pastilla gris "1" en el botón Glass). Marcar al **editar una reparación verde** → la glass nace ya verde "auto" en el acto.
+  9. Glass auto → "Guardar cambios" sobre ella → pierde "auto"; desmarcar la casilla en la reparación → la glass se va igualmente; volver a marcar y ✕ en la reparación → se va igualmente.
   10. Cambiar el cliente en la reparación con glass auto ya nacida → la glass muestra el nuevo cliente y sigue "auto".
   11. Modelo elegido a mano (lookup fallido) + "Lleva glass" → la glass nace con ese modelo, sin "Buscando…".
   12. Etiqueta "glass" visible en la lista de técnicos solo en la cola Glass, junto a los habilitados; puntos de carga intactos.
@@ -144,6 +143,9 @@ Anclajes al tip `f04e823` de `PendientesSuperTecnicoController.java` (reverifica
   14. Cerrar el modal con glass auto sin guardar → nada en BD (salvo el modelo manual del bloque 1).
   15. Pegajoso de Glass: tras nacer una auto para javi, escanear un IMEI en Glass a mano → no propone a javi por la auto (solo el último asignado a mano en esa cola).
   16. Sábado (o simular jornada 0 en test): reparte entre habilitados, no siempre al primero.
+  17. ✕ en la glass (auto o manual) → la reparación sigue en su cola y su casilla aparece desmarcada al cargarla; volver a marcarla → la glass nace de nuevo (roja o verde "auto" según esté la reparación). Asignar la glass a mano mientras la reparación está roja y después Asignar la reparación → la glass no cambia. Escanear una glass a mano de un IMEI que está en Reparación → esa reparación aparece marcada.
+  19. (smoke 2026-09-07) Dos reparaciones con glass auto a `test`; cambiar el técnico de las reparaciones a `test` con "Guardar cambios" → las glass auto se recalculan y pasan a `supertest` (test ya carga 2/25 + glass). Editar una glass a mano y reeditar su reparación → esa glass no cambia.
+  18. (review final) Con 4+ verdes en una cola, la lista verde (filas a dos líneas) hace scroll antes que antes; si se queda corta, subir el alto máximo del scroll verde.
 
 ## 8. Fuera de alcance
 
