@@ -20,7 +20,7 @@ Un sábado con unas horas de trabajo (horas extra) entra hoy en la vista Día co
    - Promedio del equipo (línea naranja) y su "Por encima / Por debajo".
    - Media por técnico (línea discontinua de cada serie) y la de la serie Equipo.
    - Tarjeta "IMEIs típicos por técnico".
-   - En las tarjetas, la **media global por día trabajado** del mes anterior (objetivo de un día de semana sin muestras): los puntos del finde siguen en el total del mes anterior, pero el sábado no cuenta como día trabajado en el divisor.
+   - En las tarjetas, la **media global por día trabajado** del mes anterior (objetivo de un día de semana sin muestras): se calcula solo con los días laborables, en numerador y divisor (puntos L–V ÷ días L–V trabajados). El total del mes anterior de la tarjeta "Puntos · mes" sigue incluyendo el finde. (Cazado por el test: quitar el sábado solo del divisor inflaba la media.)
 3. **El punto del sábado sigue visible** en el gráfico Día y sigue contando como uno de los "30 días con actividad" de la ventana (pasó, y explica el total del mes). La ventana y el eje X no cambian.
 4. Granularidades Semana, Mes y Año: sin cambios (sus periodos son laborables por definición; el finde va dentro de la semana).
 5. El objetivo del día en fin de semana sigue como estaba: media de ese día de semana en el mes anterior si hay muestras ("los sábados contra los sábados"); si no, sin línea de objetivo.
@@ -31,7 +31,7 @@ Un sábado con unas horas de trabajo (horas extra) entra hoy en la vista Día co
 `utils/PuntosEstadistica.java` (puro, con JUnit):
 - `public static boolean esLaborable(String periodo, String granularidad)`: en "Día", la fecha no es sábado ni domingo; en el resto de granularidades siempre `true`.
 - `public static List<String> soloLaborables(Collection<String> periodos, String granularidad)`: los periodos que pasan `esLaborable`, en el mismo orden.
-- `calcularTarjetas`: `diasTrabajadosAnterior` solo cuenta días laborables; `puntosAnterior` sigue sumando todos los días.
+- `calcularTarjetas`: acumulador nuevo `puntosLaborablesAnterior` y `diasTrabajadosAnterior` solo con días L–V; la media global de respaldo es `puntosLaborablesAnterior / diasTrabajadosAnterior` (y no se calcula si no hay laborables); `puntosAnterior` sigue sumando todos los días para la tarjeta del mes.
 
 `controllers/EstadisticasController.java`:
 - `promedioVentanaActual(periodos)`: aplica `soloLaborables(periodos, granularidad)` antes de `promedioVentana`.

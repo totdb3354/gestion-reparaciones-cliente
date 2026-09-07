@@ -271,6 +271,38 @@ class PuntosEstadisticaTest {
         assertSame(filas, PuntosEstadistica.sinExcluidos(filas, Set.of()));
     }
 
+    // ── fin de semana: suma, no promedia (spec 2026-09-07) ──────────────────
+    @Test void esLaborableSoloMiraElDiaEnGranularidadDia() {
+        assertFalse(PuntosEstadistica.esLaborable("2026-09-05", "Día"));   // sábado
+        assertFalse(PuntosEstadistica.esLaborable("2026-09-06", "Día"));   // domingo
+        assertTrue(PuntosEstadistica.esLaborable("2026-09-07", "Día"));    // lunes
+        assertTrue(PuntosEstadistica.esLaborable("2026-W36", "Semana"));
+        assertTrue(PuntosEstadistica.esLaborable("2026-09", "Mes"));
+        assertTrue(PuntosEstadistica.esLaborable("2026", "Año"));
+    }
+
+    @Test void soloLaborablesFiltraElFindeSoloEnDiaYConservaElOrden() {
+        assertEquals(List.of("2026-09-04", "2026-09-07"),
+                PuntosEstadistica.soloLaborables(List.of("2026-09-04", "2026-09-05", "2026-09-06", "2026-09-07"), "Día"));
+        assertEquals(List.of("2026-W35", "2026-W36"),
+                PuntosEstadistica.soloLaborables(List.of("2026-W35", "2026-W36"), "Semana"));
+        assertEquals(List.of(), PuntosEstadistica.soloLaborables(List.of("2026-09-05"), "Día"));
+    }
+
+    @Test void mediaGlobalPorDiaTrabajadoDeLasTarjetasIgnoraElFinde() {
+        // agosto: lunes 3 (100) y sábado 8 (20); hoy miércoles 2/09 sin muestras de miércoles
+        // → objetivo = media global por día trabajado SIN el sábado = 100 (no 60);
+        // el total del mes anterior sí incluye el sábado: 120.
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                fila("Marcos", "2026-08-03", 100), fila("Marcos", "2026-08-08", 20),
+                fila("Marcos", "2026-09-02", 50));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 2), null, Set.of());
+        assertEquals(120.0, t.puntosAnterior(), 0.001);
+        assertEquals(100.0, t.objetivoHoy(), 0.001);
+        assertEquals(50, t.pctHoy());
+    }
+
     private static PuntoEstadisticaPuntos fila(String tec, String periodo, double puntos) {
         return new PuntoEstadisticaPuntos(tec, periodo, puntos, puntos, 0, 0, 1, 0, 0, 0);
     }

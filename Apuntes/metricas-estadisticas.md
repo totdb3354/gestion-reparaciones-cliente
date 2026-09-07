@@ -56,6 +56,7 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 - Festivos **no** descontados y jornadas por horas **no** ponderadas (simplificación asumida, como el Excel original).
 - **Desfase intradía asumido**: hoy cuenta como día entero en el divisor desde las 00:00, así que la tasa sale deprimida a primera hora y se recupera durante el día (grande el primer día laborable del mes, se diluye después).
 - Divisor mínimo 1 (un sábado con trabajo no divide por cero).
+- **Fin de semana: suma, no promedia** (2026-09-07). Los puntos de un sábado o domingo entran en todos los totales (tarjetas, semana, mes, año, Equipo, numerador de Puntos/día), pero en granularidad Día el finde **no cuenta como día trabajado** en ninguna media: Promedio (§6), media por técnico (§7), IMEIs típicos (§5) ni la media global por día trabajado de las tarjetas (§4). Unas horas extra de sábado ya no hunden la referencia de una jornada. El punto del sábado sigue visible en el gráfico y cuenta como uno de los "días con actividad" de la ventana.
 
 ## 4. Tarjetas del mes (formato objetivo)
 
@@ -67,11 +68,12 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 - **% truncado, no redondeado**: 99,89% se muestra "99%" — el **100% solo aparece al igualar de verdad** (con redondeo, 90,6 sobre 90,7 marcaba 100% verde sin haber llegado).
 - Color: **gris** < 100%, **verde** ≥ 100%. **Nunca rojo.**
 - Mes anterior sin datos (o a cero) → la línea no se muestra.
+- Día de semana sin muestras el mes anterior → media global por día trabajado del mes anterior, **calculada solo con los días L–V (puntos L–V ÷ días L–V trabajados)**; el total del mes anterior de la tarjeta del mes sí incluye el finde (el finde suma, no promedia — §3).
 - Los excluidos de estadísticas (§8) no cuentan en las tarjetas de equipo; la tarjeta personal de un excluido sí funciona.
 
 ## 5. El gráfico
 
-- **IMEIs en la vista** (ajuste 2026-09-04): cada chip de la leyenda muestra "`nombre` · N IMEIs" = los que tocó en el **último periodo visible** (hoy en Día, esta semana en Semana, este mes en Mes), y la **tarjeta "IMEIs típicos por técnico"** de arriba muestra una sola vez la referencia común: media por técnico-periodo **trabajado** de IMEIs del rango mostrado (misma fórmula que el Promedio de puntos, sin excluidos; un decimal, con la unidad y el ámbito: "12,4 · por día trabajado · 30 días con actividad"). El chip se pone en **verde** al alcanzar esa media (comparación exacta). Ojo: la línea naranja del gráfico es de PUNTOS — la referencia de IMEIs vive en su tarjeta. Mismo criterio que el Agrupado por IMEI filtrado por técnico; un teléfono con varios trabajos cuenta 1; la cuenta la hace el servidor por periodo (campo aditivo `nImeis`; con servidor antiguo ni sufijo ni tarjeta). El detalle de *cuáles* son: popover → "Ver IMEIs". La vista/serie completa de IMEIs queda para la analítica web (F4).
+- **IMEIs en la vista** (ajuste 2026-09-04): cada chip de la leyenda muestra "`nombre` · N IMEIs" = los que tocó en el **último periodo visible** (hoy en Día, esta semana en Semana, este mes en Mes), y la **tarjeta "IMEIs típicos por técnico"** de arriba muestra una sola vez la referencia común: media por técnico-periodo **trabajado** de IMEIs del rango mostrado (misma fórmula que el Promedio de puntos, sin excluidos y sin fin de semana en Día — §3; un decimal, con la unidad y el ámbito: "12,4 · por día trabajado · 30 días con actividad"). El chip se pone en **verde** al alcanzar esa media (comparación exacta). Ojo: la línea naranja del gráfico es de PUNTOS — la referencia de IMEIs vive en su tarjeta. Mismo criterio que el Agrupado por IMEI filtrado por técnico; un teléfono con varios trabajos cuenta 1; la cuenta la hace el servidor por periodo (campo aditivo `nImeis`; con servidor antiguo ni sufijo ni tarjeta). El detalle de *cuáles* son: popover → "Ver IMEIs". La vista/serie completa de IMEIs queda para la analítica web (F4).
 
 - **Serie por técnico**: sus puntos (o puntos/día) por periodo. Los periodos visibles en los que no trabajó se pintan a **0** (honesto, y evita que el eje de categorías se desordene con huecos).
 - **Serie Equipo (suma)**: suma por periodo de los técnicos **que cuentan** (sin excluidos). Checkbox propio, apagada por defecto.
@@ -85,7 +87,7 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 **Rango de referencia = el rango mostrado** (desde el ajuste 2026-09-04, sin flechas, son siempre lo mismo):
 - Sin filtro de fechas → la **última ventana estándar** (los últimos 30 días con actividad, 16 semanas…).
 - Con filtro de fechas → **todo el rango filtrado**: para juzgar una época contra su propia media, se filtra esa época.
-- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad): 12,5 puntos" / "(rango filtrado)".
+- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad, L–V): 12,5 puntos" / "(rango filtrado, L–V)". En Día los **sábados y domingos no cuentan como técnico-periodo trabajado** (el finde suma, no promedia — §3); la media por técnico (§7) sigue la misma regla.
 
 ## 7. Por encima / Por debajo (tooltip de la línea)
 

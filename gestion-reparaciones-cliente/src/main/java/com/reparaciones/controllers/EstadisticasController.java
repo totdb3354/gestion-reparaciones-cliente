@@ -644,8 +644,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 if (p.getnImeis() != null)
                     datosImeis.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
                               .put(p.getPeriodo(), p.getnImeis().doubleValue());
-            mediaImeisTmp = PuntosEstadistica.promedioVentana(
-                    datosImeis, new java.util.ArrayList<>(periodosReferencia));
+            mediaImeisTmp = PuntosEstadistica.promedioVentana(datosImeis, referenciaLaborable());   // sin finde (spec 2026-09-07)
         }
         final double mediaImeis = mediaImeisTmp;
 
@@ -713,11 +712,18 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         else Platform.runLater(render);
     }
 
-    /** Ámbito de las varas (Promedio, x̄ y Por encima/Por debajo): filtro de fechas o última ventana. */
+    /** Ámbito de las varas (Promedio, x̄ y Por encima/Por debajo): filtro de fechas o última ventana.
+     *  En Día lleva la coletilla "L–V": el fin de semana suma, no promedia (spec 2026-09-07). */
     private String ambitoReferencia() {
-        return (dpDesde.getValue() != null || dpHasta.getValue() != null)
+        String base = (dpDesde.getValue() != null || dpHasta.getValue() != null)
                 ? "rango filtrado"
                 : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
+        return "Día".equals(cmbGranularidad.getValue()) ? base + ", L–V" : base;
+    }
+
+    /** Periodos de referencia que cuentan en las medias: sin fin de semana en Día (spec 2026-09-07). */
+    private List<String> referenciaLaborable() {
+        return PuntosEstadistica.soloLaborables(periodosReferencia, cmbGranularidad.getValue());
     }
 
     /** Promedio por periodo TRABAJADO del rango dado (técnicos que cuentan, métrica activa). */
@@ -727,7 +733,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
                         .put(p.getPeriodo(), valorDe(p));
         }
-        return PuntosEstadistica.promedioVentana(datosVentana, new java.util.ArrayList<>(periodos));
+        return PuntosEstadistica.promedioVentana(datosVentana,
+                PuntosEstadistica.soloLaborables(periodos, cmbGranularidad.getValue()));   // el finde suma, no promedia
     }
 
     private void dibujarLineasMedia(Set<String> periodosVisibles, List<XYChart.Series<String, Number>> todasSeries) {
@@ -747,10 +754,12 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         // Precomputar suma total por periodo (reutilizado en "Equipo"): excluye a los
         // técnicos con ES_ESTADISTICA=0, igual que la propia serie "Equipo" del gráfico.
         // Sobre el RANGO DE REFERENCIA, como el Promedio y el Por encima/Por debajo:
-        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04).
+        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04). Sin fin de semana en Día:
+        // el finde suma en los totales pero no promedia (spec 2026-09-07).
+        Set<String> refLaborable = new java.util.HashSet<>(referenciaLaborable());
         Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
-            if (periodosReferencia.contains(p.getPeriodo()))
+            if (refLaborable.contains(p.getPeriodo()))
                 sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
         }
 
@@ -763,7 +772,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             } else {
                 media = todosPuntos.stream()
                         .filter(p -> p.getNombreTecnico().equals(serie.getName())
-                                  && periodosReferencia.contains(p.getPeriodo()))
+                                  && refLaborable.contains(p.getPeriodo()))
                         .mapToDouble(this::valorDe)
                         .average().orElse(0);
             }
