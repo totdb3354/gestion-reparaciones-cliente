@@ -385,7 +385,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             todosLosTecnicos.addAll(inactivos);
         }
 
-        if (!com.reparaciones.Sesion.esAdminOSuperTecnico()) {
+        if (!com.reparaciones.Sesion.esAdmin()) {
             if (nombreTecnicoSesion != null) nombresSeleccionadosTec.add(nombreTecnicoSesion);
             menuTecnicos.setVisible(false);
             menuTecnicos.setManaged(false);
@@ -681,11 +681,11 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 dibujarLineasMedia(periodosVisibles, ts);
             });
 
-            // Leyenda: clic para quitar técnico (solo ADMIN/SUPERTECNICO) y sufijo con los
+            // Leyenda: clic para quitar técnico (solo ADMIN; Técnico y SuperTécnico solo ven lo suyo, spec 2026-09-07) y sufijo con los
             // IMEIs del último periodo visible (hoy / esta semana / este mes — ajuste smoke
             // 2026-09-04). El nombre se captura ANTES de tocar el texto: el clic y los
             // colores (que corren antes, en aplicarColores) siguen viendo el nombre limpio.
-            boolean puedeQuitar = com.reparaciones.Sesion.esAdminOSuperTecnico();
+            boolean puedeQuitar = com.reparaciones.Sesion.esAdmin();
             for (javafx.scene.Node item : chartReparaciones.lookupAll(".chart-legend-item")) {
                 if (!(item instanceof Label lbl)) continue;
                 String nombre = lbl.getText();
@@ -968,7 +968,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 Tooltip.install(nodo, tip);
 
                 boolean navegable = navegacion != null &&
-                        (com.reparaciones.Sesion.esAdminOSuperTecnico() ||
+                        (com.reparaciones.Sesion.esAdmin() ||
                          serie.getName().equals(nombreTecnicoSesion));
                 nodo.setOnMouseEntered(e -> {
                     String cursor = navegable ? "; -fx-cursor: hand;" : ";";
@@ -1197,9 +1197,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         dpDesde.setValue(null);
         dpHasta.setValue(null);
         nombresSeleccionadosTec.clear();
-        // Arranque limpio: admin/supertécnico quedan sin selección (solo Equipo + Promedio);
-        // técnico raso siempre vuelve a verse solo a sí mismo, nunca al resto del equipo.
-        if (!com.reparaciones.Sesion.esAdminOSuperTecnico() && nombreTecnicoSesion != null)
+        // Arranque limpio: el admin queda sin selección (solo Equipo + Promedio);
+        // técnico y supertécnico siempre vuelven a verse solo a sí mismos, nunca al resto del equipo (spec 2026-09-07).
+        if (!com.reparaciones.Sesion.esAdmin() && nombreTecnicoSesion != null)
             nombresSeleccionadosTec.add(nombreTecnicoSesion);
         if (filtroTecHandle != null) filtroTecHandle.refresh();
         chkEquipo.setSelected(false);
@@ -1452,7 +1452,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             filas = new ReparacionDAO().getEstadisticasPuntos("dia",
                     mes.minusMonths(1).atDay(1), mes.atEndOfMonth());
         } catch (SQLException e) { mostrarError(e); return; }
-        String tecnico = com.reparaciones.Sesion.esAdminOSuperTecnico() ? null : nombreTecnicoSesion;
+        String tecnico = com.reparaciones.Sesion.esAdmin() ? null : nombreTecnicoSesion;
         var t = PuntosEstadistica.calcularTarjetas(
                 filas, mes, java.time.LocalDate.now(), tecnico, nombresExcluidos);
         String quien = tecnico == null ? "equipo" : "tú";
