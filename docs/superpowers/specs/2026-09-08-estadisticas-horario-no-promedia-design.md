@@ -27,7 +27,7 @@ Horario del taller (dato del usuario, 2026-09-08; coincide con las horas de jorn
 Decisiones:
 
 - **Solo cuentan inicio y fin.** La media hora de comida no tiene hora fija y un cierre a esa hora no es hora extra: la jornada se trata como franja continua.
-- **Margen de 15 minutos a cada lado.** Cerrar el último móvil a las 18:03 no es hora extra. Franja efectiva: **8:15–18:15** (L-M), **8:15–17:15** (X-J), **8:15–14:45** (V). Fuera de esa franja, o en fin de semana, el cierre es **extra**.
+- **Margen asimétrico** (ajuste del usuario 2026-09-08 tras la revisión final; en el brainstorm era 15 min a cada lado): **30 min antes de la entrada y 15 después de la salida**. Llegar pronto y cerrar algo a las 8:10 no es hora extra; cerrar el último móvil a las 18:03 tampoco. Franja efectiva: **8:00–18:15** (L-M), **8:00–17:15** (X-J), **8:00–14:45** (V). Fuera de esa franja, o en fin de semana, el cierre es **extra**.
 - **Hora de Madrid.** La BD y el contenedor van en UTC; la hora de cierre se convierte a `Europe/Madrid` antes de compararla (el horario de verano lo absorbe la zona).
 - **Constante en el servidor** con comentario de procedencia, como `JORNADA_HORAS` en el cliente. Cambiar el horario es redesplegar el servidor, igual que cambiar los topes de carga. Tabla configurable: fuera de alcance (misma nota de futuro que la carga).
 
@@ -57,8 +57,8 @@ Nada nuevo en la interfaz (decisión del usuario). Cambian los textos:
 ## 5. Cambio en el servidor
 
 `util/Jornada.java` (nuevo, puro, con JUnit `JornadaTest`):
-- `ZoneId MADRID`, `LocalTime ENTRADA = 08:30`, `Map<DayOfWeek, LocalTime> SALIDA` {MON/TUE 18:00, WED/THU 17:00, FRI 14:30} (sábado y domingo ausentes = sin jornada), `Duration MARGEN = 15 min`. Cada constante con su comentario de procedencia (usuario 2026-09-08; horas = `JORNADA_HORAS` de la carga de capacidad).
-- `static boolean enJornada(ZonedDateTime cierreMadrid)`: día con salida definida y hora local en `[ENTRADA − MARGEN, SALIDA + MARGEN]` (extremos incluidos).
+- `ZoneId MADRID`, `LocalTime ENTRADA = 08:30`, `Map<DayOfWeek, LocalTime> SALIDA` {MON/TUE 18:00, WED/THU 17:00, FRI 14:30} (sábado y domingo ausentes = sin jornada), `Duration MARGEN_ENTRADA = 30 min`, `MARGEN_SALIDA = 15 min`. Cada constante con su comentario de procedencia (usuario 2026-09-08; horas = `JORNADA_HORAS` de la carga de capacidad).
+- `static boolean enJornada(ZonedDateTime cierreMadrid)`: día con salida definida y hora local en `[ENTRADA − MARGEN_ENTRADA, SALIDA + MARGEN_SALIDA]` (extremos incluidos).
 - `static ZonedDateTime aMadrid(Timestamp utc)`: `utc.toInstant().atZone(MADRID)`.
 
 `util/PuntosCalculo.java`:
@@ -100,7 +100,7 @@ Sin migración de BD.
 ## 7. Pruebas
 
 Servidor:
-- `JornadaTest`: lunes 8:14 → extra; 8:15 → jornada; 18:15 → jornada; 18:16 → extra; miércoles 17:15 / 17:16; viernes 14:45 / 14:46; sábado 10:00 → extra; conversión: `2026-08-28T20:30Z` es viernes 22:30 Madrid (extra) y `2026-08-28T22:30Z` es sábado 00:30 Madrid (extra, fecha 29).
+- `JornadaTest`: lunes 7:59 → extra; 8:00 → jornada; 18:15 → jornada; 18:16 → extra; miércoles 17:15 / 17:16; viernes 14:45 / 14:46; sábado 10:00 → extra; conversión: `2026-08-28T20:30Z` es viernes 22:30 Madrid (extra) y `2026-08-28T22:30Z` es sábado 00:30 Madrid (extra, fecha 29).
 - `PuntosCalculoTest`: `puntosJornada` suma solo las reparaciones con `enJornada`; una reparación con dos piezas en jornada puntúa las dos; `nImeisJornada` cuenta el IMEI con un cierre en horario y otro fuera una vez, y no cuenta el IMEI solo con cierres fuera; `puntos` y `nImeis` no cambian.
 - Suite del servidor verde. Arranque de contexto comprobado (el servidor no tiene test de contexto Spring).
 

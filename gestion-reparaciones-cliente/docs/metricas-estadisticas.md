@@ -51,14 +51,14 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 
 **Lo de fuera de horario suma, no promedia** (decisión 2026-09-08; generaliza la regla del fin de semana del 2026-09-07). Cada trabajo terminado se clasifica por su hora de cierre **en hora de Madrid**:
 
-| Día | Franja de jornada | Con margen de 15 min |
+| Día | Franja de jornada | Franja efectiva (con margen) |
 |---|---|---|
-| Lunes, Martes | 8:30–18:00 | 8:15–18:15 |
-| Miércoles, Jueves | 8:30–17:00 | 8:15–17:15 |
-| Viernes | 8:30–14:30 | 8:15–14:45 |
+| Lunes, Martes | 8:30–18:00 | 8:00–18:15 |
+| Miércoles, Jueves | 8:30–17:00 | 8:00–17:15 |
+| Viernes | 8:30–14:30 | 8:00–14:45 |
 | Sábado, Domingo | sin jornada | todo es extra |
 
-- **Puntos de jornada** = cerrados dentro de la franja con margen (extremos incluidos). **Puntos extra** = el resto. Solo cuentan entrada y salida: la media hora de comida de L–J no tiene hora fija y no se descuenta. El margen absorbe el "cerré el último antes de irme" (18:03 no es hora extra).
+- **Puntos de jornada** = cerrados dentro de la franja con margen (extremos incluidos). **Puntos extra** = el resto. Solo cuentan entrada y salida: la media hora de comida de L–J no tiene hora fija y no se descuenta. Margen asimétrico: 30 min antes de la entrada (llegar pronto y cerrar algo a las 8:10 no es hora extra) y 15 después de la salida (cerrar el último a las 18:03 tampoco).
 - **Qué suma todo** (jornada + extra): el punto del gráfico (series por técnico y Equipo), tarjetas "Puntos · mes" y "Puntos · hoy", total del mes anterior de la tarjeta del mes, numerador de Puntos/día, chips "N IMEIs", popover de desglose.
 - **Qué usa solo jornada**: todas las medias — Promedio (§6), x̄ por serie y Por encima/Por debajo (§7), IMEIs típicos (§5, con IMEIs que tienen algún cierre en horario) y las dos referencias de las tarjetas (§4). Un (técnico, periodo) cuenta como **trabajado** solo si tiene puntos de jornada > 0; un día en el que alguien solo cerró cosas fuera de horario no le cuenta como día trabajado (pero sigue en el eje X como "día con actividad").
 - **En todas las granularidades**: en Semana, Mes y Año la media tampoco incluye el sábado ni las horas extra (hasta 0.16.2 en Semana el sábado sí entraba). Consecuencia buscada: quien hace muchas horas extra queda por encima de su propia x̄; el tooltip del punto lo explica ("`X` puntos fuera de horario") y el de las varas dice "en horario".

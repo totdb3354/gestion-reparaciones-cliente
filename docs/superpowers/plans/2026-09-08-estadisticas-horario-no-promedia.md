@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- **Horario** (spec §2, dato del usuario 2026-09-08): entrada **8:30** todos los laborables; salida **18:00** L-M, **17:00** X-J, **14:30** V; sábado y domingo sin jornada. **Margen 15 min** a cada lado → franja efectiva **8:15–18:15 / 8:15–17:15 / 8:15–14:45**, extremos incluidos. Solo cuentan entrada y salida (sin pausa de comida). Todo en hora de **Madrid**.
+- **Horario** (spec §2, dato del usuario 2026-09-08): entrada **8:30** todos los laborables; salida **18:00** L-M, **17:00** X-J, **14:30** V; sábado y domingo sin jornada. **Margen asimétrico**: 30 min antes de la entrada y 15 después de la salida → franja efectiva **8:00–18:15 / 8:00–17:15 / 8:00–14:45**, extremos incluidos (ajuste del usuario tras la revisión final; el código de la Task 1 muestra el margen simétrico original). Solo cuentan entrada y salida (sin pausa de comida). Todo en hora de **Madrid**.
 - **Regla única en las cuatro granularidades** (spec §3): totales suman todo; medias solo con puntos de jornada; un (técnico, periodo) es "trabajado" solo si sus puntos de jornada > 0.
 - **Solo tooltips** (spec §4): tercera línea "`X` puntos fuera de horario" en el tooltip del punto (extra siempre en puntos, también con la métrica Puntos/día); coletilla "**, en horario**" en `ambitoReferencia()` en todas las granularidades cuando el servidor envía los campos; con servidor antiguo, todo como en 0.16.2 (coletilla ", L–V" solo en Día, sin línea de extra).
 - **Campos aditivos**: servidor `double puntosJornada`, `int nImeisJornada`; cliente `Double puntosJornada`, `Integer nImeisJornada` (Gson rellena por reflexión; `null` = servidor viejo). El constructor de 6 argumentos de `FilaPuntos` se conserva (por defecto `enJornada = true`) para no romper los tests existentes.
@@ -43,6 +43,8 @@
 ---
 
 ### Task 1: Servidor — `Jornada` (horario, margen, hora de Madrid)
+
+> Ajuste posterior (2026-09-08, tras la revisión final): margen de entrada 30 min (franja desde las 8:00) y de salida 15 min — constantes `MARGEN_ENTRADA`/`MARGEN_SALIDA`. El código de abajo es el ejecutado originalmente.
 
 **Files:**
 - Create: `gestion-reparaciones-servidor/src/main/java/com/reparaciones/servidor/util/Jornada.java`
