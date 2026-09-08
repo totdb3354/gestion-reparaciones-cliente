@@ -331,6 +331,35 @@ class PuntosEstadisticaTest {
                 PuntosEstadistica.textoTooltip("2026-08-28", 38.5, false, 14, 0));
     }
 
+    @Test void referenciasDeLasTarjetasUsanSoloPuntosDeJornada() {
+        // agosto: lunes 3 → 100 (80 en jornada), sábado 8 → 20 (0 en jornada); hoy lunes 7/09
+        // → objetivo = media de los lunes EN JORNADA = 80; el total de agosto sigue siendo 120
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                filaHorario("Marcos", "2026-08-03", 100, 80, 5, 4),
+                filaHorario("Marcos", "2026-08-08", 20, 0, 1, 0),
+                filaHorario("Marcos", "2026-09-07", 40, 40, 3, 3));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 7), null, Set.of());
+        assertEquals(120.0, t.puntosAnterior(), 0.001);
+        assertEquals(40.0, t.puntosHoy(), 0.001);
+        assertEquals(80.0, t.objetivoHoy(), 0.001);
+        assertEquals(50, t.pctHoy());
+    }
+
+    @Test void mediaGlobalDeRespaldoIgnoraLosDiasSoloConExtra() {
+        // agosto: lunes 3 → 100 (80 en jornada), martes 4 → 30 (todo extra); hoy miércoles 2/09
+        // sin muestras de miércoles → media global por día trabajado = 80 / 1 (el martes no es día trabajado)
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                filaHorario("Marcos", "2026-08-03", 100, 80, 5, 4),
+                filaHorario("Marcos", "2026-08-04", 30, 0, 2, 0),
+                filaHorario("Marcos", "2026-09-02", 50, 50, 3, 3));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 2), null, Set.of());
+        assertEquals(130.0, t.puntosAnterior(), 0.001);
+        assertEquals(80.0, t.objetivoHoy(), 0.001);
+        assertEquals(62, t.pctHoy());   // 50/80 = 62,5% truncado
+    }
+
     private static PuntoEstadisticaPuntos fila(String tec, String periodo, double puntos) {
         return new PuntoEstadisticaPuntos(tec, periodo, puntos, puntos, 0, 0, 1, 0, 0, 0);
     }

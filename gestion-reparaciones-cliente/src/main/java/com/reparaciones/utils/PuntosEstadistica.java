@@ -215,7 +215,8 @@ public final class PuntosEstadistica {
      * absorbe jornadas cortas sin mantener calendarios). El % del día arranca en 0
      * cada mañana y se espera que alcance el 100% al cierre, igual que el del mes
      * a fin de mes. Día de semana laborable sin muestras el mes anterior → media
-     * global por día trabajado (solo L–V en el divisor: el finde suma, no promedia);
+     * global por día trabajado. Las dos referencias se calculan solo con puntos de jornada (lo de
+     * fuera de horario suma, no promedia — spec 2026-09-08; el finde es su caso extremo);
      * fin de semana sin muestras → sin línea de objetivo.
      * Los % van truncados con epsilon: "100%" solo al igualar de verdad.
      *
@@ -231,34 +232,40 @@ public final class PuntosEstadistica {
                 ? sinExcluidos(filasDiarias, excluidos) : filasDiarias;
         YearMonth anterior = mesActual.minusMonths(1);
 
-        // Total del ámbito (equipo o técnico) por día de calendario
+        // Por día de calendario: el total (suma todo) y la parte en jornada (base de las medias).
+        // Lo de fuera de horario suma, no promedia (spec 2026-09-08); el finde es su caso extremo.
         Map<LocalDate, Double> porDia = new java.util.HashMap<>();
+        Map<LocalDate, Double> porDiaJornada = new java.util.HashMap<>();
         for (PuntoEstadisticaPuntos f : filas) {
             if (tecnicoONull != null && !tecnicoONull.equals(f.getNombreTecnico())) continue;
-            porDia.merge(LocalDate.parse(f.getPeriodo()), f.getPuntos(), Double::sum);
+            LocalDate dia = LocalDate.parse(f.getPeriodo());
+            porDia.merge(dia, f.getPuntos(), Double::sum);
+            porDiaJornada.merge(dia, puntosJornada(f), Double::sum);
         }
 
         double puntosActual = 0, puntosAnterior = 0;
-        double puntosLaborablesAnterior = 0;   // solo L–V: base de la media global por día trabajado
-        int diasTrabajadosAnterior = 0;
-        Map<DayOfWeek, double[]> porDiaSemana = new java.util.EnumMap<>(DayOfWeek.class); // [suma, n]
         for (var e : porDia.entrySet()) {
             YearMonth ym = YearMonth.from(e.getKey());
-            if (ym.equals(mesActual)) {
-                puntosActual += e.getValue();
-            } else if (ym.equals(anterior)) {
-                puntosAnterior += e.getValue();
-                // El finde suma en el total pero no promedia (spec 2026-09-07): la media global por
-                // día trabajado se calcula solo con los días laborables, en numerador y divisor.
-                DayOfWeek dow = e.getKey().getDayOfWeek();
-                if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
-                    puntosLaborablesAnterior += e.getValue();
-                    diasTrabajadosAnterior++;
-                }
-                double[] acc = porDiaSemana.computeIfAbsent(e.getKey().getDayOfWeek(), k -> new double[2]);
-                acc[0] += e.getValue();
-                acc[1]++;
+            if (ym.equals(mesActual))     puntosActual   += e.getValue();
+            else if (ym.equals(anterior)) puntosAnterior += e.getValue();
+        }
+
+        // Referencias del mes anterior, solo con puntos de jornada: un día cuenta como trabajado
+        // si tiene jornada > 0. La media global de respaldo además solo mira L–V (con servidor
+        // antiguo, jornada = total y el filtro L–V sostiene la regla del finde de 0.16.2).
+        double puntosJornadaAnterior = 0;
+        int diasTrabajadosAnterior = 0;
+        Map<DayOfWeek, double[]> porDiaSemana = new java.util.EnumMap<>(DayOfWeek.class); // [suma, n]
+        for (var e : porDiaJornada.entrySet()) {
+            if (!YearMonth.from(e.getKey()).equals(anterior) || e.getValue() <= 0) continue;
+            DayOfWeek dow = e.getKey().getDayOfWeek();
+            if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
+                puntosJornadaAnterior += e.getValue();
+                diasTrabajadosAnterior++;
             }
+            double[] acc = porDiaSemana.computeIfAbsent(dow, k -> new double[2]);
+            acc[0] += e.getValue();
+            acc[1]++;
         }
 
         double puntosHoy = porDia.getOrDefault(hoy, 0.0);
@@ -275,7 +282,7 @@ public final class PuntosEstadistica {
             if (acc != null && acc[1] > 0) {
                 objetivoHoy = acc[0] / acc[1];
             } else if (!finde && diasTrabajadosAnterior > 0) {
-                objetivoHoy = puntosLaborablesAnterior / diasTrabajadosAnterior; // media global por día laborable trabajado
+                objetivoHoy = puntosJornadaAnterior / diasTrabajadosAnterior; // media global por día trabajado
             }
             if (objetivoHoy != null && objetivoHoy > 0)
                 pctHoy = (int) Math.floor(puntosHoy / objetivoHoy * 100 + 1e-9);
