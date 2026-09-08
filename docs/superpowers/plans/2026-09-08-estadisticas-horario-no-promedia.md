@@ -1035,6 +1035,8 @@ cd "C:/Users/dev/Documents/ProgramaReparaciones" && git add gestion-reparaciones
 
 ### Task 7: Documentación — diccionario de métricas y CHANGELOG
 
+> Ajuste posterior (2026-09-08, tras la revisión final): la franja de jornada arranca a las 8:00 (margen de entrada 30 min); la tabla y el CHANGELOG de abajo muestran el 8:15 original tal como se ejecutó. El diccionario y el CHANGELOG reales ya están actualizados.
+
 **Files:**
 - Modify: `gestion-reparaciones-cliente/docs/metricas-estadisticas.md`
 - Modify: `CHANGELOG.md` (raíz, sección `[Unreleased]`)
