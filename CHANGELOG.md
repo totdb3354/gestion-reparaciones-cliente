@@ -7,6 +7,12 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+### Changed
+- **Estadísticas: lo de fuera de horario suma, no promedia.** Generaliza la regla del fin de semana a las horas extra de cualquier día, en las cuatro granularidades: los puntos cerrados fuera del horario del taller (8:30–18:00 L-M, 17:00 X-J, 14:30 V, con 15 min de margen) siguen sumando en gráfico, tarjetas y totales, pero el Promedio, la media de cada técnico, Por encima/Por debajo, IMEIs típicos y la referencia de las tarjetas se calculan solo con lo cerrado en horario. El tooltip del punto añade "X puntos fuera de horario" y las varas dicen "en horario". Requiere servidor con `puntosJornada`; con uno antiguo la vista se comporta como la 0.16.2.
+
+### Fixed
+- Estadísticas por puntos: la fecha de cada cierre se toma en hora de Madrid (antes en UTC, con lo que un cierre entre las 00:00 y las 02:00 de verano caía en el día anterior).
+
 ## [0.16.2] - 2026-09-07
 
 ### Added
