@@ -303,7 +303,42 @@ class PuntosEstadisticaTest {
         assertEquals(50, t.pctHoy());
     }
 
+    // ── horario: lo de fuera suma, no promedia (spec 2026-09-08) ─────────────
+    @Test void puntosJornadaYExtraConServidorNuevoYViejo() {
+        PuntoEstadisticaPuntos nuevo = filaHorario("Alex", "2026-08-28", 38.5, 26.5, 14, 9);
+        assertEquals(26.5, PuntosEstadistica.puntosJornada(nuevo), 0.001);
+        assertEquals(12.0, PuntosEstadistica.puntosExtra(nuevo), 0.001);
+        assertEquals(9, PuntosEstadistica.imeisJornada(nuevo));
+
+        PuntoEstadisticaPuntos viejo = fila("Alex", "2026-08-28", 38.5);   // sin campos: como 0.16.2
+        assertEquals(38.5, PuntosEstadistica.puntosJornada(viejo), 0.001);
+        assertEquals(0.0, PuntosEstadistica.puntosExtra(viejo), 0.001);
+        assertEquals(0, PuntosEstadistica.imeisJornada(viejo));
+    }
+
+    @Test void imeisJornadaCaeANImeisSiFaltaSoloElCampoNuevo() {
+        PuntoEstadisticaPuntos p = new PuntoEstadisticaPuntos("Alex", "2026-08-28",
+                10, 10, 0, 0, 1, 0, 0, 0, 7, null, null);
+        assertEquals(7, PuntosEstadistica.imeisJornada(p));
+    }
+
+    @Test void tooltipConExtraAnadeTerceraLineaSiempreEnPuntos() {
+        assertEquals("2026-08-28\n38,5 puntos · 14 trabajos\n12,0 puntos fuera de horario",
+                PuntosEstadistica.textoTooltip("2026-08-28", 38.5, false, 14, 12.0));
+        assertEquals("2026-08-28\n38,5 puntos/día\n12,0 puntos fuera de horario",
+                PuntosEstadistica.textoTooltip("2026-08-28", 38.5, true, 14, 12.0));
+        assertEquals("2026-08-28\n38,5 puntos · 14 trabajos",
+                PuntosEstadistica.textoTooltip("2026-08-28", 38.5, false, 14, 0));
+    }
+
     private static PuntoEstadisticaPuntos fila(String tec, String periodo, double puntos) {
         return new PuntoEstadisticaPuntos(tec, periodo, puntos, puntos, 0, 0, 1, 0, 0, 0);
+    }
+
+    /** Fila de un servidor con horario: total, parte en jornada, IMEIs e IMEIs en jornada. */
+    private static PuntoEstadisticaPuntos filaHorario(String tec, String periodo, double puntos,
+                                                      double jornada, int nImeis, int nImeisJornada) {
+        return new PuntoEstadisticaPuntos(tec, periodo, puntos, puntos, 0, 0, 1, 0, 0, 0,
+                nImeis, jornada, nImeisJornada);
     }
 }

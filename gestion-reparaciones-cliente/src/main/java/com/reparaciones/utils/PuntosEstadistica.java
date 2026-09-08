@@ -139,6 +139,32 @@ public final class PuntosEstadistica {
                 : periodo + "\n" + formatearPuntos(valor) + " puntos · " + trabajos + " trabajos";
     }
 
+    /** Como el anterior, con tercera línea "X puntos fuera de horario" si hay extra (siempre en
+     *  puntos, también con la métrica Puntos/día — spec 2026-09-08 §4). */
+    public static String textoTooltip(String periodo, double valor, boolean porDia, int trabajos, double extra) {
+        String base = textoTooltip(periodo, valor, porDia, trabajos);
+        return extra > 0 ? base + "\n" + formatearPuntos(extra) + " puntos fuera de horario" : base;
+    }
+
+    // ── Horario: lo de fuera suma, no promedia (spec 2026-09-08) ─────────────
+
+    /** Puntos cerrados en horario, la base de TODAS las medias. Con un servidor sin el campo,
+     *  todos los puntos (comportamiento 0.16.2). */
+    public static double puntosJornada(PuntoEstadisticaPuntos p) {
+        return p.getPuntosJornada() != null ? p.getPuntosJornada() : p.getPuntos();
+    }
+
+    /** Puntos fuera de horario del punto (0 con servidor antiguo). */
+    public static double puntosExtra(PuntoEstadisticaPuntos p) {
+        return Math.max(0, p.getPuntos() - puntosJornada(p));
+    }
+
+    /** IMEIs con algún cierre en horario; sin el campo, los IMEIs del periodo (0 si tampoco). */
+    public static int imeisJornada(PuntoEstadisticaPuntos p) {
+        if (p.getnImeisJornada() != null) return p.getnImeisJornada();
+        return p.getnImeis() != null ? p.getnImeis() : 0;
+    }
+
     /** Etiqueta de la barra de navegación: la unidad según la granularidad de la UI.
      *  En Día el eje solo tiene días en los que alguien trabajó, de ahí "con actividad". */
     public static String etiquetaVentana(int n, String granularidad) {
