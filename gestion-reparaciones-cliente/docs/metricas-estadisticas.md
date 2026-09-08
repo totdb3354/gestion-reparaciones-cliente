@@ -63,6 +63,7 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 - **Qué usa solo jornada**: todas las medias — Promedio (§6), x̄ por serie y Por encima/Por debajo (§7), IMEIs típicos (§5, con IMEIs que tienen algún cierre en horario) y las dos referencias de las tarjetas (§4). Un (técnico, periodo) cuenta como **trabajado** solo si tiene puntos de jornada > 0; un día en el que alguien solo cerró cosas fuera de horario no le cuenta como día trabajado (pero sigue en el eje X como "día con actividad").
 - **En todas las granularidades**: en Semana, Mes y Año la media tampoco incluye el sábado ni las horas extra (hasta 0.16.2 en Semana el sábado sí entraba). Consecuencia buscada: quien hace muchas horas extra queda por encima de su propia x̄; el tooltip del punto lo explica ("`X` puntos fuera de horario") y el de las varas dice "en horario".
 - **Dónde se decide**: en el servidor (`util/Jornada.java`, constantes con procedencia; `puntosJornada` y `nImeisJornada` en cada fila del endpoint). La fecha del punto también es la de Madrid (antes UTC). Con un servidor antiguo el cliente se comporta como la 0.16.2.
+- Un día del mes anterior con 0 puntos (por ejemplo solo acciones "otro" valoradas a 0) ya no cuenta como día trabajado en las referencias de las tarjetas; hasta 0.16.2 sí contaba. Aplica también contra un servidor antiguo.
 - Caso de calibración: Alex, 28 de agosto de 2026 (38,5 puntos con horas extra): el punto se queda en 38,5, su x̄ y el Promedio bajan.
 
 ## 3. Puntos/día (la métrica normalizada)
@@ -81,7 +82,7 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 2026-09-04), del equipo — o del propio técnico si el rol es TECNICO (contra su propio histórico):
 
 - **Puntos · mes**: acumulado del mes en curso; objetivo = `acumulado ÷ total del mes anterior completo`. Sube hacia el 100% conforme avanza el mes.
-- **Puntos · hoy (`<día>`)**: lo hecho HOY; objetivo = `puntos de hoy ÷ media de ese día de semana en el mes anterior` — "los viernes contra los viernes". Arranca en 0% cada mañana y se espera alcanzar el 100% al cierre del día, igual que la del mes a fin de mes. La referencia por día de semana **absorbe las jornadas cortas sola** (la media de los viernes ya es de 6 horas) sin mantener ningún calendario; se autocalibra con los datos (~4-5 muestras por día de semana: algo ruidosa, asumido). Día laborable sin muestras el mes anterior → media global por día trabajado; fin de semana sin muestras → sin línea de objetivo (solo la cifra).
+- **Puntos · hoy (`<día>`)**: lo hecho HOY; objetivo = `puntos de hoy ÷ media de ese día de semana en el mes anterior` — "los viernes contra los viernes". Arranca en 0% cada mañana y se espera alcanzar el 100% al cierre del día, igual que la del mes a fin de mes. La referencia por día de semana **absorbe las jornadas cortas sola** (la media de los viernes ya es de 6 horas) sin mantener ningún calendario; se autocalibra con los datos (~4-5 muestras por día de semana: algo ruidosa, asumido). Día laborable sin muestras el mes anterior → media global por día trabajado; fin de semana → sin línea de objetivo (solo la cifra: un sábado nunca tiene puntos de jornada, así que nunca es muestra).
 - Línea de objetivo: **"`pct`% de `<referencia>` (`valor`)"** — progreso hacia igualar, nunca pérdida.
 - **% truncado, no redondeado**: 99,89% se muestra "99%" — el **100% solo aparece al igualar de verdad** (con redondeo, 90,6 sobre 90,7 marcaba 100% verde sin haber llegado).
 - Color: **gris** < 100%, **verde** ≥ 100%. **Nunca rojo.**
@@ -109,7 +110,7 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 
 ## 7. Por encima / Por debajo (tooltip de la línea)
 
-Media personal **por periodo trabajado** de cada técnico sobre el **mismo rango de referencia** que la línea, comparada contra ella. Estable al navegar (habla del rango de referencia, no del tramo en pantalla). Solo puntos de jornada (§2b); un técnico con muchas horas extra queda por encima de su propia x̄, y su punto del gráfico (que suma todo) por encima de la línea.
+Media personal **por periodo trabajado** de cada técnico sobre el **mismo rango de referencia** que la línea, comparada contra ella. Estable al navegar (habla del rango de referencia, no del tramo en pantalla). Solo puntos de jornada (§2b); un técnico con muchas horas extra queda por encima de su propia x̄, y su punto del gráfico (que suma todo) por encima de la línea. Desde 2026-09-08 las listas Por encima/Por debajo usan exactamente el mismo conjunto de periodos de referencia que las líneas x̄ (antes, en Día, las listas incluían el fin de semana y las x̄ no, y podían discrepar); esto aplica también contra un servidor antiguo.
 
 Propiedad matemática: la línea es la media ponderada de esas medias personales (ponderada por días trabajados) → **siempre hay gente a ambos lados** (salvo empate total).
 

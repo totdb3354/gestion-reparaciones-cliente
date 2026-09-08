@@ -1100,6 +1100,7 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         PuntoEstadisticaPuntos datos = base.stream()
                 .filter(p -> p.getPeriodo().equals(periodo)
                         && (esEquipo || p.getNombreTecnico().equals(nombreSerie)))
+                // El agregado del popover lleva solo totales: nImeis, puntosJornada y nImeisJornada se descartan a propósito (el popover no los muestra — spec 2026-09-08 §8).
                 .reduce((a, b) -> new PuntoEstadisticaPuntos(nombreSerie, periodo,
                         a.getPuntos() + b.getPuntos(),
                         a.getPuntosNormales() + b.getPuntosNormales(),

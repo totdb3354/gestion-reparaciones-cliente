@@ -1121,6 +1121,8 @@ El usuario pushea la rama del servidor y reconstruye el contenedor en la VM de p
 5. Un cierre de prueba fuera de horario (o uno real de hoy después de las 18:15) aparece en el tooltip de hoy como extra y **no** mueve la x̄.
 6. Un sábado con actividad sigue en el eje X y en "N días con actividad".
 7. Rol TECNICO: ve solo lo suyo, con los mismos textos.
+8. **Zona horaria** (premisa UTC): en la BD de preproducción ejecutar `SELECT ID_REP, FECHA_FIN, NOW(), @@session.time_zone FROM Reparacion WHERE FECHA_FIN IS NOT NULL ORDER BY FECHA_FIN DESC LIMIT 1;` y confirmar que `NOW()` va en UTC (dos horas menos que el reloj en verano) y que ese cierre aparece en el tooltip del día correcto y en el lado jornada/extra que le corresponde por su hora de Madrid. Si `NOW()` no fuera UTC, parar: la clasificación estaría desplazada dos horas.
+9. **Por encima / Por debajo con servidor viejo**: en Día puede diferir de 0.16.2 (las listas usan ahora el mismo conjunto de periodos que las x̄, sin finde); es esperado, no un defecto.
 
 - [ ] **Step 4: Cierre**
 

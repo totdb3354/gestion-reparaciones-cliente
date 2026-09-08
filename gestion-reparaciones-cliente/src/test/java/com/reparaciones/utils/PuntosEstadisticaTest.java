@@ -360,6 +360,21 @@ class PuntosEstadisticaTest {
         assertEquals(62, t.pctHoy());   // 50/80 = 62,5% truncado
     }
 
+    @Test void sabadoConServidorNuevoNoTieneLineaDeObjetivo() {
+        // agosto tiene un sábado con puntos (todo extra: jornada 0) → no es muestra; hoy sábado 5/09
+        // → sin objetivo (spec 2026-09-08 §3.4), solo la cifra del día; el total de agosto suma el sábado
+        List<PuntoEstadisticaPuntos> filas = List.of(
+                filaHorario("Marcos", "2026-08-03", 100, 80, 5, 4),
+                filaHorario("Marcos", "2026-08-08", 20, 0, 1, 0),
+                filaHorario("Marcos", "2026-09-05", 5, 0, 1, 0));
+        PuntosEstadistica.Tarjetas t = PuntosEstadistica.calcularTarjetas(
+                filas, YearMonth.of(2026, 9), LocalDate.of(2026, 9, 5), null, Set.of());
+        assertEquals(5.0, t.puntosHoy(), 0.001);
+        assertEquals(120.0, t.puntosAnterior(), 0.001);
+        assertNull(t.pctHoy());
+        assertNull(t.objetivoHoy());
+    }
+
     private static PuntoEstadisticaPuntos fila(String tec, String periodo, double puntos) {
         return new PuntoEstadisticaPuntos(tec, periodo, puntos, puntos, 0, 0, 1, 0, 0, 0);
     }
