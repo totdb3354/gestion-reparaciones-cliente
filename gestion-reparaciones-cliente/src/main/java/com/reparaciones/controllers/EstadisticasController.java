@@ -464,6 +464,22 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 : p.getPuntos();
     }
 
+    /** Como {@link #valorDe}, pero solo con los puntos cerrados en horario: alimenta TODAS las
+     *  medias (Promedio, x̄, Por encima/Por debajo, referencia de IMEIs). Lo de fuera de horario
+     *  suma en el punto del gráfico pero no promedia (spec 2026-09-08). */
+    private double valorJornadaDe(PuntoEstadisticaPuntos p) {
+        double jornada = PuntosEstadistica.puntosJornada(p);
+        return metricaPorDia()
+                ? PuntosEstadistica.puntosDia(jornada, p.getPeriodo(),
+                        cmbGranularidad.getValue(), java.time.LocalDate.now())
+                : jornada;
+    }
+
+    /** true si el servidor envía puntosJornada; con uno antiguo la vista se comporta como la 0.16.2. */
+    private boolean servidorConJornada() {
+        return todosPuntos.stream().anyMatch(p -> p.getPuntosJornada() != null);
+    }
+
     /** Recarga datos de BD y reinicia la ventana. Llamado al cambiar fechas o granularidad. */
     @FXML
     private void recargarGrafico() {
@@ -643,8 +659,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
             for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos))
                 if (p.getnImeis() != null)
                     datosImeis.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
-                              .put(p.getPeriodo(), p.getnImeis().doubleValue());
-            mediaImeisTmp = PuntosEstadistica.promedioVentana(datosImeis, referenciaLaborable());   // sin finde (spec 2026-09-07)
+                              .put(p.getPeriodo(), (double) PuntosEstadistica.imeisJornada(p));
+            mediaImeisTmp = PuntosEstadistica.promedioVentana(datosImeis, referenciaLaborable());   // solo IMEIs en horario (spec 2026-09-08)
         }
         final double mediaImeis = mediaImeisTmp;
 
@@ -713,11 +729,14 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
     }
 
     /** Ámbito de las varas (Promedio, x̄ y Por encima/Por debajo): filtro de fechas o última ventana.
-     *  En Día lleva la coletilla "L–V": el fin de semana suma, no promedia (spec 2026-09-07). */
+     *  Coletilla "en horario" en todas las granularidades cuando el servidor envía puntosJornada
+     *  (lo de fuera de horario suma, no promedia — spec 2026-09-08); con servidor antiguo, "L–V"
+     *  solo en Día (regla del finde de 0.16.2, spec 2026-09-07). */
     private String ambitoReferencia() {
         String base = (dpDesde.getValue() != null || dpHasta.getValue() != null)
                 ? "rango filtrado"
                 : PuntosEstadistica.etiquetaVentana(periodosReferencia.size(), cmbGranularidad.getValue());
+        if (servidorConJornada()) return base + ", en horario";
         return "Día".equals(cmbGranularidad.getValue()) ? base + ", L–V" : base;
     }
 
@@ -731,10 +750,10 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         Map<String, Map<String, Double>> datosVentana = new LinkedHashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
             datosVentana.computeIfAbsent(p.getNombreTecnico(), k -> new java.util.HashMap<>())
-                        .put(p.getPeriodo(), valorDe(p));
+                        .put(p.getPeriodo(), valorJornadaDe(p));
         }
         return PuntosEstadistica.promedioVentana(datosVentana,
-                PuntosEstadistica.soloLaborables(periodos, cmbGranularidad.getValue()));   // el finde suma, no promedia
+                PuntosEstadistica.soloLaborables(periodos, cmbGranularidad.getValue()));   // lo de fuera de horario (y el finde) suma, no promedia
     }
 
     private void dibujarLineasMedia(Set<String> periodosVisibles, List<XYChart.Series<String, Number>> todasSeries) {
@@ -754,13 +773,14 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
         // Precomputar suma total por periodo (reutilizado en "Equipo"): excluye a los
         // técnicos con ES_ESTADISTICA=0, igual que la propia serie "Equipo" del gráfico.
         // Sobre el RANGO DE REFERENCIA, como el Promedio y el Por encima/Por debajo:
-        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04). Sin fin de semana en Día:
-        // el finde suma en los totales pero no promedia (spec 2026-09-07).
+        // las x̄ no bailan al navegar (ajuste smoke 2026-09-04). Solo puntos de jornada:
+        // lo de fuera de horario (y el finde) suma en los totales pero no promedia (spec
+        // 2026-09-08); un periodo sin jornada no cuenta como trabajado.
         Set<String> refLaborable = new java.util.HashSet<>(referenciaLaborable());
         Map<String, Double> sumaPorPeriodo = new java.util.HashMap<>();
         for (PuntoEstadisticaPuntos p : PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)) {
             if (refLaborable.contains(p.getPeriodo()))
-                sumaPorPeriodo.merge(p.getPeriodo(), valorDe(p), Double::sum);
+                sumaPorPeriodo.merge(p.getPeriodo(), valorJornadaDe(p), Double::sum);
         }
 
         for (XYChart.Series<String, Number> serie : chartReparaciones.getData()) {
@@ -768,12 +788,13 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
 
             double media;
             if ("Equipo".equals(serie.getName())) {
-                media = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+                media = sumaPorPeriodo.values().stream().mapToDouble(Double::doubleValue).filter(v -> v > 0).average().orElse(0);
             } else {
                 media = todosPuntos.stream()
                         .filter(p -> p.getNombreTecnico().equals(serie.getName())
                                   && refLaborable.contains(p.getPeriodo()))
-                        .mapToDouble(this::valorDe)
+                        .mapToDouble(this::valorJornadaDe)
+                        .filter(v -> v > 0)   // periodo trabajado = con puntos de jornada
                         .average().orElse(0);
             }
 
@@ -864,8 +885,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     .filter(nombre -> {
                         double media = todosPuntos.stream()
                                 .filter(p -> p.getNombreTecnico().equals(nombre)
-                                          && periodosReferencia.contains(p.getPeriodo()))
-                                .mapToDouble(this::valorDe)
+                                          && refLaborable.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorJornadaDe)
+                                .filter(v -> v > 0)
                                 .average().orElse(0);
                         return media > refMedia;
                     }).collect(Collectors.toList());
@@ -873,8 +895,9 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                     .filter(nombre -> {
                         double media = todosPuntos.stream()
                                 .filter(p -> p.getNombreTecnico().equals(nombre)
-                                          && periodosReferencia.contains(p.getPeriodo()))
-                                .mapToDouble(this::valorDe)
+                                          && refLaborable.contains(p.getPeriodo()))
+                                .mapToDouble(this::valorJornadaDe)
+                                .filter(v -> v > 0)
                                 .average().orElse(0);
                         return media > 0 && media <= refMedia;
                     }).collect(Collectors.toList());
@@ -945,6 +968,19 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                 .mapToInt(p -> p.getnNormales() + p.getnGlass() + p.getnPulidos()).sum();
     }
 
+    /** Puntos fuera de horario de un técnico (o "Equipo": técnicos que cuentan) en un periodo;
+     *  0 con un servidor antiguo (spec 2026-09-08 §4). */
+    private double extraDe(String tecnico, String periodo) {
+        boolean esEquipo = "Equipo".equals(tecnico);
+        List<PuntoEstadisticaPuntos> base = esEquipo
+                ? PuntosEstadistica.sinExcluidos(todosPuntos, nombresExcluidos)
+                : todosPuntos;
+        return base.stream()
+                .filter(p -> p.getPeriodo().equals(periodo)
+                        && (esEquipo || p.getNombreTecnico().equals(tecnico)))
+                .mapToDouble(PuntosEstadistica::puntosExtra).sum();
+    }
+
     /** Aplica el color fijo de cada técnico a su línea, puntos y símbolo de leyenda. */
     private void aplicarColores() {
         List<XYChart.Series<String, Number>> todasSeries = new java.util.ArrayList<>(chartReparaciones.getData());
@@ -970,7 +1006,8 @@ public class EstadisticasController implements com.reparaciones.utils.Recargable
                         : "-fx-background-color: transparent, transparent;");
 
                 Tooltip tip = new Tooltip(PuntosEstadistica.textoTooltip(d.getXValue(), d.getYValue().doubleValue(),
-                        metricaPorDia(), trabajosDe(serie.getName(), d.getXValue())));
+                        metricaPorDia(), trabajosDe(serie.getName(), d.getXValue()),
+                        extraDe(serie.getName(), d.getXValue())));
                 tip.setShowDelay(Duration.ZERO);
                 tip.setShowDuration(Duration.INDEFINITE);
                 tip.setHideDelay(Duration.millis(100));
