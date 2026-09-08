@@ -47,6 +47,25 @@ Qué cuenta como "fila de pieza" (mismo criterio que el descuento de stock del c
 
 Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass solo → 0,5 · glass+marco → 1,0 · pantalla con cantidad 2 (rotura) → **1,0** · dos acciones "otro" → 1,0 · reparación sin filas → 0,5 · pulido → 0,25.
 
+## 2b. Horario: puntos de jornada y puntos extra
+
+**Lo de fuera de horario suma, no promedia** (decisión 2026-09-08; generaliza la regla del fin de semana del 2026-09-07). Cada trabajo terminado se clasifica por su hora de cierre **en hora de Madrid**:
+
+| Día | Franja de jornada | Franja efectiva (con margen) |
+|---|---|---|
+| Lunes, Martes | 8:30–18:00 | 8:00–18:15 |
+| Miércoles, Jueves | 8:30–17:00 | 8:00–17:15 |
+| Viernes | 8:30–14:30 | 8:00–14:45 |
+| Sábado, Domingo | sin jornada | todo es extra |
+
+- **Puntos de jornada** = cerrados dentro de la franja con margen (extremos incluidos). **Puntos extra** = el resto. Solo cuentan entrada y salida: la media hora de comida de L–J no tiene hora fija y no se descuenta. Margen asimétrico: 30 min antes de la entrada (llegar pronto y cerrar algo a las 8:10 no es hora extra) y 15 después de la salida (cerrar el último a las 18:03 tampoco).
+- **Qué suma todo** (jornada + extra): el punto del gráfico (series por técnico y Equipo), tarjetas "Puntos · mes" y "Puntos · hoy", total del mes anterior de la tarjeta del mes, numerador de Puntos/día, chips "N IMEIs", popover de desglose.
+- **Qué usa solo jornada**: todas las medias — Promedio (§6), x̄ por serie y Por encima/Por debajo (§7), IMEIs típicos (§5, con IMEIs que tienen algún cierre en horario) y las dos referencias de las tarjetas (§4). Un (técnico, periodo) cuenta como **trabajado** solo si tiene puntos de jornada > 0; un día en el que alguien solo cerró cosas fuera de horario no le cuenta como día trabajado (pero sigue en el eje X como "día con actividad").
+- **En todas las granularidades**: en Semana, Mes y Año la media tampoco incluye el sábado ni las horas extra (hasta 0.16.2 en Semana el sábado sí entraba). Consecuencia buscada: quien hace muchas horas extra queda por encima de su propia x̄; el tooltip del punto lo explica ("`X` puntos fuera de horario") y el de las varas dice "en horario".
+- **Dónde se decide**: en el servidor (`util/Jornada.java`, constantes con procedencia; `puntosJornada` y `nImeisJornada` en cada fila del endpoint). La fecha del punto también es la de Madrid (antes UTC). Con un servidor antiguo el cliente se comporta como la 0.16.2.
+- Un día del mes anterior con 0 puntos (por ejemplo solo acciones "otro" valoradas a 0) ya no cuenta como día trabajado en las referencias de las tarjetas; hasta 0.16.2 sí contaba. Aplica también contra un servidor antiguo.
+- Caso de calibración: Alex, 28 de agosto de 2026 (38,5 puntos con horas extra): el punto se queda en 38,5, su x̄ y el Promedio bajan.
+
 ## 3. Puntos/día (la métrica normalizada)
 
 **Puntos del periodo ÷ días laborables (L–V) del periodo.**
@@ -56,24 +75,24 @@ Ejemplos (valores seed): pantalla → 1,0 · pantalla+batería → 2,0 · glass 
 - Festivos **no** descontados y jornadas por horas **no** ponderadas (simplificación asumida, como el Excel original).
 - **Desfase intradía asumido**: hoy cuenta como día entero en el divisor desde las 00:00, así que la tasa sale deprimida a primera hora y se recupera durante el día (grande el primer día laborable del mes, se diluye después).
 - Divisor mínimo 1 (un sábado con trabajo no divide por cero).
-- **Fin de semana: suma, no promedia** (2026-09-07). Los puntos de un sábado o domingo entran en todos los totales (tarjetas, semana, mes, año, Equipo, numerador de Puntos/día), pero en granularidad Día el finde **no cuenta como día trabajado** en ninguna media: Promedio (§6), media por técnico (§7), IMEIs típicos (§5) ni la media global por día trabajado de las tarjetas (§4). Unas horas extra de sábado ya no hunden la referencia de una jornada. El punto del sábado sigue visible en el gráfico y cuenta como uno de los "días con actividad" de la ventana.
+- **Fin de semana y horas extra: suman, no promedian** (2026-09-07 → generalizado 2026-09-08, §2b). Sus puntos entran en todos los totales (tarjetas, semana, mes, año, Equipo, numerador de Puntos/día) pero en ninguna media, en ninguna granularidad. El punto del sábado sigue visible en el gráfico y cuenta como uno de los "días con actividad" de la ventana.
 
 ## 4. Tarjetas del mes (formato objetivo)
 
 Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 2026-09-04), del equipo — o del propio técnico si el rol es TECNICO (contra su propio histórico):
 
 - **Puntos · mes**: acumulado del mes en curso; objetivo = `acumulado ÷ total del mes anterior completo`. Sube hacia el 100% conforme avanza el mes.
-- **Puntos · hoy (`<día>`)**: lo hecho HOY; objetivo = `puntos de hoy ÷ media de ese día de semana en el mes anterior` — "los viernes contra los viernes". Arranca en 0% cada mañana y se espera alcanzar el 100% al cierre del día, igual que la del mes a fin de mes. La referencia por día de semana **absorbe las jornadas cortas sola** (la media de los viernes ya es de 6 horas) sin mantener ningún calendario; se autocalibra con los datos (~4-5 muestras por día de semana: algo ruidosa, asumido). Día laborable sin muestras el mes anterior → media global por día trabajado; fin de semana sin muestras → sin línea de objetivo (solo la cifra).
+- **Puntos · hoy (`<día>`)**: lo hecho HOY; objetivo = `puntos de hoy ÷ media de ese día de semana en el mes anterior` — "los viernes contra los viernes". Arranca en 0% cada mañana y se espera alcanzar el 100% al cierre del día, igual que la del mes a fin de mes. La referencia por día de semana **absorbe las jornadas cortas sola** (la media de los viernes ya es de 6 horas) sin mantener ningún calendario; se autocalibra con los datos (~4-5 muestras por día de semana: algo ruidosa, asumido). Día laborable sin muestras el mes anterior → media global por día trabajado; fin de semana → sin línea de objetivo (solo la cifra: un sábado nunca tiene puntos de jornada, así que nunca es muestra; con servidor antiguo, un sábado con muestras sí tenía objetivo, como en 0.16.2).
 - Línea de objetivo: **"`pct`% de `<referencia>` (`valor`)"** — progreso hacia igualar, nunca pérdida.
 - **% truncado, no redondeado**: 99,89% se muestra "99%" — el **100% solo aparece al igualar de verdad** (con redondeo, 90,6 sobre 90,7 marcaba 100% verde sin haber llegado).
 - Color: **gris** < 100%, **verde** ≥ 100%. **Nunca rojo.**
 - Mes anterior sin datos (o a cero) → la línea no se muestra.
-- Día de semana sin muestras el mes anterior → media global por día trabajado del mes anterior, **calculada solo con los días L–V (puntos L–V ÷ días L–V trabajados)**; el total del mes anterior de la tarjeta del mes sí incluye el finde (el finde suma, no promedia — §3).
+- Las dos referencias (media por día de semana y media global por día trabajado) se calculan **solo con puntos de jornada** (§2b): un día cuenta como trabajado si tiene jornada > 0, y la media global además solo mira L–V. El total del mes anterior de la tarjeta del mes sí incluye finde y extra.
 - Los excluidos de estadísticas (§8) no cuentan en las tarjetas de equipo; la tarjeta personal de un excluido sí funciona.
 
 ## 5. El gráfico
 
-- **IMEIs en la vista** (ajuste 2026-09-04): cada chip de la leyenda muestra "`nombre` · N IMEIs" = los que tocó en el **último periodo visible** (hoy en Día, esta semana en Semana, este mes en Mes), y la **tarjeta "IMEIs típicos por técnico"** de arriba muestra una sola vez la referencia común: media por técnico-periodo **trabajado** de IMEIs del rango mostrado (misma fórmula que el Promedio de puntos, sin excluidos y sin fin de semana en Día — §3; un decimal, con la unidad y el ámbito: "12,4 · por día trabajado · 30 días con actividad"). El chip se pone en **verde** al alcanzar esa media (comparación exacta). Ojo: la línea naranja del gráfico es de PUNTOS — la referencia de IMEIs vive en su tarjeta. Mismo criterio que el Agrupado por IMEI filtrado por técnico; un teléfono con varios trabajos cuenta 1; la cuenta la hace el servidor por periodo (campo aditivo `nImeis`; con servidor antiguo ni sufijo ni tarjeta). El detalle de *cuáles* son: popover → "Ver IMEIs". La vista/serie completa de IMEIs queda para la analítica web (F4).
+- **IMEIs en la vista** (ajuste 2026-09-04): cada chip de la leyenda muestra "`nombre` · N IMEIs" = los que tocó en el **último periodo visible** (hoy en Día, esta semana en Semana, este mes en Mes), y la **tarjeta "IMEIs típicos por técnico"** de arriba muestra una sola vez la referencia común: media por técnico-periodo **trabajado** de IMEIs del rango mostrado (misma fórmula que el Promedio de puntos, sin excluidos y solo con IMEIs que tienen algún cierre en horario — §2b; un decimal, con la unidad y el ámbito: "12,4 · por día trabajado · 30 días con actividad, en horario"). El chip se pone en **verde** al alcanzar esa media (comparación exacta). Ojo: la línea naranja del gráfico es de PUNTOS — la referencia de IMEIs vive en su tarjeta. Mismo criterio que el Agrupado por IMEI filtrado por técnico; un teléfono con varios trabajos cuenta 1; la cuenta la hace el servidor por periodo (campo aditivo `nImeis`; con servidor antiguo ni sufijo ni tarjeta). El detalle de *cuáles* son: popover → "Ver IMEIs". La vista/serie completa de IMEIs queda para la analítica web (F4).
 
 - **Serie por técnico**: sus puntos (o puntos/día) por periodo. Los periodos visibles en los que no trabajó se pintan a **0** (honesto, y evita que el eje de categorías se desordene con huecos).
 - **Serie Equipo (suma)**: suma por periodo de los técnicos **que cuentan** (sin excluidos). Checkbox propio, apagada por defecto.
@@ -87,11 +106,11 @@ Dos tarjetas con **la misma mecánica de objetivo a dos escalas** (decisión 202
 **Rango de referencia = el rango mostrado** (desde el ajuste 2026-09-04, sin flechas, son siempre lo mismo):
 - Sin filtro de fechas → la **última ventana estándar** (los últimos 30 días con actividad, 16 semanas…).
 - Con filtro de fechas → **todo el rango filtrado**: para juzgar una época contra su propia media, se filtra esa época.
-- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad, L–V): 12,5 puntos" / "(rango filtrado, L–V)". En Día los **sábados y domingos no cuentan como técnico-periodo trabajado** (el finde suma, no promedia — §3); la media por técnico (§7) sigue la misma regla.
+- El tooltip dice el ámbito: "Promedio del equipo (30 días con actividad, en horario): 12,5 puntos" / "(rango filtrado, en horario)". La media se calcula **solo con puntos de jornada** y un técnico-periodo cuenta como trabajado solo si tiene jornada > 0 (§2b); la media por técnico (§7) sigue la misma regla.
 
 ## 7. Por encima / Por debajo (tooltip de la línea)
 
-Media personal **por periodo trabajado** de cada técnico sobre el **mismo rango de referencia** que la línea, comparada contra ella. Estable al navegar (habla del rango de referencia, no del tramo en pantalla).
+Media personal **por periodo trabajado** de cada técnico sobre el **mismo rango de referencia** que la línea, comparada contra ella. Estable al navegar (habla del rango de referencia, no del tramo en pantalla). Solo puntos de jornada (§2b); un técnico con muchas horas extra queda por encima de su propia x̄, y su punto del gráfico (que suma todo) por encima de la línea. Desde 2026-09-08 las listas Por encima/Por debajo usan exactamente el mismo conjunto de periodos de referencia que las líneas x̄ (antes, en Día, las listas incluían el fin de semana y las x̄ no, y podían discrepar); esto aplica también contra un servidor antiguo.
 
 Propiedad matemática: la línea es la media ponderada de esas medias personales (ponderada por días trabajados) → **siempre hay gente a ambos lados** (salvo empate total).
 
@@ -110,13 +129,16 @@ Para perfiles que no reparan a jornada completa (logística, supertécnicos con 
 - El eje X (y "días con actividad") puede incluir días en los que solo trabajaron excluidos (raro; backlog).
 - Semanas de cambio de año: la etiqueta usa el año del lunes, no el weekBasedYear ISO (preexistente; backlog).
 - Autorización por rol en cliente (salvo los PATCH de exclusión y el PUT de valores, que exigen ADMIN en servidor); llegará server-side con F3/web.
+- Horario fijo en constante del servidor (`Jornada`): sin festivos, sin jornadas reducidas puntuales ni horario por técnico. Tabla configurable → candidata a la analítica web (F4).
 
 ## 10. Dónde vive cada cosa
 
 | Qué | Dónde |
 |---|---|
 | Puntos de un trabajo, mapeo prefijos, agregación | servidor `util/PuntosCalculo.java` (+ `PuntosCalculoTest`) |
-| Endpoint de datos | `GET /api/reparaciones/estadisticas/puntos` (devuelve a todos; el filtrado de exclusión es del cliente) |
+| Horario del taller, margen, cierre en Madrid | servidor `util/Jornada.java` (+ `JornadaTest`) |
+| Puntos/IMEIs de jornada y extra, tooltip con extra | cliente `utils/PuntosEstadistica.java` (`puntosJornada`, `puntosExtra`, `imeisJornada`) |
+| Endpoint de datos | `GET /api/reparaciones/estadisticas/puntos` (devuelve a todos con `puntosJornada`/`nImeisJornada`; el filtrado de exclusión es del cliente) |
 | Días laborables, puntos/día, promedio, tarjetas, textos | cliente `utils/PuntosEstadistica.java` (+ `PuntosEstadisticaTest`) |
 | Vista (rango de referencia, series, tooltips) | cliente `controllers/EstadisticasController.java` |
 | Valores y exclusión | `GET/PUT /api/valores-dificultad`, `PATCH /api/usuarios/tecnicos/{id}/excluir-estadisticas\|incluir-estadisticas` |
