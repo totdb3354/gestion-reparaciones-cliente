@@ -12,7 +12,7 @@ IPs, secretos, topología de red y nombres de personas se quedan en `Apuntes/`, 
 - Infraestructura, despliegue y seguridad: `Apuntes/migracion-web-infra-seguridad.md` (PRIVADO, fuera del repo: resume IPs, red y estado del hardening)
 - [Dominio y producto](../research/2026-09-13-migracion-web-dominio-producto.md)
 - [Specs de diseño por módulo (47 specs)](../research/2026-09-13-migracion-web-specs-por-modulo.md)
-- [Inventario del cliente JavaFX (23 vistas, código)](../research/2026-09-13-migracion-web-inventario-cliente-javafx.md)
+- [Inventario del cliente JavaFX (las 23 vistas de la línea 0.16.x, código)](../research/2026-09-13-migracion-web-inventario-cliente-javafx.md)
 
 Toda sesión futura de este programa empieza leyendo esta spec y, si va a
 tocar un módulo concreto, el informe de specs por módulo y el inventario del
@@ -23,7 +23,7 @@ cliente en la parte de ese módulo.
 ## 1. Objetivo
 
 Sustituir el cliente de escritorio JavaFX (`gestion-reparaciones-cliente`,
-25.800 líneas, 23 vistas) por una aplicación web que ataque el mismo servidor
+25.800 líneas, 25 vistas en `main`) por una aplicación web que ataque el mismo servidor
 Spring Boot (`gestion-reparaciones-servidor`) y la misma base de datos
 MariaDB, sin que los usuarios de la tienda tengan que reaprender nada.
 
@@ -37,7 +37,7 @@ a otros dispositivos.
 | Tema | Decisión | Motivo |
 |---|---|---|
 | Estrategia | **Big bang con piloto.** El JavaFX sigue en producción sin cambios salvo hotfixes. Cuando la web tenga paridad total, uno o dos usuarios la usan en paralelo unas semanas con datos reales. Después, corte único y retirada del JavaFX | Usuarios conocidos, un solo corte de adaptación, ambos clientes comparten API y BD así que el piloto no molesta a nadie |
-| Paridad | **Total: las 23 vistas** (la vista Pulido supertécnico y `SelectorModeloDialog` son código muerto y no se migran). Las de uso raro (logs, registro, cambiar contraseña, historial de pulido) se hacen las últimas; si aprieta la fecha, el admin conserva el JavaFX unas semanas solo para ellas | Apagar el JavaFX de golpe era el objetivo |
+| Paridad | **Total: las 25 vistas de `main`** (la vista Pulido supertécnico y `SelectorModeloDialog` son código muerto y no se migran). **Versión de referencia: `main` con la línea `hotfix/0.16.x` mergeada** (lo que será v0.17.0): la tienda usa hoy 0.16.x (23 vistas) y `main` añade Inventario y Panel de Revisión con lotes, importador y envíos de la Fase 2, ya desplegados en el servidor. El inventario del cliente (informe) cubre la línea 0.16.x; Inventario y Revisión se inventarían al diseñar los sub-proyectos 3 y 4. Las de uso raro (logs, registro, cambiar contraseña, historial de pulido) se hacen las últimas; si aprieta la fecha, el admin conserva el JavaFX unas semanas solo para ellas | Apagar el JavaFX de golpe era el objetivo |
 | Aspecto | **Calco fiel del JavaFX actual** en flujos, nombres, menús, columnas, filtros, colores de fila, badges, modales y textos. Sin rediseño visual. El rediseño ERP (sidebar con módulos, topbar, dashboard; spec de julio 2026 y ejemplos en `Apuntes/EjemplosDiseñoERP`) es un **proyecto posterior al corte** | Cero readaptación de la tienda; mezclar rediseño y calco alarga el big bang y rompe el "sin readaptación" |
 | Estructura interna | Aunque por fuera calque, **por dentro nace como ERP**: código por módulos (taller, almacén, gestión), rutas por vista, tokens de color y espaciado como variables CSS, y el shell (navegación + contenedor) separado de las pantallas | Hacerlo ahora es gratis; hacerlo después es caro. El rediseño posterior será un proyecto de navegación y piel, no de reescribir vistas |
 | Dispositivos | **PC ahora, bases responsive puestas**: rejilla fluida, filtros que envuelven, tablas en contenedor con scroll horizontal, sin `min-width` mayores que la pantalla. No se diseñan vistas móviles | Puerta abierta a tablets y móviles sin rehacer vistas |
