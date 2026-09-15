@@ -2946,7 +2946,7 @@ git add -A && git commit -m "test(web): smoke Playwright de Clientes contra prod
   - Fichas `shell.md` y `clientes.md` cerradas con el usuario (checkboxes marcados).
   - `Apuntes/despliegue_vdc.md` con la sección "Producción y web" y su registro; `schema.md` regenerado; README del repo web.
 
-- [ ] **Step 3: Integración (solo con OK explícito del usuario, uno a uno)**
+- [x] **Step 3: Integración (solo con OK explícito del usuario, uno a uno)**
   1. Servidor: `git checkout main && git merge --no-ff feature/web-cimientos -m "Merge branch 'feature/web-cimientos' (springdoc, respuestas tipadas, Dockerfile)"` → push.
   2. Web: `git checkout main && git merge --no-ff feature/web-cimientos -m "Merge branch 'feature/web-cimientos' (cimientos: shell, login, API tipada, Clientes)"` → push → `git tag -a v0.1.0 -m "Cimientos: shell, login, API tipada, Clientes"` → push del tag.
   3. Raíz: `git add gestion-reparaciones-servidor gestion-reparaciones-web gestion-reparaciones-cliente/docs/api_contract.md docs/superpowers/plans/2026-09-14-web-cimientos.md && git commit -m "chore: gitlinks servidor y web tras cimientos (web v0.1.0)"`; merge de `docs/migracion-web` donde el usuario decida (main o la hotfix en curso).
