@@ -2712,7 +2712,7 @@ server {
 ```
 `deploy/nginx/default.conf`:
 ```nginx
-# Rate limiting del login (guía Arsys §10.2.1): 5 intentos/minuto por IP, ráfaga de 3.
+# Rate limiting del login (guía de hardening de la VM): 5 intentos/minuto por IP, ráfaga de 3.
 limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
 
 server {
@@ -2850,66 +2850,7 @@ Nota de ramas: la VM clona `main`, pero el trabajo está en `feature/web-cimient
 **Reglas:** Claude prepara los comandos; el usuario los ejecuta uno a uno por SSH (`ssh prod`) y pega la salida; si algo difiere del runbook, se corrige el runbook en el momento. Nada de ráfagas de conexiones (fail2ban).
 
 - [ ] **Step 1: Preparar el runbook en `Apuntes/despliegue_vdc.md`** — añadir al final la sección:
-
-```markdown
-## Producción y web (VM de producción, alias `prod`) — montaje 2026-09
-
-Contexto: la VM aloja la app web del ERP (`erp.fonestore.es`) + API + MariaDB. Durante el desarrollo, la BD es una
-copia de usar y tirar de preprod; al corte se sustituye por el dump definitivo. Ficheros de referencia:
-`gestion-reparaciones-web/deploy/`.
-
-### P1. Base (una vez)
-apt update && apt upgrade -y && reboot
-timedatectl set-timezone Europe/Madrid
-# clave SSH de este PC ya está en authorized_keys (2026-08-25); comprobar y cerrar contraseña:
-sshd -T | grep -E "passwordauthentication|permitrootlogin"     # esperado: no / prohibit-password
-systemctl status fail2ban --no-pager | head -3                  # activo
-docker --version && docker compose version
-
-### P2. Carpetas y repos
-mkdir -p /opt/reparaciones/{sql,nginx,certbot,logs-nginx} && cd /opt/reparaciones
-git clone -b feature/web-cimientos https://github.com/totdb3354/gestion-reparaciones-servidor.git
-git clone -b feature/web-cimientos https://github.com/totdb3354/gestion-reparaciones-web.git
-cp gestion-reparaciones-web/deploy/docker-compose.prod.yml docker-compose.yml
-cp gestion-reparaciones-web/deploy/nginx/bootstrap.conf nginx/default.conf
-
-### P3. Secretos (se generan en la VM; no se apuntan en ningún doc)
-ROOTP=$(openssl rand -base64 24 | tr -d '/+='); SQLP=$(openssl rand -base64 24 | tr -d '/+='); JWT=$(openssl rand -base64 48 | tr -d '/+=')
-sed -i "s#CAMBIAR_PASSWORD_ROOT#$ROOTP#; s#CAMBIAR_PASSWORD_SQL#$SQLP#g; s#CAMBIAR_JWT_SECRET#$JWT#" docker-compose.yml
-grep -c CAMBIAR docker-compose.yml     # esperado: 0
-
-### P4. Dump de preprod (desde el PC, Git Bash, nunca PowerShell)
-ssh preprod "docker exec reparaciones-mariadb-1 sh -c 'mariadb-dump -uroot -p\"\$MARIADB_ROOT_PASSWORD\" --databases gestion_reparaciones --single-transaction --routines --triggers'" > ~/Documents/Backups-BD/preprod-$(date +%F)-para-prod.sql
-tail -1 ~/Documents/Backups-BD/preprod-*-para-prod.sql        # "-- Dump completed"
-scp ~/Documents/Backups-BD/preprod-$(date +%F)-para-prod.sql prod:/opt/reparaciones/sql/init.sql
-
-### P5. DNS y firewall (paneles web)
-Webempresa: registro A  erp.fonestore.es → IP pública de la VM de producción (TTL 300).   dig +short erp.fonestore.es
-Arsys/IONOS firewall de la VM: permitir TCP 22, 80, 443 → "Aprovisionar cambios".
-
-### P6. Primer arranque (HTTP) y certificado
-cd /opt/reparaciones && docker compose up -d --build && docker compose ps
-curl -s -o /dev/null -w "%{http_code}\n" http://erp.fonestore.es/                 # 200 (index.html)
-curl -s -X POST http://erp.fonestore.es/api/auth/login -H 'Content-Type: application/json' -d '{"usuario":"admin","password":"..."}' | head -c 120   # {"idUsu":...,"token":...
-apt install -y certbot
-certbot certonly --webroot -w /opt/reparaciones/certbot -d erp.fonestore.es --agree-tos -m info@fonestore.es -n
-mkdir -p /etc/letsencrypt/renewal-hooks/deploy && printf '#!/bin/sh\ndocker exec reparaciones-nginx-1 nginx -s reload\n' > /etc/letsencrypt/renewal-hooks/deploy/reload-erp-nginx.sh && chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-erp-nginx.sh
-cp gestion-reparaciones-web/deploy/nginx/default.conf nginx/default.conf && docker compose restart nginx
-curl -sI https://erp.fonestore.es/ | head -1                                        # HTTP/2 200
-certbot renew --dry-run
-
-### P7. Comprobaciones
-docker compose ps                                  # 3 running; backend y mariadb sin puertos públicos
-ss -ltnp | grep -E ':80 |:443 |:8080 |:3306 '     # 8080 NO debe aparecer en 0.0.0.0; 3306 solo 127.0.0.1
-ls logs-nginx/                                     # erp.access.log erp.error.log
-# En el navegador: https://erp.fonestore.es → login con los 3 roles → Clientes → crear/editar/borrar; dos pestañas → 409.
-
-### P8. Actualizar
-cd /opt/reparaciones && git -C gestion-reparaciones-servidor pull && git -C gestion-reparaciones-web pull && docker compose up -d --build
-
-### Registro de sesiones
-- 2026-09-__: (fecha, qué se hizo, salida relevante, desviaciones del runbook)
-```
+El texto completo del runbook (P1 a P8: base, repos, secretos, dump de preprod, DNS y firewall, primer arranque y certificado, comprobaciones, actualización) vive **fuera del repo público**, en `Apuntes/despliegue_vdc.md`, sección "Producción y web (VM de producción, alias `prod`)". Ya está escrito (2026-09-14); aquí solo se referencia porque contiene alias SSH, nombres de contenedores y detalles de red.
 
 - [ ] **Step 2: Ejecutar P1–P7 con el usuario**, comando a comando. Cada desviación se corrige en el runbook. Al terminar, rellenar el "Registro de sesiones".
 

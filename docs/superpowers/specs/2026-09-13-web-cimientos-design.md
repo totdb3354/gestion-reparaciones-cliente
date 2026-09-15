@@ -163,7 +163,7 @@ Sigue la receta de preprod y de la web Fonestore (informe de infraestructura en 
 4. `docker-compose.yml`: mariadb (`127.0.0.1:3306`, contraseña nueva, usuario dedicado `erp` con permisos sobre la BD), backend (sin `ports`, `JWT_SECRET` nuevo de 64 caracteres, `SERVER_ERROR_INCLUDE_MESSAGE: never`), nginx (80/443, volúmenes `nginx/default.conf`, `certbot`, `/etc/letsencrypt:ro`, `logs-nginx` como bind mount para fail2ban).
 5. **Dockerfile de la web** en dos fases: `node:22-alpine` (`npm ci`, `npm run build`) → `nginx:alpine` copiando `dist/` a `/usr/share/nginx/html`. Ese contenedor es el nginx del stack: sirve la SPA con `try_files $uri /index.html` y proxy `/api/` al backend.
 6. DNS: `erp.fonestore.es` → IP pública de la VM de producción (en Apuntes) en Webempresa. Certificado: `certbot certonly --webroot` con hook de recarga en `renewal-hooks/deploy` (patrón de la web Fonestore, unificado). 80 solo challenge + 301.
-7. Firewall de Arsys: 22, 80, 443 y aprovisionar. En este sub-proyecto el 443 queda abierto con HTTPS + login; la restricción al túnel llega con el sub-proyecto 7.
+7. Firewall del proveedor de la VM: 22, 80, 443 y aprovisionar. En este sub-proyecto el 443 queda abierto con HTTPS + login; la restricción al túnel llega con el sub-proyecto 7.
 8. Prueba: login desde el navegador con un usuario de la copia, alta y borrado de un cliente, 409 provocado desde dos pestañas.
 
 Actualización: `git pull` en los dos repos y `docker compose up -d --build`. La web se reconstruye en la VM; no se sube `dist/` por scp.
