@@ -2849,14 +2849,14 @@ Nota de ramas: la VM clona `main`, pero el trabajo está en `feature/web-cimient
 
 **Reglas:** Claude prepara los comandos; el usuario los ejecuta uno a uno por SSH (`ssh prod`) y pega la salida; si algo difiere del runbook, se corrige el runbook en el momento. Nada de ráfagas de conexiones (fail2ban).
 
-- [ ] **Step 1: Preparar el runbook en `Apuntes/despliegue_vdc.md`** — añadir al final la sección:
+- [x] **Step 1: Preparar el runbook en `Apuntes/despliegue_vdc.md`** — añadir al final la sección:
 El texto completo del runbook (P1 a P8: base, repos, secretos, dump de preprod, DNS y firewall, primer arranque y certificado, comprobaciones, actualización) vive **fuera del repo público**, en `Apuntes/despliegue_vdc.md`, sección "Producción y web (VM de producción, alias `prod`)". Ya está escrito (2026-09-14); aquí solo se referencia porque contiene alias SSH, nombres de contenedores y detalles de red.
 
-- [ ] **Step 2: Ejecutar P1–P7 con el usuario**, comando a comando. Cada desviación se corrige en el runbook. Al terminar, rellenar el "Registro de sesiones".
+- [x] **Step 2: Ejecutar P1–P7 con el usuario**, comando a comando. Cada desviación se corrige en el runbook. Al terminar, rellenar el "Registro de sesiones".
 
 Expected al final: `https://erp.fonestore.es` con candado válido, login de los tres roles, Clientes operativa, 8080 cerrado al exterior, certificado con renovación probada en seco.
 
-- [ ] **Step 3: Confirmar la generación de tipos contra producción**
+- [x] **Step 3: Confirmar la generación de tipos contra producción**
 
 En el PC:
 ```bash
@@ -2874,7 +2874,7 @@ Expected: sin cambios (mismo contrato que en local) o solo diferencias de orden;
 - Modify: `package.json` (script `e2e`), `.gitignore` (`.env.e2e`, `test-results/`, `playwright-report/`), `README.md` (sección e2e)
 - Repo raíz: gitlinks; `Apuntes/plan-futuro.md` (§9: marcar el sub-proyecto 0)
 
-- [ ] **Step 1: Playwright**
+- [x] **Step 1: Playwright**
 
 ```bash
 npm install -D @playwright/test && npx playwright install chromium
@@ -2939,7 +2939,7 @@ Run: `E2E_BASE_URL=https://erp.fonestore.es E2E_USER=... E2E_PASS=... npm run e2
 git add -A && git commit -m "test(web): smoke Playwright de Clientes contra produccion"
 ```
 
-- [ ] **Step 2: Checklist de cierre (spec §11)** — comprobar y anotar en el mensaje final:
+- [x] **Step 2: Checklist de cierre (spec §11)** — comprobar y anotar en el mensaje final:
   - `npm run check` verde en local y en CI (tras el push que autorice el usuario).
   - Servidor: suite Maven verde; contexto arranca con springdoc; `schema.d.ts` commiteado.
   - `https://erp.fonestore.es` con certificado válido; login 3 roles; Clientes con paridad verificada contra `docs/paridad/clientes.md` y las capturas; e2e verde.
