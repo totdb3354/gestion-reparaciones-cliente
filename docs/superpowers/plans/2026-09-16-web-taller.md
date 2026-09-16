@@ -6266,7 +6266,7 @@ test('técnico: pendientes, historial, IMEIs y detalle', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Historial' }).click()
   await expect(page.getByRole('heading', { name: 'Mis reparaciones' })).toBeVisible()
-  await expect(page.getByText(/Actualizado a las/)).toBeVisible()
+  await expect(page.getByText(/^Actualizado [0-9][0-9]:[0-9][0-9]$/)).toBeVisible()
 
   await page.getByRole('link', { name: 'IMEIs' }).click()
   await expect(page.getByRole('heading', { name: 'Agrupado por IMEI' })).toBeVisible()
@@ -6306,7 +6306,7 @@ Se ejecuta en el Step 6 contra producción, no ahora (necesita el servidor con `
 - Historial: reparaciones, glass y pulidos (filtros por rol, borrado con motivo, incidencias, editar modelo, CSV).
 - IMEIs: maestro agrupado por IMEI (observación y cliente del teléfono) y detalle por IMEI.
 - Columna lateral de Reparaciones por rol con contador de pendientes; entrada por rol.
-- Refresco periódico (60 s, 5 s sin conexión) con etiqueta "Actualizado a las HH:mm".
+- Refresco periódico (60 s, 5 s sin conexión) con etiqueta "Actualizado HH:mm".
 - `DataTable` con anchos fijos (`colgroup`), selección, teclado y virtualización.
 - Contrato OpenAPI con `required`/`nullable` explícitos (sin `Required<>` en el cliente).
 - Servidor: `?tecnico=` verificado contra el token y `GET /api/reparaciones/pendientes/contadores`.
