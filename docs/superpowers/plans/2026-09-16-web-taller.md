@@ -2612,7 +2612,7 @@ describe('modelos (calco de MODELOS_ORDENADOS y traducirModelo)', () => {
   it('el catálogo va en orden de tienda y empieza y acaba como el JavaFX', () => {
     expect(MODELOS_ORDENADOS[0]).toBe('6s')
     expect(MODELOS_ORDENADOS.at(-1)).toBe('17promax')
-    expect(MODELOS_ORDENADOS).toHaveLength(41)
+    expect(MODELOS_ORDENADOS).toHaveLength(39)
     expect(new Set(MODELOS_ORDENADOS).size).toBe(MODELOS_ORDENADOS.length)
   })
 })
