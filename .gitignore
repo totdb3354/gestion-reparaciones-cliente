@@ -12,3 +12,6 @@ instalacion.md
 # Obsidian y notas locales
 .obsidian/
 *.canvas
+
+# Trabajo local de agentes (brainstorming, briefs e informes): nunca al repo
+.superpowers/

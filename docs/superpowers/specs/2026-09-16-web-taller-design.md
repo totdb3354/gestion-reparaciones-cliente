@@ -27,7 +27,7 @@ pendientes. Al cerrar, la web queda lista para el formulario de reparación
 - Inventario de teléfonos, lotes, estados, ubicaciones y envíos (vista INVENTARIO de `main`): sub-proyecto 4.
 - Navegación desde Estadísticas a Historial/IMEIs con filtros precargados: sub-proyecto 5.
 - Retoques menores de UI apuntados por el usuario: se acumulan en `Apuntes/plan-futuro.md` §9 y se harán en bloque más adelante.
-- Red, rate limiting y hardening: sub-proyecto 7.
+- Red, rate limiting, hardening y el resto de la autorización del servidor: sub-proyecto 7.
 - Deuda menor de Cimientos que no bloquea (§13).
 
 ## 3. Decisiones de este sub-proyecto
@@ -77,7 +77,7 @@ Efecto colateral: el JavaFX del técnico, que descarga el historial completo y f
 
 **5.4 Tests.** JUnit de controller con principal simulado para 5.1 (las seis rutas × los tres roles, incluido el 403) y 5.2; los 140 actuales siguen en verde; el arranque del contexto lo cubre `OpenApiContractTest`.
 
-**5.5 Sin tocar.** `PATCH .../por-cerrar`, `.../entrega-glass`, `PATCH`/`DELETE .../llegada`, `DELETE /asignaciones/{id}`, `DELETE /imei/{imei}/incidencia-activa`, `POST /{id}/incidencia`, `DELETE /reparacion-componentes/{id}/incidencia`, `DELETE /reparaciones/{id}` y `/pulidos/historial/{id}` con motivo, `POST /pulidos/asignaciones/completar-lote`, `DELETE /pulidos/asignaciones/{id}`, `PATCH /telefonos/{imei}/observacion` y `/cliente`, `POST /telefonos`, `GET /reparaciones/{id}/referenciadora`, `GET /tecnicos` y `/tecnicos/activos`, `GET /clientes/activos`: ya existen y ya protegen por rol o por propiedad; la web los consume tal cual. `PUT /telefonos/{imei}/revision-logistica` queda huérfano hasta que el sub-proyecto 4 lo retire.
+**5.5 Sin tocar.** `PATCH .../por-cerrar`, `.../entrega-glass`, `PATCH`/`DELETE .../llegada`, `DELETE /asignaciones/{id}`, `DELETE /imei/{imei}/incidencia-activa`, `POST /{id}/incidencia`, `DELETE /reparacion-componentes/{id}/incidencia`, `DELETE /reparaciones/{id}` y `/pulidos/historial/{id}` con motivo, `POST /pulidos/asignaciones/completar-lote`, `DELETE /pulidos/asignaciones/{id}`, `PATCH /telefonos/{imei}/observacion` y `/cliente`, `POST /telefonos`, `GET /reparaciones/{id}/referenciadora`, `GET /tecnicos` y `/tecnicos/activos`, `GET /clientes/activos`: ya existen y la web los consume tal cual, sin cambios de servidor en este sub-proyecto; revisar su autorización por rol y por propiedad es trabajo del sub-proyecto 7 (seguridad). `PUT /telefonos/{imei}/revision-logistica` queda huérfano hasta que el sub-proyecto 4 lo retire.
 
 ## 6. Web: módulo `taller`
 
@@ -171,3 +171,5 @@ Política global del shell (banner para red y 5xx en fondo, diálogo en acciones
 ## 13. Deuda que queda para más adelante
 
 `onSesionExpirada` con unsubscribe; CI que compare `api/openapi.json` con el snapshot del servidor; `X-Forwarded-Proto` en `/v3/api-docs`; tests débiles de Cimientos (píldora, tokens del banner, "solo hay uno"); colapso de la barra por debajo de 900 px; el catálogo de modelos y la categoría de pieza en el servidor.
+
+**Para el sub-proyecto 7 (seguridad):** revisar la autorización por rol y por propiedad de los endpoints que consume la web; la lista de pendientes vive fuera de los repos (`Apuntes/plan-futuro.md` §9).
