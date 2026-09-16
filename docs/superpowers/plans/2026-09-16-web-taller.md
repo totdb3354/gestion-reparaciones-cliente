@@ -6461,9 +6461,9 @@ Revisión del diff completo `main...feature/web-taller` de web y servidor con tr
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor && export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH; mvn -q test && cmp target/openapi.json ../gestion-reparaciones-web/api/openapi.json && echo CONTRATO_IDENTICO
-cd ../gestion-reparaciones-web && npm run check && grep -c "Required<" src/shared/api/client.ts
+cd ../gestion-reparaciones-web && npm run check && grep -c "Required<[A-Za-z]" src/shared/api/client.ts
 ```
-Expected: tests en verde, `CONTRATO_IDENTICO`, `0`.
+Expected: tests en verde, `CONTRATO_IDENTICO`, `0` (el patrón con letra ignora la mención `Required<>` del JSDoc de `client.ts`; `grep -c` sale con 1 cuando no hay coincidencias, es lo esperado).
 
 - [ ] **Step 7: Merges, tag y despliegue (solo con el OK del usuario, uno a uno)**
 
