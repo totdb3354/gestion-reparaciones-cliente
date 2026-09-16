@@ -3655,11 +3655,12 @@ export function useCancelarIncidencia() {
     onSettled: recargar,
   })
 }
-/** Observación y cliente del teléfono llevan bloqueo optimista: su 409 lo traduce la vista (meta.silenciarError). */
+/** Observación y cliente del teléfono llevan bloqueo optimista: su 409 lo traduce la vista (meta.silenciarError).
+ *  `updatedAt` es el `telefonoUpdatedAt` de la fila (no nullable en el contrato: el servidor exige la fila Telefono). */
 export function useEditarObservacionTelefono() {
   const recargar = useInvalidar(...HISTORIALES)
   return useMutation({
-    mutationFn: ({ imei, observacion, updatedAt }: { imei: string; observacion: string; updatedAt: string | null }) =>
+    mutationFn: ({ imei, observacion, updatedAt }: { imei: string; observacion: string; updatedAt: string }) =>
       api.PATCH('/api/telefonos/{imei}/observacion', { params: { path: { imei } }, body: { observacion, updatedAt } }),
     meta: { silenciarError: true },
     onSettled: recargar,
@@ -3668,7 +3669,7 @@ export function useEditarObservacionTelefono() {
 export function useEditarClienteTelefono() {
   const recargar = useInvalidar(...HISTORIALES)
   return useMutation({
-    mutationFn: ({ imei, idCli, updatedAt }: { imei: string; idCli: number | null; updatedAt: string | null }) =>
+    mutationFn: ({ imei, idCli, updatedAt }: { imei: string; idCli: number | null; updatedAt: string }) =>
       api.PATCH('/api/telefonos/{imei}/cliente', { params: { path: { imei } }, body: { idCli, updatedAt } }),
     meta: { silenciarError: true },
     onSettled: recargar,
@@ -3683,7 +3684,7 @@ export function useEditarModeloTelefono() {
   })
 }
 ```
-Si `tsc` rechaza `updatedAt: string | null` en algún cuerpo (el contrato lo marca no nullable), pasar `updatedAt ?? undefined` y ajustar el tipo del parámetro; si rechaza `clienteExplicito: null`, usar `false`.
+Si `tsc` rechaza `clienteExplicito: null`, usar `false`. (Task 3 dejó `updatedAt` no nullable en los cuerpos de petición a propósito: el DAO lo desreferencia y la columna es NOT NULL; por eso las dos mutaciones lo tipan `string` y la vista solo ofrece "Editar observación" / "Editar cliente" cuando el grupo tiene `telefonoUpdatedAt`.)
 
 `src/modules/taller/componentes/BadgePendientes.tsx`:
 
@@ -6107,7 +6108,7 @@ export function ImeisPage() {
         menuFila={(g, celda) => (
           <>
             <MenuCopiarCelda texto={textoCeldaGrupo(g, celda.columnaId)} celda={celda} />
-            {puedeEditar && (
+            {puedeEditar && g.telefonoUpdatedAt !== null && (
               <>
                 <ContextMenuSeparator />
                 <ContextMenuItem onSelect={() => setConObservacion(g)}>Editar observación</ContextMenuItem>
@@ -6120,7 +6121,7 @@ export function ImeisPage() {
       />
       <DialogoObservacion grupo={conObservacion} onCerrar={() => setConObservacion(null)}
         onGuardar={(observacion) => {
-          if (!conObservacion) return
+          if (!conObservacion?.telefonoUpdatedAt) return
           const g = conObservacion
           setConObservacion(null)
           editarObservacion.mutate({ imei: g.imei, observacion, updatedAt: g.telefonoUpdatedAt }, { onError: alFallar })
@@ -6128,7 +6129,7 @@ export function ImeisPage() {
       <SelectorLista abierto={conCliente !== null} titulo="Seleccionar cliente" placeholderBuscar="Buscar cliente..." opciones={opcionesClienteActivo} claveActual={claveClienteActual}
         textoNada="Nada seleccionado" textoSeleccionar="Seleccionar" onCancelar={() => setConCliente(null)}
         onSeleccionar={(clave) => {
-          if (!conCliente) return
+          if (!conCliente?.telefonoUpdatedAt) return
           const g = conCliente
           setConCliente(null)
           editarCliente.mutate({ imei: g.imei, idCli: clave === SIN_CLIENTE_CLAVE ? null : Number(clave), updatedAt: g.telefonoUpdatedAt }, { onError: alFallar })
@@ -6137,7 +6138,7 @@ export function ImeisPage() {
   )
 }
 ```
-Nota: el DataTable pinta el borde izquierdo de la fila seleccionada con su propio `data-[state=selected]:bg-azul-medio` (el color azul medio de la ficha); `filaClase` solo aporta el fondo `fila-maestro-bg` y el borde de 4 px. El icono para el botón lleva `stopPropagation` para no disparar además la selección/doble clic de la fila.
+Nota: el DataTable pinta el borde izquierdo de la fila seleccionada con su propio `data-[state=selected]:bg-azul-medio` (el color azul medio de la ficha); `filaClase` solo aporta el fondo `fila-maestro-bg` y el borde de 4 px. El icono para el botón lleva `stopPropagation` para no disparar además la selección/doble clic de la fila. "Editar observación" / "Editar cliente" solo se ofrecen cuando el grupo tiene `telefonoUpdatedAt` (hay fila Telefono): el contrato exige `updatedAt` no nulo (Task 3) y el JavaFX en ese caso fallaba con "No se pudo guardar"; anotarlo en la ficha de IMEIs como diferencia aceptada.
 
 `src/modules/taller/imeis/ImeiDetallePage.tsx`:
 
