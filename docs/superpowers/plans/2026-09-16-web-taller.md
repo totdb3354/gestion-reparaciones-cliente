@@ -2908,7 +2908,7 @@ git commit -m "feat(web): logica pura del taller: piezas, catalogo de modelos y 
 **Interfaces (produces):**
 - `grupoImei.ts`: `type GrupoImei = { imei; modelo: string; observacion: string | null; cliente: string | null; fechaMasAntigua: string | null; fechaMasReciente: string | null; trabajos: ReparacionResumen[]; incAbiertas: number; countRep; countGlass; countPul; telefonoUpdatedAt: string | null }`; `agruparPorImei(trabajos): GrupoImei[]` (orden de primera aparición); `resumenTipos(g): string`; `ordenarPorActividad(grupos): GrupoImei[]`.
 - `estadoPendiente.ts`: `type BadgeEstado = { texto: string; clases: string; tooltip?: string; sub?: string }`; `badgesEstado(rep, hoy): BadgeEstado[]`.
-- `filtros.ts`: `SIN_CLIENTE = '(Sin cliente)'`; `type TipoPendiente = 'solicitud' | 'incidencia' | 'asignacion'`; `tipoPendiente(rep)`; `pasaTipo(rep, marcados)`; `type EstadoIncidencia = 'abiertas' | 'cerradas' | 'sin'`; `estadoIncidencia(rep)`; `pasaIncidencias(rep, marcados)`; `pasaFechas(rep, desde, hasta)`; `pasaImeis(imei, imeis)`; `pasaCliente(cliente, marcados)`; `pasaPieza(tipoComponente, marcadas)`; `pasaTecnico(idTec, marcados)`; `ordenarPendientes(lista)`; `etiquetaContador(n, singular, plural, tope?)`; `sufijoToggle(n)`; `textoBadgeLateral(total)`; `etiquetaMultiseleccion` no (la pone MultiSelect).
+- `filtros.ts`: `SIN_CLIENTE = '(Sin cliente)'`; `type TipoPendiente = 'solicitud' | 'incidencia' | 'asignacion'`; `pasaTipo(rep, marcados)` (las tres casillas se evalúan por separado, como en el JavaFX: una fila que es incidencia **y** solicitud aparece bajo ambas); `type EstadoIncidencia = 'abiertas' | 'cerradas' | 'sin'`; `estadoIncidencia(rep)`; `pasaIncidencias(rep, marcados)`; `pasaFechas(rep, desde, hasta)`; `pasaImeis(imei, imeis)`; `pasaCliente(cliente, marcados)`; `pasaPieza(tipoComponente, marcadas)`; `pasaTecnico(idTec, marcados)`; `ordenarPendientes(lista)`; `etiquetaContador(n, singular, plural, tope?)`; `sufijoToggle(n)`; `textoBadgeLateral(total)`; `etiquetaMultiseleccion` no (la pone MultiSelect).
 
 - [ ] **Step 1: Tests (fallan)**
 
@@ -3009,17 +3009,21 @@ import { describe, expect, it } from 'vitest'
 import { resumen } from '../test/fabrica'
 import {
   SIN_CLIENTE, estadoIncidencia, etiquetaContador, ordenarPendientes, pasaCliente, pasaFechas, pasaImeis, pasaIncidencias,
-  pasaPieza, pasaTecnico, pasaTipo, sufijoToggle, textoBadgeLateral, tipoPendiente,
+  pasaPieza, pasaTecnico, pasaTipo, sufijoToggle, textoBadgeLateral,
 } from './filtros'
 
 describe('filtros del taller', () => {
-  it('tipo de pendiente y filtro Tipo (cualquiera de los marcados)', () => {
-    expect(tipoPendiente(resumen({ esSolicitud: 1 }))).toBe('solicitud')
-    expect(tipoPendiente(resumen({ esIncidencia: true }))).toBe('incidencia')
-    expect(tipoPendiente(resumen())).toBe('asignacion')
+  it('filtro Tipo: las tres casillas se evalúan por separado (calco de las checkboxes del JavaFX)', () => {
     expect(pasaTipo(resumen(), new Set())).toBe(true)
+    expect(pasaTipo(resumen(), new Set(['asignacion']))).toBe(true)
     expect(pasaTipo(resumen(), new Set(['solicitud']))).toBe(false)
     expect(pasaTipo(resumen({ esSolicitud: 1 }), new Set(['solicitud', 'asignacion']))).toBe(true)
+    expect(pasaTipo(resumen({ esIncidencia: true }), new Set(['incidencia']))).toBe(true)
+    // una solicitud con incidencia sale bajo cualquiera de las dos, y nunca bajo "Asignaciones"
+    const ambas = resumen({ esSolicitud: 1, esIncidencia: true })
+    expect(pasaTipo(ambas, new Set(['solicitud']))).toBe(true)
+    expect(pasaTipo(ambas, new Set(['incidencia']))).toBe(true)
+    expect(pasaTipo(ambas, new Set(['asignacion']))).toBe(false)
   })
   it('estado de incidencia y filtro Incidencias', () => {
     expect(estadoIncidencia(resumen({ esIncidencia: true }))).toBe('abiertas')
@@ -3215,13 +3219,13 @@ import { categoriaPieza } from './piezas'
 export const SIN_CLIENTE = '(Sin cliente)'
 
 export type TipoPendiente = 'solicitud' | 'incidencia' | 'asignacion'
-export function tipoPendiente(rep: ReparacionResumen): TipoPendiente {
-  if (rep.esSolicitud > 0) return 'solicitud'
-  if (rep.esIncidencia) return 'incidencia'
-  return 'asignacion'
-}
+/** Calco de las tres casillas de PendientesTecnicoController: no son excluyentes. Una fila puede ser solicitud e
+ *  incidencia a la vez y entonces la muestran las dos casillas; "Asignaciones" es la única exclusiva (ni una ni otra). */
 export function pasaTipo(rep: ReparacionResumen, marcados: Set<TipoPendiente>): boolean {
-  return marcados.size === 0 || marcados.has(tipoPendiente(rep))
+  if (marcados.size === 0) return true
+  if (marcados.has('solicitud') && rep.esSolicitud > 0) return true
+  if (marcados.has('incidencia') && rep.esIncidencia) return true
+  return marcados.has('asignacion') && rep.esSolicitud === 0 && !rep.esIncidencia
 }
 
 export type EstadoIncidencia = 'abiertas' | 'cerradas' | 'sin'
