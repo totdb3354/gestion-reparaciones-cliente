@@ -297,8 +297,8 @@ En `ReparacionResumenTest.java`, añadir:
     void nombreTecnicoAsigna_getterYSetter() {
         ReparacionResumen r = new ReparacionResumen();
         assertNull(r.getNombreTecnicoAsigna());
-        r.setNombreTecnicoAsigna("Diego");
-        assertEquals("Diego", r.getNombreTecnicoAsigna());
+        r.setNombreTecnicoAsigna("Técnico D");
+        assertEquals("Técnico D", r.getNombreTecnicoAsigna());
     }
 ```
 (Si el import de `assertNull`/`assertEquals` no está, usar `import static org.junit.jupiter.api.Assertions.*;` — verificar al principio del archivo.)

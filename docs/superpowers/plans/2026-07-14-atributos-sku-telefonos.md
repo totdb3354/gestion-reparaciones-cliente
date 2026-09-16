@@ -544,14 +544,14 @@ git add gestion-reparaciones-cliente/src && git commit -m "feat(cliente): ColorM
 ```java
     @Test void colorReconocidoSeResuelveAlOficial() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", "white", "B1", 0)),
+                List.of(fila("352500000000061", "iPhone 12", "white", "B1", 0)),
                 MAPEO, Map.of(), Map.of());
         assertEquals("White", plan.lotes().get(0).filas().get(0).colorOficial());
     }
 
     @Test void colorDesconocidoBloqueaLaFila() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", "Blanco Roto", "B1", 0)),
+                List.of(fila("352500000000061", "iPhone 12", "Blanco Roto", "B1", 0)),
                 MAPEO, Map.of(), Map.of());
         assertTrue(plan.lotes().isEmpty());
         assertEquals(ClasificadorImportacion.Destino.COLOR_SIN_MAPEAR, plan.excluidas().get(0).destino());
@@ -559,7 +559,7 @@ git add gestion-reparaciones-cliente/src && git commit -m "feat(cliente): ColorM
 
     @Test void colorVacioNoBloquea() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", null, "B1", 0)),
+                List.of(fila("352500000000061", "iPhone 12", null, "B1", 0)),
                 MAPEO, Map.of(), Map.of());
         assertEquals(1, plan.lotes().get(0).filas().size());
         assertNull(plan.lotes().get(0).filas().get(0).colorOficial());
@@ -567,7 +567,7 @@ git add gestion-reparaciones-cliente/src && git commit -m "feat(cliente): ColorM
 
     @Test void capacidadFueraDePaletaAvisaPeroEntra() {
         // helper con storage configurable: fila de 276 GB en un iPhone 12
-        var f = new LoteXlsxParser.Fila(7, "352513424271910", "Apple", "iPhone 12", 276, "White", null,
+        var f = new LoteXlsxParser.Fila(7, "352500000000061", "Apple", "iPhone 12", 276, "White", null,
                 new java.math.BigDecimal("100.00"), "Hy5", "B1", 0);
         var plan = ClasificadorImportacion.clasificar(List.of(f), MAPEO, Map.of(), Map.of());
         var fc = plan.lotes().get(0).filas().get(0);

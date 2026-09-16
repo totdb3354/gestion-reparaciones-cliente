@@ -9,30 +9,30 @@ class FiltroImeiTest {
 
     @Test
     void canonicalizar_parte_un_blob_concatenado_cada_15() {
-        assertEquals("352680941087812, 354739185728537, ",
-                FiltroImei.canonicalizar("352680941087812354739185728537"));
+        assertEquals("352600000000071, 354700000000091, ",
+                FiltroImei.canonicalizar("352600000000071354700000000091"));
     }
 
     @Test
     void canonicalizar_un_imei_completo_anade_separador() {
-        assertEquals("352680941087812, ", FiltroImei.canonicalizar("352680941087812"));
+        assertEquals("352600000000071, ", FiltroImei.canonicalizar("352600000000071"));
     }
 
     @Test
     void canonicalizar_blob_con_resto_deja_el_resto_como_token() {
-        assertEquals("352680941087812, 354739185728537, 12",
-                FiltroImei.canonicalizar("35268094108781235473918572853712"));
+        assertEquals("352600000000071, 354700000000091, 12",
+                FiltroImei.canonicalizar("35260000000007135470000000009112"));
     }
 
     @Test
     void canonicalizar_quita_no_digitos_y_normaliza_separadores() {
-        assertEquals("352680941087812, ", FiltroImei.canonicalizar("352-680-941-087-812"));
+        assertEquals("352600000000071, ", FiltroImei.canonicalizar("352-600-000-000-071"));
     }
 
     @Test
     void canonicalizar_es_idempotente() {
-        String[] entradas = {"", "3526", "352680941087812",
-                "352680941087812354739185728537", "35268094108781235473918572853712"};
+        String[] entradas = {"", "3526", "352600000000071",
+                "352600000000071354700000000091", "35260000000007135470000000009112"};
         for (String e : entradas) {
             String once = FiltroImei.canonicalizar(e);
             assertEquals(once, FiltroImei.canonicalizar(once), "no idempotente para: " + e);
@@ -47,8 +47,8 @@ class FiltroImeiTest {
 
     @Test
     void imeisValidos_solo_los_de_15() {
-        assertEquals(Set.of("352680941087812", "354739185728537"),
-                FiltroImei.imeisValidos("352680941087812, 354739185728537, 12"));
+        assertEquals(Set.of("352600000000071", "354700000000091"),
+                FiltroImei.imeisValidos("352600000000071, 354700000000091, 12"));
         assertTrue(FiltroImei.imeisValidos("").isEmpty());
         assertTrue(FiltroImei.imeisValidos("12, 34").isEmpty());
     }
@@ -58,8 +58,8 @@ class FiltroImeiTest {
         assertEquals(VACIO, FiltroImei.estado(""));
         assertEquals(VACIO, FiltroImei.estado("   "));
         assertEquals(INCOMPLETO, FiltroImei.estado("3526"));
-        assertEquals(INCOMPLETO, FiltroImei.estado("352680941087812, 12"));
-        assertEquals(VALIDO, FiltroImei.estado("352680941087812, "));
-        assertEquals(VALIDO, FiltroImei.estado("352680941087812, 354739185728537, "));
+        assertEquals(INCOMPLETO, FiltroImei.estado("352600000000071, 12"));
+        assertEquals(VALIDO, FiltroImei.estado("352600000000071, "));
+        assertEquals(VALIDO, FiltroImei.estado("352600000000071, 354700000000091, "));
     }
 }

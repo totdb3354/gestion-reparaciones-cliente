@@ -10,7 +10,7 @@ En las asignaciones y en el historial de reparaciones se muestra **quién asign�
 El "asignador" se identifica por su **técnico** (`Tecnico.ID_TEC`), no por su usuario, porque:
 - Solo el rol SUPERTECNICO asigna/reasigna, y los supertécnicos tienen técnico asociado.
 - `UsuarioPrincipal` ya expone `getIdTec()` → no hace falta lookup extra.
-- Mostrar `Tecnico.NOMBRE` (nombre real, ej. "Diego") es más claro que el login, y es consistente con la columna "Técnico" (el que recibe) que ya usa `Tecnico.NOMBRE`.
+- Mostrar `Tecnico.NOMBRE` (el nombre de la persona, ej. "Técnico D") es más claro que el login, y es consistente con la columna "Técnico" (el que recibe) que ya usa `Tecnico.NOMBRE`.
 
 ## Decisiones de alcance
 

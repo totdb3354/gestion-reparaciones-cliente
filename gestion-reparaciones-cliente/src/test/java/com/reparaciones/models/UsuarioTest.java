@@ -26,7 +26,7 @@ class UsuarioTest {
     @Test
     void isActivo_constructorCompleto_respetaValor() {
         Usuario activo   = new Usuario(1, "daniel", "TECNICO", 1, "Daniel García", true);
-        Usuario inactivo = new Usuario(2, "angelo", "TECNICO", 2, "Angelo López", false);
+        Usuario inactivo = new Usuario(2, "tecnico_c", "TECNICO", 2, "Técnico C", false);
         assertTrue(activo.isActivo());
         assertFalse(inactivo.isActivo());
     }

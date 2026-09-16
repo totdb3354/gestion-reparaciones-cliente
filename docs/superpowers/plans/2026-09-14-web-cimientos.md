@@ -508,19 +508,19 @@ class AuthControllerTest {
     private final AuthController ctl = new AuthController(authManager, jwtUtil, logDao, usuarioDao);
 
     @Test void loginDevuelveRespuestaTipadaConLosCincoCampos() {
-        var principal = new UsuarioPrincipal(7, "fati", "x", "SUPERTECNICO", 3);
+        var principal = new UsuarioPrincipal(7, "tecnico_f", "x", "SUPERTECNICO", 3);
         var auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(principal);
         when(authManager.authenticate(any())).thenReturn(auth);
         when(jwtUtil.generateToken(principal)).thenReturn("jwt-123");
 
-        var resp = ctl.login(new AuthController.LoginRequest("fati", "secreta"));
+        var resp = ctl.login(new AuthController.LoginRequest("tecnico_f", "secreta"));
 
         assertEquals(200, resp.getStatusCode().value());
         var body = (AuthController.LoginResponse) resp.getBody();
         assertNotNull(body);
         assertEquals(7, body.idUsu());
-        assertEquals("fati", body.nombreUsuario());
+        assertEquals("tecnico_f", body.nombreUsuario());
         assertEquals("SUPERTECNICO", body.rol());
         assertEquals(3, body.idTec());
         assertEquals("jwt-123", body.token());
@@ -923,7 +923,7 @@ Run: `npm test -- conexion` → PASS.
 import { beforeEach, describe, expect, it } from 'vitest'
 import { borrarSesion, esAdmin, esAdminOSuperTecnico, esSuperTecnico, guardarSesion, leerSesion, type Sesion } from './storage'
 
-const fati: Sesion = { idUsu: 7, nombreUsuario: 'fati', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt' }
+const tecnicoF: Sesion = { idUsu: 7, nombreUsuario: 'tecnico_f', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt' }
 
 describe('storage de sesión', () => {
   beforeEach(() => sessionStorage.clear())
@@ -931,12 +931,12 @@ describe('storage de sesión', () => {
     expect(leerSesion()).toBeNull()
   })
   it('guarda y lee la sesión en sessionStorage', () => {
-    guardarSesion(fati)
-    expect(leerSesion()).toEqual(fati)
-    expect(sessionStorage.getItem('fsgr.sesion')).toContain('"fati"')
+    guardarSesion(tecnicoF)
+    expect(leerSesion()).toEqual(tecnicoF)
+    expect(sessionStorage.getItem('fsgr.sesion')).toContain('"tecnico_f"')
   })
   it('borrar la deja en null', () => {
-    guardarSesion(fati)
+    guardarSesion(tecnicoF)
     borrarSesion()
     expect(leerSesion()).toBeNull()
   })
@@ -945,13 +945,13 @@ describe('storage de sesión', () => {
     expect(leerSesion()).toBeNull()
   })
   it('helpers de rol calcados de Sesion.java', () => {
-    expect(esSuperTecnico(fati)).toBe(true)
-    expect(esAdmin(fati)).toBe(false)
-    expect(esAdminOSuperTecnico(fati)).toBe(true)
-    const admin = { ...fati, rol: 'ADMIN', idTec: null }
+    expect(esSuperTecnico(tecnicoF)).toBe(true)
+    expect(esAdmin(tecnicoF)).toBe(false)
+    expect(esAdminOSuperTecnico(tecnicoF)).toBe(true)
+    const admin = { ...tecnicoF, rol: 'ADMIN', idTec: null }
     expect(esAdmin(admin)).toBe(true)
     expect(esSuperTecnico(admin)).toBe(false)
-    const tec = { ...fati, rol: 'TECNICO' }
+    const tec = { ...tecnicoF, rol: 'TECNICO' }
     expect(esAdminOSuperTecnico(tec)).toBe(false)
     expect(esAdmin(null)).toBe(false)
   })
@@ -1259,8 +1259,8 @@ export function renderConProviders(ui: ReactElement, { sesion = null, ruta = '/'
   )
 }
 
-export const SESION_SUPER: Sesion = { idUsu: 7, nombreUsuario: 'fati', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt-super' }
-export const SESION_TEC: Sesion = { idUsu: 8, nombreUsuario: 'zara', rol: 'TECNICO', idTec: 4, token: 'jwt-tec' }
+export const SESION_SUPER: Sesion = { idUsu: 7, nombreUsuario: 'tecnico_f', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt-super' }
+export const SESION_TEC: Sesion = { idUsu: 8, nombreUsuario: 'tecnico_n', rol: 'TECNICO', idTec: 4, token: 'jwt-tec' }
 export const SESION_ADMIN: Sesion = { idUsu: 1, nombreUsuario: 'admin', rol: 'ADMIN', idTec: null, token: 'jwt-admin' }
 ```
 `src/app/login/LoginPage.test.tsx`:
@@ -1275,7 +1275,7 @@ import { renderConProviders } from '@/test/render'
 import { leerSesion } from '@/app/session/storage'
 import { LoginPage } from './LoginPage'
 
-const respuestaLogin = { idUsu: 7, nombreUsuario: 'fati', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt-super' }
+const respuestaLogin = { idUsu: 7, nombreUsuario: 'tecnico_f', rol: 'SUPERTECNICO', idTec: 3, token: 'jwt-super' }
 
 function montar() {
   return renderConProviders(<LoginPage />, { ruta: '/login', rutas: <Route path="/" element={<p>INICIO</p>} /> })
@@ -1302,7 +1302,7 @@ describe('LoginPage', () => {
   it('login correcto guarda la sesión y navega a /', async () => {
     server.use(http.post('*/api/auth/login', () => HttpResponse.json(respuestaLogin)))
     montar()
-    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'fati')
+    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'tecnico_f')
     await userEvent.type(screen.getByPlaceholderText('Contraseña'), 'secreta{enter}')
     await waitFor(() => expect(screen.getByText('INICIO')).toBeInTheDocument())
     expect(leerSesion()?.token).toBe('jwt-super')
@@ -1310,7 +1310,7 @@ describe('LoginPage', () => {
   it('401 muestra "Usuario o contraseña incorrectos." y no guarda sesión', async () => {
     server.use(http.post('*/api/auth/login', () => new HttpResponse(null, { status: 401 })))
     montar()
-    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'fati')
+    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'tecnico_f')
     await userEvent.type(screen.getByPlaceholderText('Contraseña'), 'mala')
     await userEvent.click(screen.getByRole('button', { name: 'Iniciar Sesión' }))
     expect(await screen.findByText('Usuario o contraseña incorrectos.')).toBeInTheDocument()
@@ -1320,7 +1320,7 @@ describe('LoginPage', () => {
     let intentos = 0
     server.use(http.post('*/api/auth/login', () => { intentos++; return HttpResponse.error() }))
     montar()
-    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'fati')
+    await userEvent.type(screen.getByPlaceholderText('Usuario'), 'tecnico_f')
     await userEvent.type(screen.getByPlaceholderText('Contraseña'), 'x')
     await userEvent.click(screen.getByRole('button', { name: 'Iniciar Sesión' }))
     expect(await screen.findByText(/Sin conexión con el servidor/)).toBeInTheDocument()
@@ -1614,11 +1614,11 @@ describe('barra superior (calco de MainView)', () => {
     for (const b of ['Reparaciones', 'Stock', 'Estadísticas', 'Clientes']) {
       expect(screen.getByRole('link', { name: b })).toBeInTheDocument()
     }
-    expect(screen.getByText('Hola, zara')).toBeInTheDocument()
+    expect(screen.getByText('Hola, tecnico_n')).toBeInTheDocument()
   })
   it('el menú de usuario de un técnico no tiene opciones de admin y "Descargar CSV" va deshabilitado', async () => {
     renderConProviders(<AppLayout />, { sesion: SESION_TEC })
-    await userEvent.click(screen.getByRole('button', { name: /Hola, zara/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Hola, tecnico_n/ }))
     expect(screen.queryByText('Gestionar técnicos')).not.toBeInTheDocument()
     expect(screen.queryByText('Ver logs')).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Descargar CSV' })).toHaveAttribute('aria-disabled', 'true')
@@ -1637,7 +1637,7 @@ describe('barra superior (calco de MainView)', () => {
   })
   it('Cerrar Sesión borra la sesión y lleva al login', async () => {
     renderConProviders(<AppLayout />, { sesion: SESION_TEC, rutas: <Route path="/login" element={<p>LOGIN</p>} /> })
-    await userEvent.click(screen.getByRole('button', { name: /Hola, zara/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Hola, tecnico_n/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Cerrar Sesión' }))
     expect(await screen.findByText('LOGIN')).toBeInTheDocument()
     expect(sessionStorage.getItem('fsgr.sesion')).toBeNull()

@@ -1072,12 +1072,12 @@ class LoteXlsxParserTest {
     @Test void parseaFilaCompletaConCeldasNumericas() throws IOException {
         // IMEI y storage numéricos y precio con muchos decimales, como el fichero real de Hy5
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", 128, "White", null,
+            new Object[]{352500000000061L, "Apple", "iPhone 12", 128, "White", null,
                          152.24622210318043, "Hy5", "1445947", "iPhones", null, null, null, 0}));
         assertEquals(1, res.filas().size());
         LoteXlsxParser.Fila f = res.filas().get(0);
         assertEquals(7, f.numFila());
-        assertEquals("352513424271910", f.imei());
+        assertEquals("352500000000061", f.imei());
         assertEquals("Apple", f.fabricante());
         assertEquals("iPhone 12", f.modeloTexto());
         assertEquals(128, f.storageGb());
@@ -1091,10 +1091,10 @@ class LoteXlsxParserTest {
 
     @Test void parseaCeldasDeTexto() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{"352513424271910", "Apple", "iPhone 12 mini", "256", "Black", "A",
+            new Object[]{"352500000000061", "Apple", "iPhone 12 mini", "256", "Black", "A",
                          "117.50", "Hy5", "1445948", null, null, null, null, "5"}));
         LoteXlsxParser.Fila f = res.filas().get(0);
-        assertEquals("352513424271910", f.imei());
+        assertEquals("352500000000061", f.imei());
         assertEquals(256, f.storageGb());
         assertEquals("A", f.grado());
         assertEquals(new BigDecimal("117.50"), f.precioCompra());
@@ -1103,16 +1103,16 @@ class LoteXlsxParserTest {
 
     @Test void ignoraFilasVacias() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0},
+            new Object[]{352500000000061L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0},
             new Object[]{},   // fila totalmente vacía
-            new Object[]{352513424271911L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0}));
+            new Object[]{352500000000062L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0}));
         assertEquals(2, res.filas().size());
         assertEquals(List.of(), res.avisos());
     }
 
     @Test void statusVacioSeInterpretaComoCero() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1"}));
+            new Object[]{352500000000061L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1"}));
         assertEquals(0, res.filas().get(0).status());
     }
 
@@ -1432,7 +1432,7 @@ class ClasificadorImportacionTest {
 
     @Test void filaNuevaConStatusCeroEsImportable() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", "B1", 0)), MAPEO, Map.of());
+                List.of(fila("352500000000061", "iPhone 12", "B1", 0)), MAPEO, Map.of());
         assertEquals(1, plan.lotes().size());
         var f = plan.lotes().get(0).filas().get(0);
         assertEquals(ClasificadorImportacion.Destino.NUEVO, f.destino());
@@ -1442,9 +1442,9 @@ class ClasificadorImportacionTest {
 
     @Test void agrupaPorBatchNumberUnLotePorCadaUno() {
         var plan = ClasificadorImportacion.clasificar(List.of(
-                fila("352513424271910", "iPhone 12", "B1", 0),
-                fila("352513424271911", "iPhone 12", "B2", 0),
-                fila("352513424271912", "iPhone 12", "B1", 0)), MAPEO, Map.of());
+                fila("352500000000061", "iPhone 12", "B1", 0),
+                fila("352500000000062", "iPhone 12", "B2", 0),
+                fila("352500000000063", "iPhone 12", "B1", 0)), MAPEO, Map.of());
         assertEquals(2, plan.lotes().size());
         assertEquals("B1", plan.lotes().get(0).batchNumber());
         assertEquals(2, plan.lotes().get(0).filas().size());
@@ -1452,7 +1452,7 @@ class ClasificadorImportacionTest {
 
     @Test void statusDistintoDeCeroNoEntraYSeAvisa() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", "B1", 5)), MAPEO, Map.of());
+                List.of(fila("352500000000061", "iPhone 12", "B1", 5)), MAPEO, Map.of());
         assertTrue(plan.lotes().isEmpty());
         assertEquals(ClasificadorImportacion.Destino.STATUS_DISTINTO, plan.excluidas().get(0).destino());
     }
@@ -1467,36 +1467,36 @@ class ClasificadorImportacionTest {
 
     @Test void sinBatchNumberEsInvalido() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 12", null, 0)), MAPEO, Map.of());
+                List.of(fila("352500000000061", "iPhone 12", null, 0)), MAPEO, Map.of());
         assertEquals(ClasificadorImportacion.Destino.INVALIDO, plan.excluidas().get(0).destino());
     }
 
     @Test void imeiRepetidoEnElFicheroSoloEntraLaPrimera() {
         var plan = ClasificadorImportacion.clasificar(List.of(
-                fila("352513424271910", "iPhone 12", "B1", 0),
-                fila("352513424271910", "iPhone 12", "B1", 0)), MAPEO, Map.of());
+                fila("352500000000061", "iPhone 12", "B1", 0),
+                fila("352500000000061", "iPhone 12", "B1", 0)), MAPEO, Map.of());
         assertEquals(1, plan.lotes().get(0).filas().size());
         assertEquals(ClasificadorImportacion.Destino.DUPLICADO_FICHERO, plan.excluidas().get(0).destino());
     }
 
     @Test void modeloSinMapearBloqueaLaFila() {
         var plan = ClasificadorImportacion.clasificar(
-                List.of(fila("352513424271910", "iPhone 16 eSIM", "B1", 0)),
+                List.of(fila("352500000000061", "iPhone 16 eSIM", "B1", 0)),
                 Map.of(), Map.of());
         assertEquals(ClasificadorImportacion.Destino.MODELO_SIN_MAPEAR, plan.excluidas().get(0).destino());
     }
 
     @Test void imeiActivoEsConflictoYFinalOHistoricoEsReentrada() {
         var verif = Map.of(
-                "352513424271910", new VerificacionImei("352513424271910", true, "RECIBIDO", 0, "12"),
-                "352513424271911", new VerificacionImei("352513424271911", true, null, 2, "12"),
-                "352513424271912", new VerificacionImei("352513424271912", true, null, 0, "12"),
-                "352513424271913", new VerificacionImei("352513424271913", true, "ENVIADO", 0, "12"));
+                "352500000000061", new VerificacionImei("352500000000061", true, "RECIBIDO", 0, "12"),
+                "352500000000062", new VerificacionImei("352500000000062", true, null, 2, "12"),
+                "352500000000063", new VerificacionImei("352500000000063", true, null, 0, "12"),
+                "352500000000064", new VerificacionImei("352500000000064", true, "ENVIADO", 0, "12"));
         var plan = ClasificadorImportacion.clasificar(List.of(
-                fila("352513424271910", "iPhone 12", "B1", 0),
-                fila("352513424271911", "iPhone 12", "B1", 0),
-                fila("352513424271912", "iPhone 12", "B1", 0),
-                fila("352513424271913", "iPhone 12", "B1", 0)), MAPEO, verif);
+                fila("352500000000061", "iPhone 12", "B1", 0),
+                fila("352500000000062", "iPhone 12", "B1", 0),
+                fila("352500000000063", "iPhone 12", "B1", 0),
+                fila("352500000000064", "iPhone 12", "B1", 0)), MAPEO, verif);
         assertEquals(2, plan.excluidas().size());   // los dos activos
         assertTrue(plan.excluidas().stream().allMatch(f -> f.destino() == ClasificadorImportacion.Destino.CONFLICTO));
         List<ClasificadorImportacion.FilaClasificada> importables = plan.lotes().get(0).filas();

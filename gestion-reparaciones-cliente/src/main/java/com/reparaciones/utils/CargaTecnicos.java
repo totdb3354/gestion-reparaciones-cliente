@@ -41,7 +41,7 @@ public final class CargaTecnicos {
     // normales 20: bajado por el usuario de 25 a 20 (2026-07-24), en línea con el dato de BD (mejor
     // día real escalado a 9h = 20,3: 18 normales en jornada de 8h del 2026-07-08, era del flag
     // ES_CHASIS). El 25 original (2026-07-09) era una estima de techo por encima con ventana de datos
-    // corta. El glass validado: mejor día de javi = 18 escalado vs techo 17.
+    // corta. El glass validado: mejor día de tecnico_g = 18 escalado vs techo 17.
     // Futuro apuntado: tabla de BD configurable y topes por técnico (F4).
     public static final int TOPE_CHASIS_9H   = 8;
     public static final int TOPE_GLASS_9H    = 17;

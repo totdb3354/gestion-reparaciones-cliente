@@ -16,28 +16,28 @@ class ImeiUtilsTest {
 
     @Test
     void unico_si_exactamente_15() {
-        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352680941087812");
+        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352600000000071");
         assertEquals(UNICO, r.tipo());
-        assertEquals(List.of("352680941087812"), r.imeis());
+        assertEquals(List.of("352600000000071"), r.imeis());
     }
 
     @Test
     void lote_si_multiplo_de_15() {
-        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352680941087812354739185728537");
+        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352600000000071354700000000091");
         assertEquals(LOTE, r.tipo());
-        assertEquals(List.of("352680941087812", "354739185728537"), r.imeis());
+        assertEquals(List.of("352600000000071", "354700000000091"), r.imeis());
     }
 
     @Test
     void corrupto_si_mayor_de_15_y_no_multiplo() {
-        assertEquals(CORRUPTO, ImeiUtils.parsearPegadoImeis("3526809410878123").tipo());   // 16
+        assertEquals(CORRUPTO, ImeiUtils.parsearPegadoImeis("3526000000000713").tipo());   // 16
         assertEquals(CORRUPTO, ImeiUtils.parsearPegadoImeis("3".repeat(31)).tipo());        // 31
         assertTrue(ImeiUtils.parsearPegadoImeis("3".repeat(16)).imeis().isEmpty());
     }
 
     @Test
     void quita_separadores_y_no_digitos() {
-        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352680941087812\n354739185728537");
+        ImeiUtils.ResultadoPegado r = ImeiUtils.parsearPegadoImeis("352600000000071\n354700000000091");
         assertEquals(LOTE, r.tipo());
         assertEquals(2, r.imeis().size());
     }

@@ -50,12 +50,12 @@ class LoteXlsxParserTest {
     @Test void parseaFilaCompletaConCeldasNumericas() throws IOException {
         // IMEI y storage numéricos y precio con muchos decimales, como el fichero real de Hy5
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", 128, "White", null,
+            new Object[]{352500000000061L, "Apple", "iPhone 12", 128, "White", null,
                          152.24622210318043, "Hy5", "1445947", "iPhones", null, null, null, 0}));
         assertEquals(1, res.filas().size());
         LoteXlsxParser.Fila f = res.filas().get(0);
         assertEquals(7, f.numFila());
-        assertEquals("352513424271910", f.imei());
+        assertEquals("352500000000061", f.imei());
         assertEquals("Apple", f.fabricante());
         assertEquals("iPhone 12", f.modeloTexto());
         assertEquals(128, f.storageGb());
@@ -69,10 +69,10 @@ class LoteXlsxParserTest {
 
     @Test void parseaCeldasDeTexto() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{"352513424271910", "Apple", "iPhone 12 mini", "256", "Black", "A",
+            new Object[]{"352500000000061", "Apple", "iPhone 12 mini", "256", "Black", "A",
                          "117.50", "Hy5", "1445948", null, null, null, null, "5"}));
         LoteXlsxParser.Fila f = res.filas().get(0);
-        assertEquals("352513424271910", f.imei());
+        assertEquals("352500000000061", f.imei());
         assertEquals(256, f.storageGb());
         assertEquals("A", f.grado());
         assertEquals(new BigDecimal("117.50"), f.precioCompra());
@@ -81,16 +81,16 @@ class LoteXlsxParserTest {
 
     @Test void ignoraFilasVacias() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0},
+            new Object[]{352500000000061L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0},
             new Object[]{},   // fila totalmente vacía
-            new Object[]{352513424271911L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0}));
+            new Object[]{352500000000062L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1", null, null, null, null, 0}));
         assertEquals(2, res.filas().size());
         assertEquals(List.of(), res.avisos());
     }
 
     @Test void statusVacioSeInterpretaComoCero() throws IOException {
         var res = LoteXlsxParser.parsear(libro(
-            new Object[]{352513424271910L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1"}));
+            new Object[]{352500000000061L, "Apple", "iPhone 12", null, null, null, null, "Hy5", "1"}));
         assertEquals(0, res.filas().get(0).status());
     }
 

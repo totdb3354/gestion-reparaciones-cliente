@@ -53,8 +53,8 @@ class ReparacionResumenTest {
     void nombreTecnicoAsigna_getterYSetter() {
         ReparacionResumen r = reparacion(null);
         assertNull(r.getNombreTecnicoAsigna());
-        r.setNombreTecnicoAsigna("Diego");
-        assertEquals("Diego", r.getNombreTecnicoAsigna());
+        r.setNombreTecnicoAsigna("Técnico D");
+        assertEquals("Técnico D", r.getNombreTecnicoAsigna());
     }
 
     @Test

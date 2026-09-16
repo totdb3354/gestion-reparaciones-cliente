@@ -25,8 +25,8 @@ class TecnicoTest {
     @Test
     void setNombre_actualizaCorrectamente() {
         Tecnico t = new Tecnico(1, "Daniel García", true);
-        t.setNombre("Angelo López");
-        assertEquals("Angelo López", t.getNombre());
+        t.setNombre("Técnico C");
+        assertEquals("Técnico C", t.getNombre());
     }
 
     @Test
