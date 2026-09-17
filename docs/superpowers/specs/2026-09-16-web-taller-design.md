@@ -133,7 +133,7 @@ Hooks de lectura: `useHistorial(tipo)` (`['historial', tipo]`), `useAsignaciones
 
 ## 8. Errores
 
-Política global del shell (banner para red y 5xx en fondo, diálogo en acciones y en el primer fallo de carga, 401 al login). Propios de estas vistas: los 403 de propiedad de los toggles ("Solo puedes marcar tus propias asignaciones", "Solo quien registró la entrega puede deshacerla", …) y los 422 de negocio ("Sin glass abierta para este IMEI", "La entrega ya está registrada", …) se muestran con el mensaje del servidor; 409 al editar observación o cliente del teléfono → "El teléfono fue modificado por otro usuario. Se recargan los datos." y recarga; borrado bloqueado → aviso "No se puede borrar" / "Este trabajo está siendo referenciado" / "La reparación <id> apunta a esta. Bórrala primero."; el 403 de `?tecnico=` no puede darse desde la web (nunca pide otro técnico siendo TECNICO), pero si ocurre se muestra como cualquier 403.
+Política global del shell (banner para red y 5xx en fondo, diálogo en acciones y en el primer fallo de carga, 401 al login). Propios de estas vistas: los 422 de negocio ("Sin glass abierta para este IMEI", "No hay entrega que deshacer", "La entrega ya está registrada", …) se muestran con el mensaje del servidor; los 403 de propiedad de los toggles ("Solo puedes marcar tus propias asignaciones", "Solo quien registró la entrega puede deshacerla", …) se muestran, como en el JavaFX (`ApiClient.clasificar`), con el texto genérico "No tienes permisos para realizar esta acción.", sin el motivo que manda el servidor (decisión del usuario, 2026-09-17); 409 al editar observación o cliente del teléfono → "El teléfono fue modificado por otro usuario. Se recargan los datos." y recarga; borrado bloqueado → aviso "No se puede borrar" / "Este trabajo está siendo referenciado" / "La reparación <id> apunta a esta. Bórrala primero."; el 403 de `?tecnico=` no puede darse desde la web (nunca pide otro técnico siendo TECNICO), pero si ocurre se muestra como cualquier 403.
 
 ## 9. Diferencias aceptadas respecto al JavaFX
 
@@ -143,6 +143,9 @@ Política global del shell (banner para red y 5xx en fondo, diálogo en acciones
 - CSV como descarga del navegador; los diálogos y ventanas del JavaFX pasan a modales con los mismos títulos, etiquetas y botones; el detalle de IMEIs es una ruta (el botón atrás del navegador equivale a "← Volver").
 - El resaltado al copiar una celda es un cambio de fondo breve, sin animación.
 - La fila seleccionada existe (fondo azul medio) porque `DataTable` gana selección en este sub-proyecto; en Clientes sigue sin usarse.
+- Las entradas "Pendientes" e "Historial" de la columna lateral abren siempre el primer toggle ("Reparaciones"); el JavaFX vuelve a abrir el último toggle usado.
+- En el Historial, Reparaciones y Glass guardan cada uno sus filtros (técnico, pieza, fechas, incidencias); el JavaFX usa un único juego de controles para los dos toggles, así que lo filtrado en uno sigue aplicado en el otro.
+- El detalle de estas dos diferencias y las diferencias menores de la revisión final de paridad están en la sección "Diferencias aceptadas" de las fichas (`docs/paridad/pendientes.md`, `historial.md` e `imeis.md` del repo web).
 
 ## 10. Paridad, tests y verificación
 
