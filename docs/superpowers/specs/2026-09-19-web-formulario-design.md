@@ -65,11 +65,11 @@ Rutas hijas de las páginas existentes (el diálogo se pinta sobre la página, q
 - Al cerrar (guardado o no) se invalida la lista de debajo y los contadores de pendientes.
 - Acceso directo por URL a algo ajeno o con rol insuficiente: el servidor responde 403 y la web muestra el mensaje genérico ya pactado y vuelve a la lista.
 - Título de la pestaña del navegador: "Nueva reparación — IMEI <imei>" / "Editar reparación — <idRep>".
-- La campana refresca con `useIntervaloRefresco` (5 s) y al recuperar el foco la ventana; el panel abierto refresca al mismo ritmo y no redibuja si nada cambió.
+- La campana recalcula su contador con el intervalo general de refresco (`useIntervaloRefresco`: 60 s, 5 s con el banner de conexión) y al recuperar el foco la ventana; el panel abierto recarga al mismo ritmo y no redibuja las solicitudes si no cambió el conjunto de identificadores.
 
 ## 5. Servidor (rama `feature/web-formulario`; el JavaFX 0.16.x sigue funcionando)
 
-1. **Técnico del token y propiedad de la asignación** en `POST /api/reparaciones/completa`, `POST /api/reparaciones/{idAsignacion}/filas`, `POST /api/reparaciones/{idAsignacion}/agotar-componente` y `GET|PUT|DELETE /api/reparaciones/{idRep}/borrador`: el técnico efectivo es el del token; el `idTec` del cuerpo se **ignora** (no se rechaza: el JavaFX lo sigue enviando); la asignación debe ser de ese técnico o la respuesta es 403. La regla es la misma para TECNICO y SUPERTECNICO: verificado en el cliente de referencia, el formulario solo se abre desde "Mis pendientes", que carga las asignaciones del técnico de la sesión, y siempre envía ese técnico; ningún flujo completa asignaciones de otro. `PATCH /api/reparaciones/{idRep}/completar` (sin llamadores en los clientes) recibe la misma regla. Vive en un componente único junto a `FiltroTecnico`, con tests propios.
+1. **Técnico del token y propiedad de la asignación** en `POST /api/reparaciones/completa`, `POST /api/reparaciones/{idAsignacion}/filas`, `POST /api/reparaciones/{idAsignacion}/agotar-componente` y `GET|PUT|DELETE /api/reparaciones/{idAsignacion}/borrador` (la clave del borrador es el id de la asignación): el técnico efectivo es el del token; el `idTec` del cuerpo se **ignora** (no se rechaza: el JavaFX lo sigue enviando); la asignación debe ser de ese técnico o la respuesta es 403. La regla es la misma para TECNICO y SUPERTECNICO: verificado en el cliente de referencia, el formulario solo se abre desde "Mis pendientes", que carga las asignaciones del técnico de la sesión, y siempre envía ese técnico; ningún flujo completa asignaciones de otro. `PATCH /api/reparaciones/{idRep}/completar` (sin llamadores en los clientes) recibe la misma regla. Vive en un componente único junto a `FiltroTecnico`, con tests propios. **Excepción, la edición:** al añadir filas o acciones a una reparación ya hecha, los clientes llaman a `completa` sin `idAsignacion` y con el técnico **original** de esa reparación; ese caso exige SUPERTECNICO y conserva el `idTec` del cuerpo, para que el trabajo (y sus puntos) siga a nombre de quien lo hizo y no de quien corrige.
 2. `PUT /api/reparaciones/{idRep}` (editar): exige SUPERTECNICO, único rol que ofrece "Editar" en los clientes. Mantiene el bloqueo optimista (`updatedAt`, 409).
 3. **Roles**: `/api/solicitudes-stock` — crear: TECNICO y SUPERTECNICO; listar, contar, cambiar estado y borrar: SUPERTECNICO, con lectura para ADMIN como fija la spec maestra. `PATCH /api/componentes/{id}/stock`: SUPERTECNICO. Verificado: ningún cliente lo llama (ni la línea hotfix ni `main`); el stock se mueve dentro de las transacciones del servidor (completar, editar, agotar, recibir pedidos), así que restringirlo no afecta a la tienda.
 4. **Autodetección de chasis por SKU** (decisión de producto de julio): la asignación pasa a `ES_CHASIS = TRUE` al completar con una pieza cuyo SKU empieza por `cha` (`insertarCompleta` y `guardarFilaIndividual`) y al crear una solicitud de pieza `cha…` (`agotarComponente` y solicitud en `insertarCompleta`). Nunca se quita automáticamente; el toggle manual sigue igual.
@@ -100,14 +100,14 @@ Todo dentro de `src/modules/taller/`. Sin dependencias nuevas.
 
 | Unidad | Responsabilidad |
 |---|---|
-| `api.ts` | Contadores, listas `PENDIENTE` y `RECHAZADA` de solicitudes urgentes y preventivas, componentes con stock bajo, cambio de estado, limpiar y borrar |
-| `alertas.ts` (pura) | Predicado de alerta (componente master, activo, stock ≤ mínimo) y orden: "Sin stock" primero, "Bajo mínimo" después |
-| `Campana.tsx` | Icono apagado/encendido, badge con el total de pendientes, pulso cuando hay alertas. Solo se monta para SUPERTECNICO, en la barra superior |
-| `PanelNotificaciones.tsx`, `TarjetaSolicitud.tsx`, `TarjetaAlerta.tsx` | Panel flotante anclado a la campana; pestañas Solicitudes y Alertas; se abre en Alertas si hay pulso; tarjetas de fondo alterno |
+| `api.ts` | Contadores, listas `PENDIENTE` y `RECHAZADA` de solicitudes urgentes y preventivas, componentes gestionados (de los que salen las alertas), cambio de estado, limpiar y borrar |
+| `alertas.ts` (pura) | Predicado de alerta (componente master, activo, stock ≤ mínimo) y orden: "Sin Stock" (stock 0) primero, "Stock Bajo" (stock > 0) después |
+| `Campana.tsx` | Icono apagado/encendido, badge con el total de pendientes (sin tope de cifras), pulso si hay alertas al iniciar sesión (se para con el primer clic y no vuelve a arrancar). Solo se monta para SUPERTECNICO, en la barra superior |
+| `PanelNotificaciones.tsx`, `TarjetaSolicitud.tsx`, `TarjetaAlerta.tsx` | Panel flotante de 480 px anclado a la campana, sin cabecera; se cierra con otro clic en la campana o pulsando fuera; pestañas Solicitudes y Alertas; se abre en Alertas si el pulso estaba latiendo; tarjetas de fondo alterno con menú contextual |
 
 ### 6.3 Llamadas
 
-Lecturas: `GET /api/componentes/agrupados`, `GET /api/reparaciones/asignaciones/{idAsignacion}/solicitudes`, `GET /api/reparaciones/imei/{imei}/asignaciones-activas`, incidencia activa del IMEI, `GET /api/reparaciones/{idRep}/detalle-edicion`, `GET /api/reparaciones/imei/{imei}/ya-reparados`, `GET /api/reparaciones/{idRep}/borrador`, `GET /api/solicitudes` y `/count`, `GET /api/solicitudes-stock` y `/count`, `GET /api/componentes/stock-bajo`.
+Lecturas: `GET /api/componentes/agrupados`, `GET /api/reparaciones/asignaciones/{idAsignacion}/solicitudes`, `GET /api/reparaciones/imei/{imei}/asignaciones-activas`, incidencia activa del IMEI, `GET /api/reparaciones/{idRep}/detalle-edicion`, `GET /api/reparaciones/imei/{imei}/ya-reparados`, `GET /api/reparaciones/{idAsignacion}/borrador`, `GET /api/telefonos/{imei}/modelo` (modelo autodetectado), `GET /api/reparaciones/imei/{imei}` (comprobar que las filas guardadas siguen existiendo), `GET /api/reparaciones/imei/{imei}/acciones` (acciones "✓ Ya reparada" en edición), `GET /api/solicitudes` y `/count`, `GET /api/solicitudes-stock` y `/count`, `GET /api/componentes/gestionados` (las alertas se calculan en la web; `/stock-bajo` no se usa, como en el JavaFX).
 Escrituras: `POST …/{idAsignacion}/filas`, `POST …/{idAsignacion}/agotar-componente`, `POST …/completa`, `PUT …/{idRep}`, `PUT|DELETE …/{idRep}/borrador`, `PATCH /api/solicitudes/{idRc}/estado`, `PATCH /api/solicitudes/{idRc}/limpiar`, `PATCH /api/solicitudes-stock/{idSol}/estado`, `DELETE /api/solicitudes-stock/{idSol}`.
 El plan fija la lista exacta contra el contrato; ninguna escritura nueva en el servidor.
 
@@ -120,7 +120,7 @@ El plan fija la lista exacta contra el contrato; ninguna escritura nueva en el s
 
 ## 7. Comportamiento del formulario (resumen; las fichas de paridad son el criterio de aceptación)
 
-**Cabecera.** "IMEI: <imei>" (en edición, "· Editando <idRep>"); "Filtrar por modelo" con los modelos traducidos. Sin modelo elegido se ocultan las filas y se lee "Selecciona modelo"; con el modelo de la asignación viene precargado. El combo se bloquea en edición y mientras haya solicitudes pendientes. Avisos: naranja "⚠ Este IMEI también está asignado a — Reparación: … · Glass: … · Pulido: …" (con "(tú)"), "⚠ Resuelve incidencia: <idRep>", azul "✓ Borrador recuperado".
+**Cabecera.** "IMEI: <imei>" (en edición, "· Editando <idRep>"); "Filtrar por modelo" con los modelos traducidos. Sin modelo elegido se ocultan las filas y se lee "Selecciona modelo"; si el servidor autodetecta el modelo del teléfono, o se deduce del SKU de una solicitud, viene precargado. El combo se bloquea en edición, mientras haya solicitudes activas y cuando el modelo viene autodetectado; con solo solicitudes rechazadas queda libre. Cambiar de modelo resetea las filas no guardadas. Avisos: naranja "⚠ Este IMEI también está asignado a — Reparación: … · Glass: … · Pulido: …" (con "(tú)"), "⚠ Resuelve incidencia: <idRep>", azul "✓ Borrador recuperado".
 
 **Filas** (una por tipo; el modelo filtra los SKU). Contador con +/−, SKU (sin stock en rojo), stock, "Reutilizado", observación.
 - Contador ≥ 1 deshabilita "Reutilizado"; "Reutilizado" marcado deja el contador en 0 y deshabilita +/−.
@@ -132,11 +132,11 @@ El plan fija la lista exacta contra el contrato; ninguna escritura nueva en el s
 
 **Otras acciones.** Sección "OTRAS ACCIONES" con contador; "+ Añadir acción" añade una línea (campo, "✓ Guardar" activo con texto, papelera) y se deshabilita mientras haya una línea vacía; guardar bloquea la línea con "✓ Guardada <fecha>".
 
-**Guardar.** La zona inferior aparece cuando hay algo activo, una solicitud cancelada o algo ya guardado. "Terminar asignación" → primer clic "✓ Confirmar terminar" → segundo clic guarda todo (agotados, solicitudes, filas) en el orden del JavaFX, borra el borrador y cierra. Con solicitud pendiente la asignación queda abierta.
+**Guardar.** La zona inferior aparece cuando hay algo activo o algo ya guardado. "Terminar asignación" → primer clic "✓ Confirmar terminar" → segundo clic guarda todo (agotados, solicitudes, filas) en el orden del JavaFX, borra el borrador y cierra. Con solicitud pendiente la asignación queda abierta. Orden: primero un `agotar-componente` por cada agotado nuevo, uno a uno; después `completa` (también con `filas` vacía si solo había filas guardadas una a una); si solo había agotados nuevos, `completa` no se llama. "✓ Guardar fila" y "✓ Guardar" de una acción también piden un segundo clic ("✓ Confirmar"), que cualquier cambio revierte.
 
 **Glass.** Asignación `AG…`: solo filas Glass y Marco más otras acciones; genera `G`.
 
-**Editar.** Fila editada en azul, modelo bloqueado, resto de tipos ya reparados en el IMEI marcados "✓ Ya reparado" y deshabilitados; previsualización de stock "155 → 154" en rojo cuando cambia; sin reutilizado y con contador 0, contador en rojo y sin botón; con cambio válido, "Guardar cambios". También edita una acción "otro". 409 → aviso de modificación concurrente y recarga.
+**Editar.** Fila editada en azul, modelo bloqueado, resto de tipos ya reparados en el IMEI marcados "✓ Ya reparado" y deshabilitados; previsualización de stock "155 → 154" en rojo cuando cambia; sin reutilizado y con contador 0, contador en rojo y sin botón; con cambio válido, "Guardar cambios". También edita una acción "otro". 409 → aviso de modificación concurrente (sin recarga automática, como el JavaFX).
 
 ## 8. Borrador
 
@@ -152,7 +152,7 @@ JSON con los campos exactos del JavaFX: `modelo`; `filas[]` con `prefijo`, `idCo
 - Diálogo modal dentro de la página en vez de ventana aparte; no es redimensionable ni movible; ocupa casi toda la ventana con un mínimo equivalente a 960×700.
 - La URL refleja el formulario abierto; Atrás lo cierra; F5 lo reabre.
 - Botones de la campana que llevan a Almacén: deshabilitados con tooltip hasta el sub-proyecto 4.
-- La campana refresca por intervalo en vez de por hilo sondeador; mismo efecto visible.
+- Con el panel cerrado, la web recalcula el contador también por intervalo (el JavaFX solo al volver el foco): el badge se pone al día antes. Escape cierra el panel (en el JavaFX no).
 
 ### 9.2 Comportamientos del JavaFX calcados a propósito
 - El flujo nuevo no avisa de piezas ya cambiadas en el IMEI.
@@ -160,14 +160,24 @@ JSON con los campos exactos del JavaFX: `modelo`; `filas[]` con `prefijo`, `idCo
 - "Rechazar", "Recuperar" y la papelera de la campana actúan sin confirmación.
 - La tarjeta de solicitud urgente muestra la fecha de la asignación.
 - "✓ Confirmar terminar" no vuelve a "Terminar asignación" aunque cambien las filas.
-- Cerrar el formulario nuevo nunca pregunta (el borrador lo cubre).
+- Cerrar el formulario nuevo nunca pregunta (el borrador lo cubre); en edición, un cambio inválido se pierde al cerrar sin preguntar.
+- El estado "Guardada" de filas y acciones vive solo en el borrador; cambiar de modelo resetea las filas no guardadas sin avisar.
+- En edición, el primer clic en "Guardar cambios" muestra "✓  Confirmar terminar".
+- La lista completa está en las fichas de paridad.
+
+### 9.3 Correcciones deliberadas respecto al JavaFX (decididas con el usuario al cerrar las fichas)
+- El lápiz de una solicitud **ya guardada** en el servidor queda deshabilitado (en el JavaFX abría un diálogo cuyos botones no guardaban ni cancelaban nada).
+- En modo edición no hay sub-fila de agotado ni "Solicitar pieza" (en el JavaFX se mostraba pero el agotado no se registraba).
+- La papelera de la observación se deshabilita en una fila guardada.
+- Si "Terminar asignación" falla a medias, el reintento no repite los agotados ya registrados (en el JavaFX se descontaba el stock dos veces).
+- El indicador "✓ Recibido" se oculta si se cambia a un modelo sin SKU de ese tipo.
 
 ## 10. Errores
 
 - Guardar fila o acción: "No se pudo guardar la fila: <mensaje>" / "No se pudo guardar la acción: <mensaje>"; la fila no se bloquea.
 - Terminar o guardar cambios: "No se pudo guardar: <mensaje>"; el formulario sigue abierto y el borrador intacto.
-- Agotar componente: "No se pudo registrar componente agotado: <mensaje>".
-- 409 en edición: aviso y recarga. 403: mensaje genérico y vuelta a la lista.
+- Agotar componente: "No se pudo registrar componente agotado: <mensaje>" (409) y "Error al registrar componente agotado: <mensaje>" (resto).
+- 409: aviso con el texto literal del JavaFX ("… Cierra y vuelve a abrir el formulario para ver los cambios actuales."; al terminar, "Cierra el formulario y comprueba el estado de la asignación."), sin recarga automática. 403: mensaje genérico y vuelta a la lista.
 - Fallo al leer asignaciones activas del IMEI: no crítico, el formulario abre sin aviso.
 - Sin conexión: el banner existente.
 
