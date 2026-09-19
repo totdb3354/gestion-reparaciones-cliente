@@ -171,6 +171,7 @@ JSON con los campos exactos del JavaFX: `modelo`; `filas[]` con `prefijo`, `idCo
 - La papelera de la observación se deshabilita en una fila guardada.
 - Si "Terminar asignación" falla a medias, el reintento no repite los agotados ya registrados (en el JavaFX se descontaba el stock dos veces).
 - El indicador "✓ Recibido" se oculta si se cambia a un modelo sin SKU de ese tipo.
+- Al recuperar del borrador un agotado confirmado en la variante «límite», la cantidad se conserva acotada al stock actual (el JavaFX la dejaba a 0 y el descuento de stock se perdía). Decidida al escribir el plan.
 
 ## 10. Errores
 
