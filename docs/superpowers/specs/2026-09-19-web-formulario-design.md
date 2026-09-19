@@ -55,9 +55,10 @@ Rutas hijas de las páginas existentes (el diálogo se pinta sobre la página, q
 
 | Ruta | Modo | Quién |
 |---|---|---|
-| `/taller/pendientes/reparar/:idAsignacion` | nuevo (o glass si el id empieza por `AG`) | TECNICO y SUPERTECNICO, sobre asignaciones propias |
-| `/taller/historial/editar/:idRep` | editar | SUPERTECNICO |
-| `/taller/imeis/:imei/editar/:idRep` | editar | SUPERTECNICO |
+| `/reparaciones/pendientes/reparar/:idAsignacion` | nuevo | TECNICO y SUPERTECNICO, sobre asignaciones propias |
+| `/reparaciones/pendientes/glass/reparar/:idAsignacion` | glass (asignación `AG…`) | TECNICO y SUPERTECNICO, sobre asignaciones propias |
+| `/reparaciones/historial/editar/:idRep` y `/reparaciones/historial/glass/editar/:idRep` | editar | SUPERTECNICO |
+| `/reparaciones/imeis/:imei/editar/:idRep` | editar | SUPERTECNICO |
 
 - "Añadir reparación" / "Añadir glass" (Pendientes) y "Editar" (menú contextual de Historial y del detalle de IMEIs, solo filas `R`/`G`) dejan de estar deshabilitados y navegan a la ruta.
 - ✕, Atrás del navegador y Escape (sin otro diálogo encima) hacen lo mismo. En modo nuevo: volcado del borrador y cierre **sin preguntar**. En modo editar: si hay cambios, diálogo "Salir sin guardar".
