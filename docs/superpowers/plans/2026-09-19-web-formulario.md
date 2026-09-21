@@ -810,7 +810,7 @@ export function TarjetaAlerta(props: { alerta: AlertaStock; alterna: boolean }):
 
 **Ficha:** `formulario.md` — "Roles: flujo nuevo y Glass, TECNICO y SUPERTECNICO sobre sus propias asignaciones…" (parte servidor); "403 al abrir (asignación de otro técnico, o edición sin ser SUPERTECNICO)…" (parte servidor); "Las filas y acciones nuevas añadidas en edición **conservan el técnico original**…" (parte servidor); párrafo inicial de "Llamadas a la API". Spec §5.1 y §5.2.
 
-- [ ] **Step 1: Crear la rama del servidor desde `main`**
+- [x] **Step 1: Crear la rama del servidor desde `main`**
 
 ```bash
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor status --short   # vacío
@@ -826,7 +826,7 @@ export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apach
 ```
 (la herramienta de shell no conserva variables entre llamadas: repetir las dos líneas delante de cada `mvn`).
 
-- [ ] **Step 2: Escribir el test unitario de la regla**
+- [x] **Step 2: Escribir el test unitario de la regla**
 
 `src/test/java/com/reparaciones/servidor/security/PropiedadAsignacionTest.java`:
 
@@ -894,14 +894,14 @@ class PropiedadAsignacionTest {
 }
 ```
 
-- [ ] **Step 3: Ejecutarlo y ver que falla por compilación**
+- [x] **Step 3: Ejecutarlo y ver que falla por compilación**
 
 ```bash
 mvn -q test -Dtest=PropiedadAsignacionTest
 ```
 Expected: `COMPILATION ERROR ... cannot find symbol ... PropiedadAsignacion`.
 
-- [ ] **Step 4: Implementar `PropiedadAsignacion`**
+- [x] **Step 4: Implementar `PropiedadAsignacion`**
 
 `src/main/java/com/reparaciones/servidor/security/PropiedadAsignacion.java`:
 
@@ -948,14 +948,14 @@ public final class PropiedadAsignacion {
 }
 ```
 
-- [ ] **Step 5: Ejecutar el test y ver que pasa**
+- [x] **Step 5: Ejecutar el test y ver que pasa**
 
 ```bash
 mvn -q test -Dtest=PropiedadAsignacionTest
 ```
 Expected: termina sin errores (código de salida 0; 6 tests).
 
-- [ ] **Step 6: Escribir el test de la regla aplicada en el controller (falla por compilación)**
+- [x] **Step 6: Escribir el test de la regla aplicada en el controller (falla por compilación)**
 
 Los tests de controller del proyecto llaman al método Java directamente con DAOs de Mockito (no ejercitan `@PreAuthorize`; eso lo cubre el Step 9). Ojo con Mockito: un método sin programar que devuelve `Integer` responde `0`, no `null`; por eso cada test programa `getIdTecDeAsignacion` explícitamente.
 
@@ -1127,7 +1127,7 @@ mvn -q test -Dtest=PropiedadAsignacionControllersTest
 ```
 Expected: `COMPILATION ERROR` (`getIdTecDeAsignacion` no existe, los records de petición son `private`, `getBorrador`/`guardarBorrador`/`eliminarBorrador` no reciben el principal).
 
-- [ ] **Step 7: `getIdTecDeAsignacion` en el DAO y la regla en el controller**
+- [x] **Step 7: `getIdTecDeAsignacion` en el DAO y la regla en el controller**
 
 En `ReparacionDAO.java`, justo después de `getImeiByIdRep`:
 
@@ -1285,14 +1285,14 @@ En `ReparacionController.java`:
 
 No tocar `actualizarPorCerrar`, `actualizarEntregaGlass`, `marcarLlegadaGlass` ni `deshacerLlegadaGlass` (ya comprueban al dueño a mano y quedan fuera de esta tarea).
 
-- [ ] **Step 8: Ejecutar el test del controller y ver que pasa**
+- [x] **Step 8: Ejecutar el test del controller y ver que pasa**
 
 ```bash
 mvn -q test -Dtest=PropiedadAsignacionControllersTest
 ```
 Expected: termina sin errores (11 tests).
 
-- [ ] **Step 9: Test de roles con MockMvc (falla)**
+- [x] **Step 9: Test de roles con MockMvc (falla)**
 
 Copia la cabecera de `OpenApiContractTest` (contexto completo sin base de datos). El `JwtAuthFilter` construye el principal desde el token, así que `JwtUtil.generateToken(new UsuarioPrincipal(...))` basta; los `@MockBean` evitan que el caso permitido toque MariaDB.
 
@@ -1400,7 +1400,7 @@ mvn -q test -Dtest=RolesReparacionFormularioTest
 ```
 Expected: FAIL en `editarSiendoTecnicoEs403`, `editarSiendoAdminEs403` y `detalleEdicionSiendoTecnicoEs403` (`expected: <403> but was: <200>`) y en `borradorSiendoAdminEs403` (el 403 ya llega por la regla, pero `verifyNoInteractions(dao…)` falla porque se consultó `getIdTecDeAsignacion`). `editarSiendoSupertecnicoLlegaAlDao` pasa.
 
-- [ ] **Step 10: Roles de la edición y del borrador**
+- [x] **Step 10: Roles de la edición y del borrador**
 
 En `ReparacionController.java`:
 
@@ -1432,14 +1432,14 @@ mvn -q test -Dtest=RolesReparacionFormularioTest
 ```
 Expected: termina sin errores (5 tests).
 
-- [ ] **Step 11: Toda la suite en verde**
+- [x] **Step 11: Toda la suite en verde**
 
 ```bash
 mvn -q test
 ```
 Expected: sin fallos (la suite anterior + 22 tests nuevos). `OpenApiContractTest` sigue pasando: `@AuthenticationPrincipal` no entra en el contrato y los records conservan nombre y campos. Si algún test previo llamaba a `getBorrador(String)` con la firma antigua, `mvn` lo señalará por compilación: no hay ninguno en la suite actual.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/security/PropiedadAsignacion.java src/main/java/com/reparaciones/servidor/controller/ReparacionController.java src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java src/test/java/com/reparaciones/servidor/security/PropiedadAsignacionTest.java src/test/java/com/reparaciones/servidor/controller/PropiedadAsignacionControllersTest.java src/test/java/com/reparaciones/servidor/controller/RolesReparacionFormularioTest.java
@@ -1462,7 +1462,7 @@ git commit -m "feat(servidor): el técnico de las escrituras del formulario sale
 
 **Ficha:** ninguna casilla de vista; cubre spec §5.3 y §5.4 y da soporte a `notificaciones.md` "Roles: solo SUPERTECNICO…".
 
-- [ ] **Step 1: Test de roles con MockMvc (falla)**
+- [x] **Step 1: Test de roles con MockMvc (falla)**
 
 Todos los comandos se ejecutan desde el repo del servidor, en la rama `feature/web-formulario`, con el entorno de Maven:
 
@@ -1581,7 +1581,7 @@ mvn -q test -Dtest=RolesSolicitudesStockTest
 ```
 Expected: FAIL en los cuatro tests con `expected: <403> but was: <201>` / `<200>` (las anotaciones de rol por método llegan en el Step 2).
 
-- [ ] **Step 2: Anotar los roles**
+- [x] **Step 2: Anotar los roles**
 
 `SolicitudStockController.java`: añadir `import org.springframework.security.access.prepost.PreAuthorize;` y una anotación por método (cuerpos intactos):
 
@@ -1648,7 +1648,7 @@ mvn -q test -Dtest=RolesSolicitudesStockTest
 ```
 Expected: termina sin errores (4 tests).
 
-- [ ] **Step 3: Test de la autodetección de chasis (falla)**
+- [x] **Step 3: Test de la autodetección de chasis (falla)**
 
 Estilo de los tests de DAO del proyecto: `JdbcTemplate` de Mockito y se comprueba el SQL emitido. Para llegar hasta la llamada hay que dejar pasar las consultas previas de cada método (`COUNT(*) … FOR UPDATE`, `ID_TEC_ASIGNA`, `nextId`, `resolveToMasterId`, `entregaHeredable`): el mock responde `1` a todo `queryForObject` y a todo `update`, y un mapa vacío a `queryForMap`. Con eso `resolveToMasterId` devuelve `1`, distinto del `idCom` de la fila, y el test demuestra que se compara el SKU **de la fila** y no el del master. La decisión "empieza por cha" vive en el SQL (`EXISTS … LOWER(c.TIPO) LIKE 'cha%'`), así que `piezaQueNoEsChaNoMarca` comprueba que la sentencia emitida lleva ese filtro, que nunca escribe `FALSE` y que no toca `UPDATED_AT`.
 
@@ -1772,7 +1772,7 @@ mvn -q test -Dtest=ReparacionDAOChasisTest
 ```
 Expected: FAIL en los cinco primeros (`expected: <[[A20260916_1, 131]]> but was: <[]>` y equivalentes); `sinAsignacionNoMarca` pasa.
 
-- [ ] **Step 4: `marcarChasisSiProcede` y sus puntos de llamada**
+- [x] **Step 4: `marcarChasisSiProcede` y sus puntos de llamada**
 
 En `ReparacionDAO.java`, en el bloque "helpers", después de `resolveToMasterId`:
 
@@ -1843,14 +1843,14 @@ mvn -q test -Dtest=ReparacionDAOChasisTest
 ```
 Expected: termina sin errores (6 tests).
 
-- [ ] **Step 5: Toda la suite en verde**
+- [x] **Step 5: Toda la suite en verde**
 
 ```bash
 mvn -q test
 ```
 Expected: sin fallos (la suite tras la Task 1 + 10 tests nuevos). `OpenApiContractTest` no cambia: `@PreAuthorize` no entra en el contrato.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/controller/SolicitudStockController.java src/main/java/com/reparaciones/servidor/controller/ComponenteController.java src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java src/test/java/com/reparaciones/servidor/controller/RolesSolicitudesStockTest.java src/test/java/com/reparaciones/servidor/dao/ReparacionDAOChasisTest.java
@@ -1879,7 +1879,7 @@ git commit -m "feat(servidor): roles en solicitudes de stock y en el ajuste de s
 
 **Cómo se regenera `openapi.json` en este repo:** no hay plugin ni script aparte. `OpenApiContractTest.elContratoPublicaLosEsquemasDeLaWeb` levanta el contexto completo de Spring sin base de datos, pide `GET /v3/api-docs` con un token de ADMIN, comprueba rutas, esquemas y nullabilidad y, como última sentencia, escribe el documento (con los códigos de respuesta ordenados para que el volcado sea estable) en `target/openapi.json`. Por tanto `mvn -q test` o `mvn -q test -Dtest=OpenApiContractTest` lo regeneran, y solo si todas las aserciones anteriores pasan. `target/` no está en git: el snapshot versionado vive en la web (`api/openapi.json`), que lo copia y ejecuta `npm run api:types:offline` en la Task 4.
 
-- [ ] **Step 1: Ampliar `OpenApiContractTest` (falla)**
+- [x] **Step 1: Ampliar `OpenApiContractTest` (falla)**
 
 Todos los comandos, desde el repo del servidor en `feature/web-formulario`:
 
@@ -2004,7 +2004,7 @@ mvn -q test -Dtest=OpenApiContractTest
 ```
 Expected: FAIL con `falta el esquema SolicitudEstadoRequest; publicados: [...]` (hoy esos cuerpos son `Map` y no publican esquema).
 
-- [ ] **Step 2: Records nuevos y respuestas tipadas**
+- [x] **Step 2: Records nuevos y respuestas tipadas**
 
 `src/main/java/com/reparaciones/servidor/model/ValorEntero.java`:
 
@@ -2131,7 +2131,7 @@ grep -rn "get(\"value\")\|get(\"contenido\")" src/test/java
 ```
 Expected: sin resultados.
 
-- [ ] **Step 3: Anotar la nullabilidad**
+- [x] **Step 3: Anotar la nullabilidad**
 
 Cada anotación se ha verificado contra su `RowMapper`/DAO: `getSolicitudesPorAsignacion` no rellena `prefijo` y lee `OBSERVACIONES`, `DESCRIPCION_SOLICITUD` y `ESTADO_SOLICITUD` tal cual; `ULTIMO_PEDIDO` e `ID_COM_MASTER` solo se rellenan si existen; `TIPO_COM` de `SolicitudResumen` sale de un `LEFT JOIN`; `FECHA_FIN` se mapea con comprobación de nulo; `OBSERVACIONES` del detalle de edición se lee con `getString`.
 
@@ -2210,7 +2210,7 @@ public class FilaReparacion {
                               @Schema(nullable = true) String idRepAnterior) {}   // package-private: lo construye el test
 ```
 
-- [ ] **Step 4: Suite en verde y snapshot regenerado**
+- [x] **Step 4: Suite en verde y snapshot regenerado**
 
 ```bash
 mvn -q test
@@ -2220,7 +2220,7 @@ grep -n '"ValorEntero"\|"ContenidoBorrador"\|"SolicitudEstadoRequest"\|"Solicitu
 ```
 Expected: suite sin fallos; `target/openapi.json` con fecha de ahora, más `nullable` que antes y los cuatro esquemas nuevos presentes. Si una aserción de `assertNullable`/`assertNoNullable` falla, el mensaje nombra esquema y campo: corregir la anotación de ese campo, no el test.
 
-- [ ] **Step 5: Validación manual del arranque del contexto Spring (401, 403 y 200)**
+- [x] **Step 5: Validación manual del arranque del contexto Spring (401, 403 y 200)**
 
 La suite levanta el contexto con propiedades de test y DAOs simulados; el arranque real, con el `application.properties` local del desarrollador y MariaDB delante, se valida a mano antes de commitear (un cambio de anotaciones o de beans puede romperlo sin que la suite lo note). El plan no escribe credenciales: el usuario exporta antes, en su shell, las de un usuario con rol TECNICO de su base de datos local:
 
@@ -2274,14 +2274,14 @@ unset TOKEN_TEC
 ```
 Anotar en el informe de la tarea los tres códigos obtenidos (sin el token ni las credenciales).
 
-- [ ] **Step 6: Commit del contrato**
+- [x] **Step 6: Commit del contrato**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/model/ValorEntero.java src/main/java/com/reparaciones/servidor/model/ContenidoBorrador.java src/main/java/com/reparaciones/servidor/model/FilaReparacion.java src/main/java/com/reparaciones/servidor/model/Componente.java src/main/java/com/reparaciones/servidor/model/SolicitudResumen.java src/main/java/com/reparaciones/servidor/model/SolicitudStock.java src/main/java/com/reparaciones/servidor/model/Reparacion.java src/main/java/com/reparaciones/servidor/dao/ReparacionDAO.java src/main/java/com/reparaciones/servidor/controller/ReparacionController.java src/main/java/com/reparaciones/servidor/controller/SolicitudController.java src/main/java/com/reparaciones/servidor/controller/SolicitudStockController.java src/main/java/com/reparaciones/servidor/controller/TelefonoController.java src/test/java/com/reparaciones/servidor/OpenApiContractTest.java
 git commit -m "feat(servidor): contrato con nullabilidad y respuestas tipadas para el formulario y la campana"
 ```
 
-- [ ] **Step 7: `docs/autorizacion_endpoints.md` en versión corta**
+- [x] **Step 7: `docs/autorizacion_endpoints.md` en versión corta**
 
 Sustituir el fichero **entero** por el texto siguiente. Desaparecen las secciones por controlador; nada de lo retirado se copia a otro fichero del repo (la fuente de verdad de cada endpoint son las anotaciones del código y sus tests).
 
@@ -2364,7 +2364,7 @@ grep -c "Controller —" docs/autorizacion_endpoints.md      # 0
 grep -n "^| " docs/autorizacion_endpoints.md | wc -l        # 8 (cabecera, separador y seis filas)
 ```
 
-- [ ] **Step 8: `docs/api_contract.md` — contrato del formulario y de la campana**
+- [x] **Step 8: `docs/api_contract.md` — contrato del formulario y de la campana**
 
 En la lista "Convenciones que el OpenAPI no expresa", insertar estos puntos justo **después** del punto de `GET /api/reparaciones/pendientes/contadores` y antes del de "Sin sesión":
 
@@ -2402,7 +2402,7 @@ grep -nE "([0-9]{1,3}\.){3}[0-9]{1,3}|password|contraseñ" docs/autorizacion_end
 ```
 Expected: como mucho, la mención ya existente a "contraseña actual incorrecta" de `api_contract.md` (texto de una regla de negocio); ninguna IP, ningún dominio, ninguna credencial.
 
-- [ ] **Step 9: Commit de la documentación**
+- [x] **Step 9: Commit de la documentación**
 
 ```bash
 mvn -q test
@@ -2455,7 +2455,7 @@ export const BORRADOR_JAVAFX: string
 
 **Ficha:** ninguna casilla directamente (infraestructura de tipos y datos de prueba para todas las tareas siguientes).
 
-- [ ] **Step 1: Copiar el contrato del servidor (ya con la Task 3) y regenerar los tipos**
+- [x] **Step 1: Copiar el contrato del servidor (ya con la Task 3) y regenerar los tipos**
 
 El contrato sale del repo del servidor en la rama `feature/web-formulario`, con las Tasks 1–3 committeadas. `OpenApiContractTest` deja el documento en `target/openapi.json`; se vuelve a ejecutar para garantizar que está al día.
 
@@ -2476,7 +2476,7 @@ grep -n "idComMaster: number | null" src/shared/api/schema.d.ts
 ```
 Expected: `mvn` termina sin salida (verde); `schema.d.ts` regenerado; los cuatro `grep` encuentran línea (`ValorEntero`, `ContenidoBorrador`, `observacion: string | null` en `FilaReparacion`, `idComMaster: number | null` en `Componente`). Si alguno no aparece, la Task 3 del servidor no está aplicada: parar y resolverlo allí, no aquí.
 
-- [ ] **Step 2: Test de tipos (falla en typecheck)**
+- [x] **Step 2: Test de tipos (falla en typecheck)**
 
 En `src/shared/api/client.test.ts`, sustituir la línea de import de tipos
 
@@ -2551,7 +2551,7 @@ npm run typecheck
 ```
 Expected: FALLA en `client.test.ts` con `Module '"./client"' has no exported member 'AgotarRequest'` (y el resto de tipos nuevos). Las respuestas tipadas (`ContarUrgentes`, `Borrador`, `Creada`…) ya deben compilar: salen de `schema.d.ts` regenerado; si alguna falla, la Task 3 del servidor no tipó esa respuesta (los `GET` responden 200 y `POST …/filas` 201).
 
-- [ ] **Step 3: Exportar los tipos en `client.ts`**
+- [x] **Step 3: Exportar los tipos en `client.ts`**
 
 En `src/shared/api/client.ts`, debajo de `export type ContadoresPendientes = …`, añadir:
 
@@ -2579,7 +2579,7 @@ npm run typecheck
 ```
 Expected: `client.test.ts` compila. Si `tsc` señala ahora código existente por los nuevos `nullable` (p. ej. un uso de `Reparacion.fechaFin` como `string`), se corrige solo esa línea con el tratamiento de `null` que ya use el fichero (`?? ''`, `formatear(x)` que ya admite `null`, etc.) y se anota en el informe de la tarea.
 
-- [ ] **Step 4: Test de la fábrica (falla)**
+- [x] **Step 4: Test de la fábrica (falla)**
 
 Crear `src/modules/taller/test/fabrica.test.ts`:
 
@@ -2648,7 +2648,7 @@ npx vitest run src/modules/taller/test/fabrica.test.ts
 ```
 Expected: FALLA (`agrupados`, `componente`, `BORRADOR_JAVAFX`… no exportados de `./fabrica`).
 
-- [ ] **Step 5: Ampliar la fábrica**
+- [x] **Step 5: Ampliar la fábrica**
 
 En `src/modules/taller/test/fabrica.ts`, sustituir la línea de import por:
 
@@ -2761,14 +2761,14 @@ npx vitest run src/modules/taller/test/fabrica.test.ts
 ```
 Expected: PASS (4 tests).
 
-- [ ] **Step 6: `npm run check` en verde**
+- [x] **Step 6: `npm run check` en verde**
 
 ```bash
 npm run check
 ```
 Expected: lint, typecheck y toda la suite en verde (la existente + los tres tests de tipos + los cuatro de la fábrica). Si el lint protesta por `fabrica.test.ts`, es que importa algo fuera del módulo: solo debe importar de `vitest` y de `./fabrica`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add api/openapi.json src/shared/api/schema.d.ts src/shared/api/client.ts src/shared/api/client.test.ts src/modules/taller/test/fabrica.ts src/modules/taller/test/fabrica.test.ts
@@ -2807,7 +2807,7 @@ export const TOOLTIP_ALMACEN = 'Disponible con Almacén (próxima entrega)'
 
 **Ficha** (`formulario.md`): "Opciones del combo: solo los modelos para los que alguna fila…"; "Traducción del modelo…" (ya cubierta por `traducirModelo`, no se duplica); "Modelo de un SKU: en minúsculas…"; "Una fila por tipo de `GET /api/componentes/agrupados`…" (orden y nombres); "Color del SKU, en la lista y en el botón…".
 
-- [ ] **Step 1: Tests de `modelos` (fallan)**
+- [x] **Step 1: Tests de `modelos` (fallan)**
 
 En `src/modules/taller/lib/modelos.test.ts`, sustituir las dos primeras líneas de import por:
 
@@ -2881,7 +2881,7 @@ npx vitest run src/modules/taller/lib/modelos.test.ts
 ```
 Expected: FALLA (`extraerModelo` y `modelosDisponibles` no exportados de `./modelos`).
 
-- [ ] **Step 2: Implementar en `modelos.ts`**
+- [x] **Step 2: Implementar en `modelos.ts`**
 
 En `src/modules/taller/lib/modelos.ts`, añadir como primera línea del fichero:
 
@@ -2925,7 +2925,7 @@ npx vitest run src/modules/taller/lib/modelos.test.ts
 ```
 Expected: PASS (los 2 tests existentes + 9 nuevos).
 
-- [ ] **Step 3: Tests de `piezas` (fallan)**
+- [x] **Step 3: Tests de `piezas` (fallan)**
 
 En `src/modules/taller/lib/piezas.test.ts`, sustituir las dos primeras líneas de import por:
 
@@ -3009,7 +3009,7 @@ npx vitest run src/modules/taller/lib/piezas.test.ts
 ```
 Expected: FALLA (`nombreTipo`, `prefijosDeFila`, `nivelStock`, `claseStock`, `PREFIJO_OTRO`, `PREFIJOS_GLASS` no exportados).
 
-- [ ] **Step 4: Implementar en `piezas.ts`**
+- [x] **Step 4: Implementar en `piezas.ts`**
 
 En `src/modules/taller/lib/piezas.ts`, añadir como primera línea del fichero:
 
@@ -3066,7 +3066,7 @@ npx vitest run src/modules/taller/lib/piezas.test.ts
 ```
 Expected: PASS (los 2 tests existentes + 12 nuevos).
 
-- [ ] **Step 5: `TOOLTIP_ALMACEN` en `textos.ts`**
+- [x] **Step 5: `TOOLTIP_ALMACEN` en `textos.ts`**
 
 En `src/modules/taller/lib/textos.ts`, añadir al final (la constante `TOOLTIP_FORMULARIO` se queda: la siguen usando `PendientesPage` y `MenuHistorial` hasta la Task 18):
 
@@ -3081,14 +3081,14 @@ grep -rn "TOOLTIP_FORMULARIO" src --include=*.ts --include=*.tsx | wc -l
 ```
 Expected: el mismo número de apariciones que antes de la tarea (no se ha retirado nada).
 
-- [ ] **Step 6: `npm run check` en verde**
+- [x] **Step 6: `npm run check` en verde**
 
 ```bash
 npm run check
 ```
 Expected: lint (sin imports entre módulos: `lib` solo importa de `@/shared/api/client` y, en los tests, de `../test/fabrica`), typecheck y toda la suite en verde.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/modules/taller/lib/modelos.ts src/modules/taller/lib/modelos.test.ts src/modules/taller/lib/piezas.ts src/modules/taller/lib/piezas.test.ts src/modules/taller/lib/textos.ts
@@ -3130,7 +3130,7 @@ export function textoConflicto(activas: AsignacionActiva[], idAsignacionPropia: 
 - `revision` sube solo con **cambios de datos** (filas, modelo, agotado local, otras acciones). Pedir confirmación, iniciar o fallar un guardado no son cambios de datos y no la suben; `FILA_GUARDADA` y `ACCION_GUARDADA` suben `volcados`. `EDITAR_DESCRIPCION_AGOTADO` no sube ninguna de las dos.
 - `OtraAccion` lleva un campo **opcional** añadido al esqueleto, `pideOtroClic?: boolean`, imprescindible para calcar "tras un error el texto sigue en «✓ Confirmar» pero el siguiente clic vuelve a pedir confirmación" (con un solo booleano no se puede representar). Quien construya una `OtraAccion` no necesita ponerlo.
 
-- [ ] **Step 1: Test de estado inicial, modelo y cabecera (falla)**
+- [x] **Step 1: Test de estado inicial, modelo y cabecera (falla)**
 
 `src/modules/taller/formulario/estado.test.ts`:
 
@@ -3283,7 +3283,7 @@ npm test -- src/modules/taller/formulario/estado.test.ts
 ```
 Expected: falla la suite entera con `Error: Cannot find module './estado'` (0 tests ejecutados).
 
-- [ ] **Step 2: Tipos, estado inicial, cambio de modelo y selectores**
+- [x] **Step 2: Tipos, estado inicial, cambio de modelo y selectores**
 
 `src/modules/taller/formulario/estado.ts` (fichero completo en este paso):
 
@@ -3645,7 +3645,7 @@ npm test -- src/modules/taller/formulario/estado.test.ts
 ```
 Expected: `Tests  10 passed (10)`.
 
-- [ ] **Step 3: Test de las filas (falla)**
+- [x] **Step 3: Test de las filas (falla)**
 
 Añade este bloque **al final** de `src/modules/taller/formulario/estado.test.ts` (la cabecera de imports y ayudas del Step 1 ya trae todo lo que usa):
 
@@ -3802,7 +3802,7 @@ npm test -- src/modules/taller/formulario/estado.test.ts
 ```
 Expected: `Tests  7 failed | 13 passed (20)`. Fallan los que suman, restan, marcan "Reutilizado", cambian de SKU o ponen observación (p. ej. `sumar respeta el stock…` con `expected +0 to be 1`): el reductor todavía devuelve el mismo estado para esas acciones. Los nuevos que ya pasan son los que solo comprueban que algo **no** cambia.
 
-- [ ] **Step 4: Acciones de fila en el reductor**
+- [x] **Step 4: Acciones de fila en el reductor**
 
 En `estado.ts`, en la sección «Reductor», inserta este bloque **justo encima** del comentario `/** Reaplica el filtro a todas las filas y RESETEA…` (el de `cambiarModelo`):
 
@@ -3907,7 +3907,7 @@ npm test -- src/modules/taller/formulario/estado.test.ts
 ```
 Expected: `Tests  20 passed (20)`.
 
-- [ ] **Step 5: Verde y commit**
+- [x] **Step 5: Verde y commit**
 
 ```bash
 npm run check
@@ -3961,7 +3961,7 @@ export function accionPideConfirmacion(a: OtraAccion): boolean
 
 **Lo que NO se porta de la referencia:** el diálogo `abrirSolicitud`, `solicitudNueva`, la marca de "solicitud cancelada" y el doble envío uso + solicitud.
 
-- [ ] **Step 1: Test de las solicitudes ya guardadas (falla)**
+- [x] **Step 1: Test de las solicitudes ya guardadas (falla)**
 
 `src/modules/taller/formulario/estado.solicitudes.test.ts`:
 
@@ -4175,7 +4175,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  11 failed | 20 passed (31)`: los 11 nuevos fallan (`estadoInicial` ignora `solicitudes`; `botonDerecho`, `subFila` y `zonaGuardarVisible` aún no existen) y los 20 de la Task 6 siguen en verde.
 
-- [ ] **Step 2: Solicitudes en el estado inicial y selectores de botón derecho, sub-fila, otras acciones y zona**
+- [x] **Step 2: Solicitudes en el estado inicial y selectores de botón derecho, sub-fila, otras acciones y zona**
 
 Tres cambios en `estado.ts`:
 
@@ -4398,7 +4398,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  31 passed (31)`.
 
-- [ ] **Step 3: Test de la solicitud local y del guardado por fila (falla)**
+- [x] **Step 3: Test de la solicitud local y del guardado por fila (falla)**
 
 Añade **al final** de `estado.solicitudes.test.ts`:
 
@@ -4599,7 +4599,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  6 failed | 33 passed (39)`: fallan los que confirman, editan o cancelan un agotado y los del guardado por fila (p. ej. `confirmar agotado…` con `expected null to deeply equal { descripcion: 'negra original', … }`); los nuevos que ya pasan solo leen selectores que existen desde el Step 2.
 
-- [ ] **Step 4: Reductor de "✓ Guardar fila" y del agotado local**
+- [x] **Step 4: Reductor de "✓ Guardar fila" y del agotado local**
 
 En `estado.ts`, inserta este bloque **justo encima** de `export function reducir(`:
 
@@ -4709,7 +4709,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  39 passed (39)`.
 
-- [ ] **Step 5: Test de otras acciones y de la zona de guardar (falla)**
+- [x] **Step 5: Test de otras acciones y de la zona de guardar (falla)**
 
 Añade **al final** de `estado.solicitudes.test.ts`:
 
@@ -4880,7 +4880,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  7 failed | 41 passed (48)`: fallan los que añaden, escriben o guardan acciones y los de los dos clics de la zona (p. ej. `añadir acción deshabilitado…` con `expected [] to deeply equal [ { id: 1, … } ]`).
 
-- [ ] **Step 6: Reductor de otras acciones y de la zona de guardar**
+- [x] **Step 6: Reductor de otras acciones y de la zona de guardar**
 
 En `estado.ts`, inserta este bloque **justo encima** de `export function reducir(` (queda detrás del bloque del Step 4):
 
@@ -4973,7 +4973,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  48 passed (48)`.
 
-- [ ] **Step 7: Verde y commit**
+- [x] **Step 7: Verde y commit**
 
 ```bash
 npm run check
@@ -5024,7 +5024,7 @@ export function planGuardarCambios(e: EstadoFormulario): PlanGuardarCambios
 
 **Ficha** (`docs/paridad/formulario.md`): "Etiqueta IMEI…" (edición); "En edición: el modelo es el del SKU de la fila editada…"; todas las de "Modo edición" en lo que es estado y cuerpos ("Fila editada…", "Previsualización de stock…", "Hay cambio si varía…", "Filas de otros tipos… ya reparado…", "Resto de filas…", "Esas filas nuevas no tienen sub-fila…", "Acciones en edición…", "Editar una acción \"otro\"…", "Zona de guardar visible si…", "\"Guardar cambios\", en orden…", "Las filas y acciones nuevas… **conservan el técnico original**…", "Un cambio inválido oculta la zona…"); "Guardar: … con una fila `{idCom, cantidad, …}`" (cuerpo); "Terminar, paso 1… **no los reenvía**"; "Paso 2…"; "Paso 3…"; "Paso 4…"; "Los campos sin valor…" (viajan como `null`, decisión 1 del plan); "En flujo nuevo no se envía `categoria`…"; "(En la fila en edición, con el mismo componente original, ni se pone a 0…)". Correcciones deliberadas que quedan cubiertas aquí: sin sub-fila de agotado en edición y reintento de "Terminar asignación" sin repetir agotados.
 
-- [ ] **Step 1: Test del modo edición (falla)**
+- [x] **Step 1: Test del modo edición (falla)**
 
 `src/modules/taller/formulario/estado.edicion.test.ts`:
 
@@ -5278,7 +5278,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  9 failed | 48 passed (57)`: fallan los 9 nuevos (el estado de edición de la Task 6 no tiene fila editada, `edicion` ni acciones; p. ej. `editar acción…` con `expected null to match object { tipo: 'accion', … }`) y siguen en verde los 48 de las Tasks 6 y 7.
 
-- [ ] **Step 2: Estado inicial de edición, cabecera, selectores de edición y sus ramas**
+- [x] **Step 2: Estado inicial de edición, cabecera, selectores de edición y sus ramas**
 
 Cinco cambios en `estado.ts`:
 
@@ -5479,7 +5479,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  57 passed (57)`.
 
-- [ ] **Step 3: Test de los cuerpos de las llamadas (falla)**
+- [x] **Step 3: Test de los cuerpos de las llamadas (falla)**
 
 Añade **al final** de `estado.edicion.test.ts`:
 
@@ -5651,7 +5651,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  8 failed | 57 passed (65)` con `TypeError: filaDeCuerpo is not a function`, `planTerminar is not a function` y `planGuardarCambios is not a function`.
 
-- [ ] **Step 4: Constructores de cuerpos**
+- [x] **Step 4: Constructores de cuerpos**
 
 Dos cambios en `estado.ts`:
 
@@ -5810,7 +5810,7 @@ npm test -- src/modules/taller/formulario
 ```
 Expected: `Tests  65 passed (65)`.
 
-- [ ] **Step 5: Verde y commit**
+- [x] **Step 5: Verde y commit**
 
 ```bash
 npm run check
@@ -5874,7 +5874,7 @@ Reglas que fija esta tarea (para quien la ejecute sin ver las demás):
 - Fila normal recuperada: `reutilizado`, `cantidad` (mínimo 0, sin mirar el stock) y observación; de los controles solo se recalcula `menos` (`cantidad > 0`), como hace la referencia.
 - `aplicarBorrador` solo usa `reducir` para `CAMBIAR_MODELO` (así hereda el filtro de SKU y el recálculo de OTRAS ACCIONES); al final restaura `revision` y `volcados` del estado de entrada y pone `borradorRecuperado = true`.
 
-- [ ] **Step 1: Tests de captura, serialización y lectura (fallan)**
+- [x] **Step 1: Tests de captura, serialización y lectura (fallan)**
 
 Crear `src/modules/taller/formulario/borrador.test.ts`:
 
@@ -6015,7 +6015,7 @@ npx vitest run src/modules/taller/formulario/borrador.test.ts
 ```
 Expected: FALLA (no existe `./borrador`).
 
-- [ ] **Step 2: `borrador.ts` — tipos, captura, serialización y lectura**
+- [x] **Step 2: `borrador.ts` — tipos, captura, serialización y lectura**
 
 Crear `src/modules/taller/formulario/borrador.ts`:
 
@@ -6142,7 +6142,7 @@ npx vitest run src/modules/taller/formulario/borrador.test.ts
 ```
 Expected: pasan todos menos "ida y vuelta…" (que necesita `aplicarBorrador`).
 
-- [ ] **Step 3: Tests de `aplicarBorrador` (fallan)**
+- [x] **Step 3: Tests de `aplicarBorrador` (fallan)**
 
 Añadir al final de `src/modules/taller/formulario/borrador.test.ts`:
 
@@ -6244,7 +6244,7 @@ npx vitest run src/modules/taller/formulario/borrador.test.ts
 ```
 Expected: FALLAN "ida y vuelta…" y los de `aplicarBorrador` (hoy devuelve el estado sin tocar).
 
-- [ ] **Step 4: Implementar `aplicarBorrador`**
+- [x] **Step 4: Implementar `aplicarBorrador`**
 
 En `src/modules/taller/formulario/borrador.ts`, sustituir la primera línea (el import de `./estado`) por:
 
@@ -6324,7 +6324,7 @@ npx vitest run src/modules/taller/formulario/borrador.test.ts
 ```
 Expected: PASS (todos). Si "ida y vuelta…" falla solo en `serializar(e)).toBe(BORRADOR_JAVAFX)`, el orden de claves de `capturarFila`/`capturarAccion` no coincide con el de `BORRADOR_JAVAFX`: se corrige aquí (el orden de la fábrica es el del cliente de escritorio).
 
-- [ ] **Step 5: Tests de `REEMPLAZAR` y `DESBLOQUEAR_BORRADAS` (fallan)**
+- [x] **Step 5: Tests de `REEMPLAZAR` y `DESBLOQUEAR_BORRADAS` (fallan)**
 
 En `src/modules/taller/formulario/estado.test.ts`, asegurarse de que los imports del fichero incluyen `agrupados` (de `'../test/fabrica'`) y `estadoInicial`, `reducir`, `type DatosNuevo`, `type EstadoFormulario` (de `'./estado'`) —añadir los que falten a los imports ya existentes, sin duplicarlos— y añadir al final:
 
@@ -6403,7 +6403,7 @@ npx vitest run src/modules/taller/formulario/estado.test.ts
 ```
 Expected: FALLAN los seis nuevos (`reducir` devuelve hoy el mismo estado para estas dos acciones); los de las Tasks 6–8 siguen en verde.
 
-- [ ] **Step 6: Implementar las dos acciones en `estado.ts`**
+- [x] **Step 6: Implementar las dos acciones en `estado.ts`**
 
 En `src/modules/taller/formulario/estado.ts`, añadir esta función auxiliar justo **antes** de `export function reducir` (usa `componenteDe`, ya definido en el fichero por la Task 6; si está declarado con `function`, el orden no importa):
 
@@ -6448,14 +6448,14 @@ npx vitest run src/modules/taller/formulario/
 ```
 Expected: PASS (`estado.test.ts`, `estado.solicitudes.test.ts`, `estado.edicion.test.ts` y `borrador.test.ts`).
 
-- [ ] **Step 7: `npm run check` en verde**
+- [x] **Step 7: `npm run check` en verde**
 
 ```bash
 npm run check
 ```
 Expected: lint (ningún `void` ni import sin uso en `borrador.ts`: la versión provisional del Step 2 ya no existe), typecheck y toda la suite en verde. `borrador.ts` y `estado.ts` no importan React, `Date` ni `fetch`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/modules/taller/formulario/borrador.ts src/modules/taller/formulario/borrador.test.ts src/modules/taller/formulario/estado.ts src/modules/taller/formulario/estado.test.ts
@@ -6509,7 +6509,7 @@ export function renderConRouter(rutas: RouteObject[], opciones?: { sesion?: Sesi
 
 **Ficha** (`formulario.md`): "Combo de modelo: 180 px, estilo de combo navy…" (estilo); "Combo SKU: 170 px fijo, 8 opciones visibles, 11 px…" (estilo); "Color del SKU, en la lista y en el botón…" (soporte: `clase`). Deuda de la spec §6.4: el foco vuelve tras un aviso y `onSesionExpirada` devuelve `unsubscribe`.
 
-- [ ] **Step 1: Tokens del formulario**
+- [x] **Step 1: Tokens del formulario**
 
 En `src/shared/styles/tokens.css`, dentro del bloque `@theme { … }`, añadir justo antes de la llave de cierre (ningún token existente cambia de valor):
 
@@ -6538,7 +6538,7 @@ grep -c "^  --color-" src/shared/styles/tokens.css
 ```
 Expected: 16 más que antes de la tarea.
 
-- [ ] **Step 2: Test de `ComboNavy` (falla)**
+- [x] **Step 2: Test de `ComboNavy` (falla)**
 
 Crear `src/shared/ui/ComboNavy.test.tsx`:
 
@@ -6624,7 +6624,7 @@ npx vitest run src/shared/ui/ComboNavy.test.tsx
 ```
 Expected: FALLA (no existe `./ComboNavy`).
 
-- [ ] **Step 3: Implementar `ComboNavy`**
+- [x] **Step 3: Implementar `ComboNavy`**
 
 Crear `src/shared/ui/ComboNavy.tsx`:
 
@@ -6717,7 +6717,7 @@ npx vitest run src/shared/ui/ComboNavy.test.tsx
 ```
 Expected: PASS (6 tests). `visibles={2}` → `2 * 28 + 8 = 64px`.
 
-- [ ] **Step 4: Test de las consultas silenciosas (falla)**
+- [x] **Step 4: Test de las consultas silenciosas (falla)**
 
 En `src/shared/api/queryClient.test.tsx`, sustituir el componente `VistaConsulta` por esta versión (solo añade la prop `silenciar`; el resto de tests del fichero lo usan sin ella):
 
@@ -6763,7 +6763,7 @@ npx vitest run src/shared/api/queryClient.test.tsx
 ```
 Expected: FALLAN los dos nuevos (aparece el diálogo "Error"); además `npm run typecheck` protestaría por `meta.silenciarError` en una consulta (`queryMeta` aún sin tipar).
 
-- [ ] **Step 5: `queryMeta.silenciarError` en `queryClient.ts`**
+- [x] **Step 5: `queryMeta.silenciarError` en `queryClient.ts`**
 
 En `src/shared/api/queryClient.ts`, sustituir el bloque `declare module` (con su comentario) por:
 
@@ -6792,7 +6792,7 @@ npx vitest run src/shared/api/queryClient.test.tsx
 ```
 Expected: PASS (los 7 existentes + 2).
 
-- [ ] **Step 6: Test del `unsubscribe` de `onSesionExpirada` (falla)**
+- [x] **Step 6: Test del `unsubscribe` de `onSesionExpirada` (falla)**
 
 En `src/shared/session/expiracion.test.ts`, añadir dentro del `describe('sesión expirada', …)`, al final:
 
@@ -6833,7 +6833,7 @@ npx vitest run src/shared/session/expiracion.test.ts
 ```
 Expected: FALLAN los tres nuevos (`quitar is not a function`: hoy `onSesionExpirada` devuelve `undefined`).
 
-- [ ] **Step 7: `onSesionExpirada` devuelve `unsubscribe`**
+- [x] **Step 7: `onSesionExpirada` devuelve `unsubscribe`**
 
 En `src/shared/session/expiracion.ts`, sustituir la función `onSesionExpirada` por:
 
@@ -6855,7 +6855,7 @@ npx vitest run src/shared/session/expiracion.test.ts && npm run typecheck
 ```
 Expected: PASS (3 existentes + 3) y typecheck en verde.
 
-- [ ] **Step 8: Tests de `AlertaProvider`: multilínea y retorno del foco (fallan)**
+- [x] **Step 8: Tests de `AlertaProvider`: multilínea y retorno del foco (fallan)**
 
 En `src/shared/ui/AlertaProvider.test.tsx`, cambiar el import de Testing Library a
 
@@ -6912,7 +6912,7 @@ npx vitest run src/shared/ui/AlertaProvider.test.tsx
 ```
 Expected: FALLAN "…en dos líneas" (sin la clase) y los dos del foco (el foco se queda en `body`).
 
-- [ ] **Step 9: `AlertaProvider` multilínea y con retorno del foco**
+- [x] **Step 9: `AlertaProvider` multilínea y con retorno del foco**
 
 En `src/shared/ui/AlertaProvider.tsx`:
 
@@ -6964,7 +6964,7 @@ npx vitest run src/shared/ui/AlertaProvider.test.tsx
 ```
 Expected: PASS (2 existentes + 4).
 
-- [ ] **Step 10: Test de `renderConRouter` (falla)**
+- [x] **Step 10: Test de `renderConRouter` (falla)**
 
 Crear `src/test/render.test.tsx`:
 
@@ -7018,7 +7018,7 @@ npx vitest run src/test/render.test.tsx
 ```
 Expected: FALLA (`renderConRouter` no exportado de `./render`).
 
-- [ ] **Step 11: `renderConRouter` en `src/test/render.tsx`**
+- [x] **Step 11: `renderConRouter` en `src/test/render.tsx`**
 
 En `src/test/render.tsx`, sustituir los dos primeros imports de librería y el de `react-router` por:
 
@@ -7061,14 +7061,14 @@ npx vitest run src/test/render.test.tsx
 ```
 Expected: PASS (2 tests).
 
-- [ ] **Step 12: `npm run check` en verde**
+- [x] **Step 12: `npm run check` en verde**
 
 ```bash
 npm run check
 ```
 Expected: lint (`shared` sin imports de `app` ni de `modules`; `src/shared/ui/**` ya tiene desactivada la regla de fast refresh para exportar `OpcionCombo` junto al componente), typecheck y toda la suite en verde.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add src/shared/ui/ComboNavy.tsx src/shared/ui/ComboNavy.test.tsx src/shared/api/queryClient.ts src/shared/api/queryClient.test.tsx src/shared/session/expiracion.ts src/shared/session/expiracion.test.ts src/shared/ui/AlertaProvider.tsx src/shared/ui/AlertaProvider.test.tsx src/test/render.tsx src/test/render.test.tsx src/shared/styles/tokens.css
@@ -7134,7 +7134,7 @@ Decisiones de esta tarea:
 - Si `detalle-edicion` responde sin cuerpo (la reparación ya no existe), `cargarEditar` lanza `NoEncontradoError`.
 - Ninguna mutación invalida nada: la recarga se hace al cerrar (`useRecargarAlCerrar`).
 
-- [ ] **Step 1: Handlers MSW del formulario**
+- [x] **Step 1: Handlers MSW del formulario**
 
 Crear `src/modules/taller/formulario/test/handlers.ts`:
 
@@ -7231,7 +7231,7 @@ export function conRegistro(escenario: EscenarioFormulario = {}): { handlers: Re
 
 (Este fichero no tiene test propio: lo ejercitan los de `api.test.tsx` del paso siguiente.)
 
-- [ ] **Step 2: Tests de las cargas (fallan)**
+- [x] **Step 2: Tests de las cargas (fallan)**
 
 Crear `src/modules/taller/formulario/api.test.tsx`:
 
@@ -7442,7 +7442,7 @@ npx vitest run src/modules/taller/formulario/api.test.tsx
 ```
 Expected: FALLA (no existe `./api`).
 
-- [ ] **Step 3: `api.ts` — claves y cargas**
+- [x] **Step 3: `api.ts` — claves y cargas**
 
 Crear `src/modules/taller/formulario/api.ts`:
 
@@ -7544,7 +7544,7 @@ npx vitest run src/modules/taller/formulario/api.test.tsx
 ```
 Expected: FALLA todavía al importar (`borrarBorrador`, `useGuardarFila`… no exportados). Es lo esperado: los tests de las cargas se ven en verde tras el Step 5.
 
-- [ ] **Step 4: Tests de mutaciones, borrador, verificación y recarga (fallan)**
+- [x] **Step 4: Tests de mutaciones, borrador, verificación y recarga (fallan)**
 
 Añadir al final de `src/modules/taller/formulario/api.test.tsx`:
 
@@ -7673,7 +7673,7 @@ npx vitest run src/modules/taller/formulario/api.test.tsx
 ```
 Expected: FALLA al importar (faltan las exportaciones del Step 5).
 
-- [ ] **Step 5: `api.ts` — mutaciones, borrador, verificación y recarga**
+- [x] **Step 5: `api.ts` — mutaciones, borrador, verificación y recarga**
 
 Añadir al final de `src/modules/taller/formulario/api.ts`:
 
@@ -7761,14 +7761,14 @@ npx vitest run src/modules/taller/formulario/api.test.tsx
 ```
 Expected: PASS (todos: cargas, hooks, mutaciones, borrador, verificación y recarga).
 
-- [ ] **Step 6: `npm run check` en verde**
+- [x] **Step 6: `npm run check` en verde**
 
 ```bash
 npm run check
 ```
 Expected: lint (imports relativos dentro del módulo: `../api`, `./estado`, `../../test/fabrica`; ninguno a `@/modules/*` ni a `@/app/*`), typecheck y toda la suite en verde. Si `tsc` protesta porque `useQuery` no infiere `UseQueryResult<CargaNuevo>` con `OPCIONES_CARGA`, se tipa el genérico en la llamada (`useQuery<CargaNuevo>({ … })`), sin tocar las opciones.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/modules/taller/formulario/api.ts src/modules/taller/formulario/api.test.tsx src/modules/taller/formulario/test/handlers.ts
@@ -7802,7 +7802,7 @@ git commit -m "feat(web): llamadas del formulario (carga, guardado por fila, ago
 
 Todos los comandos se ejecutan desde `gestion-reparaciones-web`, en la rama `feature/web-formulario`.
 
-- [ ] **Step 1: Tests de la cabecera, los avisos y el cierre (fallan)**
+- [x] **Step 1: Tests de la cabecera, los avisos y el cierre (fallan)**
 
 `src/modules/taller/formulario/FormularioReparacion.test.tsx`:
 
@@ -7907,7 +7907,7 @@ npm test -- FormularioReparacion
 ```
 Expected: falla — `Failed to resolve import "./FormularioReparacion"`.
 
-- [ ] **Step 2: `CabeceraFormulario`**
+- [x] **Step 2: `CabeceraFormulario`**
 
 `src/modules/taller/formulario/CabeceraFormulario.tsx`:
 
@@ -7957,7 +7957,7 @@ export function CabeceraFormulario({ estado, conflicto, dispatch, onCerrar }: Pr
 }
 ```
 
-- [ ] **Step 3: `FormularioReparacion` (carga, diálogo, título de la pestaña, recarga al cerrar)**
+- [x] **Step 3: `FormularioReparacion` (carga, diálogo, título de la pestaña, recarga al cerrar)**
 
 `src/modules/taller/formulario/FormularioReparacion.tsx`:
 
@@ -8078,7 +8078,7 @@ npm test -- FormularioReparacion
 ```
 Expected: pasan los 7 tests.
 
-- [ ] **Step 4: Tests de las rutas (fallan)**
+- [x] **Step 4: Tests de las rutas (fallan)**
 
 `src/modules/taller/formulario/rutas.test.tsx`:
 
@@ -8211,7 +8211,7 @@ npm test -- formulario/rutas
 ```
 Expected: falla — `Failed to resolve import "./rutas"`.
 
-- [ ] **Step 5: `formulario/rutas.tsx`**
+- [x] **Step 5: `formulario/rutas.tsx`**
 
 `src/modules/taller/formulario/rutas.tsx`:
 
@@ -8235,7 +8235,7 @@ npm test -- formulario/rutas
 ```
 Expected: siguen fallando los tests que pasan por la lista ("Añadir reparación" está deshabilitado y `PendientesPage` no pinta `<Outlet />`: el diálogo no aparece); no quedan errores de import.
 
-- [ ] **Step 6: Tests de Pendientes (fallan)**
+- [x] **Step 6: Tests de Pendientes (fallan)**
 
 En `src/modules/taller/pendientes/PendientesPage.test.tsx`:
 
@@ -8287,7 +8287,7 @@ npm test -- PendientesPage
 ```
 Expected: falla el primero de los tres (`expect(botones[0]).toBeEnabled()`: el botón sigue deshabilitado). Los otros dos ya pasan: verifican lo que el sub-proyecto 1 dejó hecho.
 
-- [ ] **Step 7: `PendientesPage` navega y pinta `<Outlet />`; ruta hija en `router.tsx`**
+- [x] **Step 7: `PendientesPage` navega y pinta `<Outlet />`; ruta hija en `router.tsx`**
 
 En `src/modules/taller/pendientes/PendientesPage.tsx`:
 
@@ -8347,7 +8347,7 @@ npm test -- PendientesPage formulario/rutas FormularioReparacion
 ```
 Expected: todo en verde (los tests anteriores de `PendientesPage`, montados sin rutas hijas, siguen valiendo: `<Outlet />` no pinta nada).
 
-- [ ] **Step 8: Verde y commit**
+- [x] **Step 8: Verde y commit**
 
 ```bash
 npm run check
@@ -8383,7 +8383,7 @@ git commit -m "feat(web): formulario de reparación como diálogo gobernado por 
 
 Todos los comandos se ejecutan desde `gestion-reparaciones-web`. La fila **no decide nada**: pinta `fila.controles`, los selectores de `estado.ts` y despacha.
 
-- [ ] **Step 1: Tests de la fila (fallan)**
+- [x] **Step 1: Tests de la fila (fallan)**
 
 `src/modules/taller/formulario/FilaComponente.test.tsx`:
 
@@ -8585,7 +8585,7 @@ npm test -- FilaComponente
 ```
 Expected: falla — `Failed to resolve import "./FilaComponente"`.
 
-- [ ] **Step 2: `DialogoObservacionFila`**
+- [x] **Step 2: `DialogoObservacionFila`**
 
 `src/modules/taller/formulario/DialogoObservacionFila.tsx`:
 
@@ -8630,7 +8630,7 @@ export function DialogoObservacionFila({ abierto, tipo, inicial, onGuardar, onCa
 }
 ```
 
-- [ ] **Step 3: `FilaComponente`**
+- [x] **Step 3: `FilaComponente`**
 
 `src/modules/taller/formulario/FilaComponente.tsx`:
 
@@ -8788,7 +8788,7 @@ npm test -- FilaComponente
 ```
 Expected: pasan los 8 tests.
 
-- [ ] **Step 4: Tests de `useGuardado` (fallan)**
+- [x] **Step 4: Tests de `useGuardado` (fallan)**
 
 `src/modules/taller/formulario/useGuardado.test.tsx`:
 
@@ -8893,7 +8893,7 @@ npm test -- useGuardado
 ```
 Expected: falla — `Failed to resolve import "./useGuardado"`.
 
-- [ ] **Step 5: `useGuardado` con `guardarFila`**
+- [x] **Step 5: `useGuardado` con `guardarFila`**
 
 `src/modules/taller/formulario/useGuardado.ts`:
 
@@ -8961,7 +8961,7 @@ npm test -- useGuardado
 ```
 Expected: pasan los 4 tests.
 
-- [ ] **Step 6: Tests de integración en el formulario (fallan)**
+- [x] **Step 6: Tests de integración en el formulario (fallan)**
 
 En `src/modules/taller/formulario/FormularioReparacion.test.tsx`:
 
@@ -9084,7 +9084,7 @@ npm test -- FormularioReparacion
 ```
 Expected: fallan los 4 tests nuevos (`Unable to find a label/role … "Sumar Batería"`: el formulario aún pinta el hueco, no `FilaComponente`). Los 7 de la Task 12 siguen en verde.
 
-- [ ] **Step 7: `FormularioReparacion` pinta `FilaComponente` y usa `useGuardado`**
+- [x] **Step 7: `FormularioReparacion` pinta `FilaComponente` y usa `useGuardado`**
 
 En `src/modules/taller/formulario/FormularioReparacion.tsx`:
 
@@ -9113,7 +9113,7 @@ npm test -- FormularioReparacion FilaComponente useGuardado
 ```
 Expected: todo en verde (11 + 8 + 4).
 
-- [ ] **Step 8: Verde y commit**
+- [x] **Step 8: Verde y commit**
 
 ```bash
 npm run check
@@ -9143,7 +9143,7 @@ git commit -m "feat(web): filas de componente del formulario con observación y 
 
 Todos los comandos se ejecutan desde `gestion-reparaciones-web`. La variante, el texto de la etiqueta y si el lápiz funciona los decide `subFila()`; los componentes solo pintan. Los dobles espacios tras "⚠" y "✓" son literales: las etiquetas llevan `whitespace-pre-wrap` y los tests comparan `textContent`.
 
-- [ ] **Step 1: Tests de la sub-fila y sus diálogos (fallan)**
+- [x] **Step 1: Tests de la sub-fila y sus diálogos (fallan)**
 
 `src/modules/taller/formulario/SubFilaAgotado.test.tsx`:
 
@@ -9332,7 +9332,7 @@ npm test -- SubFilaAgotado
 ```
 Expected: falla — `Failed to resolve import "./SubFilaAgotado"`.
 
-- [ ] **Step 2: Los dos diálogos**
+- [x] **Step 2: Los dos diálogos**
 
 `src/modules/taller/formulario/DialogoSolicitarPieza.tsx`:
 
@@ -9429,7 +9429,7 @@ export function DialogoDescripcionSolicitud({ abierto, inicial, onGuardar, onCan
 ```
 (`showCloseButton={false}`: sin cabecera no hay ✕ —el test comprueba que los únicos botones son los tres de la ficha—; Escape y "Cancelar" cierran.)
 
-- [ ] **Step 3: `SubFilaAgotado`**
+- [x] **Step 3: `SubFilaAgotado`**
 
 `src/modules/taller/formulario/SubFilaAgotado.tsx`:
 
@@ -9502,7 +9502,7 @@ npm test -- SubFilaAgotado
 ```
 Expected: pasan los 9 tests.
 
-- [ ] **Step 4: Tests de "⚠ En camino" y "✓ Recibido" en la fila (fallan)**
+- [x] **Step 4: Tests de "⚠ En camino" y "✓ Recibido" en la fila (fallan)**
 
 En `src/modules/taller/formulario/FilaComponente.test.tsx`:
 
@@ -9579,7 +9579,7 @@ npm test -- FilaComponente
 ```
 Expected: fallan los 2 nuevos (`Unable to find an element by: [data-testid="boton-derecho-bat"]` y `…-lcd`: `BotonDerechoFila` aún devuelve `null` para esos tipos); los 8 anteriores siguen en verde.
 
-- [ ] **Step 5: `FilaComponente` pinta los dos indicadores**
+- [x] **Step 5: `FilaComponente` pinta los dos indicadores**
 
 En `src/modules/taller/formulario/FilaComponente.tsx`, dentro del `switch` de `BotonDerechoFila`, añadir entre el `case 'guardada'` y el `default`:
 
@@ -9609,7 +9609,7 @@ npm test -- FilaComponente
 ```
 Expected: pasan los 10 tests.
 
-- [ ] **Step 6: Test de integración en el formulario (falla)**
+- [x] **Step 6: Test de integración en el formulario (falla)**
 
 En `src/modules/taller/formulario/FormularioReparacion.test.tsx`:
 
@@ -9652,7 +9652,7 @@ npm test -- FormularioReparacion
 ```
 Expected: fallan los 2 nuevos (`Unable to find an element by: [data-testid="subfila-bat"]`).
 
-- [ ] **Step 7: `FormularioReparacion` pasa la sub-fila a cada fila**
+- [x] **Step 7: `FormularioReparacion` pasa la sub-fila a cada fila**
 
 En `src/modules/taller/formulario/FormularioReparacion.tsx`:
 
@@ -9677,7 +9677,7 @@ npm test -- FormularioReparacion SubFilaAgotado FilaComponente
 ```
 Expected: todo en verde (13 + 9 + 10).
 
-- [ ] **Step 8: Verde y commit**
+- [x] **Step 8: Verde y commit**
 
 ```bash
 npm run check
@@ -9712,7 +9712,7 @@ git commit -m "feat(web): solicitud de pieza y componente agotado en el formular
 
 Todos los comandos se ejecutan desde `gestion-reparaciones-web`. Qué se envía y en qué orden lo decide `planTerminar()`; el hook solo lo ejecuta, despacha y pone los literales de error. Dos reglas que vienen del reductor (Tasks 7–8) y que el hook respeta sin estado propio: (1) si el clic sobre una acción pide confirmación o guarda lo dice `accionPideConfirmacion(accion)` —tras `FALLO_GUARDAR_ACCION` la línea queda con `confirmando = true` y `pideOtroClic = true`: el botón sigue en "✓ Confirmar" pero el siguiente clic vuelve a confirmar—; (2) `planTerminar` se recalcula con el estado resultante tras cada `AGOTADO_REGISTRADO` (devuelve `completa: null` si no hay filas que enviar y existe algún agotado local, registrado o no).
 
-- [ ] **Step 1: Tests de `OtrasAcciones` (fallan)**
+- [x] **Step 1: Tests de `OtrasAcciones` (fallan)**
 
 `src/modules/taller/formulario/OtrasAcciones.test.tsx`:
 
@@ -9830,7 +9830,7 @@ npm test -- OtrasAcciones
 ```
 Expected: falla — `Failed to resolve import "./OtrasAcciones"`.
 
-- [ ] **Step 2: `OtrasAcciones`**
+- [x] **Step 2: `OtrasAcciones`**
 
 `src/modules/taller/formulario/OtrasAcciones.tsx`:
 
@@ -9915,7 +9915,7 @@ npm test -- OtrasAcciones
 ```
 Expected: pasan los 6 tests.
 
-- [ ] **Step 3: `ZonaGuardar`**
+- [x] **Step 3: `ZonaGuardar`**
 
 `src/modules/taller/formulario/ZonaGuardar.tsx`:
 
@@ -9937,7 +9937,7 @@ export function ZonaGuardar({ estado, onPulsar }: { estado: EstadoFormulario; on
 ```
 (No lleva fichero de tests propio: la cubren los tests del formulario del Step 6.)
 
-- [ ] **Step 4: Tests de `useGuardado` para acciones y "Terminar" (fallan)**
+- [x] **Step 4: Tests de `useGuardado` para acciones y "Terminar" (fallan)**
 
 En `src/modules/taller/formulario/useGuardado.test.tsx`, añadir al final:
 
@@ -10051,7 +10051,7 @@ npm test -- useGuardado
 ```
 Expected: fallan los 5 nuevos (`guardarAccion` y `pulsarGuardar` aún no hacen nada: `leerAccion().confirmando` es `false`, `leerGuardado().clics` es `0`); los 4 de la Task 13 siguen en verde.
 
-- [ ] **Step 5: `useGuardado` completo para nuevo y glass**
+- [x] **Step 5: `useGuardado` completo para nuevo y glass**
 
 Sustituir `src/modules/taller/formulario/useGuardado.ts` entero por:
 
@@ -10201,7 +10201,7 @@ npm test -- useGuardado
 ```
 Expected: pasan los 9 tests.
 
-- [ ] **Step 6: Tests de integración en el formulario (fallan)**
+- [x] **Step 6: Tests de integración en el formulario (fallan)**
 
 En `src/modules/taller/formulario/FormularioReparacion.test.tsx`, añadir al final:
 
@@ -10428,7 +10428,7 @@ npm test -- FormularioReparacion
 ```
 Expected: fallan los 10 nuevos (`Unable to find … "+ Añadir acción"` / `[data-testid="zona-guardar"]`); los 13 anteriores siguen en verde.
 
-- [ ] **Step 7: `FormularioReparacion` con OTRAS ACCIONES y la zona de guardar**
+- [x] **Step 7: `FormularioReparacion` con OTRAS ACCIONES y la zona de guardar**
 
 `src/modules/taller/formulario/FormularioReparacion.tsx` queda así (fichero completo):
 
@@ -10559,7 +10559,7 @@ npm test -- FormularioReparacion OtrasAcciones useGuardado
 ```
 Expected: todo en verde (23 + 6 + 9).
 
-- [ ] **Step 8: Verde y commit**
+- [x] **Step 8: Verde y commit**
 
 ```bash
 npm run check
@@ -10604,7 +10604,7 @@ Semántica de los dos contadores del reductor que este hook escucha (Tasks 6–9
 - El último estado se guarda en una ref actualizada en `useLayoutEffect` (no durante el render: regla `react-hooks/refs`, mismo patrón que `shared/ui/exportable.tsx`).
 - El test del hook sustituye `./api` con `vi.mock` (temporizadores falsos + red real es frágil); que `guardarBorrador` hace `PUT { contenido }`, `borrarBorrador` `DELETE` e `idsReparacionesDelImei` `GET /api/reparaciones/imei/{imei}` ya lo prueba `api.test.tsx` (Task 11), y los tests de integración de esta tarea lo recorren de punta a punta con MSW y temporizadores reales.
 
-- [ ] **Step 1: Test del hook (falla)**
+- [x] **Step 1: Test del hook (falla)**
 
 `src/modules/taller/formulario/useBorrador.test.tsx`:
 
@@ -10888,14 +10888,14 @@ describe('useBorrador (ficha docs/paridad/formulario.md, sección Borrador)', ()
 })
 ```
 
-- [ ] **Step 2: Ejecutar y ver que falla**
+- [x] **Step 2: Ejecutar y ver que falla**
 
 ```bash
 npx vitest run src/modules/taller/formulario/useBorrador.test.tsx
 ```
 Esperado: FAIL — `Failed to resolve import "./useBorrador"` (el fichero no existe).
 
-- [ ] **Step 3: Implementar el hook**
+- [x] **Step 3: Implementar el hook**
 
 `src/modules/taller/formulario/useBorrador.ts`:
 
@@ -11038,14 +11038,14 @@ export function useBorrador({ estado, dispatch, borradorJson, activo }: Args): {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y ver que pasa**
+- [x] **Step 4: Ejecutar y ver que pasa**
 
 ```bash
 npx vitest run src/modules/taller/formulario/useBorrador.test.tsx
 ```
 Esperado: PASS (19 tests). Si `'volcados dispara un PUT inmediato…'` fallara porque el reductor exige otro orden de acciones para llegar a `FILA_GUARDADA`, se ajusta la secuencia de `dispatch` del test, no el hook.
 
-- [ ] **Step 5: Tests de integración en el formulario (fallan)**
+- [x] **Step 5: Tests de integración en el formulario (fallan)**
 
 Añadir **al final** de `src/modules/taller/formulario/FormularioReparacion.test.tsx` este bloque (los imports que el fichero ya tenga se fusionan, no se duplican):
 
@@ -11172,14 +11172,14 @@ describe('FormularioReparacion — borrador persistente', () => {
 })
 ```
 
-- [ ] **Step 6: Ejecutar y ver que falla**
+- [x] **Step 6: Ejecutar y ver que falla**
 
 ```bash
 npx vitest run src/modules/taller/formulario/FormularioReparacion.test.tsx
 ```
 Esperado: FAIL — no existe `banda-borrador`, ✕ no produce ninguna llamada a `/borrador`, y tras "Terminar asignación" no hay `DELETE …/borrador`.
 
-- [ ] **Step 7: Integrar en la vista**
+- [x] **Step 7: Integrar en la vista**
 
 **7a. `CabeceraFormulario.tsx` — la banda.** Como **último hijo** del contenedor que devuelve `CabeceraFormulario` (después de la banda `data-testid="banda-incidencia"`; la cabecera de columnas la pinta `FormularioReparacion` a continuación, así que queda entre ambas), añadir:
 
@@ -11242,14 +11242,14 @@ afterEach(async () => {
 ```
 Sin esto el `PUT`/`DELETE` del desmontaje llegaría después de `server.resetHandlers()` y MSW lo denunciaría como petición sin handler (y marcaría la conexión como caída para el test siguiente). Las tareas posteriores que añadan otro fichero de test que monte el formulario real (p. ej. una página con la ruta hija real) deben copiar este mismo `afterEach`.
 
-- [ ] **Step 8: Ejecutar y ver que pasa**
+- [x] **Step 8: Ejecutar y ver que pasa**
 
 ```bash
 npx vitest run src/modules/taller/formulario src/modules/taller/pendientes
 ```
 Esperado: PASS, sin avisos `[MSW] … without a matching request handler` en la salida.
 
-- [ ] **Step 9: Verde y commit**
+- [x] **Step 9: Verde y commit**
 
 ```bash
 npm run check
@@ -11271,7 +11271,7 @@ git commit -m "feat(web): borrador persistente del formulario: autoguardado, rec
 
 **Ficha:** `formulario.md` — sección "Variante Glass" completa ("Asignación `AG…`… solo filas \"Glass\" y \"Marco\"…", "Ningún texto del formulario cambia…", "Incidencia con `tipo=G`… la banda de conflicto agrupa igual, excluida la propia `AG…`", "En flujo nuevo no se envía `categoria`…"); "Flujo nuevo: … \"Añadir glass\" a `/reparaciones/pendientes/glass/reparar/<idAsignacion>`…". `pendientes.md` — "(sub-proyecto 2) El botón abre el formulario…" (pestaña Glass).
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 **1a. `src/modules/taller/pendientes/PendientesPage.test.tsx`** — **sustituir** el test `'"Añadir glass" sigue reservado, con el tooltip del formulario'` (lo dejó la Task 12 y deja de ser cierto) por este (`renderConRouter` ya se importa de `@/test/render` desde la Task 12; `glass`, de `../test/fabrica`):
 
@@ -11411,14 +11411,14 @@ describe('FormularioReparacion — variante glass', () => {
 })
 ```
 
-- [ ] **Step 2: Ejecutar y ver que falla**
+- [x] **Step 2: Ejecutar y ver que falla**
 
 ```bash
 npx vitest run src/modules/taller/pendientes/PendientesPage.test.tsx src/modules/taller/formulario/rutas.test.tsx src/modules/taller/formulario/FormularioReparacion.test.tsx
 ```
 Esperado: FAIL en 1a (`Añadir glass` sigue deshabilitado: `toBeEnabled` falla). Los de 1b y 1c pasan ya: `FormularioNuevo` no mira la prop `modo` (la categoría la deduce `cargarNuevo` del prefijo `AG` del id y el estado nace en modo `glass`), así que documentan y blindan un comportamiento que las Tasks 6–15 ya dan.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 **3a. `src/app/router.tsx`** — la ruta de la pestaña Glass gana su hija (la de reparaciones ya la tiene desde la Task 12). Sustituir la línea
 
@@ -11459,14 +11459,14 @@ Imports: `import { Outlet, useNavigate } from 'react-router'` (fusionado con el 
 ```
 y en el JSX, `modo={glass ? 'glass' : 'nuevo'}` pasa a `modo={modo}`. La lista de cierre no cambia: `glass ? '/reparaciones/pendientes/glass' : '/reparaciones/pendientes'`.
 
-- [ ] **Step 4: Ejecutar y ver que pasa**
+- [x] **Step 4: Ejecutar y ver que pasa**
 
 ```bash
 npx vitest run src/modules/taller/pendientes src/modules/taller/formulario
 ```
 Esperado: PASS.
 
-- [ ] **Step 5: Verde y commit**
+- [x] **Step 5: Verde y commit**
 
 ```bash
 npm run check
@@ -11515,7 +11515,7 @@ export type AccionesHistorial = {
 
 **Nota sobre los textos con dos espacios en los tests:** Testing Library colapsa los espacios del DOM al buscar por texto o por nombre accesible, así que los literales con doble espacio se comprueban con `.textContent` sobre un elemento localizado por `data-testid` o por rol sin nombre.
 
-- [ ] **Step 1: `RequiereSupertecnico` — test (falla)**
+- [x] **Step 1: `RequiereSupertecnico` — test (falla)**
 
 `src/modules/taller/rutas.test.tsx` — ampliar el import de `./rutas` con `RequiereSupertecnico`, el de `react-router` con `Outlet`, el de `@/test/render` con `renderConRouter`, y añadir dentro del `describe`:
 
@@ -11553,7 +11553,7 @@ npx vitest run src/modules/taller/rutas.test.tsx
 ```
 Esperado: FAIL — `RequiereSupertecnico` no se exporta de `./rutas`.
 
-- [ ] **Step 2: `RequiereSupertecnico` — implementación**
+- [x] **Step 2: `RequiereSupertecnico` — implementación**
 
 `src/modules/taller/rutas.tsx` — imports:
 
@@ -11588,7 +11588,7 @@ npx vitest run src/modules/taller/rutas.test.tsx
 ```
 Esperado: PASS.
 
-- [ ] **Step 3: `useGuardado` en edición — test (falla)**
+- [x] **Step 3: `useGuardado` en edición — test (falla)**
 
 Añadir al final de `src/modules/taller/formulario/useGuardado.test.tsx` (imports a fusionar con los existentes):
 
@@ -11709,7 +11709,7 @@ npx vitest run src/modules/taller/formulario/useGuardado.test.tsx
 ```
 Esperado: FAIL — en modo `editar` el segundo clic no envía ningún `PUT` (la rama de edición no existe).
 
-- [ ] **Step 4: `useGuardado` — rama de edición**
+- [x] **Step 4: `useGuardado` — rama de edición**
 
 `src/modules/taller/formulario/useGuardado.ts` (tal como lo dejó la Task 15: mutaciones `guardarFilaMut`, `agotarMut`, `completaMut`; función `avisar(e, literal)`, que calla si el error ya lo gestiona el shell; `terminar(idAsignacion)`, que despacha ella misma `INICIO_GUARDADO`; y `pulsarGuardar`, cuyo segundo clic en modo `editar` aún no hace nada):
 
@@ -11769,7 +11769,7 @@ npx vitest run src/modules/taller/formulario/useGuardado.test.tsx
 ```
 Esperado: PASS.
 
-- [ ] **Step 5: `FilaComponente` en edición — test (falla)**
+- [x] **Step 5: `FilaComponente` en edición — test (falla)**
 
 Añadir al final de `src/modules/taller/formulario/FilaComponente.test.tsx` (imports a fusionar):
 
@@ -11852,7 +11852,7 @@ npx vitest run src/modules/taller/formulario/FilaComponente.test.tsx
 ```
 Esperado: FAIL — el stock pinta `5` en vez de `5 → 5`, el contador inválido no sale en rojo y no existe `boton-derecho-lcd` con "✓  Ya reparado" (el `data-estado` y el fondo de `editada`/`yaReparado` ya los pinta la Task 13: esas aserciones pasan).
 
-- [ ] **Step 6: `FilaComponente` — pintado de edición**
+- [x] **Step 6: `FilaComponente` — pintado de edición**
 
 `src/modules/taller/formulario/FilaComponente.tsx` (el de las Tasks 13–14). El `data-estado` y el fondo por estado **ya están**: `estadoDeFila()` devuelve `'editada'` / `'yaReparado'` según `fila.rol` y `CLASES_ESTADO` tiene sus clases (`bg-fila-edicion-bg border-fila-edicion-brd`, `bg-fila-reparado-bg border-fila-reparado-brd`); no se tocan. Imports a añadir a los de `./estado`: `filaEditadaInvalida`, `previsionStock`, `type PrevisionStock`. Tres cambios:
 
@@ -11899,7 +11899,7 @@ npx vitest run src/modules/taller/formulario/FilaComponente.test.tsx
 ```
 Esperado: PASS.
 
-- [ ] **Step 7: `OtrasAcciones` en edición — test (falla)**
+- [x] **Step 7: `OtrasAcciones` en edición — test (falla)**
 
 Añadir al final de `src/modules/taller/formulario/OtrasAcciones.test.tsx` (imports a fusionar):
 
@@ -11955,7 +11955,7 @@ npx vitest run src/modules/taller/formulario/OtrasAcciones.test.tsx
 ```
 Esperado: FAIL — la línea `yaReparada` no muestra "✓ Ya reparada" y las líneas de edición siguen pintando "✓ Guardar".
 
-- [ ] **Step 8: `OtrasAcciones` — reglas de la línea en edición**
+- [x] **Step 8: `OtrasAcciones` — reglas de la línea en edición**
 
 `src/modules/taller/formulario/OtrasAcciones.tsx` (el de la Task 15). Dentro de `OtrasAcciones`, debajo de `const total = estado.otros.length`, añadir:
 
@@ -12012,7 +12012,7 @@ npx vitest run src/modules/taller/formulario/OtrasAcciones.test.tsx
 ```
 Esperado: PASS.
 
-- [ ] **Step 9: Formulario en modo edición y "Salir sin guardar" — tests (fallan)**
+- [x] **Step 9: Formulario en modo edición y "Salir sin guardar" — tests (fallan)**
 
 **9a.** Añadir al final de `src/modules/taller/formulario/FormularioReparacion.test.tsx` (imports a fusionar: `type RequestHandler` de `msw`; `renderConRouter`, `SESION_SUPER` de `@/test/render`; `componente`, `detalleEdicion`, `agrupados` de `../test/fabrica`). El modo edición usa `useBlocker` (dentro de `GuardiaSalida`, que solo se monta en edición), que exige data router: estos tests montan con `renderConRouter`; los del flujo nuevo y glass pueden seguir con `renderConProviders`. `botonZona()` y `borradorEnReposo` ya están en el fichero (Tasks 15 y 16).
 
@@ -12255,7 +12255,7 @@ npx vitest run src/modules/taller/formulario/FormularioReparacion.test.tsx src/m
 ```
 Esperado: FAIL — `FormularioEditarRuta` no se exporta y `FormularioReparacion` con `modo="editar"` no carga nada.
 
-- [ ] **Step 10: `DialogoSalirSinGuardar`, rama de edición del formulario y `FormularioEditarRuta`**
+- [x] **Step 10: `DialogoSalirSinGuardar`, rama de edición del formulario y `FormularioEditarRuta`**
 
 **10a. `src/modules/taller/formulario/DialogoSalirSinGuardar.tsx`** (nuevo, completo):
 
@@ -12499,7 +12499,7 @@ npx vitest run src/modules/taller/formulario
 ```
 Esperado: PASS (los tests de 9a, 9b y todos los anteriores del directorio).
 
-- [ ] **Step 11: "Editar" habilitado en Historial e IMEIs — tests (fallan)**
+- [x] **Step 11: "Editar" habilitado en Historial e IMEIs — tests (fallan)**
 
 **11a. `src/modules/taller/historial/HistorialPage.test.tsx`:**
 - En `'menú del supertécnico y diálogo "Borrar reparación"…'`, **borrar** la línea `expect(screen.getByRole('menuitem', { name: 'Editar' })).toHaveAttribute('aria-disabled', 'true')`.
@@ -12577,7 +12577,7 @@ npx vitest run src/modules/taller/historial/HistorialPage.test.tsx src/modules/t
 ```
 Esperado: FAIL — "Editar" sigue con `aria-disabled="true"` y el clic no navega.
 
-- [ ] **Step 12: `MenuHistorial`, páginas y retirada de `TOOLTIP_FORMULARIO`**
+- [x] **Step 12: `MenuHistorial`, páginas y retirada de `TOOLTIP_FORMULARIO`**
 
 **12a. `src/modules/taller/componentes/MenuHistorial.tsx`** queda así, entero:
 
@@ -12659,7 +12659,7 @@ npx vitest run src/modules/taller
 ```
 Esperado: PASS.
 
-- [ ] **Step 13: Verde y commit**
+- [x] **Step 13: Verde y commit**
 
 ```bash
 npm run check
@@ -12720,7 +12720,7 @@ export function conRegistroNotificaciones(e?: EscenarioNotificaciones): { handle
 
 **Ficha** (`docs/paridad/notificaciones.md`): sección "Campana en la barra" completa ("Roles: solo SUPERTECNICO…", "Posición: extremo derecho…", "Botón transparente sin borde…", "Badge: arriba a la derecha…", "Contador = solicitudes urgentes…", "La imagen encendida también se fuerza…", "El contador se recalcula…"); sección "Pulso de alertas" completa ("Alerta de stock = componente master…", "Al iniciar sesión, si hay alguna alerta…", "El pulso se para con el primer clic…", "No hay diálogo automático…"); de "Panel": "Se abre con un clic en la campana y se cierra con otro…" (solo el conmutador) y "Pestaña inicial…"; de "Pestaña Alertas": "Orden…" y "Un componente con stock negativo…" (parte pura); de "Pestaña Solicitudes": "Orden…" y "Fechas…" (parte pura).
 
-- [ ] **Step 1: Imágenes de la campana**
+- [x] **Step 1: Imágenes de la campana**
 
 Se copian tal cual del cliente de referencia (rama `hotfix/0.16.3` del repo raíz), con sus nombres originales (incluida la errata `NotfON`). Comando de solo lectura sobre el repo raíz; ejecutarlo **en Bash** (la redirección `>` de PowerShell estropea los binarios). `borrar.png` ya está en `public/`.
 
@@ -12739,7 +12739,7 @@ e012f409cb995a76784014d75bd4e2706256a3b5
 3e2cba5baa346921a81152b857d90ebf8a3e9273
 ```
 
-- [ ] **Step 2: Tokens de la campana y animación del pulso**
+- [x] **Step 2: Tokens de la campana y animación del pulso**
 
 `src/shared/styles/tokens.css`, dentro de `@theme`, después de `--color-seleccion-suave` (o de la última línea que haya dejado la Task 10):
 
@@ -12795,7 +12795,7 @@ npm run build
 ```
 Expected: build correcto (Tailwind compila los tokens y el `@keyframes`). El CSS no tiene test propio: la lógica del pulso se comprueba por `data-pulso` en el Step 11.
 
-- [ ] **Step 3: `alertas.ts` — test que falla**
+- [x] **Step 3: `alertas.ts` — test que falla**
 
 `src/modules/taller/notificaciones/alertas.test.ts`:
 
@@ -12842,7 +12842,7 @@ npm test -- notificaciones/alertas
 ```
 Expected: FAIL — `Failed to resolve import "./alertas"`.
 
-- [ ] **Step 4: `alertas.ts` — implementación**
+- [x] **Step 4: `alertas.ts` — implementación**
 
 `src/modules/taller/notificaciones/alertas.ts`:
 
@@ -12877,7 +12877,7 @@ npm test -- notificaciones/alertas
 ```
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: `solicitudes.ts` — test que falla**
+- [x] **Step 5: `solicitudes.ts` — test que falla**
 
 `src/modules/taller/notificaciones/solicitudes.test.ts`:
 
@@ -12932,7 +12932,7 @@ npm test -- notificaciones/solicitudes
 ```
 Expected: FAIL — `Failed to resolve import "./solicitudes"`.
 
-- [ ] **Step 6: `solicitudes.ts` — implementación**
+- [x] **Step 6: `solicitudes.ts` — implementación**
 
 `src/modules/taller/notificaciones/solicitudes.ts`:
 
@@ -12987,7 +12987,7 @@ npm test -- notificaciones/solicitudes
 ```
 Expected: PASS (3 tests).
 
-- [ ] **Step 7: Handlers MSW de la campana**
+- [x] **Step 7: Handlers MSW de la campana**
 
 `src/modules/taller/notificaciones/test/handlers.ts` (con estado: un cambio de estado mueve la solicitud de lista, "limpiar" y el borrado la quitan; así los tests de vista ven el resultado de la recarga). Las escrituras responden 204, como el resto de handlers del proyecto.
 
@@ -13072,7 +13072,7 @@ export function conRegistroNotificaciones(e: EscenarioNotificaciones = {}): { ha
 ```
 No tiene test propio: lo ejercitan los de `api.test.tsx` y `Campana.test.tsx`.
 
-- [ ] **Step 8: `api.ts` — tests que fallan**
+- [x] **Step 8: `api.ts` — tests que fallan**
 
 `src/modules/taller/notificaciones/api.test.tsx`:
 
@@ -13259,7 +13259,7 @@ npm test -- notificaciones/api
 ```
 Expected: FAIL — `Failed to resolve import "./api"`.
 
-- [ ] **Step 9: `api.ts` — implementación**
+- [x] **Step 9: `api.ts` — implementación**
 
 `src/modules/taller/notificaciones/api.ts`:
 
@@ -13383,7 +13383,7 @@ npm test -- notificaciones/api
 ```
 Expected: PASS (10 tests). Si `tsc` protesta en `body: { estado }` es que el contrato de la Task 4 no trae `SolicitudEstadoRequest` / `SolicitudStockEstadoRequest`: se revisa `api/openapi.json`, no se añade ningún cast.
 
-- [ ] **Step 10: `Campana` — tests que fallan**
+- [x] **Step 10: `Campana` — tests que fallan**
 
 `src/modules/taller/notificaciones/Campana.test.tsx`. El intervalo de sondeo se acorta solo en el test que lo necesita, con un doble de `useIntervaloRefresco` que por defecto delega en el real; el foco de la ventana se simula con `focusManager` de TanStack Query.
 
@@ -13580,7 +13580,7 @@ npm test -- notificaciones/Campana
 ```
 Expected: FAIL — `Failed to resolve import "./Campana"`.
 
-- [ ] **Step 11: `Campana` — implementación**
+- [x] **Step 11: `Campana` — implementación**
 
 `src/modules/taller/notificaciones/Campana.tsx`:
 
@@ -13667,7 +13667,7 @@ npm test -- notificaciones/Campana
 ```
 Expected: PASS (11 tests).
 
-- [ ] **Step 12: La campana en `TopBar` — test que falla**
+- [x] **Step 12: La campana en `TopBar` — test que falla**
 
 En `src/app/shell/TopBar.test.tsx`, añadir el import y sustituir el test `'la campana no se muestra en este sub-proyecto (ni al supertécnico)'` por estos dos:
 
@@ -13702,7 +13702,7 @@ npm test -- TopBar
 ```
 Expected: FAIL — `Unable to find role="button" and name "Notificaciones"`.
 
-- [ ] **Step 13: La campana en `TopBar` — implementación**
+- [x] **Step 13: La campana en `TopBar` — implementación**
 
 `src/app/shell/TopBar.tsx`: añadir el import y sustituir el comentario-hueco por el componente (el `gap-2.5` de la barra ya da los 10 px).
 
@@ -13722,7 +13722,7 @@ npm test -- TopBar
 ```
 Expected: PASS.
 
-- [ ] **Step 14: Tests de página que montan `<AppLayout />` con supertécnico**
+- [x] **Step 14: Tests de página que montan `<AppLayout />` con supertécnico**
 
 Desde ahora la barra del supertécnico pide los datos de la campana y el servidor simulado rechaza lo que no tiene handler. En `src/modules/taller/pendientes/PendientesPage.test.tsx`, `src/modules/taller/historial/HistorialPage.test.tsx`, `src/modules/taller/imeis/ImeisPage.test.tsx` y `src/modules/taller/imeis/ImeiDetallePage.test.tsx`, añadir el import y una línea al principio del `beforeEach` de nivel de fichero (el que ya registra los handlers de la página):
 
@@ -13742,7 +13742,7 @@ npm test
 ```
 Expected: toda la suite en verde. Si otra prueba que monte `<AppLayout />` (o el router completo) con `SESION_SUPER` falla con una petición sin handler a `/api/solicitudes/count`, `/api/solicitudes-stock/count` o `/api/componentes/gestionados`, se le añade la misma línea.
 
-- [ ] **Step 15: Verde y commit**
+- [x] **Step 15: Verde y commit**
 
 ```bash
 npm run check
@@ -13771,7 +13771,7 @@ export function TarjetaAlerta(props: { alerta: AlertaStock; alterna: boolean }):
 
 **Ficha** (`docs/paridad/notificaciones.md`): sección "Panel" ("Se abre con un clic…" —tamaño, posición y recolocación—, "También se cierra al pulsar en cualquier punto…", "Control segmentado…", "A la derecha de esa fila, enlace \"→ Ir a pedidos\"…"); sección "Pestaña Solicitudes" completa ("Zona con desplazamiento vertical de 370 px…", "Orden…", "Fondo alterno…", "Fechas…", "**Urgente pendiente**…", "\"Rechazar\" (urgente)…", "**Urgente rechazada**…", "\"Recuperar\" (urgente)…", "**Preventiva pendiente**…", "**Preventiva rechazada**…", "Errores de cualquier acción…", "Botones inferiores…", "\"Rechazar todo\"…", "\"Pedir piezas\"…"); sección "Pestaña Alertas" completa; sección "Refresco" completa; de "Diferencias aceptadas": "**Escape cierra el panel**…".
 
-- [ ] **Step 1: Tarjetas — tests que fallan**
+- [x] **Step 1: Tarjetas — tests que fallan**
 
 `src/modules/taller/notificaciones/PanelNotificaciones.test.tsx` (primer bloque; los siguientes pasos añaden más `describe` al mismo fichero). Todo se prueba a través de `<Campana />`, que es quien monta el panel en producción.
 
@@ -13906,7 +13906,7 @@ npm test -- PanelNotificaciones
 ```
 Expected: FAIL — no existe `role="tab"` (el panel de la Task 19 es un contenedor vacío).
 
-- [ ] **Step 2: `TarjetaSolicitud` y `TarjetaAlerta`**
+- [x] **Step 2: `TarjetaSolicitud` y `TarjetaAlerta`**
 
 `src/modules/taller/notificaciones/TarjetaSolicitud.tsx`:
 
@@ -14027,7 +14027,7 @@ export function TarjetaAlerta({ alerta, alterna }: { alerta: AlertaStock; altern
 ```
 Los tests del Step 1 siguen en rojo hasta el Step 3 (falta el panel que pinta las tarjetas).
 
-- [ ] **Step 3: `PanelNotificaciones` y su montaje en `Campana`**
+- [x] **Step 3: `PanelNotificaciones` y su montaje en `Campana`**
 
 `src/modules/taller/notificaciones/PanelNotificaciones.tsx`:
 
@@ -14224,7 +14224,7 @@ npm test -- notificaciones
 ```
 Expected: PASS — los 4 tests de tarjetas del Step 1 y los de la Task 19 (`Campana.test.tsx` incluido).
 
-- [ ] **Step 4: Panel (posición, cierre, segmentado, títulos y botones de Almacén) — tests**
+- [x] **Step 4: Panel (posición, cierre, segmentado, títulos y botones de Almacén) — tests**
 
 Añadir a `PanelNotificaciones.test.tsx`:
 
@@ -14317,7 +14317,7 @@ npm test -- PanelNotificaciones
 ```
 Expected: PASS (la implementación del Step 3 ya lo cubre).
 
-- [ ] **Step 5: Acciones de tarjeta, menús contextuales, errores y "Rechazar todo" — tests**
+- [x] **Step 5: Acciones de tarjeta, menús contextuales, errores y "Rechazar todo" — tests**
 
 Añadir a `PanelNotificaciones.test.tsx`:
 
@@ -14424,7 +14424,7 @@ npm test -- PanelNotificaciones
 ```
 Expected: PASS (la implementación del Step 3 ya cubre estas acciones). Si algún test falla, se corrige la implementación, no el test: los textos, rutas y cuerpos son los de la ficha.
 
-- [ ] **Step 6: Pestaña Alertas y refresco con snapshot — tests**
+- [x] **Step 6: Pestaña Alertas y refresco con snapshot — tests**
 
 Añadir a `PanelNotificaciones.test.tsx`:
 
@@ -14516,7 +14516,7 @@ npm test -- PanelNotificaciones
 ```
 Expected: PASS. El snapshot lo da `pintadas` (Step 3): si el test del cambio de descripción falla es que las tarjetas pintan `solicitudes.data` directamente.
 
-- [ ] **Step 7: Verde y commit**
+- [x] **Step 7: Verde y commit**
 
 ```bash
 npm run check
@@ -14542,7 +14542,7 @@ git commit -m "feat(web): panel de notificaciones: solicitudes y alertas con sus
 
 **Regla de esta tarea:** el agente **no** hace `git push`, ni merges, ni tags, ni despliegues, ni abre SSH. Todo eso está en el Step 7 como «pasos del usuario, uno a uno y con su OK explícito»; el agente prepara los comandos y espera.
 
-- [ ] **Step 1: Smoke Playwright del formulario y de la campana**
+- [x] **Step 1: Smoke Playwright del formulario y de la campana**
 
 `.env.e2e.example` — no cambian las variables; se añaden al final dos líneas de comentario (el resto del fichero se deja como está):
 
@@ -14713,7 +14713,7 @@ env -u TEC_USER -u TEC_PASS -u E2E_USER -u E2E_PASS npx playwright test tests/e2
 ```
 Expected: la lista muestra los 2 tests; la segunda orden termina con `2 skipped`.
 
-- [ ] **Step 2: CHANGELOG, README y versión 0.3.0**
+- [x] **Step 2: CHANGELOG, README y versión 0.3.0**
 
 `CHANGELOG.md`, encima de `## [0.2.0]` (la fecha se pone el día del tag):
 
@@ -14743,7 +14743,7 @@ git diff --stat package.json package-lock.json
 ```
 Expected: `package.json` con `"version": "0.3.0"` y `package-lock.json` con sus dos apariciones de la versión del paquete raíz actualizadas.
 
-- [ ] **Step 3: Fichas de paridad y commit**
+- [x] **Step 3: Fichas de paridad y commit**
 
 1. Recorrer `docs/paridad/formulario.md` y `docs/paridad/notificaciones.md` casilla a casilla, y las tres casillas "(sub-proyecto 2)" de `pendientes.md`, `historial.md` e `imeis.md`: `[x]` si la cubre un test o la implementación (cada tarea del plan dice qué casillas cubre). Lo que no se cumpla se corrige antes del commit o se lleva a «Diferencias aceptadas» con el visto bueno del usuario; no se deja `[ ]` sin explicación.
 2. `docs/paridad/formulario.md`, tabla "Llamadas a la API": nueva primera fila.
@@ -14779,7 +14779,7 @@ git add .env.e2e.example tests/e2e/formulario.spec.ts README.md CHANGELOG.md pac
 git commit -m "chore(web): 0.3.0: smoke e2e del formulario y la campana, changelog, README y fichas de paridad marcadas"
 ```
 
-- [ ] **Step 4: Documentación privada (fuera de los repos; nada de esto se commitea en ellos)**
+- [x] **Step 4: Documentación privada (fuera de los repos; nada de esto se commitea en ellos)**
 
 **El script de capturas de la documentación privada** se amplía a los estados de las fichas. Sigue su patrón actual, `paso(nombre, fn)` + `shot(page, nombre)`, y reutiliza los nombres base de las capturas de referencia para poder comparar lado a lado. Ningún paso pulsa el segundo clic de "✓ Confirmar" ni de "✓  Confirmar terminar", ni "Rechazar", "Recuperar", papeleras o "Rechazar todo": las capturas no escriben (lo único que dejan es el borrador de la asignación de prueba, que el último paso del técnico vacía).
 
@@ -14932,7 +14932,7 @@ await paso('form-editar', async () => {
 
 **Plan maestro** (documentación privada): la casilla del sub-proyecto 2 se marca en el Step 8, con fecha y commits, cuando existan los merges.
 
-- [ ] **Step 5: Verificación final en local (la ejecuta el agente; no modifica nada)**
+- [x] **Step 5: Verificación final en local (la ejecuta el agente; no modifica nada)**
 
 Suites, en este orden. El cliente JavaFX **no se toca**: su suite es el control de compatibilidad.
 
@@ -14960,7 +14960,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $SUP" localho
 ```
 Expected: `401`, `403`, `200`. Se para el servidor al terminar.
 
-- [ ] **Step 6: Revisión final de la rama (multi-lente) y correcciones**
+- [x] **Step 6: Revisión final de la rama (multi-lente) y correcciones**
 
 Revisión del diff completo `main...feature/web-formulario` de web y servidor con tres lentes, cada una un subagente revisor con esfuerzo alto:
 1. **Paridad** contra `docs/paridad/formulario.md` y `notificaciones.md` y contra las capturas de referencia (textos literales con sus dobles espacios, colores por token, casillas marcadas que de verdad tienen test).
@@ -14969,7 +14969,7 @@ Revisión del diff completo `main...feature/web-formulario` de web y servidor co
 
 Cada hallazgo se corrige en un commit propio (`fix(web): …` / `fix(servidor): …`) con su test, y se repite el Step 5. La rama se da por "lista para merge" con cero hallazgos críticos.
 
-- [ ] **Step 7: Pasos del USUARIO, uno a uno y con su OK explícito**
+- [x] **Step 7: Pasos del USUARIO, uno a uno y con su OK explícito**
 
 El agente **no ejecuta nada de este paso por su cuenta**: ni `git push`, ni merge, ni tag, ni despliegue, ni SSH. Presenta cada punto, deja escritos los comandos, espera el OK explícito del usuario para ese punto y no pasa al siguiente hasta que el usuario confirma el resultado. Las credenciales y la dirección del entorno llegan solo por variables de entorno que el usuario carga en su terminal (`E2E_BASE_URL`, `E2E_USER`/`E2E_PASS`, `TEC_USER`/`TEC_PASS`, `API_USER`/`API_PASS`); nunca por chat ni escritas en un fichero del repo. El servidor va siempre antes que la web.
 
@@ -15012,12 +15012,12 @@ cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web && npm r
    Expected: `clientes.spec.ts`, `taller.spec.ts` **completo** (incluido el test del técnico, pendiente desde el sub-proyecto 1) y `formulario.spec.ts` en verde, sin ningún `skipped`. Si algo falla se corrige en una rama `fix/…`, que vuelve a pasar por los puntos 1 o 2 según el repo, y se repite; no se tapa con un reintento.
 
    c. Lista de comprobación manual del rol ADMIN (usuario, en el navegador):
-   - [ ] entra por Historial de reparaciones;
-   - [ ] no tiene "Pendientes" en la columna lateral;
-   - [ ] no tiene campana en la barra superior;
-   - [ ] no hay refresco automático (la etiqueta "Actualizado HH:mm" no cambia sola);
-   - [ ] los menús contextuales solo ofrecen "Copiar celda" (sin "Editar");
-   - [ ] el CSV de pulidos incluye la columna "Técnico".
+   - [x] entra por Historial de reparaciones;
+   - [x] no tiene "Pendientes" en la columna lateral;
+   - [x] no tiene campana en la barra superior;
+   - [x] no hay refresco periódico (la etiqueta "Actualizado HH:mm" solo cambia al volver el foco a la ventana o al recargar a mano);
+   - [x] los menús contextuales solo ofrecen "Copiar celda" (sin "Editar");
+   - [x] el CSV de pulidos incluye la columna "Técnico".
 
    d. Limpieza de los datos de prueba (usuario, con el guion de la documentación privada).
 5. **Tag `v0.3.0` + push del tag** — solo con el punto 4 en verde. La fecha del CHANGELOG se fija ese día: el agente prepara en `main` de la web el cambio de `<fecha del tag>` por la fecha real y, con el OK del usuario, lo commitea (`docs(web): CHANGELOG 0.3.0 con la fecha del tag`). Después, el usuario:
@@ -15035,7 +15035,7 @@ git commit -m "chore: gitlinks servidor y web tras el sub-proyecto 2 Formulario 
 git push origin main
 ```
 
-- [ ] **Step 8: Plan maestro y memoria (sin git)**
+- [x] **Step 8: Plan maestro y memoria (sin git)**
 
 Con el Step 7 completo: se marca el sub-proyecto 2 en el plan maestro de la documentación privada (fecha, commits de merge y tag) y se actualiza la memoria del proyecto: sub-proyecto 2 CERRADO, qué queda de deuda (spec §14) y cuál es el siguiente sub-proyecto. Este paso no toca ningún repositorio.
 
@@ -15078,3 +15078,22 @@ Con el Step 7 completo: se marca el sub-proyecto 2 en el plan maestro de la docu
 5. **Tokens de color:** se reutiliza un token existente cuando el hexadecimal coincide exactamente, aunque su nombre semántico sea otro; solo se crean tokens nuevos para hexadecimales que no existan (la lista cerrada está en W9).
 6. **Coste de la suite del servidor:** se aceptan las dos clases MockMvc con contextos propios.
 7. **Agotado confirmado recuperado del borrador (variante «límite»):** la cantidad se conserva acotada al stock actual del SKU (0 si ya no hay stock), para no perder el descuento; el JavaFX la dejaba a 0. Lo aplica `aplicarBorrador` (Task 9, W7) y es la sexta «corrección deliberada» que la Task 21 anota en la ficha `formulario.md`.
+
+## Ejecución y cierre (2026-09-19 → 2026-09-21)
+
+Ejecutado con un implementador y un revisor por tarea, revisión final de cada rama y verificación final (servidor 218 tests, web 683 tests y build, cliente de escritorio 284 tests sin tocar, contrato idéntico entre servidor y web). Entrega: servidor `main` `ecd69f6`, web `main` `41538a2` = tag `v0.3.0`.
+
+Tareas añadidas durante el cierre, por decisión del usuario:
+
+- **Task 22 (servidor) — reintentos seguros.** Cabecera opcional `Idempotency-Key` en `POST /api/reparaciones/completa`, `POST …/{idAsignacion}/filas`, `POST …/{idAsignacion}/agotar-componente` y `PUT /api/reparaciones/{idRep}`: con la misma clave y la misma petición, el servidor devuelve el resultado de la primera ejecución sin repetirla (409 si sigue en curso, 422 si la clave se reutiliza con otra petición). Registro en memoria con caducidad de 24 h; sin cambios de esquema; sin cabecera, el comportamiento es el de siempre. La autorización se evalúa antes que el registro y el log de actividad se escribe una sola vez, después de la escritura.
+- **Task 23 (web) — claves por operación.** Cada guardado del formulario (fila, acción, agotado, terminar y cada paso de "Guardar cambios") viaja con su clave y la reutiliza al reintentar la misma petición; en "Guardar cambios" las claves se dan por hechas al terminar bien la llamada entera. `formulario/estado.ts` y `formulario/borrador.ts` no cambian.
+- Las cuatro escrituras del formulario llevan además el rol de técnico o supertécnico, igual que el borrador; las alertas de stock se recargan también al abrir el panel de notificaciones.
+
+Ajustes respecto al texto de este plan que conviene conocer al leerlo:
+
+- Guardados solapados: mientras "Terminar asignación" o "Guardar cambios" está en curso no se guarda una fila ni una acción por separado, y al revés (octava corrección deliberada de la ficha).
+- El volcado del borrador al desmontar solo escribe si hubo cambios en esa apertura; ✕ y Escape vuelcan siempre.
+- `PanelNotificaciones` recibe las alertas por props desde `Campana`, que mantiene la única suscripción a los componentes.
+- Para elegir una opción de `ComboNavy` en un test se pulsa el botón interior de la opción.
+- El arranque del servidor con 401/403/200 se comprobó contra el entorno desplegado, y los datos de prueba del smoke se crearon por la API (teléfonos sintéticos con modelo y sus asignaciones) en vez de con el cliente de escritorio.
+- El smoke se ejecuta en serie (`workers: 1`): el entorno desplegado limita los inicios de sesión por minuto. La comparación del contrato desplegado se hace con el JSON normalizado (el script de descarga reescribe el formato).
