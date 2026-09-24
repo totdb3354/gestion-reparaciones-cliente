@@ -10,6 +10,64 @@
 
 **Spec:** [`docs/superpowers/specs/2026-09-24-web-almacen-stock-design.md`](../specs/2026-09-24-web-almacen-stock-design.md) (decisiones S1-S9 vinculantes) y [`2026-09-24-web-almacen-programa-design.md`](../specs/2026-09-24-web-almacen-programa-design.md) (D1-D16). **Referencia de detalle:** el inventario `inventario-stock.md`, guardado fuera del repo (lo tiene el controlador de la sesión; si una regla de este plan no cuadra con el JavaFX, manda el JavaFX y se consulta).
 
+## Revisión previa (2026-09-24)
+
+Tres subagentes revisaron el plan contra spec y código; el código de T1-T3 y T4-T9 se aplicó en copias y pasó (285 tests servidor, 1042 web). Correcciones aplicadas:
+
+- Servidor C1: recuento de la suite, 271 + 14 nuevos = 285 (Task 3); con el test `borrarInexistenteEs204SinLog` de la decisión 2, 271 + 15 = 286.
+- Servidor C3: nota de que `cantidad-en-camino` con `idCom` inexistente da 500 por `resolveToMasterId`, como `insertar` (Task 1, a la ficha).
+- Servidor D1: `editarConMinimoNegativoEs422` aserta el 422 y `verify(dao, never()).actualizar(...)` (Task 3).
+- Servidor D4: el assert del contrato va al bloque "Las seis respuestas que dejan de ser Map" (Task 1).
+- Servidor E1: fuera la frase condicional sobre el constructor del DAO, que es `CompraComponenteDAO(JdbcTemplate)` (Task 1).
+- Servidor E3: quitar `import java.util.Map` de `CompraController.java` (Task 1).
+- Servidor E9: `OpenApiContractTest` ya valida el arranque; el `spring-boot:run` manual sale del plan (decisión 5, Task 3).
+- Web A1 (web-1 y web-2): `getDefaultNormalizer({ collapseWhitespace: false })` en los `getByText` con espacios múltiples (T7, T10, T12, T13) y regla en Global Constraints.
+- Web-1 A2: en T7 los botones del diálogo son `['Cancelar', 'Confirmar', 'Close']`; aviso de la ✕ en T12 y T14.
+- Web-1 A3: tipo `Enlace` en `src/shared/lib/enlaces.ts`, `EnlaceTaller = Enlace`; `almacen` no importa de `taller` (T6).
+- Web-1 A4: `npm install recharts@3.10.1 react-is@19.3.0`, `react-is` directa y fijada (T4).
+- Web-1 A5: contrato por el flujo offline (`OpenApiContractTest` → `api/openapi.json` → `api:types:offline`) (T4).
+- Web-1 B3: fuera la nota de quitar el `^` a mano (`.npmrc` con `save-exact`) (T4).
+- Web-1 B4: fuera la frase del test de contrato de la web, que no existe (T4).
+- Web-1 C1 + web-2 A8: `meta.silenciarError` en `useAjustarMinimo`, `useCrearProveedor` y `useEditarProveedor`; prop `errorServidor` (hook `useErrorServidor`) en los cuatro diálogos; 422 inline con el diálogo abierto y el resto por `mostrarError`; tests por diálogo (T9, T12, T13, T14).
+- Web-1 C2: `aria-describedby` solo cuando no hay subtítulo, por spread (T7).
+- Web-1 C3: `whitespace-pre` en la `DialogDescription` (T7).
+- Web-1 C5: el gráfico por SKU solo cambia cuando llega la cantidad en camino y conserva el anterior si falla (spec §8); fuera `useCantidadEnCamino`, sin consumidor (T9, T13).
+- Web-1 C6: desviación anotada, `useInteraccionesAbiertas` en `shared/lib` y no en `shared/api` (T5, a la ficha).
+- Web-1 C7: fuera del javadoc de `semaforoStock` que las alertas de la campana derivan de ahí (T5).
+- Web-1 C8: comentario corregido; invalidar `['componentes']` no cubre los agrupados del formulario (T9).
+- Web-1 C9: líneas citadas corregidas (`piezas.ts:41-46`, `SubNav.test.tsx:18-22`) (T5, T6).
+- Web-1 D1: caso nuevo de stock negativo en `piezas.test.ts` (T5).
+- Web-1 D2: `toHaveAccessibleDescription` en el test del subtítulo (T7).
+- Web-2 A2: la fecha del CSV se espera en hora de Madrid (`12:30`) (T10).
+- Web-2 A3: clic derecho sobre `filaDe(...)` en vez de `getByText` tras seleccionar (T13).
+- Web-2 A4: "Sin stock" buscado dentro de la tabla (T13).
+- Web-2 A5: `ComboNavy` como `combobox`/`listbox` con botón de opción (T14).
+- Web-2 A6: test de la campana con `renderConRouter` en ruta `*`, testid del panel, `unmount()` por vuelta y test renombrado (T15).
+- Web-2 A7: el alta de proveedor manda y espera `divisa: 'EUR'`, sin `as never` (T14).
+- Web-2 A9: test del CSV de StockPage completo con el patrón de `HistorialPage.test.tsx` (T13).
+- Web-2 A10: `useCallback` para `irAPedidos` y `useMemo` sin disable (T13).
+- Web-2 C3: el smoke obtiene el id del proveedor por GET y nombre exacto y solo deja pasar el DELETE de ese id (T16).
+- Web-2 C6: encabezado de la ficha `## Diferencias deliberadas respecto al JavaFX` (T17).
+- Web-2 D1: la navegación de "En Camino" comprueba `router.state.location.search` (T13).
+- Web-2 D3: `antes = cargas.n` se toma tras la recarga de "Desactivar" (T13).
+- Web-2 D5: la celda "Último pedido" de una fila desactivada no lleva la crema de selección (T10).
+- Web-2 D6: import `'./credenciales.ts'` en el smoke (T16).
+- Web-2 D7: celda exacta con `escaparRegex` en el smoke (T16).
+- Web-2 E: el "Riesgo conocido" de la autorrevisión pasa a valores comprobados.
+
+Decisiones del usuario (2026-09-24), aplicadas:
+
+1. Servidor C4: el `PUT /api/proveedores/{idProv}` mantiene el 422 "Divisa no válida (EUR o USD)."; antes del merge del servidor, el usuario ejecuta en preprod y prod `SELECT DIVISA, COUNT(*) FROM Proveedor GROUP BY DIVISA;` y normaliza cualquier divisa distinta de EUR/USD (Task 17, Step 7).
+2. Servidor C2: `DELETE` de un proveedor inexistente → 204 sin log, como hoy; el nombre se lee de forma tolerante en el controlador (captura `EmptyResultDataAccessException`, el DAO no se toca), `borrar` sigue siendo no-op y el log solo va si hay nombre; test `borrarInexistenteEs204SinLog` (Task 2; suite 286).
+3. Servidor C6: nombre de más de 100 caracteres → 422 `MSG_NOMBRE_LARGO` "El nombre no puede superar los 100 caracteres."; el blanco sigue con "El nombre no puede estar vacío." (Task 2).
+4. Servidor C5: en el `POST` la divisa nula o en blanco pasa `null` al DAO (EUR); solo se valida si viene informada; el `PUT` sigue estricto (Task 2).
+5. Servidor E9: Task 3 Step 4 = suite completa `mvn -q test` (286 tests; `OpenApiContractTest` levanta el contexto), sin arranque manual.
+6. Web-2 C1: "Ajustar mínimo" con título "Ajustar mínimo" y subtítulo `subtituloComponente(c)`, como Editar stock (Tasks 12, 13, trazabilidad y ficha).
+7. Web-2 C2: "Editar proveedor" se queda como en el plan (nombre en el subtítulo); anotado en la ficha (Task 17).
+8. Web-2 C5: "Último pedido" en hora de Madrid con `formatear`; diferencia con el JavaFX anotada en la ficha; el test de T10 usa 09:00 UTC, que no cruza medianoche (Tasks 10, 17).
+9. Web-2 B1: el filtro "Estado" es el `MultiSelect` compartido; fuera `textoBotonEstado` (lo cubre `textoMultiSelect`) y las clases copiadas; tests con `checkbox` (Tasks 8, 13).
+10. Web-1 C4 / web-2 C4: `filtrosDesdePedidos` sale de 4a y pasa a 4b (Task 8, consistencia y trazabilidad).
+
 ## Global Constraints
 
 - **Ramas:** `feature/web-stock` en `gestion-reparaciones-web` y en `gestion-reparaciones-servidor`, creadas desde `main`. El repo raíz se queda en `main`.
@@ -23,6 +81,7 @@
 - **Cada petición se verifica contra el contrato OpenAPI real** (`src/shared/api/schema.d.ts`) antes de escribir el código que la usa. Si un nombre de esquema no coincide con este plan, manda el contrato.
 - **Textos visibles exactos** (se copian tal cual): ver cada tarea; ninguno se reescribe "mejorado". Los que la spec corrige (S5) están marcados.
 - **Un módulo no importa de otro módulo** (regla de lint del repo): lo compartido entre `taller` y `almacen` va a `src/shared`.
+- **Testing Library no normaliza el texto buscado:** para textos con espacios múltiples (`'lcd-x  (compartido)'`, el subtítulo `Componente: …   ·   …`) usar `getByText(texto, { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })` con `import { getDefaultNormalizer } from '@testing-library/react'`.
 
 ---
 
@@ -79,6 +138,7 @@
 **Interfaces:**
 - Consumes: `CompraComponenteDAO.resolveToMasterId(int)` (privado, ya existe en :185), `model.ValorEntero(int value)` (ya existe).
 - Produces: `GET /api/compras/cantidad-en-camino/{idCom}` → `ValorEntero` (`{"value": n}`, la misma forma JSON que hoy: el JavaFX no nota nada).
+- Nota (revisión previa, C3): con un `idCom` inexistente la respuesta pasa de `{"value":0}` a 500 por `resolveToMasterId` (`queryForObject`), mismo patrón que `insertar`; anotar en la ficha.
 
 - [ ] **Step 1: Crear la rama**
 
@@ -127,8 +187,6 @@ class CompraComponenteDAOEnCaminoTest {
     }
 }
 ```
-
-Si el constructor de `CompraComponenteDAO` recibe más dependencias que `JdbcTemplate`, mirar `src/main/java/com/reparaciones/servidor/dao/CompraComponenteDAO.java:20-40` y pasar `mock(...)` de cada una.
 
 - [ ] **Step 3: Ejecutar y ver que falla**
 
@@ -206,11 +264,11 @@ import com.reparaciones.servidor.model.ValorEntero;
     }
 ```
 
-Quitar el import de `java.util.Map` solo si ya no lo usa nadie más en el fichero (`insertar` y otros métodos pueden usarlo: comprobar antes).
+Quitar `import java.util.Map` de `CompraController.java` (solo lo usaba `cantidad-en-camino`; comprobado en la revisión previa, E3).
 
 - [ ] **Step 9: Contrato**
 
-En `OpenApiContractTest.elContratoPublicaLosEsquemasDeLaWeb`, junto a la comprobación de `tiene-telefonos` (línea ~137), añadir:
+En `OpenApiContractTest.elContratoPublicaLosEsquemasDeLaWeb`, al final del bloque comentado "Las seis respuestas que dejan de ser Map" (junto a las demás respuestas que pasaron de `Map` a un record tipado), añadir:
 
 ```java
         assertTrue(refDeLaRespuesta(paths, "/api/compras/cantidad-en-camino/{idCom}", "get", "200").endsWith("/ValorEntero"),
@@ -241,7 +299,7 @@ git commit -m "fix(compras): cantidad en camino resuelta al master del sku compa
 
 **Interfaces:**
 - Consumes: `ProveedorDAO.tienePedidos(int)`, `ProveedorDAO.getNombreById(int)`, `LogDAO.insertar(int idUsu, String accion, String detalle)`, `security.UsuarioPrincipal.getIdUsu()`.
-- Produces: `POST /api/proveedores` y `PUT /api/proveedores/{idProv}` → 422 con `"El nombre no puede estar vacío."` (nombre nulo, en blanco o de más de 100 caracteres) o `"Divisa no válida (EUR o USD)."` (divisa presente y distinta de `EUR`/`USD`; en el `POST` la divisa nula sigue valiendo, el DAO pone `EUR`). `DELETE /api/proveedores/{idProv}` → 409 `"El proveedor tiene pedidos y no se puede borrar."` y, si borra, log `BORRAR_PROVEEDOR` con `ID_PROV: n, NOMBRE: x`. Los mensajes de 422 son los que muestra el cliente JavaFX (inventario §12.1-12.2).
+- Produces: `POST /api/proveedores` y `PUT /api/proveedores/{idProv}` → 422 con `"El nombre no puede estar vacío."` (nombre nulo o en blanco), `"El nombre no puede superar los 100 caracteres."` (más de 100 tras recortar; decisión 3) o `"Divisa no válida (EUR o USD)."` (divisa distinta de `EUR`/`USD`; en el `POST` la divisa nula o en blanco sigue valiendo y se pasa `null` al DAO, que pone `EUR` (decisión 4); el `PUT` es estricto (decisión 1), el JavaFX siempre manda la del combo). `DELETE /api/proveedores/{idProv}` → 409 `"El proveedor tiene pedidos y no se puede borrar."` y, si borra, log `BORRAR_PROVEEDOR` con `ID_PROV: n, NOMBRE: x`; con un id inexistente, 204 sin log como hoy (decisión 2: el nombre se lee de forma tolerante en el controlador, `borrar` sigue siendo un no-op). Los mensajes de 422 de nombre vacío y divisa son los que muestra el cliente JavaFX (inventario §12.1-12.2).
 
 - [ ] **Step 1: Test (falla)**
 
@@ -254,6 +312,7 @@ import com.reparaciones.servidor.dao.LogDAO;
 import com.reparaciones.servidor.dao.ProveedorDAO;
 import com.reparaciones.servidor.security.UsuarioPrincipal;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -284,15 +343,22 @@ class ProveedorControllerTest {
     @Test void altaConNombreDeMasDe100Es422() {
         ResponseStatusException e = falla(() -> ctl.insertar(new ProveedorController.AltaRequest("x".repeat(101), null, null)));
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.getStatusCode());
-        assertEquals("El nombre no puede estar vacío.", e.getReason());
+        assertEquals("El nombre no puede superar los 100 caracteres.", e.getReason());
+        verifyNoInteractions(dao);
+        // 100 justos valen
+        ctl.insertar(new ProveedorController.AltaRequest("x".repeat(100), null, null));
+        verify(dao).insertar("x".repeat(100), null, null);
     }
 
-    @Test void altaConDivisaDesconocidaEs422YConNulaVale() {
+    @Test void altaConDivisaDesconocidaEs422YConNulaOEnBlancoVale() {
         ResponseStatusException e = falla(() -> ctl.insertar(new ProveedorController.AltaRequest("ACME", "CNY", null)));
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.getStatusCode());
         assertEquals("Divisa no válida (EUR o USD).", e.getReason());
+        // Nula o en blanco: se pasa null y el DAO pone EUR (como hoy)
         ctl.insertar(new ProveedorController.AltaRequest("ACME", null, "COMPONENTES"));
-        verify(dao).insertar("ACME", null, "COMPONENTES");
+        ctl.insertar(new ProveedorController.AltaRequest("ACME", "", "COMPONENTES"));
+        ctl.insertar(new ProveedorController.AltaRequest("ACME", "  ", "COMPONENTES"));
+        verify(dao, times(3)).insertar("ACME", null, "COMPONENTES");
     }
 
     @Test void altaRecortaElNombre() {
@@ -305,6 +371,12 @@ class ProveedorControllerTest {
         assertEquals("El nombre no puede estar vacío.", e1.getReason());
         ResponseStatusException e2 = falla(() -> ctl.editar(4, new ProveedorController.EditarRequest("ACME", "GBP", "")));
         assertEquals("Divisa no válida (EUR o USD).", e2.getReason());
+        // El PUT es estricto: sin divisa también es 422 (el JavaFX siempre manda la del combo)
+        ResponseStatusException e3 = falla(() -> ctl.editar(4, new ProveedorController.EditarRequest("ACME", null, "")));
+        assertEquals("Divisa no válida (EUR o USD).", e3.getReason());
+        ResponseStatusException e4 = falla(() -> ctl.editar(4, new ProveedorController.EditarRequest("x".repeat(101), "EUR", "")));
+        assertEquals("El nombre no puede superar los 100 caracteres.", e4.getReason());
+        verify(dao, never()).editar(anyInt(), any(), any(), any());
         ctl.editar(4, new ProveedorController.EditarRequest(" ACME ", "usd", "nota"));
         verify(dao).editar(4, "ACME", "USD", "nota");
     }
@@ -325,6 +397,16 @@ class ProveedorControllerTest {
         verify(dao).borrar(4);
         verify(logDao).insertar(7, "BORRAR_PROVEEDOR", "ID_PROV: 4, NOMBRE: ACME");
     }
+
+    /** Id inexistente: 204 sin log, como antes del 4a (decisión 2). getNombreById usa queryForObject y lanza
+     *  EmptyResultDataAccessException; el controlador lo tolera y borrar(99) sigue siendo un no-op. */
+    @Test void borrarInexistenteEs204SinLog() {
+        when(dao.tienePedidos(99)).thenReturn(false);
+        when(dao.getNombreById(99)).thenThrow(new EmptyResultDataAccessException(1));
+        ctl.borrar(99, super7);
+        verify(dao).borrar(99);
+        verifyNoInteractions(logDao);
+    }
 }
 ```
 
@@ -344,6 +426,7 @@ import com.reparaciones.servidor.dao.LogDAO;
 import com.reparaciones.servidor.dao.ProveedorDAO;
 import com.reparaciones.servidor.model.Proveedor;
 import com.reparaciones.servidor.security.UsuarioPrincipal;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -362,6 +445,7 @@ public class ProveedorController {
     private static final Set<String> DIVISAS = Set.of("EUR", "USD");
     private static final int NOMBRE_MAX = 100; // VARCHAR(100) de Proveedor.NOMBRE
     static final String MSG_NOMBRE = "El nombre no puede estar vacío.";
+    static final String MSG_NOMBRE_LARGO = "El nombre no puede superar los 100 caracteres.";
     static final String MSG_DIVISA = "Divisa no válida (EUR o USD).";
     static final String MSG_TIENE_PEDIDOS = "El proveedor tiene pedidos y no se puede borrar.";
 
@@ -396,8 +480,9 @@ public class ProveedorController {
     @ResponseStatus(HttpStatus.CREATED)
     public void insertar(@RequestBody AltaRequest req) {
         String nombre = nombreValido(req.nombre());
-        // Divisa nula: el DAO pone EUR (calco del alta del cliente, que no la manda).
-        String divisa = req.divisa() == null ? null : divisaValida(req.divisa());
+        // Divisa nula o en blanco: se pasa null y el DAO pone EUR (calco del alta del cliente, que no la manda).
+        // Solo se valida si viene informada (decisión 4).
+        String divisa = req.divisa() == null || req.divisa().isBlank() ? null : divisaValida(req.divisa());
         dao.insertar(nombre, divisa, req.tipo());
     }
 
@@ -422,15 +507,30 @@ public class ProveedorController {
         if (dao.tienePedidos(idProv)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, MSG_TIENE_PEDIDOS);
         }
-        String nombre = dao.getNombreById(idProv);
-        dao.borrar(idProv);
-        logDao.insertar(principal.getIdUsu(), "BORRAR_PROVEEDOR", "ID_PROV: " + idProv + ", NOMBRE: " + nombre);
+        String nombre = nombreOnull(idProv);
+        dao.borrar(idProv); // con un id inexistente es un no-op: 204 como antes del 4a
+        if (nombre != null) {
+            logDao.insertar(principal.getIdUsu(), "BORRAR_PROVEEDOR", "ID_PROV: " + idProv + ", NOMBRE: " + nombre);
+        }
+    }
+
+    /** getNombreById usa queryForObject, que lanza con un id inexistente; aquí se tolera para no dar 500 (decisión 2).
+     *  El DAO no se toca porque CompraController y CompraOtroController dependen de que lance. */
+    private String nombreOnull(int idProv) {
+        try {
+            return dao.getNombreById(idProv);
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 
     private static String nombreValido(String nombre) {
         String n = nombre == null ? "" : nombre.trim();
-        if (n.isEmpty() || n.length() > NOMBRE_MAX) {
+        if (n.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, MSG_NOMBRE);
+        }
+        if (n.length() > NOMBRE_MAX) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, MSG_NOMBRE_LARGO);
         }
         return n;
     }
@@ -454,7 +554,7 @@ Los records pasan de `private` a package-private para que el test los construya;
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `mvn -q test -Dtest=ProveedorControllerTest`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -517,7 +617,9 @@ class ComponenteControllerValidacionTest {
     @Test void editarConMinimoNegativoEs422() {
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
                 () -> ctl.actualizar(5, new ComponenteController.ActualizarRequest("lcd-x", 3, -2, ahora), super7));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.getStatusCode());
         assertEquals("Valor no válido (debe ser ≥ 0).", e.getReason());
+        verify(dao, never()).actualizar(anyInt(), anyString(), anyInt(), anyInt(), any());
     }
 
     @Test void editarConCeroVale() {
@@ -582,10 +684,10 @@ En `ComponenteController`: import `org.springframework.web.server.ResponseStatus
 
 y los records `ActualizarRequest` y `StockMinimoRequest` pasan de `private record` a `record` (package-private). Los demás no cambian.
 
-- [ ] **Step 4: Ejecutar, suite completa y arranque**
+- [ ] **Step 4: Ejecutar la suite completa**
 
 Run: `mvn -q test`
-Expected: PASS (271 + 13 nuevos). Después, arranque a mano (la suite no tiene test de contexto de Spring): `mvn -q spring-boot:run` con la BD local y comprobar `Started App` en el log; parar con Ctrl+C.
+Expected: PASS, 286 tests (271 + 15 nuevos: T1 2+1, T2 8, T3 4). `OpenApiContractTest` es `@SpringBootTest` y levanta el contexto completo de Spring, así que la suite valida también el arranque con los cambios de wiring (constructor de `ProveedorController` con `LogDAO`); no hace falta arranque manual (decisión 5).
 
 - [ ] **Step 5: Commit**
 
@@ -599,7 +701,7 @@ git commit -m "feat(componentes): 422 con stock o minimo negativos, mismos texto
 ## Task 4: Web — rama, contrato regenerado, alias, Recharts y tokens
 
 **Files:**
-- Modify: `package.json`, `package-lock.json` (recharts)
+- Modify: `package.json`, `package-lock.json` (recharts y react-is)
 - Modify: `api/openapi.json`, `src/shared/api/schema.d.ts` (regenerados)
 - Modify: `src/shared/api/client.ts` (alias `Proveedor`)
 - Modify: `src/shared/styles/tokens.css`
@@ -617,14 +719,18 @@ git checkout -b feature/web-stock
 
 - [ ] **Step 2: Contrato de la rama del servidor**
 
-Con el servidor de `feature/web-stock` arrancado en local (Task 3, Step 4) y un usuario de la BD local:
+Flujo offline del README de la web (sin arrancar el servidor ni BD): el `OpenApiContractTest` del servidor deja el contrato en `target/openapi.json`.
 
 ```bash
-API_URL=http://localhost:8080 API_USER=<usuario> API_PASS=<clave> npm run api:types
+# en gestion-reparaciones-servidor, rama feature/web-stock con las Tasks 1-3 hechas (Maven en Bash, ver Global Constraints)
+mvn -q test -Dtest=OpenApiContractTest
+cp target/openapi.json ../gestion-reparaciones-web/api/openapi.json
+# en gestion-reparaciones-web
+npm run api:types:offline
 git diff --stat api/openapi.json src/shared/api/schema.d.ts
 ```
 
-Expected: el único cambio de contrato es `/api/compras/cantidad-en-camino/{idCom}` → `components["schemas"]["ValorEntero"]` (antes `{ [key: string]: Record<string, never> }`). Si hay otros cambios, son de `main` del servidor posteriores al último `api:types` y se revisan antes de seguir. Verificar con `grep -n -A12 'getCantidadEnCamino: {' src/shared/api/schema.d.ts`.
+Expected: `schema.d.ts` cambia SOLO en la respuesta 200 de `/api/compras/cantidad-en-camino/{idCom}` → `components["schemas"]["ValorEntero"]` (antes `{ [key: string]: Record<string, never> }`; el esquema `ValorEntero` ya existía en el contrato). Si hay otros cambios, son de `main` del servidor posteriores al último `api:types` y se revisan antes de seguir. Verificar con `grep -n -A12 'getCantidadEnCamino: {' src/shared/api/schema.d.ts`. La Task 9 (`data?.value`) no compila sin este paso.
 
 - [ ] **Step 3: Alias del contrato**
 
@@ -638,10 +744,10 @@ export type Proveedor = components['schemas']['Proveedor']
 - [ ] **Step 4: Recharts**
 
 ```bash
-npm install recharts@3
+npm install recharts@3.10.1 react-is@19.3.0
 ```
 
-Anotar en `package.json` la versión exacta que quede (el repo fija versiones sin `^`: quitar el acento circunflejo a mano si `npm` lo añade, como en las demás dependencias).
+`react-is` va como dependencia directa y fijada a la versión de React: es peer de Recharts 3 y el lockfile ya trae `react-is@17.0.2` en la raíz de `node_modules` (dependencia indirecta de las librerías de test), así que npm no instalaría la 19; con la 17, Recharts no reconoce los hijos (`<Cell>`, `<Label>`) de los elementos de React 19 (`$$typeof` distinto). `.npmrc` tiene `save-exact=true`, así que las versiones quedan sin `^`.
 
 - [ ] **Step 5: Tokens**
 
@@ -660,7 +766,7 @@ En `src/shared/styles/tokens.css`, al final del bloque `@theme`:
 npm run check && npm run build
 ```
 
-Expected: verde (1017 tests) y build. Un test de contrato de la web puede comparar `api/openapi.json` con una lista de rutas: si falla por la ruta de `cantidad-en-camino`, adaptar esa aserción al `ValorEntero` (buscar con `grep -rn "cantidad-en-camino" src`).
+Expected: verde (1017 tests) y build.
 
 - [ ] **Step 7: Commit**
 
@@ -675,9 +781,11 @@ git commit -m "chore(web): contrato con cantidad en camino tipada, alias Proveed
 
 **Files:**
 - Create: `src/shared/lib/semaforoStock.ts`, `src/shared/lib/semaforoStock.test.ts`
-- Modify: `src/modules/taller/lib/piezas.ts:37-54` (y su test si asevera la implementación)
+- Modify: `src/modules/taller/lib/piezas.ts:41-46` (`nivelStock`; el tipo `NivelStock` está en la l.39), `src/modules/taller/lib/piezas.test.ts` (caso nuevo de stock negativo)
 - Move: `src/modules/taller/asignaciones/useInteraccionesAbiertas.ts` → `src/shared/lib/useInteraccionesAbiertas.ts` (y su `.test.tsx`)
 - Modify: `src/modules/taller/asignaciones/AsignacionesPage.tsx:25` (import)
+
+> **Desviación deliberada (C6, va a la ficha):** la spec §5 dice que `useInteraccionesAbiertas` se mueve a `shared/api`; el plan lo mueve a `shared/lib` porque no es API. Solo lo importan `AsignacionesPage.tsx` y su test.
 
 **Interfaces:**
 - Produces: `type EstadoStock = 'OK' | 'Bajo' | 'Sin stock' | 'Desactivado'`; `const ESTADOS_STOCK: readonly EstadoStock[]` (en ese orden, el del menú "Estado"); `estadoStock(c: Pick<Componente, 'stock' | 'stockMinimo' | 'activo'>): EstadoStock`; `useInteraccionesAbiertas()` desde `@/shared/lib/useInteraccionesAbiertas` con la misma firma (`{ hayAlguna, marcar }`).
@@ -735,8 +843,8 @@ export type EstadoStock = 'OK' | 'Bajo' | 'Sin stock' | 'Desactivado'
 export const ESTADOS_STOCK: readonly EstadoStock[] = ['OK', 'Bajo', 'Sin stock', 'Desactivado']
 
 /** Calco de StockController.estadoComponente: desactivado manda; stock 0 es "Sin stock" aunque el mínimo sea 0; stock ≤
- *  mínimo (negativo incluido) es "Bajo"; el resto OK. Única definición del semáforo en la web (spec 4a, S3): el combo de
- *  SKU del formulario (piezas.ts) y las alertas de la campana derivan de aquí. */
+ *  mínimo (negativo incluido) es "Bajo"; el resto OK. Semáforo compartido de la web (spec 4a, S3): el combo de SKU del
+ *  formulario (piezas.ts) deriva de aquí. */
 export function estadoStock(c: Pick<Componente, 'stock' | 'stockMinimo' | 'activo'>): EstadoStock {
   if (!c.activo) return 'Desactivado'
   if (c.stock === 0) return 'Sin stock'
@@ -747,7 +855,7 @@ export function estadoStock(c: Pick<Componente, 'stock' | 'stockMinimo' | 'activ
 
 - [ ] **Step 4: `nivelStock` sobre el semáforo**
 
-En `src/modules/taller/lib/piezas.ts`, sustituir `nivelStock` (líneas 39-46) por:
+En `src/modules/taller/lib/piezas.ts`, sustituir `nivelStock` (líneas 41-46) por:
 
 ```ts
 import { estadoStock } from '@/shared/lib/semaforoStock'
@@ -763,7 +871,14 @@ export function nivelStock(c: Pick<Componente, 'stock' | 'stockMinimo'>): NivelS
 }
 ```
 
-**Ojo:** el `nivelStock` de hoy devuelve `'normal'` con stock negativo (`stock > 0 &&`), y el semáforo del JavaFX lo pinta "Bajo". Mirar `src/modules/taller/lib/piezas.test.ts` (o el test que cubra `nivelStock`): si hay un caso con negativo, cambiar su expectativa a `'bajo'` con el comentario "calco de estadoComponente" y anotarlo en la ficha de paridad del formulario como diferencia corregida. Si no hay caso, añadir uno.
+**Ojo:** el `nivelStock` de hoy devuelve `'normal'` con stock negativo (`stock > 0 &&`), y el JavaFX lo pinta en ámbar (`FormularioReparacionController.aplicarColorStock`: `== 0` rojo, `<= mínimo` ámbar). `piezas.test.ts` no tiene ningún caso con negativo: AÑADIR uno al `describe('nivelStock y claseStock (color del SKU)', …)` y anotarlo en la ficha de paridad del formulario como diferencia corregida:
+
+```ts
+  it('stock negativo → bajo, en ámbar (calco de estadoComponente / aplicarColorStock)', () => {
+    expect(nivelStock({ stock: -1, stockMinimo: 0 })).toBe('bajo')
+    expect(claseStock({ stock: -1, stockMinimo: 2 })).toBe('text-fila-solicitud-brd')
+  })
+```
 
 - [ ] **Step 5: Mover el hook**
 
@@ -794,13 +909,14 @@ git commit -m "refactor(shared): semaforo de stock de cuatro estados compartido 
 ## Task 6: Web — rutas de Stock y sección `stock` del `SubNav`
 
 **Files:**
-- Create: `src/modules/almacen/rutas.ts`
-- Modify: `src/app/shell/SubNav.tsx:10-13`, `src/app/shell/SubNav.test.tsx:20-24`
+- Create: `src/shared/lib/enlaces.ts`, `src/modules/almacen/rutas.ts`
+- Modify: `src/modules/taller/rutas.tsx:8` (`EnlaceTaller = Enlace`)
+- Modify: `src/app/shell/SubNav.tsx:2,10-13`, `src/app/shell/SubNav.test.tsx:18-22`
 - Modify: `src/app/router.tsx:67`
 
 **Interfaces:**
-- Consumes: `EnlaceTaller` de `@/modules/taller/rutas` (el tipo se reutiliza: `{ to, label, badge? }`).
-- Produces: `enlacesStock(): EnlaceTaller[]` = Stock actual `/stock` · Pedidos `/stock/pedidos` · Proveedores `/stock/proveedores`, para los tres roles. Rutas `/stock` (`StockPage`, Task 12), `/stock/pedidos` (`PendienteDeMigrar nombre="Pedidos"`), `/stock/proveedores` (`ProveedoresPage`, Task 13). Hasta que existan las páginas, las dos rutas apuntan a `PendienteDeMigrar` y se sustituyen en su tarea.
+- Produces: `export type Enlace = { to: string; label: string; badge?: 'pendientes' | 'asignaciones'; end?: boolean }` en `@/shared/lib/enlaces` (los campos de `EnlaceTaller` de `taller/rutas.tsx` más `end`). `taller/rutas.tsx` pasa a `export type EnlaceTaller = Enlace` para no tocar sus usos. Nada de `almacen` importa de `taller` (regla de lint `eslint.config.js:52-68`).
+- Produces: `enlacesStock(): Enlace[]` = Stock actual `/stock` · Pedidos `/stock/pedidos` · Proveedores `/stock/proveedores`, para los tres roles. Rutas `/stock` (`StockPage`, Task 12), `/stock/pedidos` (`PendienteDeMigrar nombre="Pedidos"`), `/stock/proveedores` (`ProveedoresPage`, Task 13). Hasta que existan las páginas, las dos rutas apuntan a `PendienteDeMigrar` y se sustituyen en su tarea.
 
 - [ ] **Step 1: Test (falla)**
 
@@ -828,17 +944,33 @@ En `src/app/shell/SubNav.test.tsx`, sustituir el test `'en una sección todavía
 Run: `npx vitest run src/app/shell/SubNav.test.tsx`
 Expected: FAIL (0 enlaces en `/stock/...`).
 
-- [ ] **Step 3: Enlaces del módulo**
+- [ ] **Step 3: Tipo compartido y enlaces del módulo**
+
+`src/shared/lib/enlaces.ts`:
+
+```ts
+/** Entrada de la columna lateral (SubNav). Vive en shared desde el sub-proyecto 4a porque la usan taller y almacén, y un
+ *  módulo no importa de otro. `end`: NavLink solo activo en la ruta exacta. */
+export type Enlace = { to: string; label: string; badge?: 'pendientes' | 'asignaciones'; end?: boolean }
+```
+
+En `src/modules/taller/rutas.tsx`, sustituir la línea 8 (`export type EnlaceTaller = { to: string; label: string; badge?: … }`) por:
+
+```ts
+import type { Enlace } from '@/shared/lib/enlaces'
+...
+export type EnlaceTaller = Enlace
+```
 
 `src/modules/almacen/rutas.ts`:
 
 ```ts
-import type { EnlaceTaller } from '@/modules/taller/rutas'
+import type { Enlace } from '@/shared/lib/enlaces'
 
 /** Sidebar de StockView.fxml (`stock-sidebar-btn`): "Stock actual" · "Pedidos" · "Proveedores", en ese orden, sin badges y
  *  para los tres roles (el botón "Stock" de la barra superior tampoco depende del rol). `end` en el primero: sin él,
  *  NavLink lo marcaría activo también en /stock/pedidos. */
-export function enlacesStock(): EnlaceTaller[] {
+export function enlacesStock(): Enlace[] {
   return [
     { to: '/stock', label: 'Stock actual', end: true },
     { to: '/stock/pedidos', label: 'Pedidos' },
@@ -847,14 +979,14 @@ export function enlacesStock(): EnlaceTaller[] {
 }
 ```
 
-**Lint:** `modules/almacen` importando un tipo de `modules/taller` incumple la regla "un módulo no importa de otro". Mover el tipo: crear `src/shared/lib/enlaces.ts` con `export type Enlace = { to: string; label: string; badge?: 'pendientes' | 'asignaciones'; end?: boolean }`, hacer que `modules/taller/rutas.ts` lo reexporte (`export type EnlaceTaller = Enlace`) para no tocar sus usos, e importar `Enlace` en `almacen/rutas.ts` y en `SubNav.tsx`.
-
 - [ ] **Step 4: `SubNav` con la sección y `end`**
 
-En `SubNav.tsx`:
+En `SubNav.tsx` (el import de la l.2 deja de traer `type EnlaceTaller`):
 
 ```ts
 import { enlacesStock } from '@/modules/almacen/rutas'
+import { enlacesReparaciones } from '@/modules/taller/rutas'
+import type { Enlace } from '@/shared/lib/enlaces'
 ...
 const SUBNAV: Record<string, (sesion: Sesion | null) => Enlace[]> = {
   clientes: () => [{ to: '/clientes', label: 'Clientes' }],
@@ -922,11 +1054,13 @@ Calco de la ventana de `editarStock` (inventario §9.1): fondo `#DDE1E7` (`bg-fo
 `src/modules/almacen/ui/DialogoAlmacen.test.tsx`:
 
 ```tsx
-import { screen, within } from '@testing-library/react'
+import { getDefaultNormalizer, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { renderConProviders } from '@/test/render'
 import { DialogoAlmacen } from './DialogoAlmacen'
+
+const SIN_COLAPSAR = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) }
 
 function montar(props: Partial<Parameters<typeof DialogoAlmacen>[0]> = {}) {
   const onConfirmar = vi.fn()
@@ -944,10 +1078,13 @@ describe('DialogoAlmacen', () => {
   it('pinta título, subtítulo, los campos y los botones Cancelar / acción', () => {
     montar()
     const dlg = within(screen.getByRole('dialog', { name: 'Editar stock' }))
-    expect(dlg.getByText('Componente: lcd-x   ·   Stock actual: 3 ud(s).')).toHaveClass('text-[12px]', 'text-azul-gris')
+    expect(dlg.getByText('Componente: lcd-x   ·   Stock actual: 3 ud(s).', SIN_COLAPSAR)).toHaveClass('text-[12px]', 'text-azul-gris', 'whitespace-pre')
+    // El subtítulo es la descripción accesible (Radix la enlaza sola; ver el spread de aria-describedby).
+    expect(screen.getByRole('dialog')).toHaveAccessibleDescription(/^Componente: lcd-x\s+·\s+Stock actual: 3 ud\(s\)\.$/)
     expect(dlg.getByLabelText('Nueva cantidad')).toHaveValue('3')
+    // La ✕ de DialogContent ("Close", sr-only) se pinta después de los children: va la última.
     const botones = dlg.getAllByRole('button').map((b) => b.textContent)
-    expect(botones.slice(-2)).toEqual(['Cancelar', 'Confirmar'])
+    expect(botones).toEqual(['Cancelar', 'Confirmar', 'Close'])
   })
   it('Enter en un campo confirma; Cancelar y Escape cancelan', async () => {
     const { onConfirmar, onCancelar } = montar()
@@ -1008,11 +1145,11 @@ type Props = {
 export function DialogoAlmacen({ abierto, titulo, subtitulo, error, textoAccion, enviando = false, onConfirmar, onCancelar, children }: Props) {
   return (
     <Dialog open={abierto} onOpenChange={(o) => !o && onCancelar()}>
-      <DialogContent aria-describedby={subtitulo ? undefined : undefined} className="w-[360px] max-w-[min(360px,calc(100%-2rem))] gap-3 bg-fondo-vista p-7 sm:max-w-[min(360px,calc(100%-2rem))]">
+      <DialogContent {...(subtitulo ? {} : { 'aria-describedby': undefined })} className="w-[360px] max-w-[min(360px,calc(100%-2rem))] gap-3 bg-fondo-vista p-7 sm:max-w-[min(360px,calc(100%-2rem))]">
         <form onSubmit={(e) => { e.preventDefault(); if (!enviando) onConfirmar() }} className="flex flex-col gap-3">
           <DialogHeader>
             <DialogTitle className="text-[20px] font-bold text-azul-medio">{titulo}</DialogTitle>
-            {subtitulo ? <DialogDescription className="text-[12px] text-azul-gris">{subtitulo}</DialogDescription> : null}
+            {subtitulo ? <DialogDescription className="whitespace-pre text-[12px] text-azul-gris">{subtitulo}</DialogDescription> : null}
           </DialogHeader>
           {children}
           {error !== null && <p role="alert" className="text-[11px] text-texto-error">{error}</p>}
@@ -1027,7 +1164,7 @@ export function DialogoAlmacen({ abierto, titulo, subtitulo, error, textoAccion,
 }
 ```
 
-Si `DialogContent` avisa por `aria-describedby` sin descripción, pasar `aria-describedby={undefined}` solo cuando no hay subtítulo (ver cómo lo hace `ClienteDialog.tsx`). Los subtítulos llevan **tres espacios** a cada lado del punto medio: en JSX un literal `"Componente: x   ·   Stock…"` conserva los espacios si va dentro de una expresión `{}`; `white-space: pre` no hace falta si el texto se pasa como string en `{subtitulo}` (los espacios múltiples se colapsan al pintar; añadir `whitespace-pre` a `DialogDescription` para calcarlos).
+`aria-describedby`: Radix Dialog calcula el suyo cuando hay `DialogDescription`; un `aria-describedby={undefined}` explícito lo pisaría y el diálogo perdería la descripción. Por eso el prop solo se pasa (a `undefined`, como `ClienteDialog.tsx:30`) cuando no hay subtítulo. Los subtítulos llevan **tres espacios** a cada lado del punto medio; el navegador los colapsaría al pintar, de ahí `whitespace-pre` en `DialogDescription`. En los tests, `getByText` no normaliza el texto buscado: usar `SIN_COLAPSAR` (ver Global Constraints).
 
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
@@ -1058,11 +1195,11 @@ export type FiltrosStock = { estados: Set<EstadoStock>; buscador: string }
 export const FILTROS_STOCK_VACIOS: FiltrosStock
 export function ordenarStock(lista: Componente[]): Componente[]           // activos primero, estable
 export function aplicarFiltrosStock(lista: Componente[], f: FiltrosStock): Componente[]
-export function textoBotonEstado(estados: Set<EstadoStock>): string       // "Estado" | el único | "N estados"
 export function textoDesactivados(n: number): string | null              // null con 0; "1 desactivado"; "N desactivados"
 export function nombreComponente(c: Pick<Componente, 'tipo' | 'idComMaster'>): string  // tipo + "  (compartido)"
-export function filtrosDesdePedidos(): FiltrosStock                      // calco de navegarAComponente: quita OK/Bajo/Sin stock, conserva Desactivado
 ```
+
+El texto del botón "Estado" ("Estado" / el único marcado / "N estados") no tiene función propia: lo da `textoMultiSelect` dentro del `MultiSelect` compartido (decisión 9, Task 13), cubierto por `MultiSelect.test.tsx` y por el test del botón de `StockPage.test`. `filtrosDesdePedidos` (calco de `navegarAComponente`) sale de 4a y se hace en 4b, que es quien la usa (decisión 10).
 
 - Produces (`estado.ts`): `filtrosStock = crearStore<FiltrosStock>(FILTROS_STOCK_VACIOS)`, `seleccionStock = crearStore<string | null>(null)` (id del componente seleccionado, como texto).
 
@@ -1073,7 +1210,7 @@ export function filtrosDesdePedidos(): FiltrosStock                      // calc
 ```ts
 import { describe, expect, it } from 'vitest'
 import type { Componente } from '@/shared/api/client'
-import { aplicarFiltrosStock, FILTROS_STOCK_VACIOS, filtrosDesdePedidos, nombreComponente, ordenarStock, textoBotonEstado, textoDesactivados } from './filtros'
+import { aplicarFiltrosStock, FILTROS_STOCK_VACIOS, nombreComponente, ordenarStock, textoDesactivados } from './filtros'
 
 const base: Componente = { idCom: 1, tipo: 'lcd-x', fechaRegistro: '2026-09-01T10:00:00', stock: 5, stockMinimo: 2, activo: true, updatedAt: '2026-09-01T10:00:00', enCamino: 0, ultimoPedido: null, idComMaster: null }
 const c = (o: Partial<Componente>): Componente => ({ ...base, ...o })
@@ -1109,11 +1246,6 @@ describe('aplicarFiltrosStock', () => {
 })
 
 describe('textos', () => {
-  it('botón Estado: "Estado", el único marcado o "N estados"', () => {
-    expect(textoBotonEstado(new Set())).toBe('Estado')
-    expect(textoBotonEstado(new Set(['Bajo'] as const))).toBe('Bajo')
-    expect(textoBotonEstado(new Set(['Bajo', 'Sin stock'] as const))).toBe('2 estados')
-  })
   it('pie de desactivados: nada con 0, singular con 1, plural con más', () => {
     expect(textoDesactivados(0)).toBeNull()
     expect(textoDesactivados(1)).toBe('1 desactivado')
@@ -1122,11 +1254,6 @@ describe('textos', () => {
   it('nombre con el sufijo "(compartido)" de dos espacios', () => {
     expect(nombreComponente({ tipo: 'lcd-y', idComMaster: 1 })).toBe('lcd-y  (compartido)')
     expect(nombreComponente({ tipo: 'lcd-x', idComMaster: null })).toBe('lcd-x')
-  })
-  it('al llegar desde Pedidos se desmarcan OK, Bajo y Sin stock pero no Desactivado, y se vacía el buscador', () => {
-    const f = filtrosDesdePedidos({ estados: new Set(['OK', 'Desactivado'] as const), buscador: 'x' })
-    expect([...f.estados]).toEqual(['Desactivado'])
-    expect(f.buscador).toBe('')
   })
 })
 ```
@@ -1160,13 +1287,6 @@ export function aplicarFiltrosStock(lista: Componente[], f: FiltrosStock): Compo
   return lista.filter((c) => (f.estados.size === 0 || f.estados.has(estadoStock(c))) && (texto === '' || c.tipo.toLowerCase().includes(texto)))
 }
 
-/** Calco de actualizarTextoFiltroStock (:1916-1921). */
-export function textoBotonEstado(estados: Set<EstadoStock>): string {
-  if (estados.size === 0) return 'Estado'
-  if (estados.size === 1) return [...estados][0]
-  return `${estados.size} estados`
-}
-
 /** Calco de la etiqueta lblDesactivados (:480-484): oculta a cero. */
 export function textoDesactivados(n: number): string | null {
   if (n <= 0) return null
@@ -1176,12 +1296,6 @@ export function textoDesactivados(n: number): string | null {
 /** Calco de la columna Componente (:298-302): dos espacios antes del paréntesis. */
 export function nombreComponente(c: Pick<Componente, 'tipo' | 'idComMaster'>): string {
   return c.idComMaster != null ? `${c.tipo}  (compartido)` : c.tipo
-}
-
-/** Calco de navegarAComponente (:233-246): desmarca OK, Bajo y Sin stock pero NO "Desactivado" (inconsistencia menor del
- *  JavaFX con "Limpiar filtros", que se calca), y vacía el buscador. */
-export function filtrosDesdePedidos(f: FiltrosStock): FiltrosStock {
-  return { estados: new Set([...f.estados].filter((e) => e === 'Desactivado')), buscador: '' }
 }
 ```
 
@@ -1201,13 +1315,13 @@ export const seleccionStock = crearStore<string | null>(null)
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/stock/filtros.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 7 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/modules/almacen/stock/filtros.ts src/modules/almacen/stock/filtros.test.ts src/modules/almacen/stock/estado.ts
-git commit -m "feat(stock): orden, filtros de estado y buscador, textos del boton y del pie, y stores de la vista"
+git commit -m "feat(stock): orden, filtros de estado y buscador, texto del pie y stores de la vista"
 ```
 
 ---
@@ -1224,15 +1338,16 @@ git commit -m "feat(stock): orden, filtros de estado y buscador, textos del boto
 ```ts
 export const CLAVE_COMPONENTES_GESTIONADOS = ['componentes', 'gestionados'] as const
 export function useComponentesStock(opciones: { activo: boolean }): UseQueryResult<Componente[]>   // ordenados
-export function pedirCantidadEnCamino(idCom: number): Promise<number>                                // GET cantidad-en-camino → value
-export function useCantidadEnCamino(idCom: number | null, habilitado: boolean): UseQueryResult<number>
+export function pedirCantidadEnCamino(idCom: number): Promise<number>                                // GET cantidad-en-camino → value (T13 lo llama en un efecto)
 export function useEditarStock(): UseMutationResult<..., { c: Componente; stock: number }>          // PUT, meta.silenciarError (409 propio)
-export function useAjustarMinimo(): UseMutationResult<..., { idCom: number; stockMinimo: number }> // PATCH stock-minimo
+export function useAjustarMinimo(): UseMutationResult<..., { idCom: number; stockMinimo: number }> // PATCH stock-minimo, meta.silenciarError (422 inline)
 export function useSetActivoComponente(): UseMutationResult<..., { idCom: number; activo: boolean }>
 export function useSolicitarPieza(): UseMutationResult<..., { idCom: number; descripcion: string | null }>
 ```
 
-Todas las mutaciones invalidan `['componentes']` (prefijo: cubre `gestionados` y `agrupados` del formulario) y `['notificaciones', 'componentes']` (la campana consulta el mismo endpoint con su propia clave; se cita literal porque `almacen` no puede importar de `taller`).
+Todas las mutaciones invalidan `['componentes']` (prefijo: cubre `gestionados` y cualquier otra consulta bajo `['componentes', …]`; NO cubre los `agrupados` del formulario, que viven en `['formulario', 'nuevo' | 'editar', id]` (`modules/taller/formulario/api.ts:10-11`) y se recargan al abrir el formulario) y `['notificaciones', 'componentes']` (la campana consulta el mismo endpoint con su propia clave; se cita literal porque `almacen` no puede importar de `taller`).
+
+> **Revisión previa (C5):** no hay hook `useCantidadEnCamino`. La spec §8 pide que, si falla la cantidad en camino, el gráfico por SKU conserve lo anterior; una consulta con clave por `idCom` pintaría 0 al cambiar de fila. La Task 13 llama a `pedirCantidadEnCamino` desde un efecto y guarda el último gráfico bueno en estado; el hook se quitó por quedarse sin consumidor.
 
 - [ ] **Step 1: Test (falla)**
 
@@ -1330,14 +1445,8 @@ export async function pedirCantidadEnCamino(idCom: number): Promise<number> {
   return data?.value ?? 0
 }
 
-export function useCantidadEnCamino(idCom: number | null, habilitado: boolean): UseQueryResult<number> {
-  return useQuery({
-    queryKey: ['compras', 'cantidad-en-camino', idCom] as const,
-    queryFn: () => pedirCantidadEnCamino(idCom as number),
-    enabled: habilitado && idCom !== null,
-  })
-}
-
+/** Invalida `['componentes', …]` (tabla de Stock) y la clave de la campana. Los agrupados del formulario van con otra
+ *  clave (`['formulario', …]`) y no se tocan: el formulario los recarga al abrirse. */
 function useRecarga() {
   const qc = useQueryClient()
   return () => {
@@ -1358,11 +1467,14 @@ export function useEditarStock(): UseMutationResult<unknown, unknown, { c: Compo
   })
 }
 
+/** Su 422 se pinta dentro del diálogo (spec §8) y el resto de errores los muestra la vista a mano: silencia el diálogo
+ *  global para que el aviso no salga dos veces. */
 export function useAjustarMinimo(): UseMutationResult<unknown, unknown, { idCom: number; stockMinimo: number }> {
   const recargar = useRecarga()
   return useMutation({
     mutationFn: ({ idCom, stockMinimo }: { idCom: number; stockMinimo: number }) =>
       api.PATCH('/api/componentes/{idCom}/stock-minimo', { params: { path: { idCom } }, body: { stockMinimo } }),
+    meta: { silenciarError: true },
     onSettled: recargar,
   })
 }
@@ -1427,11 +1539,11 @@ Colores (inventario §5): badge OK `bg-badge-neutro-bg text-azul-gris`; Bajo `bg
 `src/modules/almacen/stock/columnas.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
+import { getDefaultNormalizer, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Componente } from '@/shared/api/client'
-import { DataTable } from '@/shared/ui/DataTable'
+import { CREMA_EN_FILA_SELECCIONADA, DataTable } from '@/shared/ui/DataTable'
 import { BadgeEstadoStock, CABECERAS_CSV_STOCK, claseFilaStock, crearColumnasStock, filaCsvStock, parametrosPedidos } from './columnas'
 
 const base: Componente = { idCom: 1, tipo: 'lcd-x', fechaRegistro: '2026-09-01T10:30:00', stock: 5, stockMinimo: 2, activo: true, updatedAt: '2026-09-01T10:00:00', enCamino: 0, ultimoPedido: null, idComMaster: null }
@@ -1451,8 +1563,10 @@ describe('columnas de Stock actual', () => {
     expect(cols[5]).toHaveStyle({ width: '100px' })
   })
   it('un compartido lleva el sufijo con dos espacios; sin último pedido pinta "—" y con fecha dd/MM/yyyy', () => {
+    // 09:00 UTC = 11:00 en Madrid: la hora no cruza medianoche al convertir, así que el día es el mismo en UTC y en Madrid
+    // (formatear pasa a Madrid, decisión 8; entre las 22:00 y las 24:00 UTC la web pintaría el día siguiente).
     montar([c({ idComMaster: 9, ultimoPedido: '2026-08-15T09:00:00' })])
-    expect(screen.getByText('lcd-x  (compartido)')).toBeInTheDocument()
+    expect(screen.getByText('lcd-x  (compartido)', { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeInTheDocument()
     expect(screen.getByText('15/08/2026')).toBeInTheDocument()
     montar([c({ idCom: 2, tipo: 'bat-x' })])
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
@@ -1482,12 +1596,17 @@ describe('columnas de Stock actual', () => {
     expect(inactiva).toContain('opacity-45')
     expect(inactiva).toContain('data-[state=selected]:bg-transparent')
   })
+  it('en una fila desactivada "Último pedido" no lleva la crema de la fila seleccionada (no se pone azul)', () => {
+    montar([c({ activo: false, ultimoPedido: '2026-08-15T09:00:00' })])
+    expect(screen.getByText('15/08/2026')).not.toHaveClass(CREMA_EN_FILA_SELECCIONADA)
+  })
   it('parámetros hacia Pedidos: los tres estados del pipeline y el buscador con el tipo', () => {
     expect(parametrosPedidos(c({ tipo: 'lcd x pro' }))).toBe('estados=pendiente%2Cen+camino%2Cparcial&buscar=lcd+x+pro')
   })
-  it('CSV: cabeceras exactas del JavaFX, tipo sin sufijo, estado del semáforo y fecha de registro con hora', () => {
+  // formatear lee el ISO sin zona como UTC y lo pinta en Europe/Madrid, como FechaUtils.formatear en exportarStock: 10:30 UTC = 12:30 CEST.
+  it('CSV: cabeceras exactas del JavaFX, tipo sin sufijo, estado del semáforo y fecha de registro con hora (Madrid)', () => {
     expect(CABECERAS_CSV_STOCK).toEqual(['Tipo', 'Stock', 'Stock mínimo', 'Estado', 'En camino', 'Fecha registro'])
-    expect(filaCsvStock(c({ idComMaster: 9, stock: 0, enCamino: 4 }))).toEqual(['lcd-x', '0', '2', 'Sin stock', '4', '01/09/2026 10:30'])
+    expect(filaCsvStock(c({ idComMaster: 9, stock: 0, enCamino: 4 }))).toEqual(['lcd-x', '0', '2', 'Sin stock', '4', '01/09/2026 12:30'])
   })
 })
 ```
@@ -1566,7 +1685,10 @@ export function crearColumnasStock({ onEnCamino }: { onEnCamino: (c: Componente)
     { id: 'stockMinimo', header: 'Stock Mínimo', size: ANCHOS_STOCK.stockMinimo, accessorFn: (c) => String(c.stockMinimo) },
     {
       id: 'ultimoPedido', header: 'Último pedido', size: ANCHOS_STOCK.ultimoPedido,
-      cell: ({ row }) => <span className={CREMA_EN_FILA_SELECCIONADA}>{row.original.ultimoPedido ? formatear(row.original.ultimoPedido, 'dd/MM/yyyy') : '—'}</span>,
+      // La desactivada no se pone azul al seleccionarse (claseFilaStock): sin la crema, que sobre blanco con opacidad 0.45 no se leería.
+      // formatear pasa de UTC a hora de Madrid, como el resto de la web y el CSV del JavaFX; la tabla del JavaFX pinta el día UTC
+      // sin convertir (StockController:328-330). Diferencia aceptada (decisión 8), anotada en la ficha.
+      cell: ({ row }) => <span className={row.original.activo ? CREMA_EN_FILA_SELECCIONADA : undefined}>{row.original.ultimoPedido ? formatear(row.original.ultimoPedido, 'dd/MM/yyyy') : '—'}</span>,
     },
     { id: 'estado', header: 'Estado', size: ANCHOS_STOCK.estado, cell: ({ row }) => <BadgeEstadoStock estado={estadoStock(row.original)} /> },
   ]
@@ -1585,7 +1707,7 @@ Si `DataTable` pinta la fila seleccionada con clases que `data-[state=selected]:
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/stock/columnas.test.tsx`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1845,6 +1967,7 @@ git commit -m "feat(stock): donut de estado del stock y barras por sku con recha
 
 **Files:**
 - Create: `src/modules/almacen/stock/EditarStockDialog.tsx`, `AjustarMinimoDialog.tsx`, `SolicitarPiezaDialog.tsx`, `dialogos.test.tsx`
+- Create: `src/modules/almacen/ui/useErrorServidor.ts` (lo usan también los diálogos de proveedor de la Task 14)
 
 **Interfaces:**
 - Consumes: `DialogoAlmacen` (Task 7); `Input`, `Label` de `@/shared/ui`; `Componente`.
@@ -1853,19 +1976,21 @@ git commit -m "feat(stock): donut de estado del stock y barras por sku con recha
 ```ts
 export function subtituloComponente(c: Pick<Componente, 'tipo' | 'stock'>): string   // "Componente: <tipo>   ·   Stock actual: <stock> ud(s)."
 export function parseEnteroNoNegativo(texto: string): number | null                  // trim, entero, ≥ 0; si no, null
-export function EditarStockDialog({ componente, enviando, onConfirmar, onCancelar }: { componente: Componente | null; enviando: boolean; onConfirmar: (stock: number) => void; onCancelar: () => void })
-export function AjustarMinimoDialog({ componente, enviando, onConfirmar, onCancelar }: { componente: Componente | null; enviando: boolean; onConfirmar: (stockMinimo: number) => void; onCancelar: () => void })
+export function EditarStockDialog({ componente, enviando, errorServidor, onConfirmar, onCancelar }: { componente: Componente | null; enviando: boolean; errorServidor?: string | null; onConfirmar: (stock: number) => void; onCancelar: () => void })
+export function AjustarMinimoDialog({ componente, enviando, errorServidor, onConfirmar, onCancelar }: { componente: Componente | null; enviando: boolean; errorServidor?: string | null; onConfirmar: (stockMinimo: number) => void; onCancelar: () => void })
+// ui/useErrorServidor.ts
+export function useErrorServidor(errorServidor: string | null | undefined): { error: string | null; ocultar: () => void }
 export function SolicitarPiezaDialog({ componente, enviando, onConfirmar, onCancelar }: { componente: Componente | null; enviando: boolean; onConfirmar: (descripcion: string | null) => void; onCancelar: () => void })
 ```
 
-`componente === null` = cerrado. Textos exactos (inventario §9.1, §9.2, §9.4): "Editar stock" / etiqueta **"Nueva cantidad"** / error **"Cantidad no válida (debe ser ≥ 0)."** / "Confirmar"; "Ajustar mínimo" con título **"Stock mínimo"** (título de ventana del `TextInputDialog`; S5) / etiqueta **"Nuevo stock mínimo:"** / error **"Valor no válido (debe ser ≥ 0)."** / "Confirmar"; "Solicitar pieza" / etiqueta **"Descripción (opcional)"** / placeholder **"Motivo o contexto de la solicitud..."** (tres puntos ASCII) / "Solicitar", descripción recortada y vacía → `null`.
+`componente === null` = cerrado. `errorServidor` = texto de un 422 del servidor (spec §8): se pinta en la línea de error del diálogo si no hay error de validación local y se oculta al teclear; la vista lo pone a `null` antes de cada envío y al cerrar (Task 13). Textos exactos (inventario §9.1, §9.2, §9.4): "Editar stock" / etiqueta **"Nueva cantidad"** / error **"Cantidad no válida (debe ser ≥ 0)."** / "Confirmar"; "Ajustar mínimo" con título **"Ajustar mínimo"** y subtítulo `subtituloComponente(c)` como "Editar stock" (spec §6 y S5, decisión 6; el título de ventana "Stock mínimo" del `TextInputDialog` no se usa) / etiqueta **"Nuevo stock mínimo:"** / error **"Valor no válido (debe ser ≥ 0)."** / "Confirmar"; "Solicitar pieza" / etiqueta **"Descripción (opcional)"** / placeholder **"Motivo o contexto de la solicitud..."** (tres puntos ASCII) / "Solicitar", descripción recortada y vacía → `null`.
 
 - [ ] **Step 1: Test (falla)**
 
 `src/modules/almacen/stock/dialogos.test.tsx`:
 
 ```tsx
-import { screen, within } from '@testing-library/react'
+import { getDefaultNormalizer, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Componente } from '@/shared/api/client'
@@ -1895,7 +2020,7 @@ describe('EditarStockDialog', () => {
     const onConfirmar = vi.fn()
     renderConProviders(<EditarStockDialog componente={comp} enviando={false} onConfirmar={onConfirmar} onCancelar={vi.fn()} />)
     const dlg = within(screen.getByRole('dialog', { name: 'Editar stock' }))
-    expect(dlg.getByText('Componente: lcd-x   ·   Stock actual: 3 ud(s).')).toBeInTheDocument()
+    expect(dlg.getByText('Componente: lcd-x   ·   Stock actual: 3 ud(s).', { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeInTheDocument()
     const campo = dlg.getByLabelText('Nueva cantidad')
     expect(campo).toHaveValue('3')
     expect(campo).toHaveFocus()
@@ -1914,14 +2039,21 @@ describe('EditarStockDialog', () => {
     expect(onConfirmar).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
+  it('un 422 del servidor se muestra inline y el diálogo sigue abierto; se oculta al teclear', async () => {
+    renderConProviders(<EditarStockDialog componente={comp} enviando={false} errorServidor="Cantidad no válida (debe ser ≥ 0)." onConfirmar={vi.fn()} onCancelar={vi.fn()} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Cantidad no válida (debe ser ≥ 0).')
+    expect(screen.getByRole('dialog', { name: 'Editar stock' })).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Nueva cantidad'), '1')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
 
 describe('AjustarMinimoDialog', () => {
-  it('título "Stock mínimo", etiqueta "Nuevo stock mínimo:", precargado con el mínimo; error con -1', async () => {
+  it('título "Ajustar mínimo", subtítulo de componente, etiqueta "Nuevo stock mínimo:", precargado con el mínimo; error con -1', async () => {
     const onConfirmar = vi.fn()
     renderConProviders(<AjustarMinimoDialog componente={comp} enviando={false} onConfirmar={onConfirmar} onCancelar={vi.fn()} />)
-    const dlg = within(screen.getByRole('dialog', { name: 'Stock mínimo' }))
-    expect(dlg.getByText('lcd-x')).toBeInTheDocument()
+    const dlg = within(screen.getByRole('dialog', { name: 'Ajustar mínimo' }))
+    expect(dlg.getByText('Componente: lcd-x   ·   Stock actual: 3 ud(s).', { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeInTheDocument()
     const campo = dlg.getByLabelText('Nuevo stock mínimo:')
     expect(campo).toHaveValue('2')
     await userEvent.clear(campo)
@@ -1931,6 +2063,13 @@ describe('AjustarMinimoDialog', () => {
     await userEvent.clear(campo)
     await userEvent.type(campo, '5{Enter}')
     expect(onConfirmar).toHaveBeenCalledWith(5)
+  })
+  it('un 422 del servidor se muestra inline y el diálogo sigue abierto; se oculta al teclear', async () => {
+    renderConProviders(<AjustarMinimoDialog componente={comp} enviando={false} errorServidor="Valor no válido (debe ser ≥ 0)." onConfirmar={vi.fn()} onCancelar={vi.fn()} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Valor no válido (debe ser ≥ 0).')
+    expect(screen.getByRole('dialog', { name: 'Ajustar mínimo' })).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Nuevo stock mínimo:'), '1')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
 
@@ -1959,6 +2098,26 @@ Expected: FAIL, módulos inexistentes.
 
 - [ ] **Step 3: Implementar**
 
+`src/modules/almacen/ui/useErrorServidor.ts`:
+
+```ts
+import { useState } from 'react'
+
+/** Error de un 422 del servidor para un diálogo abierto (spec 4a §8): se muestra en la línea de error del diálogo y se
+ *  oculta en cuanto el usuario teclea. La vista lo pone a null antes de cada envío, así que dos 422 seguidos con el mismo
+ *  texto vuelven a verse (null → texto es un cambio). Patrón "ajustar estado al cambiar una prop" durante el render. */
+export function useErrorServidor(errorServidor: string | null | undefined): { error: string | null; ocultar: () => void } {
+  const actual = errorServidor ?? null
+  const [visto, setVisto] = useState(actual)
+  const [oculto, setOculto] = useState(false)
+  if (actual !== visto) {
+    setVisto(actual)
+    setOculto(false)
+  }
+  return { error: oculto ? null : actual, ocultar: () => setOculto(true) }
+}
+```
+
 `src/modules/almacen/stock/EditarStockDialog.tsx`:
 
 ```tsx
@@ -1967,6 +2126,7 @@ import type { Componente } from '@/shared/api/client'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { DialogoAlmacen } from '../ui/DialogoAlmacen'
+import { useErrorServidor } from '../ui/useErrorServidor'
 
 /** Subtítulo de editarStock y solicitarPieza (:611): tres espacios a cada lado del punto medio. */
 export function subtituloComponente(c: Pick<Componente, 'tipo' | 'stock'>): string {
@@ -1982,13 +2142,14 @@ export function parseEnteroNoNegativo(texto: string): number | null {
 
 export const MSG_CANTIDAD_NO_VALIDA = 'Cantidad no válida (debe ser ≥ 0).'
 
-type Props = { componente: Componente | null; enviando: boolean; onConfirmar: (stock: number) => void; onCancelar: () => void }
+type Props = { componente: Componente | null; enviando: boolean; errorServidor?: string | null; onConfirmar: (stock: number) => void; onCancelar: () => void }
 
 /** Calco de editarStock (:607-675): campo precargado con el stock y con foco, Enter confirma, el error deja el diálogo
- *  abierto. */
-export function EditarStockDialog({ componente, enviando, onConfirmar, onCancelar }: Props) {
+ *  abierto. Un 422 del servidor (`errorServidor`) se pinta en la misma línea si no hay error local. */
+export function EditarStockDialog({ componente, enviando, errorServidor, onConfirmar, onCancelar }: Props) {
   const [texto, setTexto] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const servidor = useErrorServidor(errorServidor)
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia el campo al abrir con otro componente (patrón "Adjusting state")
     if (componente) { setTexto(String(componente.stock)); setError(null) }
@@ -1996,12 +2157,13 @@ export function EditarStockDialog({ componente, enviando, onConfirmar, onCancela
   function confirmar() {
     const n = parseEnteroNoNegativo(texto)
     if (n === null) { setError(MSG_CANTIDAD_NO_VALIDA); return }
+    setError(null)
     onConfirmar(n)
   }
   return (
-    <DialogoAlmacen abierto={componente !== null} titulo="Editar stock" subtitulo={componente ? subtituloComponente(componente) : undefined} error={error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
+    <DialogoAlmacen abierto={componente !== null} titulo="Editar stock" subtitulo={componente ? subtituloComponente(componente) : undefined} error={error ?? servidor.error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
       <Label htmlFor="editar-stock-cantidad" className="text-[12px] font-bold text-azul-gris">Nueva cantidad</Label>
-      <Input id="editar-stock-cantidad" value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
+      <Input id="editar-stock-cantidad" value={texto} onChange={(e) => { setTexto(e.target.value); servidor.ocultar() }} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
     </DialogoAlmacen>
   )
 }
@@ -2015,18 +2177,21 @@ import type { Componente } from '@/shared/api/client'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { DialogoAlmacen } from '../ui/DialogoAlmacen'
-import { parseEnteroNoNegativo } from './EditarStockDialog'
+import { useErrorServidor } from '../ui/useErrorServidor'
+import { parseEnteroNoNegativo, subtituloComponente } from './EditarStockDialog'
 
 export const MSG_MINIMO_NO_VALIDO = 'Valor no válido (debe ser ≥ 0).'
 
-type Props = { componente: Componente | null; enviando: boolean; onConfirmar: (stockMinimo: number) => void; onCancelar: () => void }
+type Props = { componente: Componente | null; enviando: boolean; errorServidor?: string | null; onConfirmar: (stockMinimo: number) => void; onCancelar: () => void }
 
-/** El TextInputDialog nativo de ajustarMinimo (:684-699) pasa al diálogo propio (spec 4a, S5) con sus textos: título de
- *  ventana "Stock mínimo", cabecera = tipo, "Nuevo stock mínimo:", precargado con el mínimo. Diferencia: el error se
- *  muestra inline y el diálogo sigue abierto (el JavaFX cerraba y avisaba con un Alert). */
-export function AjustarMinimoDialog({ componente, enviando, onConfirmar, onCancelar }: Props) {
+/** El TextInputDialog nativo de ajustarMinimo (:684-699) pasa al diálogo propio con el mismo estilo que Editar stock
+ *  (spec 4a §6 y S5, decisión 6): título "Ajustar mínimo" (en vez del título de ventana "Stock mínimo") y subtítulo
+ *  "Componente: <tipo>   ·   Stock actual: <stock> ud(s).". Se conservan "Nuevo stock mínimo:" y el campo precargado con el
+ *  mínimo. Diferencia: el error se muestra inline y el diálogo sigue abierto (el JavaFX cerraba y avisaba con un Alert). */
+export function AjustarMinimoDialog({ componente, enviando, errorServidor, onConfirmar, onCancelar }: Props) {
   const [texto, setTexto] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const servidor = useErrorServidor(errorServidor)
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reinicia el campo al abrir con otro componente
     if (componente) { setTexto(String(componente.stockMinimo)); setError(null) }
@@ -2034,12 +2199,13 @@ export function AjustarMinimoDialog({ componente, enviando, onConfirmar, onCance
   function confirmar() {
     const n = parseEnteroNoNegativo(texto)
     if (n === null) { setError(MSG_MINIMO_NO_VALIDO); return }
+    setError(null)
     onConfirmar(n)
   }
   return (
-    <DialogoAlmacen abierto={componente !== null} titulo="Stock mínimo" subtitulo={componente?.tipo} error={error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
+    <DialogoAlmacen abierto={componente !== null} titulo="Ajustar mínimo" subtitulo={componente ? subtituloComponente(componente) : undefined} error={error ?? servidor.error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
       <Label htmlFor="ajustar-minimo-valor" className="text-[12px] font-bold text-azul-gris">Nuevo stock mínimo:</Label>
-      <Input id="ajustar-minimo-valor" value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
+      <Input id="ajustar-minimo-valor" value={texto} onChange={(e) => { setTexto(e.target.value); servidor.ocultar() }} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
     </DialogoAlmacen>
   )
 }
@@ -2075,15 +2241,17 @@ export function SolicitarPiezaDialog({ componente, enviando, onConfirmar, onCanc
 
 El `DialogoAlmacen` tiene ancho 360; `solicitarPieza` del JavaFX usa 380: aceptar 360 y anotarlo en la ficha, o admitir una prop `ancho` (si se añade, el test de Task 7 no cambia).
 
+**Ojo en tests:** `getAllByRole('button')` dentro de un diálogo incluye la ✕ de `DialogContent` (nombre accesible "Close", la última).
+
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/stock/dialogos.test.tsx`
-Expected: PASS, 6 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/modules/almacen/stock/EditarStockDialog.tsx src/modules/almacen/stock/AjustarMinimoDialog.tsx src/modules/almacen/stock/SolicitarPiezaDialog.tsx src/modules/almacen/stock/dialogos.test.tsx
+git add src/modules/almacen/ui/useErrorServidor.ts src/modules/almacen/stock/EditarStockDialog.tsx src/modules/almacen/stock/AjustarMinimoDialog.tsx src/modules/almacen/stock/SolicitarPiezaDialog.tsx src/modules/almacen/stock/dialogos.test.tsx
 git commit -m "feat(stock): dialogos editar stock, stock minimo y solicitar pieza con los textos y validaciones del cliente"
 ```
 
@@ -2096,23 +2264,26 @@ git commit -m "feat(stock): dialogos editar stock, stock minimo y solicitar piez
 - Modify: `src/app/router.tsx` (`/stock` → `<StockPage />`)
 
 **Interfaces:**
-- Consumes: Tasks 5, 8-12; `DataTable`, `EtiquetaActualizado`, `BotonSecundario`, `MultiSelect`-like trigger (se construye con `DropdownMenu` + `DropdownMenuCheckboxItem`), `Input`, `useAlerta`, `useSession`, `esAdmin`, `esSuperTecnico`, `useNavigate`, `useStore`, `useRegistrarExportable`, `descargarCsv`, `useInteraccionesAbiertas`.
+- Consumes: Tasks 5, 8-12 (de la 9, `pedirCantidadEnCamino`); `DataTable`, `EtiquetaActualizado`, `BotonSecundario`, `MultiSelect` de `@/shared/ui/MultiSelect` (filtro "Estado", decisión 9: el texto del botón lo da su `textoMultiSelect`), `Input`, `useAlerta`, `useSession`, `esAdmin`, `esSuperTecnico`, `useNavigate`, `useStore`, `useRegistrarExportable`, `descargarCsv`, `useInteraccionesAbiertas`, `ReglaNegocioError`, `mensajeDeError`, `esErrorGestionadoGlobalmente` de `@/shared/api/errors`.
 - Produces: `StockPage()` en `/stock`; `MenuComponente({ c, rol, onPedir, onEditarStock, onAjustarMinimo, onToggleActivo, onSolicitar, onInteraccion })` con `rol: 'SUPERTECNICO' | 'TECNICO'` (el ADMIN no tiene menú: `menuFila` va `undefined`).
 
-Textos (inventario §1, §6, §9): título **"Stock actual"**; botón de filtro **"Estado"** con los checks "OK", "Bajo", "Sin stock", "Desactivado" (este solo si hay desactivados; `hideOnClick=false` → el desplegable no se cierra al marcar); placeholder **"Buscar componente…"** (carácter "…"); **"Limpiar filtros"**; vacío **"Sin componentes"**; ítems **"Pedir"**, **"Editar stock"**, separador, **"Ajustar mínimo"**, separador, **"Desactivar"**/**"Activar"**, separador, **"Solicitar pieza"**; 409 **"El componente fue modificado mientras editabas. Recarga los datos."**.
+Textos (inventario §1, §6, §9): título **"Stock actual"**; botón de filtro **"Estado"** con las casillas "OK", "Bajo", "Sin stock", "Desactivado" (esta solo si hay desactivados; calco de `hideOnClick=false`: el `MultiSelect` no se cierra al marcar), texto del botón "Estado" / el único marcado / "N estados"; placeholder **"Buscar componente…"** (carácter "…"); **"Limpiar filtros"**; vacío **"Sin componentes"**; ítems **"Pedir"**, **"Editar stock"**, separador, **"Ajustar mínimo"**, separador, **"Desactivar"**/**"Activar"**, separador, **"Solicitar pieza"**; 409 **"El componente fue modificado mientras editabas. Recarga los datos."**.
 
 - [ ] **Step 1: Test (falla)**
 
 `src/modules/almacen/stock/StockPage.test.tsx`:
 
 ```tsx
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, getDefaultNormalizer, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { Route } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+// eslint-disable-next-line no-restricted-imports -- "Descargar CSV" vive en el menú de usuario del AppLayout real (patrón de HistorialPage.test.tsx).
+import { AppLayout } from '@/app/shell/AppLayout'
 import { INTERVALO_CONECTADO_MS } from '@/shared/api/refresco'
-import { renderConProviders, SESION_ADMIN, SESION_SUPER, SESION_TEC } from '@/test/render'
+import * as csv from '@/shared/lib/csv'
+import { renderConProviders, renderConRouter, SESION_ADMIN, SESION_SUPER, SESION_TEC } from '@/test/render'
 import { server } from '@/test/server'
 import { StockPage } from './StockPage'
 
@@ -2145,10 +2316,11 @@ describe('StockPage', () => {
     expect(await screen.findByRole('heading', { name: 'Stock actual' })).toBeInTheDocument()
     const filas = screen.getAllByRole('row').slice(1).map((r) => r.textContent ?? '')
     expect(filas[filas.length - 1]).toMatch(/^mc-x/)
-    expect(screen.getByText('lcd-y  (compartido)')).toBeInTheDocument()
+    expect(screen.getByText('lcd-y  (compartido)', { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })).toBeInTheDocument()
     expect(screen.getByText('1 desactivado')).toHaveClass('text-[10px]', 'text-texto-vacio')
     expect(screen.getByText(/^Actualizado \d\d:\d\d$/)).toBeInTheDocument()
-    expect(screen.getByText('Sin stock', { selector: 'span' })).toBeInTheDocument()
+    // "Sin stock" también está en la leyenda del donut: se busca el badge dentro de la tabla.
+    expect(within(screen.getByRole('table')).getByText('Sin stock')).toBeInTheDocument()
   })
   it('el donut cuenta sobre todo (activos) y no cambia al filtrar; el buscador filtra "contiene" y vacío pinta "Sin componentes"', async () => {
     montar()
@@ -2164,14 +2336,17 @@ describe('StockPage', () => {
     await userEvent.type(screen.getByPlaceholderText('Buscar componente…'), 'zzz')
     expect(screen.getByText('Sin componentes')).toBeInTheDocument()
   })
-  it('filtro Estado: checks sin cerrar el desplegable, texto "N estados", "Desactivado" solo si hay; Limpiar filtros', async () => {
+  it('filtro Estado: casillas sin cerrar el desplegable, texto "N estados", "Desactivado" solo si hay; Limpiar filtros', async () => {
     montar()
     await screen.findByText('lcd-x')
     await userEvent.click(screen.getByRole('button', { name: 'Estado' }))
-    expect(screen.getAllByRole('menuitemcheckbox').map((i) => i.textContent)).toEqual(['OK', 'Bajo', 'Sin stock', 'Desactivado'])
-    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Bajo' }))
-    expect(screen.getByRole('menu')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Sin stock' }))
+    // MultiSelect pinta cada opción como checkbox con aria-label = etiqueta (MultiSelect.tsx)
+    expect(screen.getAllByRole('checkbox').map((i) => i.getAttribute('aria-label'))).toEqual(['OK', 'Bajo', 'Sin stock', 'Desactivado'])
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Bajo' }))
+    // marcar no cierra el desplegable (calco de hideOnClick=false)
+    expect(screen.getByRole('checkbox', { name: 'Sin stock' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bajo' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Sin stock' }))
     await userEvent.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: '2 estados' })).toBeInTheDocument()
     expect(screen.queryByText('lcd-x')).not.toBeInTheDocument()
@@ -2186,7 +2361,8 @@ describe('StockPage', () => {
     await screen.findByText('lcd-x')
     expect(screen.queryByText(/desactivado/)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Estado' }))
-    expect(screen.queryByRole('menuitemcheckbox', { name: 'Desactivado' })).not.toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Sin stock' })).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: 'Desactivado' })).not.toBeInTheDocument()
   })
   it('seleccionar una fila pinta el gráfico por SKU con la barra Pedido (supertécnico) y la selección sobrevive al refresco', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -2208,34 +2384,54 @@ describe('StockPage', () => {
     expect(await screen.findByRole('img', { name: 'Stock 2, Pedido 0' })).toBeInTheDocument()
     expect(pedida).toBe(false)
   })
-  it('"En Camino" > 0 navega a Pedidos con los tres estados y el buscador', async () => {
+  it('si falla la cantidad en camino, el gráfico por SKU conserva el anterior (título incluido) y avisa', async () => {
     montar()
+    await screen.findByText('bat-x')
+    await userEvent.click(screen.getByText('bat-x'))
+    expect(await screen.findByRole('img', { name: 'Stock 2, Pedido 4' })).toBeInTheDocument()
+    server.use(http.get('*/api/compras/cantidad-en-camino/:id', () => new HttpResponse(null, { status: 404 })))
+    await userEvent.click(within(screen.getByRole('table')).getByText('cam-x'))
+    expect(await screen.findByText('Recurso no encontrado.')).toBeInTheDocument()
+    // El aviso es un diálogo modal: Radix marca aria-hidden el resto, de ahí hidden: true.
+    expect(screen.getByRole('img', { name: 'Stock 2, Pedido 4', hidden: true })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'bat-x', hidden: true })).toBeInTheDocument()
+  })
+  it('"En Camino" > 0 navega a Pedidos con los tres estados y el buscador', async () => {
+    const { router } = renderConRouter(
+      [
+        { path: '/stock', element: <StockPage /> },
+        { path: '/stock/pedidos', element: <p data-testid="pedidos">Pedidos</p> },
+      ],
+      { sesion: SESION_SUPER, ruta: '/stock' },
+    )
     await screen.findByText('bat-x')
     await userEvent.click(screen.getByRole('button', { name: '4' }))
     expect(await screen.findByTestId('pedidos')).toBeInTheDocument()
-    expect(window.location.search === '' || true).toBe(true) // MemoryRouter: la URL se comprueba en el test de navegación de abajo
+    expect(router.state.location.pathname).toBe('/stock/pedidos')
+    // URLSearchParams codifica la coma como %2C y el espacio como +.
+    expect(router.state.location.search).toBe('?estados=pendiente%2Cen+camino%2Cparcial&buscar=bat-x')
   })
   it('menú del supertécnico: los cinco ítems con separadores; "Activar" en una desactivada; ADMIN sin menú; TECNICO solo "Solicitar pieza"', async () => {
     montar()
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['Pedir', 'Editar stock', 'Ajustar mínimo', 'Desactivar', 'Solicitar pieza'])
     expect(screen.getAllByRole('separator')).toHaveLength(3)
     await userEvent.keyboard('{Escape}')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('mc-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('mc-x') })
     expect(screen.getByRole('menuitem', { name: 'Activar' })).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
   })
   it('ADMIN no tiene menú contextual', async () => {
     montar(SESION_ADMIN)
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
   it('TECNICO solo ve "Solicitar pieza"', async () => {
     montar(SESION_TEC)
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual(['Solicitar pieza'])
   })
   it('"Editar stock" manda el PUT, recarga, y un 409 cierra el diálogo con el aviso y recarga', async () => {
@@ -2244,7 +2440,7 @@ describe('StockPage', () => {
     server.use(http.put('*/api/componentes/1', async ({ request }) => { cuerpo = await request.json(); return estado === 200 ? new HttpResponse(null, { status: 200 }) : HttpResponse.json({ message: 'Dato modificado por otro usuario' }, { status: 409 }) }))
     montar()
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar stock' }))
     const campo = within(screen.getByRole('dialog', { name: 'Editar stock' })).getByLabelText('Nueva cantidad')
     await userEvent.clear(campo)
@@ -2253,12 +2449,35 @@ describe('StockPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await waitFor(() => expect(cargas.n).toBe(2))
     estado = 409
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar stock' }))
     await userEvent.type(within(screen.getByRole('dialog')).getByLabelText('Nueva cantidad'), '{Enter}')
     expect(await screen.findByText('El componente fue modificado mientras editabas. Recarga los datos.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: 'Editar stock' })).not.toBeInTheDocument()
     await waitFor(() => expect(cargas.n).toBe(3))
+  })
+  it('un 422 del servidor se muestra inline y el diálogo sigue abierto (Editar stock y Ajustar mínimo), sin aviso global', async () => {
+    server.use(
+      http.put('*/api/componentes/1', () => HttpResponse.json({ message: 'Cantidad no válida (debe ser ≥ 0).' }, { status: 422 })),
+      http.patch('*/api/componentes/1/stock-minimo', () => HttpResponse.json({ message: 'Valor no válido (debe ser ≥ 0).' }, { status: 422 })),
+    )
+    montar()
+    await screen.findByText('lcd-x')
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Editar stock' }))
+    const editar = screen.getByRole('dialog', { name: 'Editar stock' })
+    await userEvent.type(within(editar).getByLabelText('Nueva cantidad'), '{Enter}')
+    expect(await within(editar).findByRole('alert')).toHaveTextContent('Cantidad no válida (debe ser ≥ 0).')
+    expect(screen.getByRole('dialog', { name: 'Editar stock' })).toBeInTheDocument()
+    expect(screen.getAllByText('Cantidad no válida (debe ser ≥ 0).')).toHaveLength(1)
+    await userEvent.click(within(editar).getByRole('button', { name: 'Cancelar' }))
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Ajustar mínimo' }))
+    const minimo = screen.getByRole('dialog', { name: 'Ajustar mínimo' })
+    await userEvent.type(within(minimo).getByLabelText('Nuevo stock mínimo:'), '{Enter}')
+    expect(await within(minimo).findByRole('alert')).toHaveTextContent('Valor no válido (debe ser ≥ 0).')
+    expect(screen.getByRole('dialog', { name: 'Ajustar mínimo' })).toBeInTheDocument()
+    expect(screen.getAllByText('Valor no válido (debe ser ≥ 0).')).toHaveLength(1)
   })
   it('"Ajustar mínimo" hace el PATCH; "Desactivar" sin confirmación; "Solicitar pieza" hace el POST sin recargar', async () => {
     const llamadas: string[] = []
@@ -2269,18 +2488,21 @@ describe('StockPage', () => {
     )
     montar()
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Ajustar mínimo' }))
-    const campo = within(screen.getByRole('dialog', { name: 'Stock mínimo' })).getByLabelText('Nuevo stock mínimo:')
+    const campo = within(screen.getByRole('dialog', { name: 'Ajustar mínimo' })).getByLabelText('Nuevo stock mínimo:')
     await userEvent.clear(campo)
     await userEvent.type(campo, '7{Enter}')
     await waitFor(() => expect(llamadas).toContain('min {"stockMinimo":7}'))
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
+    const cargasAntesDeDesactivar = cargas.n
     await userEvent.click(screen.getByRole('menuitem', { name: 'Desactivar' }))
     await waitFor(() => expect(llamadas).toContain('act {"activo":false}'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // La invalidación del PATCH recarga en diferido: se espera a esa recarga antes de tomar la referencia.
+    await waitFor(() => expect(cargas.n).toBeGreaterThan(cargasAntesDeDesactivar))
     const antes = cargas.n
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Solicitar pieza' }))
     await userEvent.click(within(screen.getByRole('dialog', { name: 'Solicitar pieza' })).getByRole('button', { name: 'Solicitar' }))
     await waitFor(() => expect(llamadas).toContain('sol {"idCom":1,"descripcion":null}'))
@@ -2291,7 +2513,7 @@ describe('StockPage', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     montar()
     await screen.findByText('lcd-x')
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('lcd-x') })
+    await userEvent.pointer({ keys: '[MouseRight]', target: filaDe('lcd-x') })
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar stock' }))
     await act(async () => { await vi.advanceTimersByTimeAsync(INTERVALO_CONECTADO_MS * 2) })
     expect(cargas.n).toBe(1)
@@ -2304,16 +2526,30 @@ describe('StockPage', () => {
     montar()
     expect(await screen.findByPlaceholderText('Buscar componente…')).toHaveValue('bat')
   })
-  it('Descargar CSV exporta la lista filtrada con las cabeceras del JavaFX', async () => {
-    montar()
+  it('Descargar CSV exporta la lista filtrada con el nombre y las cabeceras del JavaFX', async () => {
+    const descargar = vi.spyOn(csv, 'descargarCsv').mockImplementation(() => {})
+    // <AppLayout/> monta la campana y el SubNav: sus peticiones van con handlers propios (no se importan los de taller,
+    // regla de módulos). Si onUnhandledRequest:'error' señala otra, se añade aquí. No se pisa el de `gestionados`.
+    server.use(
+      http.get('*/api/solicitudes/count', () => HttpResponse.json({ value: 0 })),
+      http.get('*/api/solicitudes-stock/count', () => HttpResponse.json({ value: 0 })),
+      http.get('*/api/solicitudes', () => HttpResponse.json([])),
+      http.get('*/api/solicitudes-stock', () => HttpResponse.json([])),
+    )
+    renderConProviders(<StockPage />, { sesion: SESION_SUPER, ruta: '/stock', layout: <AppLayout /> })
     await screen.findByText('lcd-x')
-    // useRegistrarExportable registra el exportador en el ExportableProvider; se comprueba con el menú de usuario en el test del shell.
-    // Aquí basta con que la vista registre uno: ver test de AppLayout/UserMenu del sub-proyecto 1 para el patrón.
+    await userEvent.type(screen.getByPlaceholderText('Buscar componente…'), 'bat')
+    await userEvent.click(screen.getByRole('button', { name: /Hola,/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Descargar CSV' }))
+    const [nombre, cabeceras, filas] = descargar.mock.calls[0]
+    expect(nombre).toBe('stock_actual')
+    expect(cabeceras).toEqual(['Tipo', 'Stock', 'Stock mínimo', 'Estado', 'En camino', 'Fecha registro'])
+    // fechaRegistro 10:00 UTC → 12:00 en Madrid (formatear, como el CSV del JavaFX).
+    expect(filas).toEqual([['bat-x', '2', '3', 'Bajo', '4', '01/09/2026 12:00']])
+    descargar.mockRestore()
   })
 })
 ```
-
-El último test se completa con el patrón que ya usa `HistorialPage.test.tsx` para el CSV (buscar `descargarCsv` con `vi.mock` en los tests del taller y copiarlo): comprobar cabeceras `['Tipo', 'Stock', 'Stock mínimo', 'Estado', 'En camino', 'Fecha registro']` y que con el buscador "bat" solo va una fila. El test de "En Camino" comprueba la navegación; los parámetros de la URL están cubiertos por `parametrosPedidos` (Task 10).
 
 - [ ] **Step 2: Ejecutar y ver que falla**
 
@@ -2370,13 +2606,12 @@ export function MenuComponente({ c, rol, onPedir, onEditarStock, onAjustarMinimo
 `src/modules/almacen/stock/StockPage.tsx`:
 
 ```tsx
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ChevronDown } from 'lucide-react'
 import type { Componente } from '@/shared/api/client'
-import { esErrorGestionadoGlobalmente, mensajeDeError } from '@/shared/api/errors'
+import { esErrorGestionadoGlobalmente, mensajeDeError, ReglaNegocioError } from '@/shared/api/errors'
 import { descargarCsv } from '@/shared/lib/csv'
-import { ESTADOS_STOCK, estadoStock, type EstadoStock } from '@/shared/lib/semaforoStock'
+import { ESTADOS_STOCK, type EstadoStock } from '@/shared/lib/semaforoStock'
 import { useStore } from '@/shared/lib/store'
 import { useInteraccionesAbiertas } from '@/shared/lib/useInteraccionesAbiertas'
 import { useSession } from '@/shared/session/SessionProvider'
@@ -2384,16 +2619,16 @@ import { esAdmin, esAdminOSuperTecnico, esSuperTecnico } from '@/shared/session/
 import { useAlerta } from '@/shared/ui/AlertaProvider'
 import { BotonSecundario } from '@/shared/ui/Botones'
 import { DataTable } from '@/shared/ui/DataTable'
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { EtiquetaActualizado } from '@/shared/ui/EtiquetaActualizado'
 import { Input } from '@/shared/ui/input'
+import { MultiSelect } from '@/shared/ui/MultiSelect'
 import { useRegistrarExportable } from '@/shared/ui/exportable'
 import { AjustarMinimoDialog } from './AjustarMinimoDialog'
-import { useAjustarMinimo, useCantidadEnCamino, useComponentesStock, useEditarStock, useSetActivoComponente, useSolicitarPieza } from './api'
+import { pedirCantidadEnCamino, useAjustarMinimo, useComponentesStock, useEditarStock, useSetActivoComponente, useSolicitarPieza } from './api'
 import { CABECERAS_CSV_STOCK, claseFilaStock, crearColumnasStock, filaCsvStock, parametrosPedidos } from './columnas'
 import { EditarStockDialog } from './EditarStockDialog'
 import { filtrosStock, seleccionStock } from './estado'
-import { aplicarFiltrosStock, FILTROS_STOCK_VACIOS, textoBotonEstado, textoDesactivados } from './filtros'
+import { aplicarFiltrosStock, FILTROS_STOCK_VACIOS, textoDesactivados } from './filtros'
 import { GraficoEstado } from './GraficoEstado'
 import { GraficoSku } from './GraficoSku'
 import { conteosDonut } from './graficos'
@@ -2403,6 +2638,7 @@ import { SolicitarPiezaDialog } from './SolicitarPiezaDialog'
 const MSG_MODIFICADO = 'El componente fue modificado mientras editabas. Recarga los datos.'
 
 type Dialogo = { tipo: 'stock' | 'minimo' | 'solicitar'; c: Componente } | null
+type Grafico = { componente: Componente; enCamino: number }
 
 /** Pestaña "Stock actual" de StockView.fxml (spec 4a §6): una sola consulta para tabla, filtros, donut y pie. */
 export function StockPage() {
@@ -2413,6 +2649,8 @@ export function StockPage() {
   const [filtros, setFiltros] = useStore(filtrosStock)
   const [seleccionada, setSeleccionada] = useStore(seleccionStock)
   const [dialogo, setDialogo] = useState<Dialogo>(null)
+  // Texto de un 422 del servidor para el diálogo abierto (spec §8): se pinta dentro del diálogo, que sigue abierto.
+  const [errorServidor, setErrorServidor] = useState<string | null>(null)
   const { data = [], dataUpdatedAt, refetch } = useComponentesStock({ activo: !hayAlguna })
   const editarStock = useEditarStock()
   const ajustarMinimo = useAjustarMinimo()
@@ -2430,22 +2668,45 @@ export function StockPage() {
   const conteos = useMemo(() => conteosDonut(data), [data])
   const nDesactivados = useMemo(() => data.filter((c) => !c.activo).length, [data])
   const seleccionado = useMemo(() => data.find((c) => String(c.idCom) === seleccionada) ?? null, [data, seleccionada])
-  // La barra "Pedido" solo la piden ADMIN y SUPERTECNICO (:547); el técnico la ve a 0.
-  const { data: enCamino = 0 } = useCantidadEnCamino(seleccionado?.idCom ?? null, esAdminOSuperTecnico(sesion))
 
-  const irAPedidos = (c: Componente) => navigate(`/stock/pedidos?${parametrosPedidos(c)}`)
-  const columnas = useMemo(() => crearColumnasStock({ onEnCamino: irAPedidos }), [navigate]) // eslint-disable-line react-hooks/exhaustive-deps -- irAPedidos solo depende de navigate
+  // Gráfico por SKU (spec §8): la barra "Pedido" solo la piden ADMIN y SUPERTECNICO (:547). El gráfico solo cambia cuando
+  // llega la cantidad en camino; si la petición falla se avisa y el gráfico conserva el anterior, título incluido.
+  // `seleccionado` mantiene la referencia entre sondeos si no cambia (structural sharing de TanStack Query): el refresco
+  // no vuelve a pedir la cantidad.
+  const veEnCamino = esAdminOSuperTecnico(sesion)
+  const [grafico, setGrafico] = useState<Grafico | null>(null)
+  useEffect(() => {
+    if (!veEnCamino || !seleccionado) return
+    // Guard de carrera: si cambia la selección antes de que llegue la respuesta, la de la fila anterior se descarta.
+    let vigente = true
+    pedirCantidadEnCamino(seleccionado.idCom).then(
+      (enCamino) => { if (vigente) setGrafico({ componente: seleccionado, enCamino }) },
+      (e: unknown) => { if (vigente && !esErrorGestionadoGlobalmente(e)) mostrarError(mensajeDeError(e)) },
+    )
+    return () => { vigente = false }
+  }, [seleccionado, veEnCamino, mostrarError])
+  // Sin selección, "Selecciona un componente"; el TECNICO no pide la cantidad y su barra "Pedido" va a 0 al momento.
+  const graficoSku: Grafico | null = !seleccionado ? null : veEnCamino ? grafico : { componente: seleccionado, enCamino: 0 }
+
+  const irAPedidos = useCallback((c: Componente) => navigate(`/stock/pedidos?${parametrosPedidos(c)}`), [navigate])
+  const columnas = useMemo(() => crearColumnasStock({ onEnCamino: irAPedidos }), [irAPedidos])
 
   useRegistrarExportable(() => descargarCsv('stock_actual', CABECERAS_CSV_STOCK, visibles.map(filaCsvStock)))
 
-  function cambiarEstado(estado: EstadoStock, marcado: boolean) {
-    const estados = new Set(filtros.estados)
-    if (marcado) estados.add(estado)
-    else estados.delete(estado)
-    setFiltros({ ...filtros, estados })
+  function cerrarDialogo() {
+    setDialogo(null)
+    setErrorServidor(null)
   }
 
-  /** Editar stock: el 409 es el aviso de modificado (calco de :661-665); el resto de errores pasan por el mapeo común. */
+  /** Spec §8: un 422 del servidor se pinta dentro del diálogo, que sigue abierto. Devuelve true si lo ha gestionado. */
+  function errorEnDialogo(e: unknown): boolean {
+    if (!(e instanceof ReglaNegocioError)) return false
+    setErrorServidor(e.message)
+    return true
+  }
+
+  /** Editar stock: el 409 es el aviso de modificado (calco de :661-665); el resto de errores pasan por el mapeo común.
+   *  Las dos mutaciones con diálogo silencian el diálogo global (meta.silenciarError), así que el aviso sale una vez. */
   function alFallarEdicion(e: unknown) {
     if (esErrorGestionadoGlobalmente(e)) return
     mostrarError(mensajeDeError(e, { staleData: MSG_MODIFICADO }))
@@ -2459,20 +2720,19 @@ export function StockPage() {
     <div className="p-5">
       <h1 className="mb-3 text-2xl font-bold text-azul-medio">Stock actual</h1>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        {/* Calco del MenuButton "Estado" con CustomMenuItem(hideOnClick=false): marcar no cierra el desplegable. */}
-        <DropdownMenu onOpenChange={marcar}>
-          <DropdownMenuTrigger className="flex h-10 w-[130px] items-center justify-between rounded-3xl bg-azul-noche px-4 text-[12px] font-bold text-texto-nav-activo hover:bg-azul-noche-hover">
-            {textoBotonEstado(filtros.estados)}
-            <ChevronDown aria-hidden="true" className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {estadosMenu.map((e) => (
-              <DropdownMenuCheckboxItem key={e} checked={filtros.estados.has(e)} onCheckedChange={(v) => cambiarEstado(e, v === true)} onSelect={(ev) => ev.preventDefault()}>
-                {e}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Calco del MenuButton "Estado" con CustomMenuItem(hideOnClick=false) con el MultiSelect compartido (spec §5,
+            decisión 9): marcar no cierra el desplegable y abrirlo congela el refresco (onOpenChange → marcar). */}
+        <MultiSelect
+          opciones={estadosMenu}
+          clave={(e) => e}
+          etiqueta={(e) => e}
+          seleccion={filtros.estados}
+          onChange={(estados) => setFiltros({ ...filtros, estados: estados as Set<EstadoStock> })}
+          textoVacio="Estado"
+          textoPlural={(n) => `${n} estados`}
+          onOpenChange={marcar}
+          className="min-w-[130px]"
+        />
         <Input value={filtros.buscador} onChange={(e) => setFiltros({ ...filtros, buscador: e.target.value })} placeholder="Buscar componente…" className="w-[220px] bg-superficie" />
         <BotonSecundario onClick={() => setFiltros({ ...FILTROS_STOCK_VACIOS, estados: new Set() })}>Limpiar filtros</BotonSecundario>
       </div>
@@ -2509,36 +2769,47 @@ export function StockPage() {
         <aside className="flex w-[240px] shrink-0 flex-col gap-3 rounded-md border border-fila-sep bg-superficie p-4">
           <GraficoEstado conteos={conteos} />
           <hr className="border-fila-sep" />
-          <GraficoSku componente={seleccionado} enCamino={enCamino} />
+          <GraficoSku componente={graficoSku?.componente ?? null} enCamino={graficoSku?.enCamino ?? 0} />
         </aside>
       </div>
 
       <EditarStockDialog
         componente={dialogo?.tipo === 'stock' ? dialogo.c : null}
         enviando={editarStock.isPending}
-        onCancelar={() => setDialogo(null)}
+        errorServidor={errorServidor}
+        onCancelar={cerrarDialogo}
         onConfirmar={(stock) => {
           if (dialogo?.tipo !== 'stock') return
           const c = dialogo.c
-          editarStock.mutate({ c, stock }, { onSettled: () => setDialogo(null), onError: alFallarEdicion })
+          setErrorServidor(null)
+          editarStock.mutate({ c, stock }, {
+            onSuccess: cerrarDialogo,
+            // 422 → inline con el diálogo abierto; 409 y resto → se cierra y avisa (el 409 recarga por el onSettled del hook).
+            onError: (e) => { if (errorEnDialogo(e)) return; cerrarDialogo(); alFallarEdicion(e) },
+          })
         }}
       />
       <AjustarMinimoDialog
         componente={dialogo?.tipo === 'minimo' ? dialogo.c : null}
         enviando={ajustarMinimo.isPending}
-        onCancelar={() => setDialogo(null)}
+        errorServidor={errorServidor}
+        onCancelar={cerrarDialogo}
         onConfirmar={(stockMinimo) => {
           if (dialogo?.tipo !== 'minimo') return
-          ajustarMinimo.mutate({ idCom: dialogo.c.idCom, stockMinimo }, { onSuccess: () => setDialogo(null) })
+          setErrorServidor(null)
+          ajustarMinimo.mutate({ idCom: dialogo.c.idCom, stockMinimo }, {
+            onSuccess: cerrarDialogo,
+            onError: (e) => { if (errorEnDialogo(e)) return; if (!esErrorGestionadoGlobalmente(e)) mostrarError(mensajeDeError(e)) },
+          })
         }}
       />
       <SolicitarPiezaDialog
         componente={dialogo?.tipo === 'solicitar' ? dialogo.c : null}
         enviando={solicitar.isPending}
-        onCancelar={() => setDialogo(null)}
+        onCancelar={cerrarDialogo}
         onConfirmar={(descripcion) => {
           if (dialogo?.tipo !== 'solicitar') return
-          solicitar.mutate({ idCom: dialogo.c.idCom, descripcion }, { onSuccess: () => setDialogo(null) })
+          solicitar.mutate({ idCom: dialogo.c.idCom, descripcion }, { onSuccess: cerrarDialogo })
         }}
       />
     </div>
@@ -2546,13 +2817,15 @@ export function StockPage() {
 }
 ```
 
-Notas para quien lo implemente: (1) `useStore` devuelve `[valor, set]` con `set` que admite valor o función, como `useState`. (2) Si `DataTable` no tiene `altoFila`, mirar sus props (Task 10 ya lo usó): existe (`altoFila?: number`). (3) Con un 422 del servidor en "Editar stock" (Task 3), `mensajeDeError` devuelve el texto del servidor y el diálogo se cierra por `onSettled`: la spec §8 pide que un 422 se muestre inline con el diálogo abierto; para eso, en `onError` de las tres mutaciones con diálogo, si `e instanceof ReglaNegocioError` dejar el diálogo abierto y pasar el mensaje al diálogo (añadir un estado `errorServidor` que se pasa como `error` al diálogo cuando no hay error de validación local). Implementarlo así y añadir un test "un 422 deja el diálogo abierto con el texto del servidor". (4) El `p-5` calca el padding 20 del StackPane central; el `SubNav` ya aporta la columna izquierda.
+Notas para quien lo implemente: (1) `useStore` devuelve `[valor, set]` con `set` que admite valor o función, como `useState`. (2) Si `DataTable` no tiene `altoFila`, mirar sus props (Task 10 ya lo usó): existe (`altoFila?: number`). (3) Un 422 del servidor (Task 3) en "Editar stock" o "Ajustar mínimo" se pinta dentro del diálogo, que sigue abierto (spec §8): `errorEnDialogo` lo pasa a `errorServidor` y el diálogo lo muestra si no hay error de validación local (`useErrorServidor`, Task 12); `useEditarStock` y `useAjustarMinimo` llevan `meta: { silenciarError: true }` (Task 9) para que el diálogo global no lo repita. El 409 de "Editar stock" cierra y avisa como antes; el resto de errores pasa por `mostrarError(mensajeDeError(e))` salvo `esErrorGestionadoGlobalmente`. "Solicitar pieza" no cambia (sin 422 en su endpoint). (4) El `p-5` calca el padding 20 del StackPane central; el `SubNav` ya aporta la columna izquierda.
 
 - [ ] **Step 5: Ruta**
 
 En `router.tsx`: `{ path: '/stock', element: <StockPage /> }` con `import { StockPage } from '@/modules/almacen/stock/StockPage'`.
 
 - [ ] **Step 6: Ejecutar**
+
+**Ojo en tests:** tras un clic (o clic derecho) la fila queda seleccionada y `GraficoSku` pinta el tipo en su `<h2>`: `getByText('lcd-x')` encuentra dos nodos. Para apuntar a la fila se usa `filaDe(tipo)` o `within(screen.getByRole('table'))`.
 
 Run: `npx vitest run src/modules/almacen/stock && npm run check`
 Expected: PASS.
@@ -2573,7 +2846,7 @@ git commit -m "feat(stock): vista stock actual con filtros, tabla, graficos, men
 - Modify: `src/app/router.tsx` (`/stock/proveedores` → `<ProveedoresPage />`)
 
 **Interfaces:**
-- Consumes: `Proveedor` (Task 4), `DialogoAlmacen` (Task 7), `MultiSelect`, `StatusBadge`, `ConfirmDialog`, `ComboNavy`, `DataTable`, `EtiquetaActualizado`, `BotonPrimario`, `useInteraccionesAbiertas`, `useStore`, `descargarCsv`.
+- Consumes: `Proveedor` (Task 4), `DialogoAlmacen` (Task 7), `useErrorServidor` (Task 12), `ReglaNegocioError`/`mensajeDeError`/`esErrorGestionadoGlobalmente`, `MultiSelect`, `StatusBadge`, `ConfirmDialog`, `ComboNavy`, `DataTable`, `EtiquetaActualizado`, `BotonPrimario`, `useInteraccionesAbiertas`, `useStore`, `descargarCsv`.
 - Produces:
 
 ```ts
@@ -2581,8 +2854,8 @@ git commit -m "feat(stock): vista stock actual con filtros, tabla, graficos, men
 export const CLAVE_PROVEEDORES = ['proveedores', 'COMPONENTES'] as const
 export function useProveedoresComponentes({ activo }: { activo: boolean }): UseQueryResult<Proveedor[]>   // GET ?tipo=COMPONENTES
 export function tienePedidos(idProv: number): Promise<boolean>
-export function useCrearProveedor(): UseMutationResult<..., string>                                       // POST {nombre, tipo:'COMPONENTES'}
-export function useEditarProveedor(): UseMutationResult<..., { idProv: number; nombre: string; divisa: string; comentario: string }>
+export function useCrearProveedor(): UseMutationResult<..., string>                                       // POST {nombre, divisa:'EUR', tipo:'COMPONENTES'}, meta.silenciarError (422 inline)
+export function useEditarProveedor(): UseMutationResult<..., { idProv: number; nombre: string; divisa: string; comentario: string }> // meta.silenciarError (422 inline)
 export function useSetActivoProveedor(): UseMutationResult<..., { idProv: number; activo: boolean }>
 export function useBorrarProveedor(): UseMutationResult<..., number>
 // estado.ts
@@ -2684,8 +2957,19 @@ describe('ProveedoresPage', () => {
     await userEvent.click(dlg.getByRole('button', { name: 'Confirmar' }))
     expect(dlg.getByRole('alert')).toHaveTextContent('El nombre no puede estar vacío.')
     await userEvent.type(dlg.getByLabelText('Nombre del proveedor:'), '  Nuevo  {Enter}')
-    await waitFor(() => expect(cuerpo).toEqual({ nombre: 'Nuevo', tipo: 'COMPONENTES' }))
+    await waitFor(() => expect(cuerpo).toEqual({ nombre: 'Nuevo', divisa: 'EUR', tipo: 'COMPONENTES' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+  it('"Nuevo proveedor": un 422 del servidor se muestra inline y el diálogo sigue abierto, sin aviso global', async () => {
+    server.use(http.post('*/api/proveedores', () => HttpResponse.json({ message: 'El nombre no puede estar vacío.' }, { status: 422 })))
+    montar()
+    await screen.findByText('ACME')
+    await userEvent.click(screen.getByRole('button', { name: 'Nuevo proveedor' }))
+    const dlg = within(screen.getByRole('dialog', { name: 'Nuevo proveedor' }))
+    await userEvent.type(dlg.getByLabelText('Nombre del proveedor:'), 'Nuevo{Enter}')
+    expect(await dlg.findByRole('alert')).toHaveTextContent('El nombre no puede estar vacío.')
+    expect(screen.getByRole('dialog', { name: 'Nuevo proveedor' })).toBeInTheDocument()
+    expect(screen.getAllByText('El nombre no puede estar vacío.')).toHaveLength(1)
   })
   it('"Editar": precarga nombre, divisa y comentario; manda el PUT; nombre vacío avisa', async () => {
     let cuerpo: unknown = null
@@ -2696,16 +2980,30 @@ describe('ProveedoresPage', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Editar' }))
     const dlg = within(screen.getByRole('dialog', { name: 'Editar proveedor' }))
     expect(dlg.getByLabelText('Nombre')).toHaveValue('ACME')
-    expect(dlg.getByRole('button', { name: /Divisa/ })).toHaveTextContent('EUR')
+    // ComboNavy: el disparador es role="combobox" con aria-label; cada opción es un <li role="option"> con un <button>
+    // dentro, que es quien recibe el clic (patrón de ComboNavy.test.tsx).
+    expect(dlg.getByRole('combobox', { name: 'Divisa' })).toHaveTextContent('EUR')
     expect(dlg.getByLabelText('Comentario')).toHaveValue('principal')
     await userEvent.clear(dlg.getByLabelText('Nombre'))
     await userEvent.click(dlg.getByRole('button', { name: 'Confirmar' }))
     expect(dlg.getByRole('alert')).toHaveTextContent('El nombre no puede estar vacío.')
     await userEvent.type(dlg.getByLabelText('Nombre'), 'ACME 2')
-    await userEvent.click(dlg.getByRole('button', { name: /Divisa/ }))
-    await userEvent.click(screen.getByRole('option', { name: 'USD' }))
+    await userEvent.click(dlg.getByRole('combobox', { name: 'Divisa' }))
+    await userEvent.click(within(screen.getByRole('listbox', { name: 'Divisa' })).getByRole('button', { name: 'USD' }))
     await userEvent.click(dlg.getByRole('button', { name: 'Confirmar' }))
     await waitFor(() => expect(cuerpo).toEqual({ nombre: 'ACME 2', divisa: 'USD', comentario: 'principal' }))
+  })
+  it('"Editar": un 422 del servidor se muestra inline y el diálogo sigue abierto, sin aviso global', async () => {
+    server.use(http.put('*/api/proveedores/1', () => HttpResponse.json({ message: 'Divisa no válida (EUR o USD).' }, { status: 422 })))
+    montar()
+    await screen.findByText('ACME')
+    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('ACME') })
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Editar' }))
+    const dlg = within(screen.getByRole('dialog', { name: 'Editar proveedor' }))
+    await userEvent.click(dlg.getByRole('button', { name: 'Confirmar' }))
+    expect(await dlg.findByRole('alert')).toHaveTextContent('Divisa no válida (EUR o USD).')
+    expect(screen.getByRole('dialog', { name: 'Editar proveedor' })).toBeInTheDocument()
+    expect(screen.getAllByText('Divisa no válida (EUR o USD).')).toHaveLength(1)
   })
   it('"Borrar" pide confirmación con el texto del JavaFX y hace el DELETE; un 409 del servidor se muestra como aviso', async () => {
     let borrado = false
@@ -2741,6 +3039,8 @@ describe('ProveedoresPage', () => {
   })
 })
 ```
+
+**Ojo en tests:** `getAllByRole('button')` dentro de un diálogo incluye la ✕ de `DialogContent` (nombre accesible "Close", la última).
 
 - [ ] **Step 2: Ejecutar y ver que falla**
 
@@ -2781,21 +3081,24 @@ function useRecarga() {
   return () => void qc.invalidateQueries({ queryKey: CLAVE_PROVEEDORES })
 }
 
+/** El alta del cliente no manda divisa y el DAO pone EUR; el contrato (`ProveedorAltaRequest`) exige `nombre`, `divisa`
+ *  y `tipo`, así que se manda 'EUR' explícito: mismo resultado. Su 422 lo pinta el diálogo: silencia el global. */
 export function useCrearProveedor(): UseMutationResult<unknown, unknown, string> {
   const recargar = useRecarga()
   return useMutation({
-    // El alta del cliente no manda divisa: el servidor pone EUR. El contrato exige `divisa` y `tipo` en el cuerpo;
-    // si `divisa` no admite omitirse, mandar 'EUR' explícito (mismo resultado).
-    mutationFn: (nombre: string) => api.POST('/api/proveedores', { body: { nombre, tipo: 'COMPONENTES' } as never }),
+    mutationFn: (nombre: string) => api.POST('/api/proveedores', { body: { nombre, divisa: 'EUR', tipo: 'COMPONENTES' } }),
+    meta: { silenciarError: true },
     onSettled: recargar,
   })
 }
 
+/** Su 422 (nombre o divisa, Task 2) lo pinta el diálogo: silencia el global. */
 export function useEditarProveedor(): UseMutationResult<unknown, unknown, { idProv: number; nombre: string; divisa: string; comentario: string }> {
   const recargar = useRecarga()
   return useMutation({
     mutationFn: ({ idProv, ...body }: { idProv: number; nombre: string; divisa: string; comentario: string }) =>
       api.PUT('/api/proveedores/{idProv}', { params: { path: { idProv } }, body }),
+    meta: { silenciarError: true },
     onSettled: recargar,
   })
 }
@@ -2819,7 +3122,7 @@ export function useBorrarProveedor(): UseMutationResult<unknown, unknown, number
 }
 ```
 
-Sobre el `as never` del alta: `ProveedorAltaRequest` en `schema.d.ts` (línea ~2364) declara `nombre`, `divisa` y `tipo` como obligatorios porque el servidor marca todo `required`. El JavaFX manda `{nombre, tipo}` sin `divisa` (hotfix: solo `{nombre}`). Preferible a `as never`: mandar `{ nombre, divisa: 'EUR', tipo: 'COMPONENTES' }`, que cumple el contrato y da el mismo resultado que el DAO. Hacerlo así y quitar el cast.
+Sobre el alta: `ProveedorAltaRequest` en `schema.d.ts` (línea ~2364) declara `nombre`, `divisa` y `tipo` como obligatorios porque el servidor marca todo `required`. El JavaFX manda solo `{nombre}` (hotfix); la web manda `{ nombre, divisa: 'EUR', tipo: 'COMPONENTES' }`, que cumple el contrato sin casts y da el mismo resultado que el DAO (anotar en la ficha).
 
 `src/modules/almacen/proveedores/estado.ts`:
 
@@ -2920,16 +3223,18 @@ import { useLayoutEffect, useState } from 'react'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { DialogoAlmacen } from '../ui/DialogoAlmacen'
+import { useErrorServidor } from '../ui/useErrorServidor'
 
 export const MSG_NOMBRE_VACIO = 'El nombre no puede estar vacío.'
 
-type Props = { abierto: boolean; enviando: boolean; onConfirmar: (nombre: string) => void; onCancelar: () => void }
+type Props = { abierto: boolean; enviando: boolean; errorServidor?: string | null; onConfirmar: (nombre: string) => void; onCancelar: () => void }
 
 /** El TextInputDialog nativo de nuevoProveedor (:1773-1785) pasa al diálogo propio (spec 4a, S5): solo el nombre,
  *  "Nombre del proveedor:", sin cabecera. Diferencia S5: el nombre en blanco avisa en vez de cerrarse en silencio. */
-export function NuevoProveedorDialog({ abierto, enviando, onConfirmar, onCancelar }: Props) {
+export function NuevoProveedorDialog({ abierto, enviando, errorServidor, onConfirmar, onCancelar }: Props) {
   const [nombre, setNombre] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const servidor = useErrorServidor(errorServidor)
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- vacía el campo al abrir
     if (abierto) { setNombre(''); setError(null) }
@@ -2937,12 +3242,13 @@ export function NuevoProveedorDialog({ abierto, enviando, onConfirmar, onCancela
   function confirmar() {
     const n = nombre.trim()
     if (n === '') { setError(MSG_NOMBRE_VACIO); return }
+    setError(null)
     onConfirmar(n)
   }
   return (
-    <DialogoAlmacen abierto={abierto} titulo="Nuevo proveedor" error={error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
+    <DialogoAlmacen abierto={abierto} titulo="Nuevo proveedor" error={error ?? servidor.error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
       <Label htmlFor="nuevo-proveedor-nombre" className="text-[12px] font-bold text-azul-gris">Nombre del proveedor:</Label>
-      <Input id="nuevo-proveedor-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
+      <Input id="nuevo-proveedor-nombre" value={nombre} onChange={(e) => { setNombre(e.target.value); servidor.ocultar() }} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
     </DialogoAlmacen>
   )
 }
@@ -2957,21 +3263,23 @@ import { ComboNavy } from '@/shared/ui/ComboNavy'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { DialogoAlmacen } from '../ui/DialogoAlmacen'
+import { useErrorServidor } from '../ui/useErrorServidor'
 import { MSG_NOMBRE_VACIO } from './NuevoProveedorDialog'
 
 /** Exactamente las dos del combo del JavaFX (:1803-1806). */
 const DIVISAS = [{ valor: 'EUR', etiqueta: 'EUR' }, { valor: 'USD', etiqueta: 'USD' }]
 
-type Props = { proveedor: Proveedor | null; enviando: boolean; onConfirmar: (datos: { nombre: string; divisa: string; comentario: string }) => void; onCancelar: () => void }
+type Props = { proveedor: Proveedor | null; enviando: boolean; errorServidor?: string | null; onConfirmar: (datos: { nombre: string; divisa: string; comentario: string }) => void; onCancelar: () => void }
 
 /** Calco de editarProveedor (:1787-1868): Nombre, Divisa (EUR/USD, combo navy), Comentario (3 filas). Sin Enter en el
  *  JavaFX; aquí Enter en "Nombre" confirma (form), diferencia menor que se anota. El nombre del proveedor va en el
  *  subtítulo porque la web no tiene título de ventana ("Editar proveedor — <nombre>"). */
-export function EditarProveedorDialog({ proveedor, enviando, onConfirmar, onCancelar }: Props) {
+export function EditarProveedorDialog({ proveedor, enviando, errorServidor, onConfirmar, onCancelar }: Props) {
   const [nombre, setNombre] = useState('')
   const [divisa, setDivisa] = useState('EUR')
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const servidor = useErrorServidor(errorServidor)
   useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- precarga al abrir con otro proveedor
     if (proveedor) { setNombre(proveedor.nombre); setDivisa(proveedor.divisa || 'EUR'); setComentario(proveedor.comentario ?? ''); setError(null) }
@@ -2979,22 +3287,23 @@ export function EditarProveedorDialog({ proveedor, enviando, onConfirmar, onCanc
   function confirmar() {
     const n = nombre.trim()
     if (n === '') { setError(MSG_NOMBRE_VACIO); return }
+    setError(null)
     onConfirmar({ nombre: n, divisa, comentario: comentario.trim() })
   }
   return (
-    <DialogoAlmacen abierto={proveedor !== null} titulo="Editar proveedor" subtitulo={proveedor?.nombre} error={error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
+    <DialogoAlmacen abierto={proveedor !== null} titulo="Editar proveedor" subtitulo={proveedor?.nombre} error={error ?? servidor.error} textoAccion="Confirmar" enviando={enviando} onConfirmar={confirmar} onCancelar={onCancelar}>
       <Label htmlFor="editar-proveedor-nombre" className="text-[12px] font-bold text-azul-gris">Nombre</Label>
-      <Input id="editar-proveedor-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
+      <Input id="editar-proveedor-nombre" value={nombre} onChange={(e) => { setNombre(e.target.value); servidor.ocultar() }} autoFocus className="bg-superficie text-[13px] text-azul-medio" />
       <span className="text-[12px] font-bold text-azul-gris">Divisa</span>
-      <ComboNavy valor={divisa} opciones={DIVISAS} onChange={setDivisa} textoVacio="EUR" ancho={304} aria-label="Divisa" />
+      <ComboNavy valor={divisa} opciones={DIVISAS} onChange={(d) => { setDivisa(d); servidor.ocultar() }} textoVacio="EUR" ancho={304} aria-label="Divisa" />
       <Label htmlFor="editar-proveedor-comentario" className="text-[12px] font-bold text-azul-gris">Comentario</Label>
-      <textarea id="editar-proveedor-comentario" rows={3} value={comentario} onChange={(e) => setComentario(e.target.value)} className="w-full rounded border border-fila-sep bg-superficie p-1.5 text-[13px] text-azul-medio" />
+      <textarea id="editar-proveedor-comentario" rows={3} value={comentario} onChange={(e) => { setComentario(e.target.value); servidor.ocultar() }} className="w-full rounded border border-fila-sep bg-superficie p-1.5 text-[13px] text-azul-medio" />
     </DialogoAlmacen>
   )
 }
 ```
 
-`ComboNavy` (ver `src/shared/ui/ComboNavy.tsx`): el botón lleva `aria-label`, y las opciones se pintan con `role="option"`; si el test `getByRole('button', { name: /Divisa/ })` no encaja con el nombre accesible real, ajustar el test al que dé `ComboNavy`.
+`ComboNavy` (`src/shared/ui/ComboNavy.tsx:79-118`, comprobado): el disparador es `role="combobox"` con `aria-label` ("Divisa"); la lista es `role="listbox"` con el mismo nombre; cada opción es un `<li role="option">` con un `<button>` dentro, que es quien recibe el clic. Los tests eligen con `within(listbox).getByRole('button', { name: 'USD' })`, como `ComboNavy.test.tsx:19-26`.
 
 - [ ] **Step 6: `ProveedoresPage`**
 
@@ -3003,11 +3312,13 @@ export function EditarProveedorDialog({ proveedor, enviando, onConfirmar, onCanc
 ```tsx
 import { useEffect, useMemo, useState } from 'react'
 import type { Proveedor } from '@/shared/api/client'
+import { esErrorGestionadoGlobalmente, mensajeDeError, ReglaNegocioError } from '@/shared/api/errors'
 import { descargarCsv } from '@/shared/lib/csv'
 import { useStore } from '@/shared/lib/store'
 import { useInteraccionesAbiertas } from '@/shared/lib/useInteraccionesAbiertas'
 import { useSession } from '@/shared/session/SessionProvider'
 import { esSuperTecnico } from '@/shared/session/storage'
+import { useAlerta } from '@/shared/ui/AlertaProvider'
 import { BotonPrimario } from '@/shared/ui/Botones'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { DataTable } from '@/shared/ui/DataTable'
@@ -3027,10 +3338,13 @@ type Dialogo = { tipo: 'nuevo' } | { tipo: 'editar'; p: Proveedor } | { tipo: 'b
 export function ProveedoresPage() {
   const { sesion } = useSession()
   const puedeEditar = esSuperTecnico(sesion)
+  const { mostrarError } = useAlerta()
   const { hayAlguna, marcar } = useInteraccionesAbiertas()
   const [seleccion, setSeleccion] = useStore(filtroProveedores)
   const [seleccionada, setSeleccionada] = useStore(seleccionProveedores)
   const [dialogo, setDialogo] = useState<Dialogo>(null)
+  // Texto de un 422 del servidor para el diálogo de alta o edición abierto (spec §8): se pinta dentro, que sigue abierto.
+  const [errorServidor, setErrorServidor] = useState<string | null>(null)
   const { data = [], dataUpdatedAt, refetch } = useProveedoresComponentes({ activo: !hayAlguna })
   const crear = useCrearProveedor()
   const editar = useEditarProveedor()
@@ -3046,6 +3360,19 @@ export function ProveedoresPage() {
   const visibles = useMemo(() => (seleccion.size === 0 ? data : data.filter((p) => seleccion.has(p.nombre))), [data, seleccion])
   const columnas = useMemo(() => crearColumnasProveedores(), [])
   useRegistrarExportable(() => descargarCsv('proveedores', CABECERAS_CSV_PROVEEDORES, visibles.map(filaCsvProveedor)))
+
+  function cerrarDialogo() {
+    setDialogo(null)
+    setErrorServidor(null)
+  }
+
+  /** Alta y edición (silencian el diálogo global): el 422 va al diálogo, que sigue abierto; el resto se avisa con el
+   *  mapeo común, salvo lo que ya gestiona el mecanismo global (401, sin conexión). */
+  function alFallarDialogo(e: unknown) {
+    if (e instanceof ReglaNegocioError) { setErrorServidor(e.message); return }
+    if (esErrorGestionadoGlobalmente(e)) return
+    mostrarError(mensajeDeError(e))
+  }
 
   return (
     <div className="p-5">
@@ -3068,8 +3395,24 @@ export function ProveedoresPage() {
         ) : undefined}
       />
       <EtiquetaActualizado actualizadoEn={dataUpdatedAt} onRecargar={() => refetch({ throwOnError: true })} />
-      <NuevoProveedorDialog abierto={dialogo?.tipo === 'nuevo'} enviando={crear.isPending} onCancelar={() => setDialogo(null)} onConfirmar={(nombre) => crear.mutate(nombre, { onSuccess: () => setDialogo(null) })} />
-      <EditarProveedorDialog proveedor={dialogo?.tipo === 'editar' ? dialogo.p : null} enviando={editar.isPending} onCancelar={() => setDialogo(null)} onConfirmar={(datos) => { if (dialogo?.tipo !== 'editar') return; editar.mutate({ idProv: dialogo.p.idProv, ...datos }, { onSuccess: () => setDialogo(null) }) }} />
+      <NuevoProveedorDialog
+        abierto={dialogo?.tipo === 'nuevo'}
+        enviando={crear.isPending}
+        errorServidor={errorServidor}
+        onCancelar={cerrarDialogo}
+        onConfirmar={(nombre) => { setErrorServidor(null); crear.mutate(nombre, { onSuccess: cerrarDialogo, onError: alFallarDialogo }) }}
+      />
+      <EditarProveedorDialog
+        proveedor={dialogo?.tipo === 'editar' ? dialogo.p : null}
+        enviando={editar.isPending}
+        errorServidor={errorServidor}
+        onCancelar={cerrarDialogo}
+        onConfirmar={(datos) => {
+          if (dialogo?.tipo !== 'editar') return
+          setErrorServidor(null)
+          editar.mutate({ idProv: dialogo.p.idProv, ...datos }, { onSuccess: cerrarDialogo, onError: alFallarDialogo })
+        }}
+      />
       <ConfirmDialog
         abierto={dialogo?.tipo === 'borrar'}
         titulo="Borrar proveedor"
@@ -3083,7 +3426,7 @@ export function ProveedoresPage() {
 }
 ```
 
-Los 422 del servidor (Task 2) en alta y edición: como en Task 13 nota (3), `onError` con `ReglaNegocioError` deja el diálogo abierto y pasa el mensaje al `error` del diálogo; añadir el mismo estado `errorServidor` y un test.
+Los 422 del servidor (Task 2) en alta y edición se pintan dentro del diálogo, que sigue abierto (spec §8), igual que en la Task 13: `useCrearProveedor` y `useEditarProveedor` llevan `meta: { silenciarError: true }`, la página guarda `errorServidor` y los diálogos lo muestran con `useErrorServidor` (Task 12). Cubierto por los dos tests "un 422 del servidor se muestra inline…".
 
 - [ ] **Step 7: Ruta y ejecución**
 
@@ -3105,7 +3448,7 @@ git commit -m "feat(proveedores): pestaña proveedores con filtro de activos, al
 
 **Files:**
 - Modify: `src/modules/taller/notificaciones/PanelNotificaciones.tsx:24-35, 119, 152-153`
-- Modify: `src/modules/taller/notificaciones/PanelNotificaciones.test.tsx:179-205`
+- Modify: `src/modules/taller/notificaciones/PanelNotificaciones.test.tsx:5` (import de `renderConRouter`), `:55-62` (helper nuevo junto a `abrirPanel`), `:179-205`
 
 **Interfaces:**
 - Consumes: `useNavigate` de `react-router`; `onCerrar` del panel.
@@ -3113,40 +3456,53 @@ git commit -m "feat(proveedores): pestaña proveedores con filtro de activos, al
 
 - [ ] **Step 1: Test (falla)**
 
-En `PanelNotificaciones.test.tsx`, sustituir el test `'"→ Ir a pedidos" deshabilitado con el tooltip de Almacén en las dos pestañas'` por:
+`abrirPanel` (`PanelNotificaciones.test.tsx:55-62`) monta `<Campana />` (no el panel) con `renderConProviders`, pulsa `data-testid="campana"` y la pestaña, y devuelve `{ ...render, llamadas }`: no hay `onCerrar` espiable (lo gestiona la Campana). El panel es `data-testid="panel-notificaciones"`. Añadir `renderConRouter` al import de `@/test/render` y, junto a `abrirPanel`, la variante con data router. La Campana va en la ruta comodín `*` para seguir montada tras navegar (con `path: '/'`, ir a `/stock/pedidos` la desmontaría y "se cerró" pasaría aunque nadie cerrara el panel):
+
+```tsx
+/** Como abrirPanel, pero con un data router para leer la ruta tras navegar (sub-proyecto 4a). La Campana va en la ruta
+ *  comodín para seguir montada después de ir a /stock o /stock/pedidos. */
+async function abrirPanelConRouter(escenario: EscenarioNotificaciones = ESCENARIO, pestana: 'Solicitudes' | 'Alertas' = 'Solicitudes') {
+  const registro = conRegistroNotificaciones(escenario)
+  server.use(...registro.handlers)
+  const resultado = renderConRouter([{ path: '*', element: <Campana /> }], { sesion: SESION_SUPER })
+  await userEvent.click(screen.getByTestId('campana'))
+  await userEvent.click(screen.getByRole('tab', { name: pestana }))
+  return { ...resultado, llamadas: registro.llamadas }
+}
+```
+
+Sustituir el test `'"→ Ir a pedidos" deshabilitado con el tooltip de Almacén en las dos pestañas'` por (una montura por pestaña, desmontada al final de cada vuelta para no dejar dos campanas):
 
 ```tsx
   it('"→ Ir a pedidos" cierra el panel y navega a /stock/pedidos desde las dos pestañas', async () => {
-    for (const pestana of ['Solicitudes', 'Alertas']) {
-      const { onCerrar, router } = await abrirPanelConRouter({})
-      await userEvent.click(screen.getByRole('tab', { name: pestana }))
+    for (const pestana of ['Solicitudes', 'Alertas'] as const) {
+      const { router, unmount } = await abrirPanelConRouter({}, pestana)
       const enlace = screen.getByRole('button', { name: '→ Ir a pedidos' })
       expect(enlace).toBeEnabled()
       expect(enlace).toHaveClass('text-[12px]', 'font-bold', 'text-azul-noche', 'cursor-pointer')
       await userEvent.click(enlace)
-      expect(onCerrar).toHaveBeenCalled()
+      await waitFor(() => expect(screen.queryByTestId('panel-notificaciones')).not.toBeInTheDocument())
+      expect(screen.getByTestId('campana')).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/stock/pedidos')
+      unmount()
     }
   })
 ```
 
-y en el test de los reservados, sacar "Ver Stock Completo" de la lista (quedan `Pedir` ×2 y "Pedir todas las piezas": `toHaveLength(3)`) y añadir:
+En el test de los reservados (`:190`), renombrarlo a `'"Pedir piezas", "Pedir" y "Pedir todas las piezas" deshabilitados con tooltip; "Rechazar todo" habilitado'`, sacar "Ver Stock Completo" de la lista (quedan `Pedir` ×2 y "Pedir todas las piezas": `toHaveLength(3)`) y añadir:
 
 ```tsx
   it('"Ver Stock Completo" cierra el panel y navega a /stock sin filtros', async () => {
-    const { onCerrar, router } = await abrirPanelConRouter()
-    await userEvent.click(screen.getByRole('tab', { name: 'Alertas' }))
+    const { router } = await abrirPanelConRouter(ESCENARIO, 'Alertas')
     const boton = screen.getByRole('button', { name: 'Ver Stock Completo' })
     expect(boton).toBeEnabled()
     expect(boton).toHaveClass('bg-azul-medio', 'text-superficie')
     await userEvent.click(boton)
-    expect(onCerrar).toHaveBeenCalled()
+    await waitFor(() => expect(screen.queryByTestId('panel-notificaciones')).not.toBeInTheDocument())
     expect(router.state.location.pathname).toBe('/stock')
     expect(router.state.location.search).toBe('')
   })
 ```
-
-`abrirPanelConRouter` es `abrirPanel` (helper ya existente en ese fichero) montado con `renderConRouter` de `@/test/render` en vez de `renderConProviders`, devolviendo además `router` para leer `router.state.location`. Mirar cómo está escrito `abrirPanel` y crear la variante (o cambiar `abrirPanel` a `renderConRouter` si todos los tests siguen pasando).
 
 - [ ] **Step 2: Ejecutar y ver que falla**
 
@@ -3203,13 +3559,31 @@ git commit -m "feat(campana): ver stock completo e ir a pedidos navegan a la vis
 **Interfaces:**
 - Consumes: `credenciales` de `tests/e2e/credenciales.ts`; el login de `tests/e2e/taller.spec.ts`.
 
-Variables nuevas (en `~/.env.e2e`, fuera del repo): `E2E_SKU_PRUEBA` (el `tipo` exacto de un componente **de prueba** activo y master, que exista en la BD de pruebas). Si falta, el test se salta. El proveedor de prueba se crea con nombre único `E2E <timestamp>` y se borra por ese nombre (el `POST /api/proveedores` responde 201 sin cuerpo: no devuelve el id, así que la identificación por lo que devuelve el servidor no es posible aquí; se anota en la ficha como desviación de la spec §9 y se hace como `clientes.spec.ts`).
+Variables nuevas (en `~/.env.e2e`, fuera del repo): `E2E_SKU_PRUEBA` (el `tipo` exacto de un componente **de prueba** activo y master, que exista en la BD de pruebas). Si falta, el test se salta. El proveedor de prueba se crea con nombre único `E2E <timestamp>`. El `POST /api/proveedores` responde 201 sin cuerpo, así que tras el alta el id se obtiene con `GET /api/proveedores?tipo=COMPONENTES` buscando el nombre EXACTO (debe haber uno y solo uno) y el borrado se hace por ese id: el `DELETE` a cualquier otro id se aborta con `page.route`. Nunca se borra por nombre a ciegas; si no se obtiene el id, el test falla SIN limpiar (mejor basura de test que borrar una fila ajena, como `asignar.spec.ts`).
 
 - [ ] **Step 1: El test**
 
 ```ts
 import { expect, test, type Page } from '@playwright/test'
-import { credenciales } from './credenciales'
+import { credenciales } from './credenciales.ts'
+
+const escaparRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** La fila cuya primera celda es EXACTAMENTE `texto` (patrón de asignar.spec.ts:18-24): "lcd-x" no casa con "lcd-x-pro". */
+function filaExacta(page: Page, texto: string) {
+  const exacto = new RegExp(`^\\s*${escaparRegex(texto)}\\s*$`)
+  return page.getByRole('row').filter({ has: page.getByRole('cell').first().filter({ hasText: exacto }) })
+}
+
+/** GET /api/proveedores?tipo=COMPONENTES con el token de la sesión de la página (misma origin que la app). */
+async function proveedoresComponentes(page: Page): Promise<{ idProv: number; nombre: string }[]> {
+  return page.evaluate(async () => {
+    const sesion = JSON.parse(sessionStorage.getItem('fsgr.sesion') ?? '{}') as { token?: string }
+    const r = await fetch('/api/proveedores?tipo=COMPONENTES', { headers: { Authorization: `Bearer ${sesion.token}` } })
+    if (!r.ok) throw new Error(`GET /api/proveedores: ${r.status}`)
+    return (await r.json()) as { idProv: number; nombre: string }[]
+  })
+}
 
 async function entrar(page: Page) {
   const { usuario, clave } = credenciales('E2E_USER', 'E2E_PASS')
@@ -3234,8 +3608,8 @@ test('supertécnico: stock actual, editar stock y devolverlo; proveedor de prueb
 
   // Localizar el SKU de prueba con el buscador y leer su stock
   await page.getByPlaceholder('Buscar componente…').fill(sku!)
-  const fila = page.getByRole('row', { name: new RegExp(`^${sku}`) }).first()
-  await expect(fila).toBeVisible()
+  const fila = filaExacta(page, sku!)
+  await expect(fila).toHaveCount(1)
   const stockInicial = Number((await fila.getByRole('cell').nth(1).textContent())?.trim())
   expect(Number.isInteger(stockInicial)).toBe(true)
 
@@ -3255,22 +3629,36 @@ test('supertécnico: stock actual, editar stock y devolverlo; proveedor de prueb
     await editar(stockInicial)
   }
 
-  // Proveedor de prueba: alta, ver en la tabla, borrar por nombre único
+  // Proveedor de prueba: alta, id por el nombre exacto, ver en la tabla y borrar SOLO ese id
   const nombre = `E2E ${Date.now()}`
   await page.getByRole('link', { name: 'Proveedores' }).click()
   await expect(page.getByRole('heading', { name: 'Proveedores' })).toBeVisible()
   await page.getByRole('button', { name: 'Nuevo proveedor' }).click()
   await page.getByRole('dialog', { name: 'Nuevo proveedor' }).getByLabel('Nombre del proveedor:').fill(nombre)
   await page.getByRole('dialog', { name: 'Nuevo proveedor' }).getByRole('button', { name: 'Confirmar' }).click()
-  const filaProv = page.getByRole('row', { name: new RegExp(`^${nombre}`) })
-  await expect(filaProv).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Nuevo proveedor' })).toBeHidden()
+  // El alta responde 201 sin cuerpo: el id sale del listado, con el nombre exacto y único. Si no aparece exactamente
+  // uno, el test falla aquí sin limpiar nada.
+  const creados = (await proveedoresComponentes(page)).filter((p) => p.nombre === nombre)
+  expect(creados).toHaveLength(1)
+  const idProv = creados[0].idProv
+  const filaProv = filaExacta(page, nombre)
+  await expect(filaProv).toHaveCount(1)
   try {
     await expect(filaProv.getByText('Activo')).toBeVisible()
   } finally {
+    // Solo pasa el DELETE de ese id: si la fila o el menú apuntaran a otro proveedor, la petición se aborta.
+    await page.route('**/api/proveedores/*', (route) => {
+      const req = route.request()
+      if (req.method() === 'DELETE' && new URL(req.url()).pathname !== `/api/proveedores/${idProv}`) return route.abort()
+      return route.continue()
+    })
+    const borrado = page.waitForResponse((r) => r.request().method() === 'DELETE' && new URL(r.url()).pathname === `/api/proveedores/${idProv}`)
     await filaProv.click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Borrar' }).click()
     await page.getByRole('dialog', { name: 'Borrar proveedor' }).getByRole('button', { name: 'Borrar' }).click()
-    await expect(filaProv).toBeHidden()
+    expect((await borrado).status()).toBe(204)
+    await expect(filaProv).toHaveCount(0)
   }
 })
 ```
@@ -3315,7 +3703,7 @@ git commit -m "test(e2e): smoke de stock actual y proveedores con limpieza"
 
 - [ ] **Step 1: La ficha**
 
-Mismo formato que `docs/paridad/asignar-trabajos.md`: título "Ficha de paridad — Stock actual y Proveedores (StockController)", párrafos de Referencia (`hotfix/0.16.3`, con `?tipo=COMPONENTES` de `main`) / Capturas (**solo por nombre**: `almacen/stock-*.png`, `almacen/proveedores-*.png`, `almacen/campana-*.png`, documentación privada fuera del repo) / ejemplos sintéticos; después **"## Diferencias deliberadas"** con las de la spec §10 (diálogos propios, aviso de nombre en blanco, ordenación bloqueada, selección mantenida, 409 al borrar, `tiene-pedidos` al abrir el menú, Recharts) más las salidas de la ejecución (subtítulo del diálogo de editar proveedor en vez de título de ventana; Enter confirma en "Editar proveedor"; ancho 360 en "Solicitar pieza"; 422 inline con el diálogo abierto; smoke que borra por nombre y no por id); y secciones de `- [ ]` por bloque: sidebar y rutas, tabla, semáforo y estilos, filtros, pie, donut, gráfico por SKU, menú por rol, editar stock, ajustar mínimo, activar/desactivar, solicitar pieza, proveedores (tabla, filtro, menú, nuevo, editar, borrar), campana, CSV, refresco y errores. Una línea por comportamiento del inventario, con la captura entre paréntesis.
+Mismo formato que `docs/paridad/asignar-trabajos.md`: título "Ficha de paridad — Stock actual y Proveedores (StockController)", párrafos de Referencia (`hotfix/0.16.3`, con `?tipo=COMPONENTES` de `main`) / Capturas (**solo por nombre**: `almacen/stock-*.png`, `almacen/proveedores-*.png`, `almacen/campana-*.png`, documentación privada fuera del repo) / ejemplos sintéticos; después **"## Diferencias deliberadas respecto al JavaFX"** con las de la spec §10 (diálogos propios, aviso de nombre en blanco, ordenación bloqueada, selección mantenida, 409 al borrar, `tiene-pedidos` al abrir el menú, Recharts) más las salidas de la ejecución (en "Editar proveedor" el nombre del proveedor va en el subtítulo en vez de en el título de ventana: la web no tiene título de ventana y así queda coherente con "Editar stock" (decisión 7); "Último pedido": el JavaFX pinta la fecha UTC sin convertir y la web la pasa a hora de Madrid con `formatear`, como el resto de la web y el CSV del JavaFX; solo difiere con pedidos entre las 22:00 y las 24:00 UTC, diferencia aceptada (decisión 8); "Ajustar mínimo" con título "Ajustar mínimo" y el subtítulo de componente en vez del título de ventana "Stock mínimo" del `TextInputDialog` (decisión 6, spec §6/S5); el filtro "Estado" es el `MultiSelect` compartido (casillas en un popover) en vez del `MenuButton` del JavaFX (decisión 9, spec §5); nombre de más de 100 caracteres → 422 "El nombre no puede superar los 100 caracteres." (decisión 3); Enter confirma en "Editar proveedor"; ancho 360 en "Solicitar pieza"; 422 inline con el diálogo abierto; el alta de proveedor manda `divisa: 'EUR'` explícita; el smoke obtiene el id del proveedor de prueba con un GET por nombre exacto porque el alta no lo devuelve; `useInteraccionesAbiertas` en `shared/lib` y no en `shared/api` como decía la spec §5; `cantidad-en-camino` con un `idCom` inexistente responde 500 en vez de `{"value":0}`, como `insertar`; el negativo del combo de SKU del formulario pasa a ámbar); y secciones de `- [ ]` por bloque: sidebar y rutas, tabla, semáforo y estilos, filtros, pie, donut, gráfico por SKU, menú por rol, editar stock, ajustar mínimo, activar/desactivar, solicitar pieza, proveedores (tabla, filtro, menú, nuevo, editar, borrar), campana, CSV, refresco y errores. Una línea por comportamiento del inventario, con la captura entre paréntesis.
 
 - [ ] **Step 2: Marcarla contra las capturas**
 
@@ -3336,7 +3724,7 @@ Tomar las mismas situaciones que las capturas `stock-*`, `proveedores-*` y `camp
 - Stock actual: tabla con componente, en stock, en camino (enlace a Pedidos), mínimo, último pedido y el semáforo OK / Bajo / Sin stock / Desactivado; filtro de estado, buscador y "Limpiar filtros"; donut "Estado del stock" y gráfico por SKU al seleccionar una fila; menú por rol con Pedir, Editar stock, Ajustar mínimo, Desactivar/Activar y Solicitar pieza.
 - Proveedores: tabla, filtro de activos, alta, edición (divisa y comentario), activar/desactivar y borrado con confirmación.
 - La campana: "Ver Stock Completo" e "→ Ir a pedidos" abren la vista de Stock.
-- Servidor: cantidad en camino resuelta al SKU master, 409 al borrar un proveedor con pedidos y 422 en cantidades negativas, nombre vacío o divisa desconocida.
+- Servidor: cantidad en camino resuelta al SKU master, 409 al borrar un proveedor con pedidos y 422 en cantidades negativas, nombre vacío o de más de 100 caracteres o divisa desconocida.
 - Diferencias aceptadas respecto al programa de escritorio: `docs/paridad/stock.md`.
 ```
 
@@ -3363,7 +3751,7 @@ En el raíz, añadir al final de este plan la sección **"Ejecución y cierre"**
 
 - [ ] **Step 7: Parar y pedir OK al usuario**
 
-**No hacer push, merge, tag ni despliegue.** Presentar: qué se ha hecho, estado de los tres repos, y la lista de pasos que requieren su OK **uno a uno**: push de las dos ramas, merges `--no-ff`, tag `v0.6.0`, gitlinks en el raíz, despliegue en la VDC con **el servidor antes que la web**, smoke de la Task 16 contra producción, y actualizar `Apuntes/plan-futuro.md` (casilla 4a) y la memoria del programa.
+**No hacer push, merge, tag ni despliegue.** Presentar: qué se ha hecho, estado de los tres repos, y la lista de pasos que requieren su OK **uno a uno**: push de las dos ramas; **antes del merge del servidor, paso del usuario (decisión 1):** ejecutar en preprod y en prod `SELECT DIVISA, COUNT(*) FROM Proveedor GROUP BY DIVISA;` y normalizar a `EUR`/`USD` cualquier otra divisa (el `PUT /api/proveedores/{idProv}` responde 422 "Divisa no válida (EUR o USD)." y el JavaFX precarga la divisa guardada, así que un proveedor con otra divisa dejaría de poder editarse); merges `--no-ff`, tag `v0.6.0`, gitlinks en el raíz, despliegue en la VDC con **el servidor antes que la web**, smoke de la Task 16 contra producción, y actualizar `Apuntes/plan-futuro.md` (casilla 4a) y la memoria del programa.
 
 ---
 
@@ -3380,13 +3768,13 @@ En el raíz, añadir al final de este plan la sección **"Ejecución y cierre"**
 | §3 "En Camino" > 0 enlace → Pedidos con pendiente + en camino + parcial y buscador | `columnas.test` "En Camino…", "parámetros hacia Pedidos", `StockPage.test` "En Camino > 0 navega…" |
 | §4 semáforo de cuatro valores, negativo = Bajo | `semaforoStock.test` |
 | §5 badge y fila por estado; desactivada 0.45 y no se pone azul | `columnas.test` badge y clase de fila |
-| §6 filtro Estado OR, ninguno = todos, "N estados", no se cierra al marcar; buscador contiene; Limpiar | `filtros.test`, `StockPage.test` "filtro Estado…" |
-| §6 al llegar desde Pedidos se conserva "Desactivado" | `filtros.test` "al llegar desde Pedidos…" (4b la usa) |
+| §6 filtro Estado OR, ninguno = todos, "N estados", no se cierra al marcar; buscador contiene; Limpiar | `filtros.test`, `MultiSelect.test` (texto del botón), `StockPage.test` "filtro Estado…" |
+| §6 al llegar desde Pedidos se conserva "Desactivado" | 4b (`filtrosDesdePedidos` sale de 4a, decisión 10) |
 | §7 donut sobre todo, activos, sin negativos; compartidos como filas; total y leyenda | `graficos.test.ts` conteosDonut, `graficos.test.tsx` GraficoEstado, `StockPage.test` "el donut cuenta…" |
 | §8 barra Stock por semáforo, Pedido azul, placeholder; Pedido solo ADMIN/SUPERTECNICO | `graficos.test` colorBarraStock, GraficoSku, `StockPage.test` "seleccionar una fila…", "el TECNICO no pide…" |
 | §9 menú por rol con separadores; Activar/Desactivar alterna; ADMIN sin menú | `StockPage.test` "menú del supertécnico…", "ADMIN…", "TECNICO…" |
 | §9.1 Editar stock: precarga, Enter, error, PUT tal cual, 409 con aviso y recarga | `dialogos.test`, `api.test` useEditarStock, `StockPage.test` "Editar stock manda el PUT…" |
-| §9.2 Ajustar mínimo: "Stock mínimo", "Nuevo stock mínimo:", error, PATCH | `dialogos.test` AjustarMinimo, `StockPage.test` "Ajustar mínimo hace el PATCH…" |
+| §9.2 Ajustar mínimo: título "Ajustar mínimo" y subtítulo de componente (decisión 6), "Nuevo stock mínimo:" precargado, error, PATCH | `dialogos.test` AjustarMinimo, `StockPage.test` "Ajustar mínimo hace el PATCH…" |
 | §9.3 Desactivar sin confirmación | `StockPage.test` ídem |
 | §9.4 Solicitar pieza: placeholder, sin validación, null, sin recarga | `dialogos.test` SolicitarPieza, `StockPage.test` ídem (cargas.n no sube) |
 | §10 proveedores ?tipo=COMPONENTES; columnas; orden del servidor | `ProveedoresPage.test` "pide los de COMPONENTES…" |
@@ -3410,8 +3798,8 @@ En el raíz, añadir al final de este plan la sección **"Ejecución y cierre"**
 
 **Sin marcadores.** No hay "TBD" ni pasos sin contenido. Donde el plan dice "mirar el fichero" (constructor de `CompraComponenteDAO`, `refDeLaRespuesta`, nombre accesible de `ComboNavy`, helper `abrirPanel`, `data-state` de la fila de `DataTable`), es una comprobación con ruta concreta, no un hueco.
 
-**Consistencia de nombres.** `estadoStock`, `ESTADOS_STOCK`, `EstadoStock`, `ordenarStock`, `aplicarFiltrosStock`, `textoBotonEstado`, `textoDesactivados`, `nombreComponente`, `filtrosDesdePedidos`, `FILTROS_STOCK_VACIOS`, `filtrosStock`, `seleccionStock`, `useComponentesStock`, `pedirCantidadEnCamino`, `useCantidadEnCamino`, `useEditarStock`, `useAjustarMinimo`, `useSetActivoComponente`, `useSolicitarPieza`, `crearColumnasStock`, `claseFilaStock`, `BadgeEstadoStock`, `parametrosPedidos`, `CABECERAS_CSV_STOCK`, `filaCsvStock`, `conteosDonut`, `colorBarraStock`, `COLORES_DONUT`, `COLOR_BARRA_PEDIDO`, `GraficoEstado`, `GraficoSku`, `subtituloComponente`, `parseEnteroNoNegativo`, `EditarStockDialog`, `AjustarMinimoDialog`, `SolicitarPiezaDialog`, `MenuComponente`, `StockPage`, `DialogoAlmacen`, `useProveedoresComponentes`, `tienePedidos`, `useCrearProveedor`, `useEditarProveedor`, `useSetActivoProveedor`, `useBorrarProveedor`, `crearColumnasProveedores`, `claseFilaProveedor`, `CABECERAS_CSV_PROVEEDORES`, `filaCsvProveedor`, `MenuProveedor`, `NuevoProveedorDialog`, `EditarProveedorDialog`, `ProveedoresPage`, `enlacesStock`, `Enlace` se usan igual en todas las tareas. En el servidor, `ValorEntero`, `MSG_NOMBRE`, `MSG_DIVISA`, `MSG_TIENE_PEDIDOS`, `MSG_CANTIDAD`, `MSG_MINIMO` son consistentes entre Tasks 1-3 y los tests.
+**Consistencia de nombres.** `estadoStock`, `ESTADOS_STOCK`, `EstadoStock`, `ordenarStock`, `aplicarFiltrosStock`, `textoDesactivados`, `nombreComponente`, `FILTROS_STOCK_VACIOS`, `filtrosStock`, `seleccionStock`, `useComponentesStock`, `pedirCantidadEnCamino`, `useEditarStock`, `useAjustarMinimo`, `useSetActivoComponente`, `useSolicitarPieza`, `crearColumnasStock`, `claseFilaStock`, `BadgeEstadoStock`, `parametrosPedidos`, `CABECERAS_CSV_STOCK`, `filaCsvStock`, `conteosDonut`, `colorBarraStock`, `COLORES_DONUT`, `COLOR_BARRA_PEDIDO`, `GraficoEstado`, `GraficoSku`, `subtituloComponente`, `parseEnteroNoNegativo`, `EditarStockDialog`, `AjustarMinimoDialog`, `SolicitarPiezaDialog`, `MenuComponente`, `StockPage`, `DialogoAlmacen`, `useProveedoresComponentes`, `tienePedidos`, `useCrearProveedor`, `useEditarProveedor`, `useSetActivoProveedor`, `useBorrarProveedor`, `crearColumnasProveedores`, `claseFilaProveedor`, `CABECERAS_CSV_PROVEEDORES`, `filaCsvProveedor`, `MenuProveedor`, `NuevoProveedorDialog`, `EditarProveedorDialog`, `ProveedoresPage`, `enlacesStock`, `Enlace` se usan igual en todas las tareas. En el servidor, `ValorEntero`, `MSG_NOMBRE`, `MSG_NOMBRE_LARGO`, `MSG_DIVISA`, `MSG_TIENE_PEDIDOS`, `MSG_CANTIDAD`, `MSG_MINIMO` son consistentes entre Tasks 1-3 y los tests.
 
-**Riesgo conocido.** Recharts en jsdom, el nombre accesible del combo de `ComboNavy`, el `data-state` de la fila seleccionada de `DataTable` y el `aria-describedby` de `DialogContent` se comprueban en el código antes de escribir; si no coinciden, manda el código existente y se ajusta el test, no el comportamiento.
+**Comprobado en la revisión previa** (antes "riesgo conocido"): `ComboNavy` es `role="combobox"` con `aria-label`, lista `role="listbox"` con el mismo nombre y opciones `<li role="option">` con un `<button>` que recibe el clic; `DataTable` pone `data-state="selected"` solo en la fila seleccionada y `aria-selected` solo si recibe `onSeleccionar`, y las clases de `filaClase` van después en `cn` (ganan en tailwind-merge); `abrirPanel` de `PanelNotificaciones.test.tsx` monta `<Campana />`, no el panel; los dos gráficos de Recharts usan tamaños fijos (sin `ResponsiveContainer`) y los tests solo afirman sobre HTML propio (testids y el `div role="img"`), nunca sobre el SVG; `test/setup.ts` ya define un stub de `ResizeObserver`; `DialogContent` pinta la ✕ ("Close", `sr-only`) después de los children y Radix enlaza sola la `DialogDescription` como descripción accesible.
 
 **Revisión previa (lección del 3b).** Antes de la Task 1, un subagente revisa este plan contra la spec y el código (contrato `schema.d.ts`, `DataTable`, `ComboNavy`, `PanelNotificaciones.test.tsx`, `OpenApiContractTest`) buscando tests de contrato o de componentes que romperían la suite tal como están escritos.
