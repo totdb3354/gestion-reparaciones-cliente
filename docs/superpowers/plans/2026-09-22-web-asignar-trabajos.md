@@ -4083,3 +4083,21 @@ En el raíz, añadir al final de este plan la sección **"Ejecución y cierre"**
 
 **Riesgo conocido.** Los nombres de esquema generados (Task 5) y algunos detalles de componentes existentes (`ComboNavy`, `dialog.tsx`, fábricas de test) se leen del código antes de escribir; si no coinciden, manda el código existente.
 
+
+---
+
+## Ejecución y cierre
+
+**Entregado el 2026-09-24.** Servidor `main` `54c60c6` y web `main` `08dadad` (tag `v0.5.0`), desplegados en producción con el servidor antes que la web; el bundle servido es byte a byte el del build local de `main`. Suites: servidor 271, web 1017, cliente JavaFX sin cambios. Smoke e2e `asignar.spec.ts` en verde contra producción (crea una reparación del IMEI de prueba y borra solo el id que devuelve el lote). Ficha de paridad `docs/paridad/asignar-trabajos.md` con todas sus casillas marcadas tras comparar las 13 capturas de la web con las del JavaFX.
+
+Las diecinueve tareas se ejecutaron con un implementador y una revisión por tarea, y una revisión final de cada rama (servidor y web), ambas cerradas en "Ready to merge" tras un lote de arreglos. Como en el 3a, el código existente y el contrato real mandaron sobre el código de ejemplo de este plan. Los ajustes, todos decididos con el usuario o salidos de las revisiones:
+
+- **Servidor.** La carga de asignaciones abiertas y cerradas de hoy se extrajo a `CargaAsignacionesService`, compartida por `carga-tecnicos` y la predicción, en vez de copiarla. El test de rollback del lote va contra el proxy `@Transactional` real con un `DataSource` de mentira (no hay BD de tests): verifica `rollback()` y ningún `commit()`, y se pone en rojo si se quita la anotación. `POST /api/asignaciones/lote` responde 422 a elementos nulos, teléfonos sin IMEI válido y categorías desconocidas; `POST /api/glass/prediccion`, a un IMEI inválido. `OpenApiContractTest` incluye el lote en la lista blanca de `Idempotency-Key`.
+- **Web: reutilización.** `useClientes`/`CLAVE_CLIENTES` pasaron de `gestion/clientes` a `src/shared/api/clientes.ts` (el lint prohíbe importar entre módulos y su propio mensaje manda mover lo compartido a `shared`); no existe `useClientesTodos`. Los ayudantes del selector de cliente viven en `modal/opcionesCliente.ts`, compartidos por `DetalleEntrada` y `PanelPulido`. Tres tokens del plan ya existían con otro nombre (`fondo-vista`, `recibido-text`, `seleccion-suave`).
+- **Web: paridad decidida durante la ejecución.** Los técnicos se guardan en el orden de la lista del modal, como el JavaFX (`MARCAR_TECNICO` lleva `orden`). Una entrada verde sin modelo manda el modelo vivo del IMEI y "Guardar" se bloquea si no hay ninguno (el JavaFX mandaba `null`; el lote nuevo lo rechazaría entero). Las filas de pulido sin técnico no mandan teléfono, como el JavaFX. El texto guía del campo Modelo se calcula por entrada (diferencia aceptada).
+- **Web: hallazgos de las revisiones.** `CampoAutocompletar` sincroniza el texto con el patrón de estado derivado en el render (sin `useEffect` + `setState`, que rompía el lint) y no borra lo tecleado cuando el padre anula el valor. Los efectos del modal esperan a que carguen los clientes, para no perder el cliente de la BD (D6). El smoke espera a que la tabla esté cargada y borra solo el `idRep` que devuelve el lote. La lista roja/verde con la clave de idempotencia reutilizada en el reintento y la congelación del refresco tienen tests que fallan si se quita la pieza.
+- **Comparación de capturas.** Salieron dos diferencias nuevas, aceptadas: el campo Cliente deshabilitado se queda vacío cuando no hay entrada cargada (el JavaFX muestra el último cliente en gris) y los combos de técnico de Pulido no llenan el ancho. Las tres que traía la ficha (texto del combo de Pulido, borde `#D4D8DE`, título "Aviso") también se aceptaron.
+
+Backlog anotado en `Apuntes/plan-futuro.md` (menores de las revisiones: accesibilidad de las filas clicables y del autocompletado, teléfonos repetidos dentro de un lote, lookups de pulido en serie, tests de borde).
+
+Siguiente: sub-proyecto 4 (Inventario y el panel de Revisión), con la red y la seguridad (SP7) después del código del 3, según decidió el usuario.
