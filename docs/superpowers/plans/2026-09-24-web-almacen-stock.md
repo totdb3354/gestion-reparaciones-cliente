@@ -3803,3 +3803,59 @@ En el raíz, añadir al final de este plan la sección **"Ejecución y cierre"**
 **Comprobado en la revisión previa** (antes "riesgo conocido"): `ComboNavy` es `role="combobox"` con `aria-label`, lista `role="listbox"` con el mismo nombre y opciones `<li role="option">` con un `<button>` que recibe el clic; `DataTable` pone `data-state="selected"` solo en la fila seleccionada y `aria-selected` solo si recibe `onSeleccionar`, y las clases de `filaClase` van después en `cn` (ganan en tailwind-merge); `abrirPanel` de `PanelNotificaciones.test.tsx` monta `<Campana />`, no el panel; los dos gráficos de Recharts usan tamaños fijos (sin `ResponsiveContainer`) y los tests solo afirman sobre HTML propio (testids y el `div role="img"`), nunca sobre el SVG; `test/setup.ts` ya define un stub de `ResizeObserver`; `DialogContent` pinta la ✕ ("Close", `sr-only`) después de los children y Radix enlaza sola la `DialogDescription` como descripción accesible.
 
 **Revisión previa (lección del 3b).** Antes de la Task 1, un subagente revisa este plan contra la spec y el código (contrato `schema.d.ts`, `DataTable`, `ComboNavy`, `PanelNotificaciones.test.tsx`, `OpenApiContractTest`) buscando tests de contrato o de componentes que romperían la suite tal como están escritos.
+
+## Ejecución y cierre (2026-09-24)
+
+**Código terminado; pendiente de smoke, capturas y OK del usuario.** Las diecisiete tareas se ejecutaron con un implementador y una revisión por tarea (todas "Approved"). Nada está pusheado, mergeado ni etiquetado. El raíz sigue en `main`.
+
+**Servidor**, rama `feature/web-stock` desde `main` `54c60c6`, head `033c049`:
+
+- `d31bead` fix(compras): cantidad en camino resuelta al master del sku compartido y respuesta tipada ValorEntero
+- `7a0ec6a` test(contrato): corrige el recuento del comentario de respuestas tipadas
+- `abd223f` feat(proveedores): 409 al borrar con pedidos, log de borrado y 422 de nombre y divisa
+- `f5c93fa` feat(componentes): 422 con stock o minimo negativos, mismos textos que el cliente
+- `033c049` test(componentes): los 422 tampoco registran log
+
+**Web**, rama `feature/web-stock` desde `main` `08dadad`, head `53c23de` (versión `0.6.0`):
+
+- `cc878f0` chore(web): contrato con cantidad en camino tipada, alias Proveedor, recharts y tokens de stock
+- `8339c33` refactor(shared): semaforo de stock de cuatro estados compartido y hook de interacciones abiertas en shared
+- `374a8bb` feat(web): seccion stock del lateral con stock actual, pedidos y proveedores, y sus rutas
+- `7f4e3bd` feat(almacen): dialogo base de stock y proveedores, calco de las ventanas propias de StockController
+- `fe53c59` feat(stock): orden, filtros de estado y buscador, texto del pie y stores de la vista
+- `9b0eb3b` feat(stock): consulta de componentes gestionados, cantidad en camino y mutaciones de stock, minimo, activo y solicitud
+- `e819dc6` feat(stock): columnas de la tabla, enlace en camino, badge y clase de fila del semaforo, y csv
+- `0a7ad3a` refactor(stock): badge de estado en su propio fichero para no mezclar componente y helpers
+- `3510e8f` feat(stock): donut de estado del stock y barras por sku con recharts, calco de la tarjeta del JavaFX
+- `3d71b75` feat(stock): dialogos editar stock, stock minimo y solicitar pieza con los textos y validaciones del cliente
+- `13ad21f` feat(stock): vista stock actual con filtros, tabla, graficos, menu por rol y dialogos
+- `243b67b` feat(proveedores): pestaña proveedores con filtro de activos, alta, edicion, activar y borrado con confirmacion
+- `57e1aea` feat(campana): ver stock completo e ir a pedidos navegan a la vista de stock
+- `d29ac51` test(e2e): smoke de stock actual y proveedores con limpieza
+- `938c0a5` test(e2e): comprobacion exacta de "Activo" y nota de restauracion manual en el smoke
+- `53c23de` docs(web): ficha de stock sin marcar, CHANGELOG y version 0.6.0
+
+**Suites (Task 17, Step 5).** Servidor 286 tests en verde (271 + 15). Web: lint limpio, `tsc -b` limpio, 1092 tests en 121 ficheros y build correcto (1017 al empezar). Cliente JavaFX sin cambios, 284 tests en verde. El contrato `api/openapi.json` de la web es idéntico, normalizado, al que genera `OpenApiContractTest` en la rama del servidor; solo cambia `cantidad-en-camino` (respuesta tipada `ValorEntero`).
+
+Desviaciones respecto al plan:
+
+- **Servidor, T2.** Los commits de T2 y T3 salieron con un trailer que el usuario no admite; se reescribieron los mensajes en la rama local (`0885741`→`7a0ec6a`, `80cad3b`→`abd223f`, `a6a5480`→`f5c93fa`) con el contenido idéntico.
+- **Servidor, T3.** Commit aparte `033c049`: los tests de los 422 verifican también que no se registra log (`verify(logDao, never())`), hallazgo de la revisión.
+- **Web, revisión previa.** `useCantidadEnCamino` salió del plan antes de empezar: sin consumidor, porque el gráfico por SKU pide la cantidad desde un efecto y conserva el gráfico anterior si falla (spec §8).
+- **Web, T10.** `BadgeEstadoStock` vive en `stock/BadgeEstadoStock.tsx` y no en `columnas.tsx` (commit `0a7ad3a`), por la regla `react-refresh/only-export-components`; ningún consumidor lo importa de `columnas`.
+- **Web, T12.** `subtituloComponente` y `parseEnteroNoNegativo` van en `stock/dialogos.ts`, por la misma regla.
+- **Web, T13.** Dos ajustes de test: esperar a la primera fila antes de leer la tabla, y buscar el título del gráfico con `getByText(…, { selector: 'h2' })` porque Radix marca el `<h2>` con `aria-hidden`.
+- **Web, T14.** Un ajuste de test (`findAllByText('Activo')` para esperar a los datos) y `ordenacion={false}` explícito en el `DataTable`; `MSG_NOMBRE_VACIO` se queda exportada desde `NuevoProveedorDialog.tsx` (`allowConstantExport`).
+- **Web, T16/T17.** Dos arreglos de la revisión del smoke: `getByText('Activo', { exact: true })` y una nota en el README (si falla la restauración, el SKU de prueba queda en +1 y se corrige a mano).
+- **Paridad.** Las diferencias decididas durante la ejecución están en la ficha `docs/paridad/stock.md` (web), en "Diferencias deliberadas respecto al JavaFX". La ficha está **sin marcar**: tiene un "Pendiente de decidir" con dos puntos (Editar stock con un error que no es 409 ni 422, y los dos "a comprobar en capturas").
+
+Backlog menor:
+
+- **Servidor** (revisión final: "Ready to merge", todo triado como backlog): `toUpperCase()` sin `Locale.ROOT`; check-then-delete no atómico al borrar proveedor (500 en una carrera, aceptado); tests e1-e4 del `PUT` de proveedor sin assert del estado; log tras el `DELETE` sin `@Transactional` (patrón del repo); constantes `MSG_` a mitad de `ComponenteController`; sin test con stock y mínimo negativos a la vez; `cantidad-en-camino` con id inexistente → 500 (en la ficha); `BORRAR_PROVEEDOR` no filtrable en el visor de logs del JavaFX (en la ficha).
+- **Web** (de las revisiones por tarea; **la revisión final de la rama web está pendiente**): tooltip del gráfico por SKU con " : N"; barra ámbar recortada con stock negativo seleccionado; sin test del eje Y con ambos valores a 0; tests que no cubren los cuerpos de mínimo/activo/solicitud ni el flag `silenciarError`; congelación probada solo con diálogo; sin tests de "Pedir" con `?componente=`, guard de carrera, selección tras remontar, errores "otros" en diálogos ni "Limpiar" con buscador; en Proveedores, sin tests de congelación ni de `tiene-pedidos` fallando, y `onCancelar` del `ConfirmDialog` no pasa por `cerrarDialogo`; `Enlace` compartido con `badge` de vocabulario del taller; el smoke deja el proveedor de prueba si falla el lookup por nombre (aceptado).
+
+Pendiente, del usuario y uno a uno:
+
+1. **Task 17, Step 2:** marcar la ficha contra las capturas y decidir el "Pendiente de decidir".
+2. **Task 17, Step 3:** capturas de la web lado a lado con las del JavaFX, antes del tag.
+3. **Task 17, Step 7:** push de las dos ramas; **antes del merge del servidor**, `SELECT DIVISA, COUNT(*) FROM Proveedor GROUP BY DIVISA;` en preprod y prod y normalizar a `EUR`/`USD` cualquier otra divisa (decisión 1); merges `--no-ff`, tag `v0.6.0`, gitlinks en el raíz, despliegue con el servidor antes que la web, smoke de la Task 16 contra producción (necesita `E2E_SKU_PRUEBA` además de las credenciales), y actualizar `plan-futuro.md` (casilla 4a) y la memoria del programa.
