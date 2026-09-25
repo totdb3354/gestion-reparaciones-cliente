@@ -140,13 +140,13 @@ El inventario del código es la referencia de detalle. Aquí va lo que define la
 
 **Tabla de componentes.** Columnas **Pedido** (`dd/MM/yy HH:mm`, Madrid), **Componente** (enlace azul subrayado al pasar → `/stock?componente=<idCom>`), **Proveedor**, **Cant.** (`parcial` → "recibida/cantidad" o solo cantidad si la recibida es nula; `recibido` → la recibida si no es nula, si no la cantidad; resto → cantidad), **P.Unit.** (`"12,50 €"`, `$` en USD, el código en cualquier otra divisa; **"!"** ámbar negrita si `recibido` con precio 0), **EUR** (total = unidades × `precioEur`, con unidades = recibida en `recibido` si no es nula; **"!"** si `recibido` y total 0) y **Estado** (badge con `estado` tal cual: `pendiente`, `en_camino`, `parcial`, `recibido`, `cancelado`; **"⚠"** a la derecha si urgente y en_camino o parcial). Sin columna Div. (oculta en el JavaFX). Orden: el del servidor (fecha desc) con los cancelados al final, estable. Placeholder **"Sin pedidos"**. **Tabla de otros:** igual con **Concepto** (texto, sin enlace) en vez de Componente y placeholder **"Sin otros pedidos"**.
 
-**Colores.** Barra izquierda de 8 px: `pendiente` ámbar `#C8961E`; `en_camino` urgente `#C07800`, normal sin barra; `recibido` verde `#3A7D44`; `parcial` violeta `#7B5EA7`; `cancelado` sin barra y opacidad 0,45 en toda la fila; seleccionada navy con textos claros (la opacidad de cancelado prevalece, como la de desactivado en Stock). Badges: `pendiente` `#B26A00` sobre `#FFF3D6`; `en_camino` urgente `#C07800` sobre `#FDEBC8`, normal `#586376` sobre `#E8EAF0`; `recibido` `#3A7D44` sobre `#C8E6C9`; `parcial` `#7B5EA7` sobre `#E8E0F7`; `cancelado` `#9E9E9E` sobre `#E0E0E0`; radio 12, padding 3/10, 11 px negrita.
+**Colores.** Barra izquierda de 8 px: `pendiente` ámbar `#C8961E`; `en_camino` urgente `#C07800`, normal sin barra; `recibido` verde `#3A7D44`; `parcial` violeta `#7B5EA7`; `cancelado` sin barra y opacidad 0,45 en toda la fila; seleccionada navy con textos claros; un `cancelado` seleccionado se pinta navy **sin** la opacidad 0,45 (calco del JavaFX: `actualizarEstilo` pinta el navy antes de mirar el estado; corregido en la ejecución, antes decía que la opacidad prevalecía). El enlace Componente, el importe ámbar y el "!" conservan su color sobre el navy (el `Label` del JavaFX fija su propio color; a comprobar con la captura). Badges: `pendiente` `#B26A00` sobre `#FFF3D6`; `en_camino` urgente `#C07800` sobre `#FDEBC8`, normal `#586376` sobre `#E8EAF0`; `recibido` `#3A7D44` sobre `#C8E6C9`; `parcial` `#7B5EA7` sobre `#E8E0F7`; `cancelado` `#9E9E9E` sobre `#E0E0E0`; radio 12, padding 3/10, 11 px negrita.
 
 **Pie.** **"Actualizado HH:mm"** a la derecha, clicable: recarga la tabla visible (P7).
 
 **Llegada desde Stock (S8).** `/stock/pedidos?estados=pendiente,en camino,parcial&buscar=<tipo>`: al montar, Pedidos marca esos estados, pone el tipo en el buscador (proveedor y fechas intactos), selecciona la primera fila filtrada, la desplaza a la vista y limpia los parámetros de la URL con `replace`. Siempre en el toggle Componentes (§10).
 
-**Vuelta a Stock.** El enlace Componente navega a `/stock?componente=<idCom>`: Stock desmarca OK, Bajo y Sin stock (conserva Desactivado), vacía el buscador, selecciona la fila del componente, la desplaza a la vista y limpia la URL.
+**Vuelta a Stock.** El enlace Componente navega a `/stock?componente=<idCom>`: Stock desmarca OK, Bajo y Sin stock (conserva Desactivado), vacía el buscador, selecciona la fila del componente y la desplaza a la vista solo si queda visible con esos filtros (con solo "Desactivado" marcado y un componente activo, aplica los filtros y no selecciona nada; calco), y limpia la URL. Pulsar el enlace también selecciona la fila del pedido antes de navegar (calco).
 
 **Menú contextual** (solo SUPERTECNICO; ADMIN y TECNICO sin menú), por estado y en este orden:
 - `pendiente`: **"Confirmar pedido"** · ─ · **"Editar"** · **"Borrar"**
@@ -226,7 +226,12 @@ Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`
 | El panel de la campana se cierra al pedir (el JavaFX lo deja abierto) | **Diferencia** inocua |
 | "Pedir todas las piezas" sin alertas no hace nada; "Pedir piezas" se deshabilita mientras relee | **Calco** |
 | Enter no confirma en los formularios de alta (sí en los editores) | **Diferencia** inocua |
-| Un proveedor desactivado después del pedido hace que editarlo dé 422 aunque no se toque el proveedor | **Diferencia** (§4.2) |
+| Un proveedor desactivado después del pedido hace que editarlo dé 422 "El proveedor no está activo." aunque no se toque el proveedor; también desde el JavaFX 0.16.x | **Diferencia** (§4.2) |
+| "Pedir" de Stock actual sobre un componente desactivado: al guardar, 422 "El componente no está activo."; el JavaFX lo guardaba, y el JavaFX 0.16.x ahora recibe el 422 | **Diferencia** (§4.2) |
+| Editar desde el JavaFX 0.16.x un `recibido` cerrado con "Cerrar sin resto" (recibida < pedida): precarga la recibida y el servidor responde 422 "No se puede cambiar la cantidad de un pedido recibido." salvo que se teclee la pedida | **Diferencia** (P2); nota en las NOVEDADES del JavaFX y backlog del servidor (tolerar `cantidad == cantidadRecibida` como sin cambio) |
+| Fila `cancelado` seleccionada: navy sin la opacidad 0,45 | **Calco** (corregido en la ejecución; la versión anterior de §6 decía que la opacidad prevalecía) |
+| El enlace Componente también selecciona la fila del pedido antes de navegar | **Calco** (decidido en la ejecución) |
+| La vuelta a Stock con `?componente=` selecciona la fila solo si queda visible tras los filtros | **Calco** (decidido en la ejecución) |
 | Llegada desde "En Camino" siempre al toggle Componentes | **Diferencia** (el JavaFX se queda en Otros si estaba ahí) |
 | Filtro Estado y Proveedor como `MultiSelect` sin buscador | **Diferencia** ya aceptada en 4a |
 | Fechas de "Desde/Hasta" tecleables | **Diferencia** ya aceptada en Historial |

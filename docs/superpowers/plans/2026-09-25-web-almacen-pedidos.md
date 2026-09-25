@@ -11559,3 +11559,210 @@ Decisiones del usuario:
 3. **Spec §7:** el congelado del refresco con el formulario abierto aplica a Stock actual y Pedidos; una vista del taller sigue sondeando debajo del modal (diferencia inocua en la ficha y en la spec §10).
 
 Correcciones aplicadas: T1 `never()` con `any(Object[].class)` (antes era una aserción vacía); T2 Step 6 (fallos reales 11/15 y 7/10) y duplicado de la validación de divisa de `ProveedorController`; T4 referencias de `RegistroIdempotencia` y tasa por línea; T6 Step 4 `grep`; T7 líneas de `fechas.ts`, `client.ts` y su test; T11 `Array.from` (TS2488), typecheck en el Step 6 y mensaje del Step 2; comentarios y referencias de línea desfasados (`filtros.ts`, `columnas.tsx`, `fechaLocal`, `DialogoAlmacen`, `useErrorServidor`, `errors.ts`, `rutas.ts`); T15 18 tests (+26); T17 `within` en el test del cableado, `esCompra` en el import existente y Steps 10.2-10.3 simplificados; T19 "Files" y `[x]` en `stock.md`; desviaciones web 10 y formularios 6-7 marcadas como resueltas; acumulados, Autorrevisión 10 y 13; timeouts intermitentes en las Global Constraints; ficha de T21 (proveedor desactivado en el PUT, sondeo de las vistas del taller, clic derecho en cancelados).
+
+## Ejecución y cierre (2026-09-25)
+
+**Código terminado; pendiente de smoke, capturas y OK del usuario.** Las veinte tareas de código se ejecutaron con un implementador y una revisión por tarea (todas "Approved"), más una revisión final por repo con su ronda de arreglos y una re-revisión ("Ready to merge" en los dos). Nada está pusheado, mergeado ni etiquetado. El raíz sigue en `main`.
+
+**Servidor**, rama `feature/web-pedidos` desde `main` `c042b5b`, head `5153e54` (READY TO MERGE):
+
+- `ed31d0f` feat(compras): 409 de estado en todas las transiciones de pedidos y log de confirmar alterado (T1)
+- `65cb5c2` feat(compras): 422 de alta, edicion y recepcion de pedidos con los textos del cliente y cantidad fija en recibido (T2)
+- `c953845` fix(compras): el servidor calcula el importe en euros dividiendo por la tasa y responde 503 sin tipo de cambio (T3)
+- `6aea242` feat(compras): lote de pedidos transaccional con clave de idempotencia, 422 por linea y solicitudes gestionadas (T4)
+- `31f1507` feat(compras): lote de otros pedidos transaccional con clave de idempotencia y 422 por linea (T5)
+- `68fd681` feat(contrato): nulos de pedidos, precioEur ignorado y lotes de pedidos en el contrato openapi (T6)
+- `5153e54` fix(compras): 503 con tasa no válida sin cachear, precio infinito rechazado y tests del put de otros, del 503 y del alcance de p2 (arreglo tras la revisión final)
+
+**Web**, rama `feature/web-pedidos` desde `main` `02cc928`, head `5377a1d` (versión `0.7.0`; código READY TO MERGE en `e39769b`):
+
+- `b5ff469` chore(web): contrato con lotes de compras y nullables, tipos de pedidos, importes con coma, fecha de pedidos, 503 con json de mensaje como error de negocio sin banner, claves de idempotencia en shared y tokens (T7)
+- `e085c10` feat(shared): store del formulario de pedido con sus modos de precarga (T8)
+- `80783bb` feat(pedidos): reglas de cantidad, importes y menu por estado, filtros, stores, confirmaciones y tasa de cambio (T9)
+- `ccae589` feat(pedidos): consultas de compras y otros, transiciones, edicion, lotes con clave de idempotencia y recargas (T10)
+- `18467b0` feat(pedidos): columnas de componentes y otros, enlace al componente, marcas de precio cero, badge con aviso, clase de fila y csv (T11)
+- `ce71a23` feat(pedidos): dialogos de recepcion parcial y recibir unidades con error inline, y menu contextual por estado (T12)
+- `3764797` feat(pedidos): pestaña pedidos con toggle componentes y otros, filtros, menu de transiciones, dialogos, llegada desde stock, csv y refresco congelado (T13)
+- `c5e7216` feat(pedidos): lineas del formulario de pedido: precargas, validacion, cuerpos de lote y conversion a euros (T14)
+- `0ce94f1` feat(pedidos): formulario nuevo pedido como modal del shell, con lote idempotente, tasa por divisa y errores inline (T15)
+- `f23e9b9` feat(pedidos): formulario nuevo otro pedido con concepto libre y lote idempotente (T16)
+- `0d3cc80` feat(pedidos): editores de pedido de componentes y de otros con tasa dividida, cantidad pedida y 409 inline (T17)
+- `2be0781` feat(campana): pedir, pedir todas las piezas y pedir piezas abren el formulario de pedido (T18)
+- `73264a8` feat(stock): pedir abre el formulario en el sitio y la vuelta desde pedidos selecciona el componente (T19)
+- `ccec333` test(e2e): smoke de pedidos y otros pedidos con proveedor de prueba y limpieza por id (T20)
+- `c4191cb` fix(e2e): registrar los ids del lote antes de las aserciones y limpieza resistente (T20, arreglo de la revisión)
+- `e39769b` fix(pedidos): aviso de omitidas solo con lista cargada, test del 409 en recepcion parcial y calcos del enlace, del cancelado seleccionado y de la vuelta a stock (arreglo tras la revisión final)
+- `5377a1d` docs(web): ficha de pedidos sin marcar, CHANGELOG y version 0.7.0 (T21)
+
+**Suites (Task 21, Step 3).** Servidor **421** tests en verde (286 + 122 de T1-T6 + 13 del arreglo final). Web: lint y `tsc -b` limpios, **1327** tests en verde (1119 + 203 de T7-T19 + 5 del arreglo final) y build correcto. Cliente JavaFX sin cambios, **284** tests esperados en verde. El contrato `target/openapi.json` del servidor es idéntico a `api/openapi.json` de la web. El smoke `tests/e2e/pedidos.spec.ts` **no se ha ejecutado** (solo `npx playwright test --list`); va en U4.
+
+Desviaciones respecto al plan:
+
+- **Recuentos.** Servidor 421 (no 408): el arreglo tras la revisión final añadió 13 tests. Web 1327 (no 1322): T7 sumó +10 (el test del 503 con JSON de la decisión D-503) y el arreglo final +5.
+- **Servidor, arreglo final `5153e54`.** Una tasa ≤ 0 o no numérica de Frankfurter es 503 y no se guarda en la caché del día (antes se cacheaba y `ConversionEur` dividía por cero: 500 en todas las escrituras en USD hasta el día siguiente); `Double.isFinite` en los precios (un `1e400` pasaba la validación); tests del `PUT` de otros, del 503 en los `editar` e `insertar` que faltaban y del alcance de P2 (`en_camino` sí puede cambiar la cantidad).
+- **Web, T20.** El combo de proveedor de la línea se localiza por el nombre accesible `Proveedor línea 1`, no como el primer `combobox` del diálogo (el primero es el autocompletar de componente). Arreglo `c4191cb`: los ids del lote se registran antes de las aserciones y la limpieza es resistente a fallos por llamada.
+- **Web, arreglo final `e39769b`.** Sin aviso de omitidas si la lista de componentes no se pudo leer (el aviso D10 era falso en ese camino); test del 409 dentro de "Recepción parcial"; y los tres calcos decididos por el usuario (abajo).
+- **Paridad.** La ficha `docs/paridad/pedidos.md` (web) está **sin marcar** (85 casillas) y recoge las diferencias y calcos decididos durante la ejecución; "Pendiente de decidir" vacío.
+
+Decisiones del usuario durante la ejecución:
+
+1. **D-503** (revisión previa): un 503 es de negocio solo con el JSON `{message}`; el banner se enciende solo con `ConexionError`.
+2. **Spec §4.2, "componente: solo alta"** (revisión previa): "El componente no está activo." solo en POST y lotes; se mantiene el 422 del proveedor desactivado en el `PUT` (desviación 8 del servidor).
+3. **Sondeo del taller** (revisión previa): las vistas del taller siguen sondeando debajo de un formulario abierto desde la campana; solo Stock actual y Pedidos lo congelan.
+4. **Tras las revisiones finales:**
+   - El enlace Componente ya no para la propagación: pulsarlo selecciona la fila (calco).
+   - Una fila `cancelado` seleccionada es navy **sin** la opacidad 0,45 (calco del JavaFX). Contradecía la spec §6, que decía que la opacidad prevalecía: §6 y §10 corregidas en este commit.
+   - La vuelta a Stock con `?componente=` selecciona la fila solo si queda visible tras los filtros (calco).
+   - **P2 frente a "Cerrar sin resto" del JavaFX**: editar desde el JavaFX un `recibido` cerrado con recibida < pedida da 422 "No se puede cambiar la cantidad de un pedido recibido." salvo que se teclee la pedida. Se anota en la ficha y en la spec §10, se añade una nota a las NOVEDADES del JavaFX en su próxima versión (pendiente; el cliente no se toca en este sub-proyecto) y al backlog del servidor tolerar `cantidad == cantidadRecibida` como "sin cambio".
+   - Las ~30 líneas casi idénticas entre `EditarPedidoDialog` y `EditarOtroPedidoDialog`: al backlog.
+5. **Otras diferencias anotadas en la ficha** (de las revisiones): `PUT` con 422 "El proveedor no está activo." si el proveedor se desactivó después; "Pedir" de Stock sobre un componente desactivado da 422 "El componente no está activo." al guardar (el JavaFX lo permitía, y el JavaFX 0.16.x ahora recibe el 422); clic derecho en un cancelado muestra el menú nativo del navegador; en una fila navy el enlace, el importe ámbar y el "!" conservan su color (a comprobar con captura); con solo "Desactivado" marcado la vuelta desde Pedidos aplica los filtros sin seleccionar; el panel de la campana se cierra al pedir; Enter no confirma en los formularios de alta; 503 de la tasa inline en los formularios; `['notificaciones']` se invalida entero.
+
+Backlog menor (de las revisiones de tarea y finales; va a `Apuntes/plan-futuro.md` al cerrar, U12):
+
+- **Servidor** (revisión final "Ready to merge" tras `5153e54`): `UPDATED_AT` en el `WHERE` de los guards (hoy `checkUpdatedAt` lee y luego escribe); 404 para ids inexistentes (hoy 500, preexistente); deduplicar los ids de solicitud del lote (logs `GESTIONAR_SOLICITUD` repetidos); `getIdComDeSolicitud` filtrando por `ES_SOLICITUD = 1` (nunca por estado, rompería el reintento); reutilizar `Basico`/`Proveedor` ya leídos en los logs de alta (dos lecturas redundantes); duplicaciones (`checkUpdatedAt`, `GeneratedKeyHolder`, `DIVISAS`/`MSG_DIVISA` de `ProveedorController`); comprobar el status HTTP de Frankfurter; traza de `DataAccessResourceFailureException` en `CompraLoteServiceTransaccionTest`; tolerancia de P2 (`cantidad == cantidadRecibida` como sin cambio).
+- **Web** (revisión final "Ready to merge" tras `c4191cb` + `e39769b`): tests de cliente (`reportarExito` tras un 503 de negocio, 503 JSON sin `message`, fallo al leer el cuerpo de un 5xx que ya no llama a `reportarFallo`); `FILTROS_PEDIDOS_VACIOS` como fábrica; identidad estable de `useTasas`; `setError(null)` al teclear en `CantidadDialog`; guard `isPending` ante una acción directa repetida (409 falso de "modificado por otro usuario"); `scrollIntoView` del `ref` de `DialogoLineas` como efecto; líneas duplicadas de los diálogos de alta y de los editores; aserciones de deshabilitado en T18 ("Pedir piezas" durante la relectura y tras el error); comentario de "por referencia" en `PrecargaPedido`; `EditarPedidoDialog` con una divisa distinta de EUR/USD sin test; alinear con los nombres reales los tests citados en la tabla de trazabilidad; el test del cancelado seleccionado comprueba la clase, no una selección real; un `json()` que lanza con 2xx deja pedidos del smoke sin registrar (casi imposible).
+
+### Pendiente, del usuario y uno a uno
+
+No hacer push, merge, tag ni despliegue sin OK. Claude no hace SSH a las VMs: los comandos de la VDC se preparan y los ejecuta el usuario. Las capturas de la web se comparan **antes del merge de la web** (spec §9 y Global Constraints).
+
+**U1. Push de las dos ramas** (copia de seguridad; con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git -C gestion-reparaciones-servidor push -u origin feature/web-pedidos
+git -C gestion-reparaciones-web push -u origin feature/web-pedidos
+```
+
+**U2. Merge del servidor en `main` y push** (con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor
+git checkout main && git pull --ff-only
+git merge --no-ff --no-edit feature/web-pedidos
+export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH
+mvn -q test
+git push origin main
+```
+
+Expected: suite en verde en `main` antes del push.
+
+**U3. Despliegue del servidor en la VDC y contrato** (lo ejecuta el usuario; guía privada `Apuntes/despliegue_vdc_produccion.md` §P8). Solo el backend: la web 0.6.0 desplegada sigue funcionando con el servidor nuevo porque todo es aditivo.
+
+```bash
+ssh prod
+cd /opt/reparaciones && git -C gestion-reparaciones-servidor pull && git -C gestion-reparaciones-servidor log --oneline -1
+docker compose up -d --build backend
+docker compose logs --tail=80 backend | grep -E "Started|ERROR"
+exit
+```
+
+Expected: el `log -1` muestra el merge de U2 y los logs, `Started App`. Después, en el PC (Git Bash, desde la web, credenciales de `~/.env.e2e` exportadas y sin escribirlas en la línea de comandos):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+set -a; . ~/.env.e2e; set +a
+cp api/openapi.json "$TMPDIR/openapi-rama.json"
+API_URL="$E2E_BASE_URL" API_USER="$E2E_USER" API_PASS="$E2E_PASS" node scripts/fetch-openapi.mjs
+node /c/Users/dev/Documents/Apuntes/herramientas/paridad-capturas/comparar-openapi.mjs "$TMPDIR/openapi-rama.json" api/openapi.json
+git checkout api/openapi.json
+```
+
+Expected: sin diferencias salvo `servers` (lección del 4a); `git checkout` devuelve el snapshot determinista. `node scripts/fetch-openapi.mjs` (no `npm run api:types`) para no regenerar `schema.d.ts`.
+
+**U4. Smoke contra producción con la web de la rama en local** (escribe en la BD de pruebas; con OK). `.env.local` con `VITE_API_PROXY_TARGET` apuntando a la API de producción (lección del 3b) y el puerto 5173 libre:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git checkout feature/web-pedidos
+npm run dev   # en otra terminal
+set -a; . ~/.env.e2e; set +a
+E2E_BASE_URL=http://localhost:5173 npx playwright test tests/e2e/pedidos.spec.ts
+E2E_BASE_URL=http://localhost:5173 npx playwright test
+```
+
+Expected: `pedidos.spec.ts` en verde; después la suite completa en serie (`workers: 1`) con `stock`, `asignar`, `clientes` y `taller` en verde (`formulario.spec.ts` depende de su precondición de datos, como en 4a). Si `pedidos.spec.ts` falla en la limpieza, sus `expect.soft` nombran la ruta que quedó: se anota en la limpieza de la VDC. Respetar el límite de 5 logins por minuto: espaciar las dos ejecuciones.
+
+**U5. Capturas del JavaFX** (el usuario, con Claude manejando los scripts de `Apuntes/herramientas/paridad-capturas/` sin pulsar nada que escriba). Worktree recreado desde el raíz, que se queda en `main`:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git worktree add ../_ref-hotfix-0163 hotfix/0.16.3
+cp gestion-reparaciones-cliente/src/main/resources/config.properties ../_ref-hotfix-0163/gestion-reparaciones-cliente/src/main/resources/config.properties
+```
+
+Editar esa copia para que apunte a producción (como en 4a; el fichero está ignorado por git), y lanzar:
+
+```bash
+cd /c/Users/dev/Documents/_ref-hotfix-0163/gestion-reparaciones-cliente
+export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH
+mvn -q javafx:run
+```
+
+Comprobar con `Get-NetTCPConnection -OwningProcess <pid>` que solo conecta con producción. Recorrer `CAPTURAS-4b.md` una a una; los pedidos de prueba en cada estado los crea el usuario desde el JavaFX (las escrituras nunca las pulsa el script) y apunta sus ids en "Datos creados". Al terminar: `git worktree remove ../_ref-hotfix-0163` desde el raíz.
+
+**U6. Capturas de la web y comparación lado a lado** (antes del merge de la web). Con la web de la rama en local contra producción, tomar las mismas situaciones con el prefijo `web-` en `Apuntes/paridad-capturas/almacen/` y anotar pareja a pareja en `COMPARACION-4b.md` (formato de `COMPARACION-4a.md`): diferencia deliberada confirmada, calco, no comparable por datos o diferencia nueva. **Cada diferencia nueva se decide con el usuario**, no sobre la marcha; las que se corrijan van a `feature/web-pedidos` con su test y su commit, y las aceptadas a la ficha ("Decididas durante la ejecución y la comparación de capturas").
+
+**U7. Ficha marcada** contra las capturas y los tests; commit en la rama:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git add docs/paridad/pedidos.md
+git commit -m "docs(web): ficha de pedidos marcada tras comparar capturas"
+git push origin feature/web-pedidos
+```
+
+**U8. Merge de la web en `main` y push** (con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git checkout main && git pull --ff-only
+git merge --no-ff --no-edit feature/web-pedidos
+npm run check && npm run build
+git push origin main
+```
+
+**U9. Despliegue de la web en la VDC** (lo ejecuta el usuario):
+
+```bash
+ssh prod
+cd /opt/reparaciones && git -C gestion-reparaciones-web pull && git -C gestion-reparaciones-web log --oneline -1
+docker compose up -d --build nginx
+exit
+```
+
+Verificación del bundle desde el PC: el `index-*.js` que sirve producción es el del build local de U8.
+
+```bash
+set -a; . ~/.env.e2e; set +a
+curl -s "$E2E_BASE_URL/" | grep -o 'assets/index-[^"]*\.js'
+grep -o 'assets/index-[^"]*\.js' /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web/dist/index.html
+```
+
+Expected: el mismo nombre en las dos líneas. Si difiere con commits nuevos, la variante `--no-cache` de §P8 de la guía.
+
+**U10. Tag `v0.7.0`** (con OK): fijar antes la fecha de la entrada del CHANGELOG (commit `docs(web): fecha de la 0.7.0` en `main` y push) y después:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git tag -a v0.7.0 -m "v0.7.0: pedidos, formularios de pedido y campana"
+git push origin v0.7.0
+```
+
+**U11. Gitlinks en el raíz** (con OK para el push):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git add gestion-reparaciones-servidor gestion-reparaciones-web docs/superpowers/plans/2026-09-25-web-almacen-pedidos.md
+git commit -m "chore: gitlinks servidor y web tras el sub-proyecto 4b (web v0.7.0) y cierre del plan"
+git push origin main
+```
+
+Antes, completar en este plan un "### Cierre final" con el esquema del 4a (`2026-09-24-web-almacen-stock.md:3863-3869`): merges, despliegues, smoke, comparación, tag y suites finales.
+
+**U12. `Apuntes/plan-futuro.md`, §9** (privado, sin commit): marcar `[x]` la casilla **4b** con el mismo nivel de detalle que la del 4a (commits de `main`, tag, tests, despliegue, smoke, capturas comparadas), y añadir debajo:
+
+- `[ ] Limpieza en la VDC del 4b (se suma a las anteriores)`: los pedidos de componentes y de otros creados para las capturas (ids en `CAPTURAS-4b.md`, "Datos creados"), las unidades de stock que sumaron sus recepciones (revertir o corregir el SKU), el proveedor USD si se le crearon pedidos, lo que el smoke no pudiera limpiar (sus `expect.soft` nombran la ruta) y los logs `CREAR_PEDIDO`, `EDITAR_PEDIDO`, `BORRAR_PEDIDO`, `*_OTRO` y de proveedor del smoke.
+- `[ ] Backlog 4b → web / servidor`: lo triado como backlog en las revisiones de las tareas y en la revisión final.
+
+**U13. Memoria** (Claude, con OK): actualizar `project_migracion_web_programa.md` (4b cerrado, web v0.7.0, siguiente 4c) y su línea en `MEMORY.md`.
