@@ -1,7 +1,7 @@
 # Sub-proyecto 4 — Almacén, Inventario y Revisión: partición y decisiones comunes
 
 **Fecha:** 2026-09-24
-**Estado:** Aprobado en brainstorming; pendiente de revisión escrita del usuario
+**Estado:** Aprobado en brainstorming; pendiente de revisión escrita del usuario. **Actualización 2026-09-26:** 4a y 4b están cerrados (web v0.6.0 y v0.7.0). Por decisión del usuario, la web migra solo lo que la tienda usa hoy, la línea `hotfix/0.16.3` del cliente: **4c, 4d y 4e quedan fuera de la migración por ahora** (Inventario, lotes, envíos, suppliers, importador y Revisión solo existen en `main` del cliente y la tienda no los usa). El siguiente sub-proyecto es el 6 (Gestión). El merge de `hotfix/0.16.3` en `main` del cliente previsto en §3 sí se hizo ese día.
 **Programa:** [Migración del cliente JavaFX a app web](2026-09-13-migracion-web-programa-design.md) (spec maestra; sus decisiones generales no se repiten aquí). Antecesor: [Asignar trabajos (3b)](2026-09-22-web-asignar-trabajos-design.md).
 **Ámbito:** este documento no se planifica directamente. Fija la partición del sub-proyecto 4 en cinco partes, el orden, las decisiones que las cruzan y lo que sube al servidor en cada una. Cada parte tiene su propia spec y su propio plan: la primera es [4a Stock actual y Proveedores](2026-09-24-web-almacen-stock-design.md).
 
@@ -31,6 +31,8 @@ La referencia de detalle son cuatro inventarios del código del JavaFX, guardado
 Orden 4a → 4b → 4c → 4d → 4e: primero lo que la tienda usa a diario. Cada parte lleva spec, plan, ramas `feature/web-<parte>` en la web y en el servidor creadas desde `main`, smoke Playwright, ficha de paridad con capturas comparadas y tag, todo con el OK del usuario paso a paso.
 
 **Antes de 4c** se mergea `hotfix/0.16.3` en `main` del cliente, vigilando tres artefactos que el inventario detectó: `main` perdió el `isActivo()` en la regla de alerta de stock (hay que conservar la versión del hotfix, que es la que copia la web), y no tiene `CeldaReparador` ni `setFiltroInicial` de la vista Agrupado. A partir de 4c la referencia de la web es `main`, que es lo que será v0.17.0.
+
+**2026-09-26:** el merge se hizo sin conflictos textuales y con los tres artefactos conservados (suite del cliente 287 tests), pero 4c, 4d y 4e no se ejecutan: la web calca únicamente `hotfix/0.16.3` y las vistas que solo existen en `main` no se migran por ahora (ver Estado). Las decisiones D4, D5, D11, D12, D14 y D15 quedan como referencia si esas partes se retoman después del corte.
 
 **De esta sesión salen** este documento, la spec y el plan de 4a. Las partes 4b a 4e se brainstormean corto y se especifican en su propia sesión, con este documento y sus inventarios como contexto.
 
