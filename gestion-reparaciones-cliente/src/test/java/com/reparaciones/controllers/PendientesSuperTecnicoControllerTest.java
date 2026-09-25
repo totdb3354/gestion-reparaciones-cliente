@@ -98,4 +98,46 @@ class PendientesSuperTecnicoControllerTest {
         assertEquals(TipoTrabajo.REPARACION,
                 PendientesSuperTecnicoController.tipoDe(null));
     }
+
+    // ── propagarModelo (modelo vivo entre las colas Reparación/Glass del modal) ──────────────
+
+    private static PendientesSuperTecnicoController.EntradaAsignacion entrada(String imei, String modelo, boolean asignada) {
+        PendientesSuperTecnicoController.EntradaAsignacion e = new PendientesSuperTecnicoController.EntradaAsignacion(imei);
+        e.modeloCode = modelo;
+        e.asignada = asignada;
+        return e;
+    }
+
+    @Test
+    void propagar_modelo_copia_a_rojas_y_verdes_del_mismo_imei_en_las_dos_pilas() {
+        var rojaRep   = entrada("111111111111111", null,    false);
+        var verdeRep  = entrada("111111111111111", "viejo", true);
+        var rojaGlass = entrada("111111111111111", null,    false);
+        var otroImei  = entrada("222222222222222", "otro",  false);
+        List<PendientesSuperTecnicoController.EntradaAsignacion> rep   = List.of(rojaRep, verdeRep, otroImei);
+        List<PendientesSuperTecnicoController.EntradaAsignacion> glass = List.of(rojaGlass);
+
+        int n = PendientesSuperTecnicoController.propagarModelo("111111111111111", "nuevo", rep, glass);
+
+        assertEquals(3, n);
+        assertEquals("nuevo", rojaRep.modeloCode);
+        assertEquals("nuevo", verdeRep.modeloCode);
+        assertEquals("nuevo", rojaGlass.modeloCode);
+        assertEquals("otro", otroImei.modeloCode);   // otro IMEI: intacto
+    }
+
+    @Test
+    void propagar_modelo_sin_entradas_del_imei_devuelve_0_y_no_toca_nada() {
+        var otro = entrada("222222222222222", "otro", false);
+        int n = PendientesSuperTecnicoController.propagarModelo("111111111111111", "nuevo", List.of(otro), List.of());
+        assertEquals(0, n);
+        assertEquals("otro", otro.modeloCode);
+    }
+
+    @Test
+    void propagar_modelo_con_imei_null_no_hace_nada() {
+        var e = entrada("111111111111111", null, false);
+        assertEquals(0, PendientesSuperTecnicoController.propagarModelo(null, "nuevo", List.of(e), List.of()));
+        assertNull(e.modeloCode);
+    }
 }

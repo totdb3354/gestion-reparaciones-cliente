@@ -429,14 +429,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
                     rep.getNombreTecnicoAsigna() != null ? rep.getNombreTecnicoAsigna() : "—");
             return new javafx.beans.property.SimpleStringProperty("");
         });
-        colReparador.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty || item == null || item.isEmpty() ? null : item);
-            }
-        });
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
 
         colFecha.setCellFactory(col -> new TableCell<>() {
             private final javafx.scene.control.Label lblInicio = new javafx.scene.control.Label();
@@ -999,6 +992,12 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         filtroFechaHasta.setValue(hasta);
     }
 
+    /** "Ver IMEIs" desde Estadísticas: abre el Agrupado con fechas y técnico aplicados. */
+    public void setFiltroInicialImeis(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        mostrarAgrupado();
+        agrupadoController.setFiltroInicial(desde, hasta, tecnico);
+    }
+
     @FXML
     private void limpiarFiltros() {
         filtroImei.clear();
@@ -1186,7 +1185,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
             List<ReparacionResumen> items = pendientesSuperTecnicoController.getItemsVisibles();
             List<String> cabeceras = List.of(
                     "ID", "Tipo", "Técnico", "IMEI", "Modelo", "Fecha asignación", "Comentario",
-                    "Cliente", "Asignado por", "Urgente", "Chasis", "Por cerrar", "En espera de pieza");
+                    "Cliente", "Asignado por", "Urgente", "Chasis", "Por cerrar", "Entregado", "En espera de pieza");
             List<List<String>> filas = new ArrayList<>();
             for (ReparacionResumen r : items) filas.add(filaAsignacion(r, fmtHora));
             com.reparaciones.utils.CsvExporter.exportar(owner, "reparaciones_pendientes", cabeceras, filas);
@@ -1261,6 +1260,7 @@ public class ReparacionControllerSuperTecnico implements com.reparaciones.utils.
         fila.add(r.isUrgente() ? "Sí" : "No");
         fila.add(r.isEsChasis() ? "Sí" : "No");
         fila.add(r.isPorCerrar() ? "Sí" : "No");
+        fila.add(com.reparaciones.utils.EntregaGlass.textoCsv(r, fmt));   // entrega a glass (A: derivada; AG: real)
 
         // Mismo criterio que CargaTecnicos.enEsperaDePieza (privado): solicitud activa
         // y aún no recibida (gestionada + stock disponible).

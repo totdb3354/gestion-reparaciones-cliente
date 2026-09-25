@@ -60,4 +60,17 @@ public class TecnicoDAO {
     public void eliminar(int idTec) throws SQLException {
         ApiClient.delete("/api/tecnicos/" + idTec);
     }
+
+    /**
+     * Habilita o deshabilita al técnico para la glass automática del modal de asignación
+     * (spec 2026-09-05-glass-prediccion). Solo SuperTécnico: el servidor devuelve 403 al resto
+     * y 404 si es anterior a la 0.16.2 (sin el endpoint).
+     *
+     * @param idTec      ID del técnico
+     * @param habilitado {@code true} para habilitarlo
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public void setGlass(int idTec, boolean habilitado) throws SQLException {
+        ApiClient.patch("/api/tecnicos/" + idTec + "/glass", Map.of("habilitado", habilitado));
+    }
 }

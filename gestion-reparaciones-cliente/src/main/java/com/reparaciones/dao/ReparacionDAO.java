@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.reparaciones.models.AsignacionActiva;
 import com.reparaciones.models.FilaReparacion;
 import com.reparaciones.models.PuntoEstadistica;
+import com.reparaciones.models.PuntoEstadisticaPuntos;
 import com.reparaciones.models.Reparacion;
 import com.reparaciones.models.ReparacionResumen;
 import com.reparaciones.utils.ApiClient;
@@ -306,6 +307,22 @@ public class ReparacionDAO {
         return ApiClient.getList(path, PuntoEstadistica.class);
     }
 
+    /**
+     * Devuelve las estadísticas por puntos de dificultad agrupadas por técnico y periodo.
+     *
+     * @param granularidad {@code "dia"}, {@code "semana"}, {@code "mes"} o {@code "ano"}
+     * @param desde        fecha de inicio del rango
+     * @param hasta        fecha de fin del rango
+     * @return lista de puntos de estadística por puntos ordenados por periodo y técnico
+     * @throws SQLException si falla la llamada al servidor
+     */
+    public List<PuntoEstadisticaPuntos> getEstadisticasPuntos(
+            String granularidad, LocalDate desde, LocalDate hasta) throws SQLException {
+        String path = "/api/reparaciones/estadisticas/puntos?granularidad=" + granularidad
+                + "&desde=" + desde + "&hasta=" + hasta;
+        return ApiClient.getList(path, PuntoEstadisticaPuntos.class);
+    }
+
     // ── Escritura ─────────────────────────────────────────────────────────────
 
     /**
@@ -441,6 +458,25 @@ public void actualizarAsignacion(String idRep, int idTec, String comentarioAsign
     public void actualizarPorCerrar(String idRep, boolean porCerrar) throws SQLException {
         ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/por-cerrar",
                 Map.of("porCerrar", porCerrar));
+    }
+
+    /**
+     * Entrega (o deshace la entrega) del teléfono a la glass abierta del mismo IMEI.
+     * Solo el dueño de la reparación normal; el servidor valida (403/422 con mensaje).
+     */
+    public void actualizarEntregaGlass(String idRep, boolean entregado) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/entrega-glass",
+                Map.of("entregado", entregado));
+    }
+
+    /** El técnico de glass registra él mismo la llegada del teléfono (válvula del gate). */
+    public void marcarLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.patch("/api/reparaciones/asignaciones/" + idRep + "/llegada", null);
+    }
+
+    /** Deshace la llegada auto-registrada (solo el firmante; el servidor valida la firma). */
+    public void deshacerLlegadaGlass(String idRep) throws SQLException {
+        ApiClient.delete("/api/reparaciones/asignaciones/" + idRep + "/llegada");
     }
 
     /**

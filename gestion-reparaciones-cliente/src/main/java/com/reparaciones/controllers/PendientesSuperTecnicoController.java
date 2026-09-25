@@ -117,8 +117,9 @@ public class PendientesSuperTecnicoController {
     private final StringProperty etiquetaCli    = new SimpleStringProperty("Cliente");
     private com.reparaciones.utils.MultiSelectDropdown.Handle filtroCliHandle;
 
-    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD). */
-    private static final class EntradaAsignacion {
+    /** Una entrada del lote de asignación: un IMEI con su configuración local (aún no en BD).
+     *  Package-private (no private) para que el test del helper puro {@link #propagarModelo} pueda construirla. */
+    static final class EntradaAsignacion {
         final String imei;
         TipoTrabajo tipo = TipoTrabajo.REPARACION;             // reparación (A) o glass (AG); fijado por el selector al escanear
         String modeloCode;                       // código interno del modelo, o null si falta
@@ -131,6 +132,8 @@ public class PendientesSuperTecnicoController {
         boolean modeloBuscado;                   // true si ya se lanzó el lookup (no repetir)
         boolean buscando;                        // true mientras el lookup está en vuelo
         long seq;                                // orden de la última acción (escaneo/asignación): mayor = más reciente = más arriba
+        boolean llevaGlass;                      // solo tipo Reparación: marcada ⇔ hay glass de este IMEI en la cola Glass (se crea/retira al marcar)
+        boolean auto;                            // solo tipo Glass: nacida por predicción y aún no editada a mano ("Guardar cambios" la vuelve manual)
 
         EntradaAsignacion(String imei) { this.imei = imei; }
 
@@ -158,6 +161,20 @@ public class PendientesSuperTecnicoController {
     /** Deriva el tipo de trabajo del prefijo del {@code ID_REP}. Delega en {@link TipoTrabajo#desde}. */
     static TipoTrabajo tipoDe(String idRep) {
         return TipoTrabajo.desde(idRep);
+    }
+
+    /**
+     * Modelo vivo del modal: copia {@code code} a TODAS las entradas de {@code imei} en las dos pilas
+     * (rojas y verdes). Devuelve cuántas entradas ha tocado. Puro (sin UI) para poder testearlo; el modal
+     * lo envuelve en {@code decidirModelo} y repinta la pila después. {@code imei == null} → 0.
+     */
+    static int propagarModelo(String imei, String code,
+                              List<EntradaAsignacion> pilaRep, List<EntradaAsignacion> pilaGlass) {
+        if (imei == null) return 0;
+        int n = 0;
+        for (EntradaAsignacion x : pilaRep)   if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        for (EntradaAsignacion x : pilaGlass) if (imei.equals(x.imei)) { x.modeloCode = code; n++; }
+        return n;
     }
 
     @FXML
@@ -255,12 +272,15 @@ public class PendientesSuperTecnicoController {
         });
         cImei.setCellFactory(col -> new TableCell<>() {
             private final Label lbl = new Label();
+            private final Label lblGlass = new Label();
             private final Label lblAsignados = new Label();
-            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblAsignados);
+            private final javafx.scene.layout.VBox box = new javafx.scene.layout.VBox(1, lbl, lblGlass, lblAsignados);
             private final javafx.beans.value.ChangeListener<Boolean> selListener =
                 (obs, o, sel) -> aplicarEstilos(sel);
             {
                 box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                lblGlass.setStyle(com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente());
+                lblGlass.setVisible(false); lblGlass.setManaged(false);
                 lblAsignados.setVisible(false); lblAsignados.setManaged(false);
                 aplicarEstilos(false);
                 tableRowProperty().addListener((obs, oldRow, newRow) -> {
@@ -278,10 +298,31 @@ public class PendientesSuperTecnicoController {
                 if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
                     setGraphic(null); return;
                 }
-                String imei = getTableView().getItems().get(getIndex()).getImei();
+                ReparacionResumen repFila = getTableView().getItems().get(getIndex());
+                String imei = repFila.getImei();
                 lbl.setText(imei);
+                // Verde en filas A (quién tiene la glass); azul en filas AG (quién tiene la normal).
+                String pildora = com.reparaciones.utils.EntregaGlass.etiquetaGlassPendiente(repFila);
+                String tip     = com.reparaciones.utils.EntregaGlass.tooltipGlassPendiente(repFila);
+                String estilo  = com.reparaciones.utils.EntregaGlass.estiloPildoraGlassPendiente();
+                if (pildora == null) {
+                    pildora = com.reparaciones.utils.EntregaGlass.etiquetaRepAbierta(repFila);
+                    tip     = com.reparaciones.utils.EntregaGlass.tooltipRepAbierta(repFila);
+                    estilo  = com.reparaciones.utils.EntregaGlass.estiloPildoraRepAbierta();
+                }
                 int n = conteoTecnicosPorImei.getOrDefault(imei, 1);
-                boolean varios = n >= 2;
+                if (pildora != null) {
+                    lblGlass.setText(pildora);
+                    lblGlass.setStyle(estilo);
+                    lblGlass.setTooltip(new Tooltip(tip));
+                    lblGlass.setVisible(true); lblGlass.setManaged(true);
+                } else {
+                    lblGlass.setText(null); lblGlass.setTooltip(null);
+                    lblGlass.setVisible(false); lblGlass.setManaged(false);
+                }
+                // Con 2 asignados la píldora ya cuenta al segundo; con 3+ el contador convive con ella.
+                boolean varios = n >= 2
+                        && !com.reparaciones.utils.EntregaGlass.ocultarContadorAsignados(repFila, n);
                 lblAsignados.setText(varios ? n + " asignados" : "");
                 lblAsignados.setVisible(varios); lblAsignados.setManaged(varios);
                 aplicarEstilos(getTableRow() != null && getTableRow().isSelected());
@@ -472,9 +513,10 @@ public class PendientesSuperTecnicoController {
         cEstado.setCellFactory(col -> new TableCell<>() {
             private final Label badgeUrgente   = new Label();
             private final Label badgePorCerrar = new Label("Por cerrar");
+            private final Label badgeEntrega   = new Label();     // "→ <técnico glass>" (A) / "Llegó hh:mm" (AG)
             private final Label badge          = new Label();
             private final javafx.scene.layout.VBox celdaBox =
-                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badge);
+                    new javafx.scene.layout.VBox(2, badgeUrgente, badgePorCerrar, badgeEntrega, badge);
             { celdaBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT); }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -497,6 +539,16 @@ public class PendientesSuperTecnicoController {
                     badgePorCerrar.setVisible(true); badgePorCerrar.setManaged(true);
                 } else {
                     badgePorCerrar.setVisible(false); badgePorCerrar.setManaged(false);
+                }
+                String textoEntrega = com.reparaciones.utils.EntregaGlass.textoBadge(rep, com.reparaciones.utils.EntregaGlass.hoy());
+                if (textoEntrega != null) {
+                    badgeEntrega.setText(textoEntrega);
+                    badgeEntrega.setStyle(base + com.reparaciones.utils.EntregaGlass.estiloColores());
+                    badgeEntrega.setTooltip(new Tooltip(com.reparaciones.utils.EntregaGlass.tooltip(rep)));
+                    badgeEntrega.setVisible(true); badgeEntrega.setManaged(true);
+                } else {
+                    badgeEntrega.setTooltip(null);
+                    badgeEntrega.setVisible(false); badgeEntrega.setManaged(false);
                 }
                 if (rep.isEsIncidencia()) {
                     badge.setText("Incidencia");
@@ -830,6 +882,21 @@ public class PendientesSuperTecnicoController {
         return "#0D47A1";
     }
 
+    /** Contador de una cola del modal en su botón de tipo: pastilla "N" a la derecha del texto, roja si hay
+     *  entradas pendientes (rojas / pulido sin técnico), gris si no; sin pastilla con 0 entradas
+     *  (spec 2026-09-05-glass-prediccion, regla 8: que se vea desde Reparación lo que nace en Glass). */
+    private static void pintarContadorCola(ToggleButton tb, int total, int pendientes) {
+        if (total == 0) { tb.setGraphic(null); return; }
+        Label pill = new Label(String.valueOf(total));
+        pill.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        pill.setStyle("-fx-font-size: 10.5px; -fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 7 1 7;"
+                + (pendientes > 0 ? " -fx-background-color: #FDE2E1; -fx-text-fill: #C0392B;"
+                                  : " -fx-background-color: #E8EAF0; -fx-text-fill: #586376;"));
+        tb.setGraphic(pill);
+        tb.setContentDisplay(ContentDisplay.RIGHT);
+        tb.setGraphicTextGap(6);
+    }
+
     /** Carga del día de un técnico ausente del mapa (sin asignaciones que cuenten): todo a 0,
      *  con el mismo {@code sinJornada} que tendría cualquier otro técnico hoy. */
     private CargaTecnicos.DiaTecnico diaDe(Map<Integer, CargaTecnicos.DiaTecnico> mapa, int idTec) {
@@ -839,6 +906,54 @@ public class PendientesSuperTecnicoController {
                 .getOrDefault(java.time.LocalDate.now().getDayOfWeek(), 0) == 0;
         CargaTecnicos.Desglose vacio = new CargaTecnicos.Desglose(0, 0, 0, 0, 0, 0);
         return new CargaTecnicos.DiaTecnico(0, 0, vacio, vacio, sinJornada);
+    }
+
+    /** Diálogo "Técnicos de glass": quién entra en la glass automática del modal de asignación (spec
+     *  2026-09-05-glass-prediccion, §3.3). SuperTécnico edita (solo se mandan los cambios); Admin (soloLectura)
+     *  solo mira. El modal de asignación lee los técnicos al abrirse, así que no hay nada que recargar aquí. */
+    @FXML
+    private void abrirTecnicosGlass() {
+        List<Tecnico> lista;
+        try { lista = tecnicoDAO.getAllActivos(); }
+        catch (SQLException e) { mostrarError(e); return; }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Técnicos de glass");
+        dialog.setHeaderText("A quién se le asigna la glass automáticamente");
+        VBox caja = new VBox(6);
+        Map<Integer, CheckBox> checks = new java.util.LinkedHashMap<>();
+        Map<Integer, Boolean> estadoInicial = new HashMap<>();
+        for (Tecnico t : lista) {
+            CheckBox cb = new CheckBox(t.getNombre());
+            cb.setSelected(t.isEsGlass());
+            cb.setDisable(soloLectura);
+            checks.put(t.getIdTec(), cb);
+            estadoInicial.put(t.getIdTec(), t.isEsGlass());
+            caja.getChildren().add(cb);
+        }
+        Label aviso = new Label("Al marcar «Lleva glass» en una reparación, la glass va al técnico marcado aquí\n"
+                + "con menos carga hoy (cuentan sus reparaciones y sus glass). Si no hay ninguno, la glass queda pendiente para asignarla a mano.");
+        aviso.setStyle("-fx-font-size: 11px; -fx-text-fill: #7A8A9A;");
+        caja.getChildren().add(aviso);
+        dialog.getDialogPane().setContent(caja);
+
+        if (soloLectura) {
+            dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+            dialog.showAndWait();
+            return;
+        }
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Button ok = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        ok.addEventFilter(javafx.event.ActionEvent.ACTION, ev -> {
+            try {
+                for (Map.Entry<Integer, CheckBox> e : checks.entrySet()) {
+                    boolean marcado = e.getValue().isSelected();
+                    if (marcado == estadoInicial.get(e.getKey())) continue;   // solo cambios
+                    tecnicoDAO.setGlass(e.getKey(), marcado);
+                }
+            } catch (SQLException ex) { ev.consume(); mostrarError(ex); }   // p. ej. 404 con servidor anterior: el diálogo no cierra
+        });
+        dialog.showAndWait();
     }
 
     /** Abre la ventana "Carga de técnicos": toggle Pedidos|Total (Pedidos por defecto), una fila
@@ -1108,6 +1223,13 @@ public class PendientesSuperTecnicoController {
      *  ilegibles — los estilos inline de esta etiqueta ganan a las reglas :selected/:hover del
      *  stylesheet, así que el conmutado hay que hacerlo aquí, no por CSS. */
     private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada) {
+        return etiquetaConCargaNodo(t, resaltada, false);
+    }
+
+    /** Variante con la pastilla "glass" (paleta del tipo Glass) tras el porcentaje: la usa el modal de
+     *  asignación en la cola Glass para señalar a los habilitados de la glass automática (spec 2026-09-05, §3.3).
+     *  No filtra ni marca nada: solo orienta al cambiar a mano una glass automática. */
+    private HBox etiquetaConCargaNodo(Tecnico t, boolean resaltada, boolean marcarGlass) {
         double pctPedidos = diaDe(cargaDiaPedidos, t.getIdTec()).pctTotal();
 
         String colorNombre       = resaltada ? "#FAFAFA" : "#2C3B54";
@@ -1124,6 +1246,13 @@ public class PendientesSuperTecnicoController {
 
         HBox caja = new HBox(4, lblNombre, lblPuntoPedidos, lblPctPedidos);
         caja.setAlignment(Pos.CENTER_LEFT);
+        if (marcarGlass) {
+            Label pillGlass = new Label("glass");
+            pillGlass.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+            pillGlass.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
+                    + " -fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";");
+            caja.getChildren().add(pillGlass);
+        }
         return caja;
     }
 
@@ -1183,6 +1312,14 @@ public class PendientesSuperTecnicoController {
         return ids;
     }
 
+    /** Nombre del técnico de la primera glass abierta de ese IMEI en la tabla cargada, o {@code null} si no
+     *  hay: con glass abierta en BD la casilla "Lleva glass" se deshabilita (spec 2026-09-05-glass-prediccion, regla 4). */
+    private String tecnicoGlassAbierta(String imei) {
+        for (ReparacionResumen r : datos)
+            if (imei.equals(r.getImei()) && tipoDe(r.getIdRep()) == TipoTrabajo.GLASS) return r.getNombreTecnico();
+        return null;
+    }
+
     /** Construye una fila de la pila para {@code e}. onClick = cargar en el formulario; onRemove = quitar de la pila. */
     private HBox crearFilaPila(EntradaAsignacion e, boolean seleccionada, Runnable onClick, Runnable onRemove) {
         Label lblImei = new Label(e.imei);
@@ -1214,8 +1351,28 @@ public class PendientesSuperTecnicoController {
 
         // El contenido (IMEI + modelo) crece y se RECORTA limpio (sin "...") si no cabe;
         // la ✕ va fuera del recorte, pegada a la derecha → siempre visible.
-        HBox contenido = new HBox(8, lblImei, badgeTipo, estado);
+        // Línea 1: IMEI + tipo + modelo (como siempre). Línea 2 (solo verdes): pastilla "auto" si la eligió el
+        // programa + nombres de sus técnicos, para supervisar la glass automática de un vistazo (spec 2026-09-05).
+        HBox linea1 = new HBox(8, lblImei, badgeTipo, estado);
+        linea1.setAlignment(Pos.CENTER_LEFT);
+        VBox contenido = new VBox(3, linea1);
         contenido.setAlignment(Pos.CENTER_LEFT);
+        if (e.asignada && !e.tecnicos.isEmpty()) {
+            HBox linea2 = new HBox(6);
+            linea2.setAlignment(Pos.CENTER_LEFT);
+            if (e.auto) {
+                Label badgeAuto = new Label("auto");
+                badgeAuto.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+                badgeAuto.setStyle("-fx-font-size: 9.5px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 1 6 1 6;"
+                        + " -fx-background-color: " + TipoTrabajo.GLASS.colorFondo() + "; -fx-text-fill: " + TipoTrabajo.GLASS.colorTexto() + ";");
+                linea2.getChildren().add(badgeAuto);
+            }
+            Label lblTecs = new Label(e.tecnicos.stream().map(Tecnico::getNombre)
+                    .collect(java.util.stream.Collectors.joining(", ")));
+            lblTecs.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #586376;");
+            linea2.getChildren().add(lblTecs);
+            contenido.getChildren().add(linea2);
+        }
         contenido.setMinWidth(0);
         HBox.setHgrow(contenido, javafx.scene.layout.Priority.ALWAYS);
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
@@ -1624,7 +1781,11 @@ public class PendientesSuperTecnicoController {
         List<EntradaAsignacion> pilaGlass = new ArrayList<>();
         EntradaAsignacion[] actual = { null };
         boolean[] editandoVerde = { false };
-        List<Tecnico> defTecnicos = new ArrayList<>();
+        // Técnico "pegajoso" POR COLA (Reparación y Glass por separado; pulido tiene su propio selector arriba):
+        // el último técnico asignado en una cola se propone en las entradas nuevas de ESA cola, no de la otra.
+        final Map<TipoTrabajo, List<Tecnico>> defTecnicos = new java.util.EnumMap<>(TipoTrabajo.class);
+        defTecnicos.put(TipoTrabajo.REPARACION, new ArrayList<>());
+        defTecnicos.put(TipoTrabajo.GLASS, new ArrayList<>());
         long[] seqCounter = { 0 };
         TipoTrabajo[] tipoActual = { TipoTrabajo.REPARACION };   // tipo por defecto de los IMEIs que se escaneen (lo fija el selector)
         // Cola de la categoría activa (rep/glass); pulido va aparte en lotePulido.
@@ -1758,8 +1919,13 @@ public class PendientesSuperTecnicoController {
         // Última decisión MANUAL de cliente por IMEI en este modal; prevalece sobre la precarga de BD.
         // Valor: cliente real, o SIN_CLIENTE (sentinel) = "sin cliente"; ausente = sin decisión manual.
         final java.util.Map<String, Cliente> clienteManual = new java.util.HashMap<>();
-        // Cliente por defecto para los próximos IMEIs que se escaneen (persiste como defTecnicos, no como
-        // clienteManual que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
+        // Modelo vivo: último modelo conocido por IMEI en este modal (lookup con éxito o decisión manual).
+        // Lo alimentan decidirModelo (put) y el lookup (putIfAbsent: nunca pisa una decisión manual); lo
+        // consumen la siembra al escanear y la propagación entre las colas Reparación/Glass. Por-IMEI, sin
+        // default para los siguientes IMEIs (un modelo "pegajoso" entre teléfonos distintos no tiene sentido).
+        final java.util.Map<String, String> modeloPorImei = new java.util.HashMap<>();
+        // Cliente por defecto para los próximos IMEIs que se escaneen (un solo default para todo el modal,
+        // a diferencia de defTecnicos, que es por cola, y de clienteManual, que es por-IMEI). Se actualiza con cada elección manual en cualquiera de las colas;
         // se aplica solo si la precarga de BD no aporta nada (la BD prevalece). Null = sin default aún.
         final Cliente[] clienteDefaultModal = { null };
         FilteredList<Cliente> clientesFiltrados = new FilteredList<>(todosClientes, c -> true);
@@ -1910,6 +2076,14 @@ public class PendientesSuperTecnicoController {
                 "-fx-text-fill: #2C3B54; -fx-font-size: 13px;");
         CheckBox chkChasis = new CheckBox("Reparación de chasis");
         chkChasis.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+        // Lleva glass (spec 2026-09-05-glass-prediccion): como chasis, por IMEI y sin efecto hasta Asignar.
+        CheckBox chkLlevaGlass = new CheckBox("Lleva glass");
+        chkLlevaGlass.setStyle("-fx-font-size: 12px; -fx-text-fill: #586376;");
+        Label lblGlassNota = new Label();
+        lblGlassNota.setStyle("-fx-font-size: 10.5px; -fx-text-fill: #586376; -fx-font-style: italic;");
+        lblGlassNota.setVisible(false); lblGlassNota.setManaged(false);
+        HBox filaGlass = new HBox(8, chkLlevaGlass, lblGlassNota);
+        filaGlass.setAlignment(Pos.CENTER_LEFT);
         Label lblImeiCursoCap = new Label("IMEI en curso");
         lblImeiCursoCap.setStyle("-fx-font-size: 11px; -fx-text-fill: #586376; -fx-font-weight: bold;");
         Label lblImeiCurso = new Label("—");
@@ -1923,7 +2097,7 @@ public class PendientesSuperTecnicoController {
 
         VBox formBox = new VBox(8, lblImeiCursoCap, lblImeiCurso, lblModelo, tfModelo,
                 headerTecnicos, scrollTecnicos, lblNotaPersist, lblCliente, tfCliente,
-                lblComentario, tfComentario, chkChasis, accionesForm);
+                lblComentario, tfComentario, chkChasis, filaGlass, accionesForm);
         formBox.setStyle("-fx-background-color: white; -fx-border-color: #C2C8D0; -fx-border-radius: 6; -fx-border-width: 1; -fx-padding: 16;");
         HBox.setHgrow(formBox, javafx.scene.layout.Priority.ALWAYS);
         formBox.setDisable(true);
@@ -1973,6 +2147,30 @@ public class PendientesSuperTecnicoController {
             if (renderPila[0] != null) renderPila[0].run();
             validarForm.run();
         };
+        // ── Modelo vivo (calcado del cliente pegajoso, solo la parte por-IMEI) ─────────────────
+        // Decisión MANUAL de modelo para la entrada cargada: confirma en el formulario, la recuerda para los
+        // IMEIs que se escaneen después y la copia a todas las entradas del mismo IMEI en las dos colas
+        // (rojas y verdes). El lookup NO pasa por aquí: sigue llamando a confirmarModelo.
+        // Guardado inmediato del modelo del IMEI: upsert de teléfono de DOS argumentos (modelo sí; el cliente
+        // queda intacto por COALESCE en el servidor; sin entrada de log). En hilo aparte, como el lookup.
+        // Si falla: una línea en stderr y nada más — Guardar vuelve a mandar el modelo con la asignación.
+        java.util.function.BiConsumer<String, String> persistirModelo = (imei, code) -> {
+            Thread t = new Thread(() -> {
+                try { telefonoDAO.insertar(imei, code); }
+                catch (Exception ex) { System.err.println("[asignación] No se pudo guardar el modelo de " + imei + ": " + ex.getMessage()); }
+            });
+            t.setDaemon(true);
+            t.start();
+        };
+        java.util.function.Consumer<String> decidirModelo = code -> {
+            EntradaAsignacion e = actual[0];
+            confirmarModelo.accept(code);
+            if (e == null || code == null || code.isEmpty()) return;
+            modeloPorImei.put(e.imei, code);
+            propagarModelo(e.imei, code, pilaRep, pilaGlass);
+            if (renderPila[0] != null) renderPila[0].run();
+            persistirModelo.accept(e.imei, code);
+        };
 
         renderPila[0] = () -> {
             boxRojo.getChildren().clear();
@@ -1986,6 +2184,8 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
+                    if (e.tipo == TipoTrabajo.REPARACION && tecnicoGlassAbierta(e.imei) == null) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -1995,6 +2195,8 @@ public class PendientesSuperTecnicoController {
                 Runnable onClick = () -> cargarEntrada[0].accept(e);
                 Runnable onRemove = () -> {
                     activa.remove(e);
+                    if (e.tipo == TipoTrabajo.REPARACION && tecnicoGlassAbierta(e.imei) == null) pilaGlass.removeIf(x -> x.imei.equals(e.imei));   // sin marca no hay glass
+                    if (e.tipo == TipoTrabajo.GLASS) for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = false;   // sin glass no hay marca
                     if (actual[0] == e) { actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
                     renderPila[0].run();
                 };
@@ -2003,7 +2205,7 @@ public class PendientesSuperTecnicoController {
             lblRojo.setText("Pendiente de asignar (" + nRojo + ")");
             lblVerde.setText("Asignados (" + nVerde + ") · sin guardar");
             scrollRojo.setPrefHeight(nRojo == 0 ? 34 : Math.min(nRojo, 5) * 39 + 4);
-            scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 39 + 4);
+            scrollVerde.setPrefHeight(nVerde == 0 ? 34 : Math.min(nVerde, 5) * 57 + 4);   // dos líneas por fila verde (ajustar si en el smoke queda corto)
             // Totales globales (rep + glass) para la barra inferior y el botón Guardar.
             int nRojoGlobal  = (int) (pilaRep.stream().filter(x -> !x.asignada).count()
                                     + pilaGlass.stream().filter(x -> !x.asignada).count());
@@ -2018,28 +2220,42 @@ public class PendientesSuperTecnicoController {
                     + (sinModelo > 0 ? " · " + sinModelo + " sin modelo" : ""));
             btnGuardar.setText("Guardar (" + (nVerdeGlobal + nPul) + ")");
             btnGuardar.setDisable(nRojoGlobal != 0 || pulidoSinTecnico > 0 || (nVerdeGlobal + nPul) == 0);
+            pintarContadorCola(tbRep,    pilaRep.size(),   (int) pilaRep.stream().filter(x -> !x.asignada).count());
+            pintarContadorCola(tbGlass,  pilaGlass.size(), (int) pilaGlass.stream().filter(x -> !x.asignada).count());
+            pintarContadorCola(tbPulido, nPul,             pulidoSinTecnico);
         };
 
         lanzarLookup[0] = () -> {
             EntradaAsignacion e = actual[0];
-            if (e == null || e.tieneModelo() || e.modeloBuscado) return;
+            if (e == null || e.modeloBuscado) return;
+            // Modelo vivo: una entrada sembrada (o propagada) ya tiene modelo → se salta SOLO la mitad de modelo
+            // (sin "Buscando...", sin getModelo). La precarga del cliente de BD sigue corriendo una vez por
+            // entrada: la BD manda sobre el cliente "pegajoso" también en las entradas sembradas.
+            final boolean buscarModelo = !e.tieneModelo();
             e.modeloBuscado = true;
-            e.buscando = true;
-            tfModelo.setPromptText("Buscando...");
-            renderPila[0].run();
+            if (buscarModelo) {
+                e.buscando = true;
+                tfModelo.setPromptText("Buscando...");
+                renderPila[0].run();
+            }
             Thread t = new Thread(() -> {
                 String modelo = null;
                 Integer idCli = null;
-                try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {}
+                if (buscarModelo) { try { modelo = telefonoDAO.getModelo(e.imei); } catch (Exception ignore) {} }
                 try { idCli = telefonoDAO.getClienteId(e.imei); } catch (Exception ignore) {}
                 String res = modelo;
                 Integer idCliRes = idCli;
                 javafx.application.Platform.runLater(() -> {
                     e.buscando = false;
                     if (res != null && !res.isEmpty()) {
-                        e.modeloCode = res;
-                        if (actual[0] == e) confirmarModelo.accept(res);
-                    } else if (actual[0] == e) {
+                        // Modelo vivo: recuerda el resultado (sin pisar una decisión manual) y aplícalo solo si la
+                        // entrada sigue sin modelo (una decisión manual desde la otra cola pudo llegar en vuelo).
+                        modeloPorImei.putIfAbsent(e.imei, res);
+                        if (!e.tieneModelo()) {
+                            e.modeloCode = res;
+                            if (actual[0] == e) confirmarModelo.accept(res);
+                        }
+                    } else if (buscarModelo && actual[0] == e) {
                         tfModelo.setPromptText("No encontrado — selecciona manualmente");
                     }
                     // Precargar el cliente que el IMEI ya tuviera en BD: la BD manda siempre, salvo que haya
@@ -2112,7 +2328,7 @@ public class PendientesSuperTecnicoController {
             tfModelo.setText(e.tieneModelo() ? FormularioReparacionController.traducirModelo(e.modeloCode) : "");
             modelosFiltrados.setPredicate(s -> true);
             actualizandoModelo[0] = false;
-            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos;
+            List<Tecnico> base = (e.asignada || !e.tecnicos.isEmpty()) ? e.tecnicos : defTecnicos.getOrDefault(e.tipo, List.of());   // pegajoso de SU cola
             java.util.Set<Integer> ids = base.stream().map(Tecnico::getIdTec).collect(java.util.stream.Collectors.toSet());
             for (int i = 0; i < tecnicosModal.size(); i++)
                 checkboxes.get(i).setSelected(ids.contains(tecnicosModal.get(i).getIdTec()));
@@ -2120,6 +2336,15 @@ public class PendientesSuperTecnicoController {
             boolean esRep = (e.tipo == TipoTrabajo.REPARACION);
             chkChasis.setVisible(esRep); chkChasis.setManaged(esRep);
             chkChasis.setSelected(e.esChasis);   // entrada nueva = false → el check NO persiste entre IMEIs
+            // Lleva glass: solo en Reparación; deshabilitada con nota si el IMEI ya tiene glass abierta en BD.
+            filaGlass.setVisible(esRep); filaGlass.setManaged(esRep);
+            String glassAbierta = esRep ? tecnicoGlassAbierta(e.imei) : null;
+            boolean yaTieneGlass = glassAbierta != null;
+            if (yaTieneGlass) e.llevaGlass = false;
+            chkLlevaGlass.setDisable(yaTieneGlass);
+            chkLlevaGlass.setSelected(e.llevaGlass);
+            lblGlassNota.setText(yaTieneGlass ? "ya tiene glass: " + glassAbierta : "");
+            lblGlassNota.setVisible(yaTieneGlass); lblGlassNota.setManaged(yaTieneGlass);
             // Cliente: por IMEI, NO se arrastra (a diferencia de los técnicos). Parte de lo que
             // tenga la entrada; si es nueva, vacío (y la precarga de BD lo rellenará si el IMEI ya tenía uno).
             clienteSel[0] = e.cliente;
@@ -2159,6 +2384,12 @@ public class PendientesSuperTecnicoController {
             Cliente m = clienteManual.get(e.imei);
             if (m != null) { e.sinCliente = (m == SIN_CLIENTE); e.cliente = e.sinCliente ? null : m; }
         };
+        // Modelo vivo: si el modal ya conoce el modelo de este IMEI (lookup con éxito o decisión manual en
+        // cualquier cola), la entrada nace con él y lanzarLookup se la salta (tieneModelo()).
+        java.util.function.Consumer<EntradaAsignacion> sembrarModeloEntrada = e -> {
+            String m = modeloPorImei.get(e.imei);
+            if (m != null && !m.isEmpty()) e.modeloCode = m;
+        };
         // aplicarClienteDefaultEntrada está declarada más arriba (antes de cargarEntrada[0], que la usa).
         java.util.function.Consumer<FilaPulido> sembrarClientePulido = fila -> {
             Cliente m = clienteManual.get(fila.imei);
@@ -2172,6 +2403,66 @@ public class PendientesSuperTecnicoController {
             fila.cliente = sinDef ? null : clienteDefaultModal[0];
             fila.sinCliente = sinDef;
         };
+
+        // Entradas verdes del modal (reparación y glass, sin guardar), tal como las pesa PrediccionGlass: una por técnico.
+        java.util.function.Supplier<List<com.reparaciones.utils.PrediccionGlass.VerdeEnModal>> verdesModal = () -> {
+            List<com.reparaciones.utils.PrediccionGlass.VerdeEnModal> out = new ArrayList<>();
+            for (List<EntradaAsignacion> pila : List.of(pilaRep, pilaGlass))
+                for (EntradaAsignacion x : pila)
+                    if (x.asignada)
+                        for (Tecnico t : x.tecnicos)
+                            out.add(new com.reparaciones.utils.PrediccionGlass.VerdeEnModal(
+                                    x.imei, t.getIdTec(), x.tipo, x.esChasis, x.cliente != null));
+            return out;
+        };
+        // Invariante del modal (spec 2026-09-05, §2 reglas 2-6): casilla "Lleva glass" marcada ⇔ hay glass de ese IMEI en
+        // la cola Glass, en los dos sentidos. La casilla crea/retira la glass al instante; Asignar solo rellena con la
+        // predicción una glass que siga roja y sin técnicos. No toca defTecnicos (no es decisión del usuario) ni relanza
+        // el lookup (modelo y cliente vienen de la reparación; el modelo se iguala al Asignar si a la glass le faltaba).
+        java.util.function.Function<String, EntradaAsignacion> glassDe = imei ->
+                pilaGlass.stream().filter(x -> x.imei.equals(imei)).findFirst().orElse(null);
+        java.util.function.Consumer<EntradaAsignacion> predecirGlass = g -> {
+            // Automática sin revisar: se recalcula con la carga de ahora (p. ej. tras cambiar el técnico de la reparación).
+            if (g.auto) { g.tecnicos.clear(); g.asignada = false; g.auto = false; }
+            if (g.asignada || !g.tecnicos.isEmpty()) return;   // asignada a mano o en configuración: no se toca
+            Tecnico t = com.reparaciones.utils.PrediccionGlass.elegir(
+                    tecnicosModal, datos, cerradasHoy, verdesModal.get(), g.imei, g.cliente != null);
+            if (t != null) { g.tecnicos.add(t); g.asignada = true; g.auto = true; }   // sin candidato: se queda roja
+        };
+        // Crea la glass pendiente del IMEI de la reparación e (si no la hay); si la reparación ya está verde, la predice ya.
+        java.util.function.Consumer<EntradaAsignacion> crearGlassDe = e -> {
+            if (glassDe.apply(e.imei) != null) return;
+            EntradaAsignacion g = new EntradaAsignacion(e.imei);
+            g.tipo = TipoTrabajo.GLASS;
+            g.modeloCode = e.tieneModelo() ? e.modeloCode : modeloPorImei.get(e.imei);
+            g.cliente = e.cliente;
+            g.sinCliente = e.sinCliente;
+            g.comentario = "";
+            g.seq = ++seqCounter[0];
+            g.modeloBuscado = true;
+            pilaGlass.add(g);
+            if (e.asignada) predecirGlass.accept(g);
+        };
+        java.util.function.Consumer<String> quitarGlassDe = imei -> pilaGlass.removeIf(x -> x.imei.equals(imei));
+        // Al escanear: una reparación de un IMEI que ya está en Glass nace marcada; una glass de un IMEI que está en
+        // Reparación marca esa reparación. Con glass abierta en BD la casilla está deshabilitada y no se marca nada.
+        java.util.function.Consumer<EntradaAsignacion> vincularGlass = e -> {
+            if (tecnicoGlassAbierta(e.imei) != null) return;
+            if (e.tipo == TipoTrabajo.REPARACION) e.llevaGlass = glassDe.apply(e.imei) != null;
+            else if (e.tipo == TipoTrabajo.GLASS)
+                for (EntradaAsignacion r : pilaRep) if (r.imei.equals(e.imei)) r.llevaGlass = true;
+        };
+        // La casilla actúa al marcarla (solo clic del usuario, como memorizarTecnicos). En una reparación pendiente es solo
+        // una intención, como chasis: la glass nace al pulsar Asignar, ya verde con técnico. En una verde (edición) la crea
+        // y la predice en el acto. Desmarcar retira la glass de ese IMEI esté como esté.
+        chkLlevaGlass.setOnAction(ev -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null || e.tipo != TipoTrabajo.REPARACION) return;
+            e.llevaGlass = chkLlevaGlass.isSelected();
+            if (!e.llevaGlass) quitarGlassDe.accept(e.imei);
+            else if (e.asignada) crearGlassDe.accept(e);
+            renderPila[0].run();
+        });
 
         Runnable asignarActual = () -> {
             EntradaAsignacion e = actual[0];
@@ -2190,7 +2481,20 @@ public class PendientesSuperTecnicoController {
             propagarCliente[0].accept(e.imei, e.cliente, e.sinCliente);
             e.asignada = true;
             // seq NO cambia al asignar: rojo y verde se ordenan por orden de escaneo → mismo orden en ambas
-            defTecnicos.clear(); defTecnicos.addAll(sel);   // solo los técnicos se mantienen entre IMEIs
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);   // los técnicos se mantienen entre IMEIs de la MISMA cola (rep y glass por separado)
+            if (e.tipo == TipoTrabajo.REPARACION) {
+                e.llevaGlass = chkLlevaGlass.isSelected() && !chkLlevaGlass.isDisabled();
+                if (e.llevaGlass) {
+                    crearGlassDe.accept(e);   // por si venía marcada de nacimiento (con glass ya en la cola no crea nada)
+                    EntradaAsignacion g = glassDe.apply(e.imei);
+                    if (g != null) { if (!g.tieneModelo()) g.modeloCode = e.modeloCode; predecirGlass.accept(g); }
+                } else if (!chkLlevaGlass.isDisabled()) {
+                    quitarGlassDe.accept(e.imei);   // casilla deshabilitada (glass abierta en BD): la glass de la cola no está vinculada
+                }
+            } else if (e.tipo == TipoTrabajo.GLASS) {
+                e.auto = false;   // "Guardar cambios" (o asignar a mano una roja): la glass pasa a ser del usuario
+            }
             renderPila[0].run();
             if (editandoVerde[0]) { editandoVerde[0] = false; actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—"); }
             else cargarSiguienteRojo.run();
@@ -2210,11 +2514,19 @@ public class PendientesSuperTecnicoController {
             validarForm.run();
         });
         tfModelo.setOnAction(e -> {
-            if (!modelosFiltrados.isEmpty()) confirmarModelo.accept(modelosFiltrados.get(0));
+            // Guard: con un modelo ya confirmado y el texto sin tocar, Enter no re-decide. Antes re-confirmaba
+            // modelosFiltrados.get(0) = el PRIMER modelo de toda la lista (confirmar resetea el filtro a "todos").
+            String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
+            if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) return;
+            if (texto.isEmpty()) return;   // campo vacío (p. ej. tras un lookup fallido): Enter no decide el primer modelo del catálogo
+            if (!modelosFiltrados.isEmpty()) decidirModelo.accept(modelosFiltrados.get(0));
         });
         tfModelo.focusedProperty().addListener((obs, o, focused) -> {
-            if (!focused) javafx.application.Platform.runLater(() -> {
+            if (focused) return;
+            final EntradaAsignacion origen = actual[0];   // hardening: el callback diferido no decide sobre otra entrada
+            javafx.application.Platform.runLater(() -> {
                 popupModelo.hide();
+                if (actual[0] != origen) return;
                 String texto = tfModelo.getText() == null ? "" : tfModelo.getText().trim();
                 if (modeloSel[0] != null && FormularioReparacionController.traducirModelo(modeloSel[0]).equals(texto)) {
                     modelosFiltrados.setPredicate(s -> true);
@@ -2224,7 +2536,7 @@ public class PendientesSuperTecnicoController {
                         .filter(c -> FormularioReparacionController.traducirModelo(c).equalsIgnoreCase(texto))
                         .findFirst().orElse(null);
                 if (exacto != null) {
-                    confirmarModelo.accept(exacto);
+                    decidirModelo.accept(exacto);
                 } else {
                     actualizandoModelo[0] = true;
                     tfModelo.setText(modeloSel[0] != null ? FormularioReparacionController.traducirModelo(modeloSel[0]) : "");
@@ -2235,12 +2547,12 @@ public class PendientesSuperTecnicoController {
         });
         listaModelos.setOnMouseClicked(e -> {
             String sel = listaModelos.getSelectionModel().getSelectedItem();
-            if (sel != null) confirmarModelo.accept(sel);
+            if (sel != null) decidirModelo.accept(sel);
         });
         listaModelos.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ENTER) {
                 String sel = listaModelos.getSelectionModel().getSelectedItem();
-                if (sel != null) confirmarModelo.accept(sel);
+                if (sel != null) decidirModelo.accept(sel);
             }
         });
 
@@ -2256,6 +2568,8 @@ public class PendientesSuperTecnicoController {
             e.seq = ++seqCounter[0];
             sembrarClienteEntrada.accept(e);   // hereda el cliente ya decidido en el modal para este IMEI
             aplicarClienteDefaultEntrada.accept(e);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+            sembrarModeloEntrada.accept(e);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
+            vincularGlass.accept(e);           // invariante casilla ⇔ glass entre colas
             pilaActiva.get().add(e);
             renderPila[0].run();
             cargarEntrada[0].accept(e);
@@ -2288,6 +2602,8 @@ public class PendientesSuperTecnicoController {
                     en.seq = ++seqCounter[0];
                     sembrarClienteEntrada.accept(en);   // hereda el cliente ya decidido en el modal para este IMEI
                     aplicarClienteDefaultEntrada.accept(en);   // si no hay decisión manual, pinta ya el cliente "pegajoso"
+                    sembrarModeloEntrada.accept(en);    // modelo vivo: nace con el modelo que el modal ya conoce (sin lookup)
+                    vincularGlass.accept(en);          // invariante casilla ⇔ glass entre colas
                     pilaActiva.get().add(en);
                     anadidos++;
                 }
@@ -2309,6 +2625,21 @@ public class PendientesSuperTecnicoController {
         tfScan.setOnKeyPressed(ev -> { if (ev.getCode() == javafx.scene.input.KeyCode.ENTER) intentarAnadir.run(); });
 
         checkboxes.forEach(cb -> cb.selectedProperty().addListener((obs, o, n) -> validarForm.run()));
+        // Técnico pegajoso: se memoriza en cuanto lo MARCAS, no solo al pulsar Asignar (sin modelo detectado no
+        // se puede pulsar Asignar y la marca se perdía al picar el siguiente IMEI). La entrada pendiente (roja)
+        // también recuerda sus marcas para no perderlas al cambiar de IMEI. setOnAction solo salta con la acción
+        // del usuario (clic/teclado), no con los setSelected programáticos de cargarEntrada/recomputeOcupados.
+        Runnable memorizarTecnicos = () -> {
+            EntradaAsignacion e = actual[0];
+            if (e == null) return;
+            List<Tecnico> sel = new ArrayList<>();
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                if (checkboxes.get(i).isSelected() && !checkboxes.get(i).isDisabled()) sel.add(tecnicosModal.get(i));
+            List<Tecnico> def = defTecnicos.computeIfAbsent(e.tipo, k -> new ArrayList<>());
+            def.clear(); def.addAll(sel);
+            if (!e.asignada) { e.tecnicos.clear(); e.tecnicos.addAll(sel); }   // la verde solo cambia con "Guardar cambios"
+        };
+        checkboxes.forEach(cb -> cb.setOnAction(ev -> memorizarTecnicos.run()));
         btnAsignar.setOnAction(ev -> asignarActual.run());
 
         // ── Layout + ventana ─────────────────────────────────────────────────
@@ -2340,6 +2671,11 @@ public class PendientesSuperTecnicoController {
             richArea.setVisible(!pulido);  richArea.setManaged(!pulido);
             pulidoPane.setVisible(pulido); pulidoPane.setManaged(pulido);
             if (!pulido) tipoActual[0] = (n == tbGlass) ? TipoTrabajo.GLASS : TipoTrabajo.REPARACION;
+            // Etiqueta "glass" junto a los habilitados, solo en la cola Glass (los checkboxes se construyen una vez).
+            boolean colaGlass = !pulido && tipoActual[0] == TipoTrabajo.GLASS;
+            for (int i = 0; i < tecnicosModal.size(); i++)
+                checkboxes.get(i).setGraphic(etiquetaConCargaNodo(tecnicosModal.get(i), false,
+                        colaGlass && tecnicosModal.get(i).isEsGlass()));
             // El detalle cargado pertenece a la cola vieja: al cambiar de cola, se limpia.
             actual[0] = null; formBox.setDisable(true); lblImeiCurso.setText("—");
             if (renderPila[0] != null) renderPila[0].run();
@@ -2405,10 +2741,26 @@ public class PendientesSuperTecnicoController {
                     "Descartar", ventana::close);
         });
 
-        javafx.scene.Scene scene = new javafx.scene.Scene(contenido);
+        // Pantallas pequeñas (portátil con escalado de Windows): el contenido va dentro de un ScrollPane y la
+        // ventana se limita a la zona visible de la pantalla, para que la barra de título y Guardar no se salgan.
+        // En pantallas grandes no cambia nada: la altura preferida cabe y el scroll no aparece.
+        javafx.scene.control.ScrollPane raiz = new javafx.scene.control.ScrollPane(contenido);
+        raiz.setFitToWidth(true);
+        raiz.setFocusTraversable(false);
+        raiz.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        raiz.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        raiz.setStyle("-fx-background-color: #DDE1E7; -fx-background: #DDE1E7; -fx-padding: 0;");
+        javafx.geometry.Rectangle2D visible = javafx.stage.Screen.getPrimary().getVisualBounds();
+        double altoMax = Math.max(ventana.getMinHeight(), visible.getHeight() - 24);
+        ventana.setMaxHeight(altoMax);
+        javafx.scene.Scene scene = new javafx.scene.Scene(raiz);
         scene.getStylesheets().add(getClass().getResource("/styles/app.css").toExternalForm());
         ventana.setScene(scene);
         renderPila[0].run();
+        ventana.setOnShown(ev -> {
+            if (ventana.getHeight() > altoMax) ventana.setHeight(altoMax);
+            ventana.centerOnScreen();
+        });
         javafx.application.Platform.runLater(tfScan::requestFocus);
 
         // ── F2b: precarga desde la ficha de revisión (IMEI + tipo principal del veredicto) ──

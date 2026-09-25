@@ -24,7 +24,7 @@ jobs:
             icon-arg: "--icon packaging/icono_mac.icns"
             artifact: FSGR-mac
             appimage-artifact: FSGR-mac-appimage
-          - os: macos-13
+          - os: macos-15-intel
             jfx-jmods-zip: openjfx-21_osx-x64_bin-jmods.zip
             pkg-type: dmg
             pkg-version: 1.0.0
@@ -34,7 +34,7 @@ jobs:
           - os: windows-latest
             jfx-jmods-zip: openjfx-21_windows-x64_bin-jmods.zip
             pkg-type: msi
-            pkg-version: 0.16.0
+            pkg-version: 0.16.2
             icon-arg: "--icon packaging/icono_Windows.ico"
             artifact: FSGR-windows
             appimage-artifact: FSGR-windows-appimage
@@ -94,7 +94,7 @@ jobs:
             --name "FSGR" \
             --app-version ${{ matrix.pkg-version }} \
             --input target/libs \
-            --main-jar gestion-reparaciones-cliente-0.16.0.jar \
+            --main-jar gestion-reparaciones-cliente-0.16.2.jar \
             --main-class com.reparaciones.App \
             --runtime-image custom-runtime \
             --java-options "--add-modules=javafx.controls,javafx.fxml" \
@@ -117,7 +117,7 @@ jobs:
             --name "FSGR" \
             --app-version ${{ matrix.pkg-version }} \
             --input target/libs \
-            --main-jar gestion-reparaciones-cliente-0.16.0.jar \
+            --main-jar gestion-reparaciones-cliente-0.16.2.jar \
             --main-class com.reparaciones.App \
             --runtime-image custom-runtime \
             --java-options "--add-modules=javafx.controls,javafx.fxml" \

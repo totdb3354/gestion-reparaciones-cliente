@@ -7,7 +7,49 @@ y el proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-_(cambios para la próxima versión)_
+### Changed
+- **Estadísticas: lo de fuera de horario suma, no promedia.** Generaliza la regla del fin de semana a las horas extra de cualquier día, en las cuatro granularidades: los puntos cerrados fuera del horario del taller (horario 8:30–18:00 L-M, 17:00 X-J, 14:30 V; franja efectiva 8:00–18:15 / 8:00–17:15 / 8:00–14:45, con 30 min de margen antes de la entrada y 15 después de la salida) siguen sumando en gráfico, tarjetas y totales, pero el Promedio, la media de cada técnico, Por encima/Por debajo, IMEIs típicos y la referencia de las tarjetas se calculan solo con lo cerrado en horario. El tooltip del punto añade "X puntos fuera de horario" y las varas dicen "en horario". Requiere servidor con `puntosJornada`; con uno antiguo la vista se comporta como la 0.16.2.
+- Estadísticas: las listas "Por encima / Por debajo" del Promedio usan el mismo conjunto de periodos de referencia que las líneas x̄ (antes, en Día, las listas incluían el fin de semana y las x̄ no, y podían discrepar), y un día con 0 puntos ya no cuenta como día trabajado en las referencias de las tarjetas. Ambos cambios aplican también con un servidor antiguo.
+
+### Fixed
+- Estadísticas por puntos: la fecha de cada cierre se toma en hora de Madrid (antes en UTC, con lo que un cierre entre las 00:00 y las 02:00 de verano caía en el día anterior).
+
+## [0.16.2] - 2026-09-07
+
+### Added
+- Estadísticas por puntos de dificultad: la pestaña "Técnicos" mide puntos (tabla editable por el admin en ⚙ Valores) con métricas Puntos y Puntos/día, tarjetas del mes, promedio del equipo, desplegable con buscador, leyenda con los IMEIs del periodo visible, tarjeta "IMEIs típicos por técnico" y popover de desglose con salto al Historial.
+- **👥 Técnicos en estadísticas** (solo admin, junto a ⚙ Valores): panel para excluir de la vista de Técnicos a quienes no reparan a jornada completa; el excluido sale de Promedio, Equipo, tarjetas y desplegable (pero sigue viéndose a sí mismo). Acciones `EXCLUIR_ESTADISTICAS` / `INCLUIR_ESTADISTICAS` en el log.
+- **Glass automática al asignar la reparación**: en el modal de asignación, la reparación tiene una casilla **"Lleva glass"** (como "Reparación de chasis"). Al pulsar Asignar en la reparación nace en la cola Glass una entrada del mismo IMEI, con su modelo y su cliente, ya asignada al técnico habilitado para glass con **menos carga** (cuentan sus reparaciones y sus glass, en BD y en el propio lote; Pedidos si el teléfono tiene cliente, Total si es stock; empate por nombre), con la pastilla **"auto"**; si no hay técnico disponible se queda pendiente para asignarla a mano. Casilla y glass van siempre a la par: desmarcar la casilla o quitar la reparación retira la glass, quitar la glass desmarca la casilla, escanear el mismo IMEI en la otra cola enlaza las dos entradas, y reeditar la reparación recalcula la glass "auto" (una glass editada a mano no se toca). Con glass ya abierta en BD la casilla se deshabilita.
+- **Técnicos de glass** (Asignaciones, junto a "Carga técnicos"): quién entra en la glass automática. Solo el SuperTécnico edita; el Admin lo ve. Acciones `HABILITAR_GLASS` / `DESHABILITAR_GLASS` en el log. Requiere servidor 0.16.2 (columna `ES_GLASS`); con servidor anterior nadie está habilitado y la glass nace pendiente.
+
+### Changed
+- **Tarjetas resumen en formato objetivo**: en vez del delta ▲/▼ (que salía rojo enorme a principios de mes), muestran "% de <mes anterior> (total)" — gris hasta el 100%, verde al superarlo, nunca rojo.
+- El selector **Puntos / Puntos·día** se deshabilita en granularidad Día (ambas métricas coinciden); la selección se conserva al cambiar de granularidad.
+- La etiqueta de la ventana dice la unidad real: "30 días con actividad", "16 semanas", "12 meses", "5 años" (antes "N periodos").
+- **Modelo compartido en el modal de asignación**: el modelo es del IMEI, no de cada cola. Al elegirlo o cambiarlo a mano se guarda al instante y todas las entradas de ese IMEI (Reparación y Glass) lo muestran; un IMEI que el modal ya conoce nace con modelo al escanearlo, sin volver a buscar. Antes, un modelo elegido a mano en Reparación había que volver a elegirlo al asignar la glass del mismo teléfono.
+- **Técnico propuesto por cola en el modal de asignación**: el último técnico asignado en Reparación solo se propone en Reparación y el de Glass solo en Glass (antes se arrastraba de una cola a la otra; no tiene por qué reparar la glass la misma persona). Pulido ya tenía su selector propio. Además el técnico **se recuerda en cuanto lo marcas**, no solo al pulsar Asignar: si el modelo no se detecta y pasas al siguiente IMEI, la marca ya no se pierde, y la entrada pendiente conserva sus técnicos al volver a ella.
+- En el modal de asignación, los botones Reparación / Glass / Pulido muestran cuántas entradas tiene cada cola (en rojo si alguna está pendiente), las filas verdes de la pila muestran sus técnicos, y en la cola Glass la lista de técnicos marca con **"glass"** a los habilitados.
+- **Estadísticas: cada uno ve solo las suyas**: el SuperTécnico pasa a ver únicamente su propia serie y sus tarjetas (como el Técnico), sin desplegable de técnicos; Equipo, Promedio e IMEIs típicos siguen como referencia del equipo. Solo el Admin ve las estadísticas de todos. (Restricción de cliente; el filtrado en servidor queda apuntado en la revisión de seguridad.)
+- **Estadísticas: el fin de semana suma, no promedia**: los puntos de un sábado o domingo siguen contando en tarjetas, semanas y meses, pero en la vista Día ya no cuentan como "día trabajado" en el Promedio, la media de cada técnico, IMEIs típicos ni el objetivo de las tarjetas. Unas horas extra de sábado ya no hunden la referencia de una jornada. El tooltip del Promedio lo indica con "L–V".
+
+### Fixed
+- La pestaña Stock de Estadísticas etiquetaba los SKU `g` como "Pantalla" y `lcd` como "LCD"; ahora `g`=Glass y `lcd`=Pantalla, como el formulario de reparación.
+- En el modal de asignación, pulsar Enter en el campo de modelo con un modelo ya confirmado re-seleccionaba el primer modelo de la lista.
+- El modal de asignación no cabía en pantallas pequeñas (portátil con escalado): la barra de título se salía por arriba y Guardar quedaba pegado a la barra de tareas. Ahora se limita a la zona visible de la pantalla, se centra y el contenido hace scroll si hace falta.
+
+## [0.16.1] - 2026-08-31
+
+### Added
+- **Entrega del teléfono al técnico de glass**: en Mis pendientes, el dueño de una reparación normal cuyo IMEI tiene glass abierta puede **"Entregar a <técnico de glass>"** (clic derecho, junto a "Marcar por cerrar"); se registra quién y a qué hora. Badge **"→ <técnico de glass>"** en su fila (la columna Estado no daba para "Entregado dd/MM hh:mm") y **"Llegó hh:mm"** en la fila de glass del otro técnico (solo la fecha, "Llegó dd/MM", si no es de hoy); el tooltip lleva quién, a quién y la hora. Visibles también en Asignaciones. "Deshacer entrega" por si fue un error. Columna "Entregado" en el CSV de Asignaciones. Acciones `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` en el log. En el historial (Agrupado por IMEI e Historial), las glass completadas muestran bajo el reparador **"Llegó dd/MM hh:mm"** (la entrega se hereda al completar).
+- **Sin teléfono no hay glass**: en Mis pendientes → Glass, el botón "Añadir glass" no aparece mientras el IMEI tenga una reparación normal abierta y la glass no tenga entrega; en cuanto llega la píldora "Llegó" (o si no hay reparación normal abierta) vuelve a estar disponible. Si el dueño de la reparación no registra la entrega (p. ej. el teléfono ya estaba abajo), el técnico de glass puede desbloquearse con **"Marcar que llegó"** (queda firmado en el log). "Deshacer entrega"/"Deshacer llegada" solo puede usarlas quien registró la entrega (la firma queda en `ENTREGADO_POR`).
+- **Píldora "Glass: <técnico>" bajo el IMEI** en Mis pendientes y Asignaciones (filas de reparación normal con glass abierta sin entrega): se ve de primeras quién tiene la glass del IMEI, esté el teléfono arriba o ya abajo. Al registrar la entrega la sustituye la píldora "→ <técnico>". **Bidireccional**: las filas de glass llevan la píldora azul **"Rep: <técnico>"** mientras la reparación normal siga abierta (también tras el "Llegó": dice a quién devolver el teléfono). En Asignaciones, con 2 asignados el contador genérico se oculta cuando una píldora ya cuenta quién es el segundo; con 3+ conviven.
+
+### Fixed
+- Los errores **422** del servidor muestran su mensaje real (antes salía siempre "Contraseña actual incorrecta."); cambiar contraseña conserva su mensaje también contra servidores anteriores.
+- Las **alertas de stock de la campana ya no incluyen componentes desactivados** (aparecían como "Sin Stock" y entraban en "Pedir todas las piezas"; también podían encender el aviso al arrancar). Como en el resto de la app, un desactivado no cuenta para conteos ni alertas.
+
+### Notas de despliegue
+- Requiere el **servidor** con el endpoint `entrega-glass` y la migración `sql/migracion-entrega-glass.sql` (columnas `ENTREGADO_AT`/`ENTREGADO_POR` en `Reparacion`; **ya aplicada en preproducción el 2026-08-28**). Orden: **ALTER → servidor → cliente**. Retrocompatible en ambos sentidos (campos JSON aditivos). Servidor: `main` `9eba0ae`, **ya desplegado en preproducción** (2026-08-31).
 
 ## [0.16.0] - 2026-07-10
 

@@ -408,14 +408,7 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
                     rep.getNombreTecnicoAsigna() != null ? rep.getNombreTecnicoAsigna() : "—");
             return new javafx.beans.property.SimpleStringProperty("");
         });
-        colReparador.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty || item == null || item.isEmpty() ? null : item);
-            }
-        });
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
 
         colFecha.setCellFactory(col -> new TableCell<>() {
             private final Label lblInicio = new Label();
@@ -909,6 +902,12 @@ public class ReparacionControllerTecnico implements com.reparaciones.utils.Recar
         mostrarHistorial();
         filtroFechaDesde.setValue(desde);
         filtroFechaHasta.setValue(hasta);
+    }
+
+    /** "Ver IMEIs" desde Estadísticas: abre el Agrupado con las fechas aplicadas (sus datos ya son solo suyos). */
+    public void setFiltroInicialImeis(java.time.LocalDate desde, java.time.LocalDate hasta) {
+        mostrarAgrupado();
+        agrupadoController.setFiltroInicial(desde, hasta, null);
     }
 
     @FXML

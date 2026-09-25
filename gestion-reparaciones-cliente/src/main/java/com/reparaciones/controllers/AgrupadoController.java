@@ -525,14 +525,7 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
                 return new SimpleStringProperty(rep.getNombreTecnico() != null ? rep.getNombreTecnico() : "");
             return new SimpleStringProperty("");
         });
-        colReparador.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(null);
-                setText(empty || item == null || item.isEmpty() ? null : item);
-            }
-        });
+        colReparador.setCellFactory(col -> com.reparaciones.utils.CeldaReparador.crear());   // nombre + "Llegó …" en glass
         colAsignadoPor.setCellValueFactory(d -> {
             Object o = d.getValue();
             if (o instanceof ReparacionResumen rep)
@@ -1330,6 +1323,25 @@ public class AgrupadoController implements com.reparaciones.utils.Recargable, co
         if (itemCerradas != null) itemCerradas.setVisible(true);
         cbNormales.setText("Sin incidencia");
         actualizarTextoFiltroIncidencias();
+    }
+
+    /**
+     * Filtro inicial desde Estadísticas (popover "Ver IMEIs"): fechas y técnico
+     * ya aplicados sobre el modo maestro — se ven los IMEIs con al menos un
+     * trabajo del técnico en el rango.
+     */
+    public void setFiltroInicial(java.time.LocalDate desde, java.time.LocalDate hasta, String tecnico) {
+        volverAlMaestro();
+        if (tecnico != null) {
+            idsTecFiltro.clear();
+            tecnicosLista.stream().filter(t -> t.getNombre().equals(tecnico))
+                    .findFirst().ifPresent(t -> idsTecFiltro.add(t.getIdTec()));
+            if (filtroTecHandle != null) filtroTecHandle.refresh();
+            actualizarTextoFiltroTecnico();
+        }
+        filtroFechaDesde.setValue(desde);
+        filtroFechaHasta.setValue(hasta);
+        aplicarFiltros();
     }
 
     @FXML
