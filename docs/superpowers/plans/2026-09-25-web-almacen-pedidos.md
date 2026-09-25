@@ -11766,3 +11766,13 @@ Antes, completar en este plan un "### Cierre final" con el esquema del 4a (`2026
 - `[ ] Backlog 4b → web / servidor`: lo triado como backlog en las revisiones de las tareas y en la revisión final.
 
 **U13. Memoria** (Claude, con OK): actualizar `project_migracion_web_programa.md` (4b cerrado, web v0.7.0, siguiente 4c) y su línea en `MEMORY.md`.
+
+## Cierre final (2026-09-25)
+
+Estado: **CERRADO**. Servidor `main` `3dccc4a` (merge `--no-ff` de `feature/web-pedidos` `5153e54`, 421 tests) desplegado en la VDC antes que la web; contrato publicado idéntico al de la rama (136 rutas, 123 esquemas). Web `main` `cd6853b` = tag **`v0.7.0`** (merge `--no-ff` de `feature/web-pedidos` `440ef32` en `21a98a0`, 1333 tests, lint/typecheck/build limpios; `cd6853b` solo fija la fecha del CHANGELOG), desplegada con el bundle verificado igual al build local. Las dos ramas `feature/web-pedidos` siguen en origin.
+
+Pasos del usuario ejecutados en orden: U1 push de las ramas → U2 merge y push del servidor → U3 despliegue del backend y comparación del contrato → U4 smoke `pedidos.spec` en verde contra producción con la web de la rama en local (nota: el smoke debe correr con `E2E_BASE_URL=http://localhost:5173`; con el valor de `~/.env.e2e` corre contra la web desplegada, que era la 0.6.0) → U5 capturas del JavaFX (65, con datos de prueba creados por la API; dos de roles pendientes, cubiertas por las de la web) → U6 capturas de la web (70) y comparación lado a lado ANTES del merge: 9 diferencias nuevas, 4 corregidas en la rama (`ebd7a0c`: 409 de acción como "Advertencia", tabla de líneas con alto máximo, sin autofoco en precargas, redondeo del unitario como el servidor; `114ca65`: lista del autocompletar en portal porque la caja con scroll la recortaba, redondeo half-up decimal, EUR sin redondear) y 6 aceptadas en la ficha → U7 ficha marcada 84/85 (`440ef32`) → U8 merge y push de la web → U9 despliegue → U10 fecha y tag. Recuentos finales: servidor 286 → 421, web 1119 → 1333.
+
+Decisiones tomadas durante la ejecución (además de las de la revisión previa): P2 se anota en la ficha y el cambio queda en el backlog; la duplicación de los dos editores va al backlog; los tres calcos de la revisión final (enlace selecciona la fila, cancelado seleccionado navy, vuelta a Stock solo si visible); las diferencias aceptadas de la comparación (divisa dentro del campo P.Unit., texto no numérico en las celdas, error en línea hasta el siguiente Confirmar, orden de "Pedir todas las piezas", papelera visible, color del texto de todas las tablas como decisión global).
+
+Backlog y limpieza de la VDC: en `Apuntes/plan-futuro.md` (casilla 4b) y en la sección "Ejecución y cierre" de arriba.
