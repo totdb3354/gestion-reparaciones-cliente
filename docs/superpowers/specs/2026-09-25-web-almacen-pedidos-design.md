@@ -193,7 +193,7 @@ Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`
 - **409 en desrecibir:** el mensaje del servidor (stock insuficiente o estado) y recarga.
 - **422 de parcial o resto:** inline en el diálogo, que sigue abierto (la web valida antes con los mismos textos).
 - **422 y 409 de los formularios:** inline (§6).
-- **503 de tasa:** en la vista previa, "—" / "Error al obtener tasa"; al guardar, el mensaje del servidor inline.
+- **503 de tasa:** en la vista previa, "—" / "Error al obtener tasa"; al guardar, el mensaje del servidor inline. Para ello el clasificador de errores de la web trata un **503 con mensaje** como error de negocio (solo lo emite nuestro backend); un 503 sin cuerpo (nginx) sigue siendo "sin conexión".
 - **Fallo de carga de la lista:** política general (aviso, banner si es conexión).
 - **Refresco:** 60 s conectado, 5 s con banner; recarga al volver a la pestaña; congelado con algo abierto. La selección se mantiene (S4).
 
@@ -221,7 +221,11 @@ Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`
 | Celdas de líneas siempre editables | **Diferencia** (P8) |
 | Ordenación por cabecera bloqueada | **Diferencia** (P10) |
 | Selección mantenida en el refresco y refresco congelado con formulario abierto | **Diferencia** (S4, D4) |
-| Recarga de compras, stock y campana tras cualquier acción | **Diferencia** inocua |
+| Recarga de compras, stock y campana entera tras cualquier acción | **Diferencia** inocua |
+| El panel de la campana se cierra al pedir (el JavaFX lo deja abierto) | **Diferencia** inocua |
+| "Pedir todas las piezas" sin alertas no hace nada; "Pedir piezas" se deshabilita mientras relee | **Calco** |
+| Enter no confirma en los formularios de alta (sí en los editores) | **Diferencia** inocua |
+| Un proveedor desactivado después del pedido hace que editarlo dé 422 aunque no se toque el proveedor | **Diferencia** (§4.2) |
 | Llegada desde "En Camino" siempre al toggle Componentes | **Diferencia** (el JavaFX se queda en Otros si estaba ahí) |
 | Filtro Estado y Proveedor como `MultiSelect` sin buscador | **Diferencia** ya aceptada en 4a |
 | Fechas de "Desde/Hasta" tecleables | **Diferencia** ya aceptada en Historial |
