@@ -65,7 +65,7 @@ Mensajes idénticos a los del cliente cuando existen:
 
 - `confirmar-parcial`: `0 < cantidadRecibida < cantidad` → "La cantidad debe ser mayor que 0 y menor que {cantidad}."
 - `recibir-resto`: `cantidadExtra > 0` → "La cantidad debe ser mayor que 0."; `(recibida ?? 0) + extra <= cantidad` → "No puedes recibir más de lo pedido. Faltan {restante} unidad(es)."
-- `POST` y `PUT` de compras y de otros: `cantidad > 0` → "Cantidad no válida (debe ser > 0)."; `precioUnidad >= 0` → "Precio no válido."; concepto en blanco (otros) → "El concepto no puede estar vacío."; divisa fuera de `EUR`/`USD` → "Divisa no válida (EUR o USD)." (texto de 4a); componente inexistente o inactivo → "El componente no está activo."; proveedor inexistente o inactivo → "El proveedor no está activo."
+- `POST` y `PUT` de compras y de otros: `cantidad > 0` → "Cantidad no válida (debe ser > 0)."; `precioUnidad >= 0` → "Precio no válido."; concepto en blanco (otros) → "El concepto no puede estar vacío."; divisa fuera de `EUR`/`USD` → "Divisa no válida (EUR o USD)." (texto de 4a); componente inexistente o inactivo (solo en el alta, `POST` y lotes: el `PUT` no lleva componente) → "El componente no está activo."; proveedor inexistente o inactivo → "El proveedor no está activo."
 - `PUT` de compras y de otros en `recibido` con `cantidad` distinta de la guardada → "No se puede cambiar la cantidad de un pedido recibido." (P2).
 - Lotes (§4.4): "Añade al menos una línea."; por línea `i` (1-based) y en este orden: "Línea {i}: selecciona un componente." (componente nulo o inexistente) / "Línea {i}: el concepto no puede estar vacío." (otros), "Línea {i}: selecciona un proveedor.", "Línea {i}: el componente está desactivado.", "Línea {i}: el proveedor está desactivado.", "Línea {i}: la cantidad debe ser mayor que 0.", "Línea {i}: el precio no puede ser negativo."; una solicitud cuyo componente (resuelto al master) no tiene línea en el lote → "La solicitud no corresponde a ninguna línea del pedido."
 
@@ -107,12 +107,12 @@ modules/almacen/
 ├── stock/StockPage.tsx, filtros.ts    "Pedir" abre el modal en el sitio; ?componente=<id> → filtrosDesdePedidos + selección + scroll
 └── pedidos/
     ├── PedidosPage.tsx                título, toggle, filtros, tabla, pie; consume ?estados&buscar (S8)
-    ├── api.ts (+test)                 useCompras(tipo, {activo}); mutaciones de transición, editar y lote; invalidaciones
-    ├── filtros.ts (+test)             FiltrosPedidos, ordenarCanceladosAlFinal, aplicarFiltrosPedidos, FILTROS_VACIOS
+    ├── api.ts (+test)                 useCompras / useComprasOtros({activo, habilitada}); mutaciones de transición, editar y lote; invalidaciones
+    ├── filtros.ts (+test)             FiltrosPedidos, ordenarCanceladosAlFinal, aplicarFiltrosPedidos, FILTROS_PEDIDOS_VACIOS
     ├── estado.ts                      stores: filtros (compartido), selección por toggle
-    ├── reglas.ts (+test)              textoCantidad, unidadesFila, totalFila, marcaPrecioCero, entradasMenu(estado), validarParcial, validarResto, claseFila, estiloBadge
-    ├── columnas.tsx (+test)           columnas de componentes y de otros, enlace Componente, CSV de cada tabla
-    ├── BadgeEstadoPedido.tsx          badge radio 12, padding 3 10, "⚠" al lado
+    ├── reglas.ts (+test)              textoCantidad, unidadesFila, totalFila, marcaPrecioCero, entradasMenu(estado), validarParcial, validarResto
+    ├── columnas.tsx (+test)           columnas de componentes y de otros, enlace Componente, claseFilaPedido, CSV de cada tabla
+    ├── BadgeEstadoPedido.tsx          badge radio 12, padding 3 10, "⚠" al lado; sus clases por estado
     ├── MenuPedido.tsx                 menú por estado (SUPERTECNICO)
     ├── CantidadDialog.tsx (+test)     "Recepción parcial" y "Recibir unidades"
     ├── confirmaciones.ts (+test)      títulos y textos de Cancelar, Borrar y Revertir (componentes y otros)
@@ -185,7 +185,7 @@ Modos de precarga (`abrirNuevoPedido`):
 
 ## 7. Guardado y recargas
 
-Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`{updatedAt}`, `{cantidadRecibida, updatedAt}`, `{cantidadExtra, updatedAt}`; `DELETE` sin cuerpo). Al terminar, con éxito o error, se invalidan `['compras']`, `['componentes']` y la clave de la campana (`['notificaciones','componentes']`, literal como en 4a): el JavaFX recarga stock solo en algunas acciones; la web recarga siempre las tres (diferencia inocua a favor, §10). Los lotes y el `PUT` recargan lo mismo al cerrar. Con un menú, un diálogo o un formulario abiertos el refresco automático se congela (`useInteraccionesAbiertas`; el host de formularios avisa a través del store). El formulario de reparación no cambia de comportamiento al mover `crearClavesIdempotencia`.
+Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`{updatedAt}`, `{cantidadRecibida, updatedAt}`, `{cantidadExtra, updatedAt}`; `DELETE` sin cuerpo). Al terminar, con éxito o error, se invalidan `['compras']`, `['componentes']` y la clave de la campana (`['notificaciones','componentes']`, literal como en 4a): el JavaFX recarga stock solo en algunas acciones; la web recarga siempre las tres (diferencia inocua a favor, §10). Los lotes y el `PUT` recargan lo mismo al cerrar. Con un menú, un diálogo o un formulario abiertos el refresco automático se congela (`useInteraccionesAbiertas`; el host de formularios avisa a través del store). El congelado por el formulario de pedido aplica a Stock actual y Pedidos, las vistas que leen el store; una vista del taller desde la que se abra el formulario por la campana sigue sondeando debajo del modal (inocuo, §10). El formulario de reparación no cambia de comportamiento al mover `crearClavesIdempotencia`.
 
 ## 8. Errores y refresco
 
@@ -221,6 +221,7 @@ Cada transición es una mutación con el endpoint de §4.6 y el cuerpo de hoy (`
 | Celdas de líneas siempre editables | **Diferencia** (P8) |
 | Ordenación por cabecera bloqueada | **Diferencia** (P10) |
 | Selección mantenida en el refresco y refresco congelado con formulario abierto | **Diferencia** (S4, D4) |
+| Una vista del taller sigue sondeando debajo del formulario de pedido abierto desde la campana (solo Stock actual y Pedidos lo congelan) | **Diferencia** inocua |
 | Recarga de compras, stock y campana entera tras cualquier acción | **Diferencia** inocua |
 | El panel de la campana se cierra al pedir (el JavaFX lo deja abierto) | **Diferencia** inocua |
 | "Pedir todas las piezas" sin alertas no hace nada; "Pedir piezas" se deshabilita mientras relee | **Calco** |

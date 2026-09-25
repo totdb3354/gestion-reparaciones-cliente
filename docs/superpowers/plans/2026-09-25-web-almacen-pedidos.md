@@ -28,6 +28,7 @@
 - **Testing Library no normaliza el texto buscado:** para textos con espacios múltiples (`'  (1 USD = 0,8797 €)'`, subtítulos con `   ·   `) usar `getByText(texto, { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) })`.
 - **El puerto 5173** no lo puede ocupar un dev server viejo al sacar capturas o correr el smoke (lección del 4a).
 - **Capturas de la web lado a lado con las del JavaFX ANTES del merge** de la rama web (lección del 4a).
+- **Tests con timeout intermitente (>5 s) cuando hay varios procesos node:** relanzar el fichero aislado antes de diagnosticar.
 
 ---
 
@@ -181,8 +182,8 @@ class CompraComponenteDAOTransicionesTest {
     }
 
     private void sinTocarStock() {
-        verify(jdbc, never()).update(eq(SUMAR_STOCK), any(), any());
-        verify(jdbc, never()).update(eq(RESTAR_STOCK), any(), any());
+        verify(jdbc, never()).update(eq(SUMAR_STOCK), any(Object[].class));
+        verify(jdbc, never()).update(eq(RESTAR_STOCK), any(Object[].class));
     }
 
     // ── confirmar (pendiente → en_camino) ──
@@ -407,7 +408,7 @@ class CompraOtroDAOTransicionesTest {
         when(jdbc.update(RECIBIDO, ID)).thenReturn(1);
         dao.confirmarRecibido(ID, AT);
         verify(jdbc).update(RECIBIDO, ID);
-        verify(jdbc, never()).update(startsWith("UPDATE Componente"), any(), any());
+        verify(jdbc, never()).update(startsWith("UPDATE Componente"), any(Object[].class));
     }
 
     @Test void recibirFueraDeEnCaminoEs409() {
@@ -1117,6 +1118,7 @@ git commit -m "feat(compras): 409 de estado en todas las transiciones de pedidos
 
 **Interfaces:**
 - Consumes: `CompraComponenteDAO.getById(int)` (`Optional<CompraComponente>`, :215-219) y `CompraOtroDAO.getById(int)` (`Optional<CompraOtro>`, :50-53), que ya existen y traen `estado`, `cantidad` y `cantidadRecibida`; `CompraComponente.getEstado()/getCantidad()/getCantidadRecibida()`, ídem `CompraOtro`; `Proveedor.isActivo()`.
+- Pieza existente que se duplica: `ProveedorController` ya tiene `DIVISAS`, `MSG_DIVISA` y `divisaValida` (mismo texto "Divisa no válida (EUR o USD)." y misma normalización), pero son `private`; `ValidacionPedidos` los duplica para no tocar `ProveedorController`.
 - Produces:
   - `controller/ValidacionPedidos` (package-private, `final`, métodos estáticos) con los textos EXACTOS de la spec §4.2; la reutilizan `CompraController`, `CompraOtroController` y, desde la Task 4, `CompraLoteController`.
   - `ComponenteDAO.Basico(int idCom, int idMaster, String tipo, boolean activo)` y `Optional<Basico> ComponenteDAO.getBasico(int idCom)` (vacío si no existe; `idMaster = COALESCE(ID_COM_MASTER, ID_COM)`; el `ACTIVO` de un slave es el del grupo porque `setActivo` activa y desactiva master y slaves a la vez, `ComponenteDAO.java:201-206`).
@@ -1597,7 +1599,7 @@ class CompraOtroControllerTest {
 - [ ] **Step 6: Ejecutar y ver que fallan**
 
 Run: `export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH; mvn -q test -Dtest='CompraControllerTest,CompraOtroControllerTest'`
-Expected: FAIL: los tests de 422 fallan con `AssertionFailedError: Expected ResponseStatusException to be thrown, but nothing was thrown` (el controlador escribe sin validar); los dos de la Task 1 siguen en verde.
+Expected: FAIL: 11 de 15 en `CompraControllerTest` y 7 de 10 en `CompraOtroControllerTest`. Los de 422 fallan con `AssertionFailedError: Expected ResponseStatusException to be thrown, but nothing was thrown` (el controlador escribe sin validar); `altaValidaNormalizaLaDivisaYEscribe` falla por argumentos distintos (`" eur "` frente a `"EUR"`); `parcialDentroDeRangoEscribe`, `editarUnRecibidoSinCambiarLaCantidadEscribe` y `CompraOtroControllerTest.altaValidaEscribeYRegistra` (no son de 422) ya pasan, igual que los dos de la Task 1.
 
 - [ ] **Step 7: `ValidacionPedidos`**
 
@@ -2581,13 +2583,14 @@ git commit -m "fix(compras): el servidor calcula el importe en euros dividiendo 
 - Create: `src/test/java/com/reparaciones/servidor/controller/RolesCompraLoteTest.java`
 
 **Interfaces:**
-- Consumes: `RegistroIdempotencia.ejecutar(int idUsuario, String operacion, String clave, Object peticion, Supplier<T> escritura, Consumer<T> trasEscribir)` (`RegistroIdempotencia.java:170-224`; con excepción en `escritura` libera la entrada, :210-216; el repetido con la misma petición devuelve el resultado guardado sin ejecutar nada, :195-204) y `RegistroIdempotencia.CABECERA` (:131); `AsignacionController.MSG_SIN_CLAVE` (`AsignacionController.java:27`, package-private, mismo paquete); `ReparacionComponenteDAO.actualizarEstadoSolicitud(int idRc, String estado)` (`ReparacionComponenteDAO.java:158-175`, con `"GESTIONADA"` solo actúa si no lo estaba ya) y `SolicitudStockDAO.actualizarEstado(int idSol, String estado)` (`SolicitudStockDAO.java:57-68`, ídem); `ComponenteDAO.getBasico` y `ProveedorDAO.getById` (Task 2); `ConversionEur.aEuros` (Task 3).
+- Consumes: `RegistroIdempotencia.ejecutar(int idUsuario, String operacion, String clave, Object peticion, Supplier<T> escritura, Consumer<T> trasEscribir)` (`RegistroIdempotencia.java:64`, la sobrecarga de seis argumentos; la de cinco está en :47; con excepción en `escritura` libera la entrada, :104-110; el repetido con la misma petición devuelve el resultado guardado sin ejecutar nada, :94-98) y `RegistroIdempotencia.CABECERA` (:25); `AsignacionController.MSG_SIN_CLAVE` (`AsignacionController.java:27`, package-private, mismo paquete); `ReparacionComponenteDAO.actualizarEstadoSolicitud(int idRc, String estado)` (`ReparacionComponenteDAO.java:158-175`, con `"GESTIONADA"` solo actúa si no lo estaba ya) y `SolicitudStockDAO.actualizarEstado(int idSol, String estado)` (`SolicitudStockDAO.java:57-68`, ídem); `ComponenteDAO.getBasico` y `ProveedorDAO.getById` (Task 2); `ConversionEur.aEuros` (Task 3).
 - Produces:
   - `model.LoteCompras` con los records anidados EXACTOS de el documento de interfaces del reparto (fuera del repo): `Peticion(List<Linea> lineas, Solicitudes solicitudes)`, `Linea(@Schema(nullable = true) Integer idCom, @Schema(nullable = true) Integer idProv, int cantidad, boolean esUrgente, double precioUnidad)`, `Solicitudes(List<Integer> urgentes, List<Integer> preventivas)`, `Respuesta(List<Integer> idsCreados)`. springdoc (`OpenApiConfig.NombreEsquemaAnidado`, prefija la envolvente) los publica como `LoteComprasPeticion`, `LoteComprasLinea`, `LoteComprasSolicitudes`, `LoteComprasRespuesta`.
   - `int CompraComponenteDAO.insertar(...)`: misma firma de entrada, devuelve el `ID_COMPRA` generado (`GeneratedKeyHolder` + `Statement.RETURN_GENERATED_KEYS`); sigue resolviendo al master. El `POST /api/compras` suelto lo ignora (su respuesta no cambia: 201 sin cuerpo).
   - `Integer ReparacionComponenteDAO.getIdComDeSolicitud(int idRc)` y `Integer SolicitudStockDAO.getIdCom(int idSol)`: el `ID_COM` de la solicitud o `null` si no existe (o, en urgentes, si no tiene componente).
   - `service.CompraLoteService` (`@Service`): `public record LineaCompra(int idCom, int idProv, int cantidad, boolean esUrgente, double precioUnidad, String divisa, double precioEur)` y `@Transactional public LoteCompras.Respuesta guardarCompras(List<LineaCompra> lineas, List<Integer> urgentes, List<Integer> preventivas)`: un `insertar` por línea en orden (ids en ese orden) y después `actualizarEstadoSolicitud(idRc, "GESTIONADA")` por urgente y `actualizarEstado(idSol, "GESTIONADA")` por preventiva. Cualquier excepción deshace todo. El constructor recibe ya `CompraOtroDAO`, que usa `guardarOtros` en la Task 5.
   - `POST /api/compras/lote` (`CompraLoteController`, `@PreAuthorize("hasRole('SUPERTECNICO')")`), cabecera `Idempotency-Key` declarada opcional en el contrato (como asignaciones) pero exigida: sin ella o en blanco → 400 `"Falta la clave de idempotencia"`. Orden de trabajo: 400 → 422 de líneas → 422 de solicitudes → `idempotencia.ejecutar(idUsu, "compras-lote", clave, req, escritura, trasEscribir)`; dentro de `escritura`, primero la divisa (`Proveedor.DIVISA`, nula o en blanco → `EUR`) y el EUR de cada línea con `ConversionEur` (fuera de la transacción: un 503 no escribe y libera la clave) y después `servicio.guardarCompras`. `trasEscribir`: `CREAR_PEDIDO` por línea con `"COMPONENTE: {tipo}, PROVEEDOR: {nombre}, CANT: {n}"` (tipo del id pedido, como el POST suelto), `GESTIONAR_SOLICITUD` `"ID_RC: {id}, ESTADO: GESTIONADA"` por urgente y `GESTIONAR_SOLICITUD_STOCK` `"ID_SOL: {id}, ESTADO: GESTIONADA"` por preventiva. Respuesta 200 `LoteCompras.Respuesta`.
+  - La tasa se resuelve por línea (`conversion.aEuros` en cada una, también en la Task 5), no una vez por divisa distinta como dice la spec §4.4: inocuo, porque la primera línea en USD consulta Frankfurter y guarda la tasa del día en `TipoCambio` y las siguientes la leen de BD (N lecturas en vez de una).
   - 422 del lote, textos EXACTOS: `"Añade al menos una línea."` (lista nula o vacía); por línea `i` (1-based), en este orden: `"Línea {i}: selecciona un componente."` (idCom nulo o inexistente, o línea nula), `"Línea {i}: selecciona un proveedor."` (idProv nulo o inexistente), `"Línea {i}: el componente está desactivado."`, `"Línea {i}: el proveedor está desactivado."`, `"Línea {i}: la cantidad debe ser mayor que 0."`, `"Línea {i}: el precio no puede ser negativo."`; después, `"La solicitud no corresponde a ninguna línea del pedido."` si el componente de una solicitud (resuelto al master) no es el master de ninguna línea (también si la solicitud no existe o es un id nulo). `solicitudes` nula = sin solicitudes.
   - La operación de idempotencia `"compras-lote"` y la ruta en `OpenApiContractTest.lasEscriturasDelFormularioAdmitenClaveDeIdempotencia`.
 
@@ -4197,7 +4200,7 @@ En `CompraOtroController.java`, el mismo import y los dos primeros records por:
                          LocalDateTime updatedAt) {}
 ```
 
-Desde la Task 3 ningún código de producción lee `req.precioEur()`: comprobarlo con `grep -rn "precioEur()" src/main/java/com/reparaciones/servidor/controller` (no debe salir ninguna línea; los `l.precioEur()` de `CompraLoteService` están en `service/` y son de otro record). Los tests que construyen estas peticiones con un `double` siguen compilando por autoboxing.
+Desde la Task 3 ningún código de producción lee `req.precioEur()`: comprobarlo con `grep -rn "req.precioEur()" src/main/java/com/reparaciones/servidor/controller | grep -v "//"` (no debe salir ninguna línea: sin el `grep -v` salen solo las dos líneas de comentario `// P3: …` que añade la Task 3 en `CompraController` y `CompraOtroController`; los `l.precioEur()` de `CompraLoteService` están en `service/` y son de otro record). Los tests que construyen estas peticiones con un `double` siguen compilando por autoboxing.
 
 - [ ] **Step 5: Ejecutar y ver que pasa**
 
@@ -4226,9 +4229,9 @@ git commit -m "feat(contrato): nulos de pedidos, precioEur ignorado y lotes de p
 
 **Files:**
 - Modify: `api/openapi.json`, `src/shared/api/schema.d.ts` (regenerados por el flujo offline)
-- Modify: `src/shared/api/client.ts` (alias `CompraComponente` y `CompraOtro` tras `Proveedor`, l.17-18)
+- Modify: `src/shared/api/client.ts` (alias `CompraComponente` y `CompraOtro` tras `Proveedor`, l.17-18; `onResponse` l.64-79, 503 de negocio y banner en el Step 15), `src/shared/api/client.test.ts`
 - Create: `src/shared/lib/importes.ts`, `src/shared/lib/importes.test.ts`
-- Modify: `src/shared/lib/fechas.ts` (`Patron` l.89, constante tras `FMT_FECHA_ASIGNACION` l.93, `Partes` l.105, `partesMadrid` l.107-113, regex de `formatear` l.127), `src/shared/lib/fechas.test.ts`
+- Modify: `src/shared/lib/fechas.ts` (`Patron` l.4, constante tras `FMT_FECHA_ASIGNACION` l.8, `Partes` l.20, `partesMadrid` l.22-28, regex de `formatear` l.42), `src/shared/lib/fechas.test.ts`
 - Move: `src/modules/taller/formulario/clavesIdempotencia.ts` → `src/shared/lib/clavesIdempotencia.ts` (y su `.test.ts`)
 - Modify: `src/modules/taller/formulario/useGuardado.ts:6`, `src/modules/taller/asignaciones/modal/AsignarTrabajosDialog.tsx:10` (imports)
 - Modify: `src/shared/styles/tokens.css` (final del bloque `@theme`, tras `--color-badge-sin-stock-bg` l.137)
@@ -4438,13 +4441,13 @@ Expected: FAIL: `FMT_FECHA_PEDIDO` es `undefined` y `formatear(…, 'dd/MM/yy HH
 
 En `src/shared/lib/fechas.ts`:
 
-Sustituir la l.89 por:
+Sustituir la l.4 por:
 
 ```ts
 export type Patron = 'yyyy/MM/dd HH:mm' | 'yyyy/MM/dd' | 'dd/MM HH:mm' | 'dd/MM' | 'HH:mm' | 'dd/MM/yyyy' | 'dd/MM/yyyy HH:mm' | 'dd/MM/yy HH:mm'
 ```
 
-Tras `FMT_FECHA_ASIGNACION` (l.93):
+Tras `FMT_FECHA_ASIGNACION` (l.8):
 
 ```ts
 
@@ -4452,7 +4455,7 @@ Tras `FMT_FECHA_ASIGNACION` (l.93):
 export const FMT_FECHA_PEDIDO: Patron = 'dd/MM/yy HH:mm'
 ```
 
-Sustituir `Partes` y `partesMadrid` (l.105-113) por:
+Sustituir `Partes` y `partesMadrid` (l.20-28) por:
 
 ```ts
 type Partes = Record<'yyyy' | 'yy' | 'MM' | 'dd' | 'HH' | 'mm', string>
@@ -4466,7 +4469,7 @@ function partesMadrid(d: Date): Partes {
 }
 ```
 
-Y en `formatear` (l.127), la regex (`yyyy` antes que `yy` para que la alternancia no parta el año de cuatro cifras):
+Y en `formatear` (l.42), la regex (`yyyy` antes que `yy` para que la alternancia no parta el año de cuatro cifras):
 
 ```ts
   return patron.replace(/yyyy|yy|MM|dd|HH|mm/g, (t) => p[t as keyof Partes])
@@ -4508,7 +4511,7 @@ Expected: solo `src/shared/lib/clavesIdempotencia.test.ts:2`.
 
 - [ ] **Step 13: Test del 503 con mensaje (falla)**
 
-Un 503 con `message` solo lo emite nuestro backend (T3: `TipoCambioDAO` cuando Frankfurter falla, spec §4.3 y §8); los 503 de nginx llegan sin cuerpo JSON. Hoy `clasificar` (`src/shared/api/errors.ts:59`) convierte cualquier 5xx en `ConexionError` y el `MutationCache` abre "Sin conexión con el servidor: HTTP 503" aunque la mutación esté silenciada (`src/shared/api/queryClient.ts:65-72`), así que el mensaje de la tasa nunca llegaría a la línea de error de los formularios (T15, T17). Regla nueva y acotada: **503 con mensaje = `ReglaNegocioError`**; 503 sin mensaje sigue siendo sin conexión.
+Un 503 con `message` solo lo emite nuestro backend (T3: `TipoCambioDAO` cuando Frankfurter falla, spec §4.3 y §8); los 503 de nginx llegan sin cuerpo JSON (vacíos, o con texto plano o una página HTML). Hoy `clasificar` (`src/shared/api/errors.ts:59`) convierte cualquier 5xx en `ConexionError` y el `MutationCache` abre "Sin conexión con el servidor: HTTP 503" aunque la mutación esté silenciada (`src/shared/api/queryClient.ts:65-72`), así que el mensaje de la tasa nunca llegaría a la línea de error de los formularios (T15, T17). Además `client.ts` llama a `reportarFallo()` para todo `status >= 500` antes de clasificar, así que el banner "Sin conexión" se encendería igualmente. Regla nueva y acotada: **503 con el JSON `{message}` de nuestro backend = `ReglaNegocioError`**; 503 sin cuerpo, con texto plano o con HTML sigue siendo sin conexión, y el banner solo se enciende si el error clasificado es `ConexionError`.
 
 En `src/shared/api/errors.test.ts`, dentro del `describe('clasificar (port de ApiClient.clasificar)')`, tras el caso `'5xx → error de conexión con el detalle HTTP para el diálogo'`:
 
@@ -4540,8 +4543,8 @@ En `src/shared/api/errors.ts`, la rama `default` de `clasificar` (l.58-60) queda
 ```ts
     default:
       // Un 503 con mensaje solo lo emite nuestro backend (p. ej. el tipo de cambio no disponible, sub-proyecto 4b):
-      // es un error de negocio que la vista enseña inline. Los 503 de nginx llegan sin cuerpo JSON (msg null) y
-      // siguen siendo "sin conexión".
+      // es un error de negocio que la vista enseña inline. client.ts solo pasa el mensaje de un 503 si el cuerpo
+      // es JSON {message}; los de nginx (vacíos, texto o HTML) llegan con msg null y siguen siendo "sin conexión".
       if (status === 503 && msg) return new ReglaNegocioError(503, msg)
       if (status >= 500) return new ConexionError(status, MSG_SIN_CONEXION, `HTTP ${status}`)
       return new ApiError(status, msg ?? `Error del servidor (${status}).`)
@@ -4549,13 +4552,37 @@ En `src/shared/api/errors.ts`, la rama `default` de `clasificar` (l.58-60) queda
 
 Y en el javadoc de `esErrorGestionadoGlobalmente` (l.80-82) se añade: `Un 503 con mensaje es ReglaNegocioError y NO se gestiona globalmente.`
 
+En `src/shared/api/client.ts`, dentro de `onResponse` (l.68-76), quitar la línea `if (response.status >= 500) reportarFallo()` y sustituir la de `clasificar` (l.76) por:
+
+```ts
+    // Un 503 solo es de negocio con el JSON {message} de nuestro backend (sub-proyecto 4b); el texto plano o el HTML
+    // de nginx sigue siendo "sin conexión".
+    const msg = response.status === 503 && typeof body === 'string' ? null : extraerMensaje(body)
+    const err = clasificar(response.status, msg)
+    if (err instanceof ConexionError) reportarFallo()
+    else if (response.status >= 500) reportarExito()
+```
+
+(el `if (err instanceof SesionExpiradaError) dispararSesionExpirada()` y el `throw err` siguen igual). Los mocks existentes `HttpResponse.text('boom', { status: 503 })` de `client.test.ts`, `queryClient.test.tsx`, `taller/formulario/api.test.tsx` y `PulidosPendientesPage.test.tsx` NO se cambian: siguen siendo sin conexión.
+
+En `src/shared/api/client.test.ts`, antes de `it('un 4xx no toca el estado de conexión (y cura el banner)'`:
+
+```ts
+  it('un 503 con {message} de nuestro backend es de negocio y no enciende el banner', async () => {
+    server.use(http.get('*/api/clientes', () => HttpResponse.json({ message: 'No se pudo obtener el tipo de cambio de USD. Inténtalo de nuevo.' }, { status: 503 })))
+    const err: unknown = await api.GET('/api/clientes').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ReglaNegocioError)
+    expect(estaConectado()).toBe(true)
+  })
+```
+
 - [ ] **Step 16: Ejecutar y ver que pasa**
 
 ```bash
-npx vitest run src/shared/api/errors.test.ts
+npx vitest run src/shared/api/errors.test.ts src/shared/api/client.test.ts src/shared/api/queryClient.test.tsx
 ```
 
-Expected: PASS (los dos casos nuevos y los anteriores; `clasificar(503, null)` sigue siendo `ConexionError`).
+Expected: PASS (los tres casos nuevos y los anteriores; `clasificar(503, null)` sigue siendo `ConexionError` y los 503 de texto de los mocks existentes siguen encendiendo el banner).
 
 - [ ] **Step 17: Tokens**
 
@@ -4577,13 +4604,13 @@ En `src/shared/styles/tokens.css`, al final del bloque `@theme` (tras `--color-b
 npm run check
 ```
 
-Expected: lint y typecheck en verde; **1128 tests** (1119 + 6 de `importes` + 1 de `fechas` + 2 de `errors`).
+Expected: lint y typecheck en verde; **1129 tests** (1119 + 6 de `importes` + 1 de `fechas` + 2 de `errors` + 1 de `client`).
 
 - [ ] **Step 19: Commit**
 
 ```bash
-git add api/openapi.json src/shared/api/schema.d.ts src/shared/api/client.ts src/shared/api/errors.ts src/shared/api/errors.test.ts src/shared/lib/importes.ts src/shared/lib/importes.test.ts src/shared/lib/fechas.ts src/shared/lib/fechas.test.ts src/shared/lib/clavesIdempotencia.ts src/shared/lib/clavesIdempotencia.test.ts src/modules/taller/formulario/useGuardado.ts src/modules/taller/asignaciones/modal/AsignarTrabajosDialog.tsx src/shared/styles/tokens.css
-git commit -m "chore(web): contrato con lotes de compras y nullables, tipos de pedidos, importes con coma, fecha de pedidos, 503 con mensaje como error de negocio, claves de idempotencia en shared y tokens"
+git add api/openapi.json src/shared/api/schema.d.ts src/shared/api/client.ts src/shared/api/client.test.ts src/shared/api/errors.ts src/shared/api/errors.test.ts src/shared/lib/importes.ts src/shared/lib/importes.test.ts src/shared/lib/fechas.ts src/shared/lib/fechas.test.ts src/shared/lib/clavesIdempotencia.ts src/shared/lib/clavesIdempotencia.test.ts src/modules/taller/formulario/useGuardado.ts src/modules/taller/asignaciones/modal/AsignarTrabajosDialog.tsx src/shared/styles/tokens.css
+git commit -m "chore(web): contrato con lotes de compras y nullables, tipos de pedidos, importes con coma, fecha de pedidos, 503 con json de mensaje como error de negocio sin banner, claves de idempotencia en shared y tokens"
 ```
 
 ---
@@ -4694,7 +4721,7 @@ export function cerrarFormularioPedido(): void {
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/shared/lib/formularioPedido.test.ts`
-Expected: PASS, 4 tests (acumulado: 1130).
+Expected: PASS, 4 tests (acumulado: 1133).
 
 - [ ] **Step 5: Commit**
 
@@ -4714,7 +4741,7 @@ git commit -m "feat(shared): store del formulario de pedido con sus modos de pre
 - Create: `src/modules/almacen/pedidos/tasa.ts`, `src/modules/almacen/pedidos/tasa.test.tsx`
 
 **Interfaces:**
-- Consumes: `CompraComponente`, `CompraOtro`, `api` de `@/shared/api/client` (Task 7); `fechaLocal` de `@/shared/lib/fechas` (`fechas.ts:131-136`); `crearStore`, `Store` de `@/shared/lib/store`.
+- Consumes: `CompraComponente`, `CompraOtro`, `api` de `@/shared/api/client` (Task 7); `fechaLocal` de `@/shared/lib/fechas` (`fechas.ts:46-51` en `main`; unas líneas más abajo tras la T7); `crearStore`, `Store` de `@/shared/lib/store`.
 - Produces (firmas exactas de el documento de interfaces del reparto (fuera del repo)):
 
 ```ts
@@ -5149,7 +5176,7 @@ export function aplicarFiltrosPedidos<T extends Pedido>(lista: T[], f: FiltrosPe
 }
 
 /** Llegada desde "En Camino" de Stock actual (spec 4b §6, S8): `?estados=pendiente,en camino,parcial&buscar=<tipo>`
- *  (Stock los monta con `parametrosPedidos`, `stock/columnas.ts:109-111`). Devuelve solo lo que venga; null si no viene
+ *  (Stock los monta con `parametrosPedidos`, `stock/columnas.tsx:31`). Devuelve solo lo que venga; null si no viene
  *  ninguno de los dos. Los chips que no son de un estado se ignoran. */
 export function filtrosDesdeStock(search: URLSearchParams): Partial<Pick<FiltrosPedidos, 'estados' | 'buscador'>> | null {
   const estados = search.get('estados')
@@ -5391,7 +5418,7 @@ Expected: PASS, 4 tests.
 npm run lint && npx vitest run src/modules/almacen/pedidos
 ```
 
-Expected: lint sin errores; PASS, 32 tests (acumulado: 1162).
+Expected: lint sin errores; PASS, 32 tests (acumulado: 1165).
 
 - [ ] **Step 18: Commit**
 
@@ -5812,7 +5839,7 @@ Comprobar contra el contrato regenerado antes de ejecutar: `grep -n -A6 '^      
 - [ ] **Step 4: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/pedidos/api.test.tsx`
-Expected: PASS, 18 tests (acumulado: 1180).
+Expected: PASS, 18 tests (acumulado: 1183).
 
 - [ ] **Step 5: Lint y tipos**
 
@@ -5854,7 +5881,7 @@ export function filaCsvOtro(p: CompraOtro): string[]
 export function BadgeEstadoPedido({ pedido }: { pedido: Pedido }): JSX.Element   // en BadgeEstadoPedido.tsx
 ```
 
-Anchos: prefWidth de `StockView.fxml:141-163` (inventario §4). Sin columna Div. (oculta en el JavaFX). La franja izquierda de 8 px va, como en Stock y en el resto de tablas (`stock/columnas.tsx:21-30`, `taller/asignaciones/columnas.tsx:40`), en la clase del `<tr>` (`border-l-8` + color); `DataTable` la vuelve transparente en la fila seleccionada (`DataTable.tsx:324`, `data-[state=selected]:border-l-transparent`) y el `opacity-45` del cancelado sigue aplicando sobre el navy, como la desactivada de Stock (`stock/columnas.test.tsx:63-70`). El badge y sus clases van en su propio fichero porque un `.tsx` de módulo no puede exportar componente y helpers a la vez (react-refresh, como `BadgeEstadoStock`).
+Anchos: prefWidth de `StockView.fxml:141-163` (inventario §4). Sin columna Div. (oculta en el JavaFX). La franja izquierda de 8 px va, como en Stock y en el resto de tablas (`stock/columnas.tsx:20-27`, `taller/asignaciones/columnas.tsx:40`), en la clase del `<tr>` (`border-l-8` + color); `DataTable` la vuelve transparente en la fila seleccionada (`DataTable.tsx:324`, `data-[state=selected]:border-l-transparent`) y el `opacity-45` del cancelado sigue aplicando sobre el navy, como la desactivada de Stock (`stock/columnas.test.tsx:63-70`). El badge y sus clases van en su propio fichero porque un `.tsx` de módulo no puede exportar componente y helpers a la vez (react-refresh, como `BadgeEstadoStock`).
 
 - [ ] **Step 1: Test (falla)**
 
@@ -5884,7 +5911,7 @@ function montarPedidos(filas: CompraComponente[], onComponente = vi.fn()) {
   const r = render(<DataTable columns={crearColumnasPedidos({ onComponente })} data={filas} vacio="Sin pedidos" getRowId={(p) => String(p.idCompra)} filaClase={claseFilaPedido} />)
   return { ...r, onComponente }
 }
-const celdas = (container: HTMLElement, columna: string) => [...container.querySelectorAll(`[data-columna="${columna}"]`)].map((c) => c.textContent)
+const celdas = (container: HTMLElement, columna: string) => Array.from(container.querySelectorAll(`[data-columna="${columna}"]`)).map((c) => c.textContent)
 
 describe('tabla de componentes', () => {
   it('siete cabeceras en orden, sin Div., con los anchos del FXML', () => {
@@ -5998,7 +6025,7 @@ describe('CSV (StockController :1961-2006)', () => {
 - [ ] **Step 2: Ejecutar y ver que falla**
 
 Run: `npx vitest run src/modules/almacen/pedidos/columnas.test.tsx`
-Expected: FAIL, `Failed to resolve import "./BadgeEstadoPedido"`.
+Expected: FAIL, `Failed to resolve import "./columnas"`.
 
 - [ ] **Step 3: Implementar el badge**
 
@@ -6071,7 +6098,7 @@ export function crearColumnasPedidos({ onComponente }: { onComponente: (p: Compr
     {
       id: 'componente', header: 'Componente', size: ANCHOS_PEDIDOS.componente,
       // Calco del Label con TEXTO_ACCION, cursor mano y subrayado al pasar (:762-780), con la clase del enlace "En Camino"
-      // de Stock (stock/columnas.tsx:128): lleva a Stock actual con la fila del componente seleccionada.
+      // de Stock (stock/columnas.tsx:50): lleva a Stock actual con la fila del componente seleccionada.
       cell: ({ row }) => (
         <button type="button" onClick={(e) => { e.stopPropagation(); onComponente(row.original) }} className="cursor-pointer text-texto-accion hover:underline">
           {row.original.tipoComponente}
@@ -6143,12 +6170,12 @@ export function filaCsvOtro(p: CompraOtro): string[] {
 - [ ] **Step 5: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/pedidos/columnas.test.tsx`
-Expected: PASS, 10 tests (acumulado: 1190).
+Expected: PASS, 10 tests (acumulado: 1193).
 
-- [ ] **Step 6: Lint**
+- [ ] **Step 6: Lint y typecheck**
 
-Run: `npm run lint`
-Expected: sin errores ni avisos de `react-refresh/only-export-components` (`BadgeEstadoPedido.tsx` solo exporta el componente; `columnas.tsx` no exporta componentes).
+Run: `npm run lint && npm run typecheck`
+Expected: sin errores ni avisos de `react-refresh/only-export-components` (`BadgeEstadoPedido.tsx` solo exporta el componente; `columnas.tsx` no exporta componentes); `tsc -b` limpio (el `tsconfig.app.json` no lleva `DOM.Iterable`: un `[...NodeList]` daría TS2488, por eso los tests usan `Array.from`).
 
 - [ ] **Step 7: Commit**
 
@@ -6165,7 +6192,7 @@ git commit -m "feat(pedidos): columnas de componentes y otros, enlace al compone
 - Create: `src/modules/almacen/pedidos/MenuPedido.tsx`, `src/modules/almacen/pedidos/MenuPedido.test.tsx`
 
 **Interfaces:**
-- Consumes: `DialogoAlmacen` (`ui/DialogoAlmacen.tsx:121-140`: título, `subtitulo` con `whitespace-pre`, error en `role="alert"`, "Cancelar" y la acción; Enter confirma) y `useErrorServidor` (`ui/useErrorServidor.ts:146-155`); `Input`, `Label`; `ContextMenuItem`, `ContextMenuSeparator` de `@/shared/ui/context-menu`; de `./reglas`: `idPedido`, `nombrePedido`, `restante`, `validarParcial`, `validarResto`, `entradasMenu`, `AccionMenu`, `Pedido` (Task 9).
+- Consumes: `DialogoAlmacen` (`ui/DialogoAlmacen.tsx:21-40`: título, `subtitulo` con `whitespace-pre`, error en `role="alert"`, "Cancelar" y la acción; Enter confirma) y `useErrorServidor` (`ui/useErrorServidor.ts:6-15`); `Input`, `Label`; `ContextMenuItem`, `ContextMenuSeparator` de `@/shared/ui/context-menu`; de `./reglas`: `idPedido`, `nombrePedido`, `restante`, `validarParcial`, `validarResto`, `entradasMenu`, `AccionMenu`, `Pedido` (Task 9).
 - Produces:
 
 ```ts
@@ -6460,7 +6487,7 @@ git add src/modules/almacen/pedidos/CantidadDialog.tsx src/modules/almacen/pedid
 git commit -m "feat(pedidos): dialogos de recepcion parcial y recibir unidades con error inline, y menu contextual por estado"
 ```
 
-Acumulado: 1204 tests.
+Acumulado: 1205 tests.
 
 ---
 ## Task 13: Web — `PedidosPage` y rutas `/stock/pedidos` y `/stock/pedidos/otros`
@@ -6472,7 +6499,7 @@ Acumulado: 1204 tests.
 - Modify: `src/app/router.tsx:2-3` (import) y `:70` (rutas)
 
 **Interfaces:**
-- Consumes: todo lo de las Tasks 7-12; `useProveedoresComponentes` de `../proveedores/api` (`proveedores/api.ts:9-17`, clave `['proveedores','COMPONENTES']`, mismo módulo); `ultimaRutaStock` de `../estado`; `formularioPedido`, `abrirNuevoPedido`, `abrirNuevoOtroPedido` de `@/shared/lib/formularioPedido` (Task 8); `useInteraccionesAbiertas`, `useStore`, `descargarCsv`, `useRegistrarExportable`, `DataTable` (`menuFila`, `filaClase`, `getRowId`, `seleccionada`, `onSeleccionar`, `pedirDesplazamiento`), `TogglePill`, `MultiSelect`, `RangoFechas`, `ConfirmDialog`, `EtiquetaActualizado`, `Input`, `BotonPrimario`/`BotonSecundario`; `mensajeDeError`, `esErrorGestionadoGlobalmente`, `ReglaNegocioError`, `StaleDataError` de `@/shared/api/errors` (`errors.ts:124-126`, `:185-195`).
+- Consumes: todo lo de las Tasks 7-12; `useProveedoresComponentes` de `../proveedores/api` (`proveedores/api.ts:9-17`, clave `['proveedores','COMPONENTES']`, mismo módulo); `ultimaRutaStock` de `../estado`; `formularioPedido`, `abrirNuevoPedido`, `abrirNuevoOtroPedido` de `@/shared/lib/formularioPedido` (Task 8); `useInteraccionesAbiertas`, `useStore`, `descargarCsv`, `useRegistrarExportable`, `DataTable` (`menuFila`, `filaClase`, `getRowId`, `seleccionada`, `onSeleccionar`, `pedirDesplazamiento`), `TogglePill`, `MultiSelect`, `RangoFechas`, `ConfirmDialog`, `EtiquetaActualizado`, `Input`, `BotonPrimario`/`BotonSecundario`; `mensajeDeError`, `esErrorGestionadoGlobalmente`, `ReglaNegocioError`, `StaleDataError` de `@/shared/api/errors` (tras la T7: `mensajeDeError` en `errors.ts:79-82` y `esErrorGestionadoGlobalmente` en `:88-90`).
 - Produces:
   - `export function PedidosPage({ tipo }: { tipo: TipoPedido }): JSX.Element`.
   - Rutas `{ path: '/stock/pedidos', element: <PedidosPage key="componentes" tipo="componentes" /> }` y `{ path: '/stock/pedidos/otros', element: <PedidosPage key="otros" tipo="otros" /> }` (con `key`, desviación 5).
@@ -6481,7 +6508,7 @@ Acumulado: 1204 tests.
 
 Comportamiento (spec §6-§8): cabecera con "Pedidos" y el toggle; barra de filtros; tabla del toggle visible (la otra no se consulta); menú solo SUPERTECNICO; "Confirmar pedido", "Confirmar recibido" y "Cerrar sin resto" escriben al pulsar; "Recepción parcial" y "Recibir resto" abren `CantidadDialog` (un 422 va inline y el diálogo sigue abierto; un 409 lo cierra y avisa); "Cancelar pedido", "Borrar" y "Revertir a En camino" piden `ConfirmDialog` con `confirmacionDe`; un 409 de cualquier transición avisa **"Este pedido fue modificado por otro usuario. Los datos se han recargado."** salvo desrecibir, que enseña el mensaje del servidor (StockController :1635); todas recargan (Task 10). Llegada con `?estados&buscar`: aplica al store, selecciona la primera fila filtrada, pide el desplazamiento y limpia la URL con `replace`. "Actualizado HH:mm" recarga la tabla visible (P7). CSV `pedidos` / `pedidos_otros`.
 
-> Búsqueda previa: `grep -rn "PedidosPage" src` sale vacío; `/stock/pedidos` es hoy `<PendienteDeMigrar nombre="Pedidos" />` (`router.tsx:70`). El enlace "Pedidos" del lateral (`almacen/rutas.ts:171`) no lleva `end`, así que sigue activo en `/stock/pedidos/otros`. La franja de 8 px sigue el patrón de `border-l-8` en el `<tr>` de todas las tablas (desviación 6).
+> Búsqueda previa: `grep -rn "PedidosPage" src` sale vacío; `/stock/pedidos` es hoy `<PendienteDeMigrar nombre="Pedidos" />` (`router.tsx:70`). El enlace "Pedidos" del lateral (`almacen/rutas.ts:9`) no lleva `end`, así que sigue activo en `/stock/pedidos/otros`. La franja de 8 px sigue el patrón de `border-l-8` en el `<tr>` de todas las tablas (desviación 6).
 
 - [ ] **Step 1: `DataTable` sin menú en las filas cuyo `menuFila` devuelve `null` (test que falla)**
 
@@ -7300,7 +7327,7 @@ y sustituir la antigua l.70 (`{ path: '/stock/pedidos', element: <PendienteDeMig
 npm run check
 ```
 
-Expected: lint, typecheck y **1230 tests** en verde (1202 + 1 de `DataTable` + 1 de `ConfirmDialog` + 24 de `PedidosPage`). Si `react-hooks/set-state-in-effect` no señala el `setPeticionDesplazamiento` (y ESLint avisa de la directiva sin uso), quitar el comentario `eslint-disable-next-line`; si señala también el `setSeleccionada` (store), mover el comentario a esa línea.
+Expected: lint, typecheck y **1231 tests** en verde (1205 + 1 de `DataTable` + 1 de `ConfirmDialog` + 24 de `PedidosPage`). Si `react-hooks/set-state-in-effect` no señala el `setPeticionDesplazamiento` (y ESLint avisa de la directiva sin uso), quitar el comentario `eslint-disable-next-line`; si señala también el `setSeleccionada` (store), mover el comentario a esa línea.
 
 - [ ] **Step 10: Commit**
 
@@ -8463,7 +8490,7 @@ export function NuevoPedidoDialog({ precarga, onCerrar }: Props) {
 - [ ] **Step 9: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/pedidos/formulario/NuevoPedidoDialog.test.tsx`
-Expected: PASS, 17 tests.
+Expected: PASS, 18 tests.
 
 - [ ] **Step 10: Test del host y del montaje en el shell (falla)**
 
@@ -8606,7 +8633,7 @@ export function AppLayout() {
 - [ ] **Step 13: Ejecutar y ver que pasa**
 
 Run: `npx vitest run src/modules/almacen/pedidos/formulario src/app/shell`
-Expected: PASS; los ficheros nuevos de esta tarea suman 25 tests (4 + 17 + 3 + 1) y los de `src/app/shell` que ya existían siguen en verde.
+Expected: PASS; los ficheros nuevos de esta tarea suman 26 tests (4 + 18 + 3 + 1) y los de `src/app/shell` que ya existían siguen en verde.
 
 - [ ] **Step 14: Lint y tipos**
 
@@ -8620,7 +8647,7 @@ git add src/modules/almacen/pedidos/formulario/errores.ts src/modules/almacen/pe
 git commit -m "feat(pedidos): formulario nuevo pedido como modal del shell, con lote idempotente, tasa por divisa y errores inline"
 ```
 
-Recuento: **+25 tests** (4 `errores`, 17 `NuevoPedidoDialog`, 3 `FormulariosPedido`, 1 `AppLayout`).
+Recuento: **+26 tests** (4 `errores`, 18 `NuevoPedidoDialog`, 3 `FormulariosPedido`, 1 `AppLayout`).
 
 ---
 
@@ -9597,7 +9624,7 @@ Antes de escribirlo, abrir `src/modules/almacen/pedidos/PedidosPage.test.tsx` (T
 `src/modules/almacen/pedidos/PedidosPage.editar.test.tsx`:
 
 ```tsx
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -9627,7 +9654,8 @@ describe('PedidosPage: "Editar" abre el editor de su tabla', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Editar' }))
     expect(await screen.findByRole('dialog', { name: 'Editar pedido #7' })).toBeInTheDocument()
     expect(screen.getByText('Componente:')).toBeInTheDocument()
-    await screen.findByText('ACME')
+    // Dentro del diálogo: la celda "Proveedor" de la tabla también dice ACME.
+    await within(screen.getByRole('dialog', { name: 'Editar pedido #7' })).findByText('ACME')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Editar pedido #7' })).not.toBeInTheDocument())
     expect(puts).toEqual(['compras/7'])
@@ -9653,36 +9681,18 @@ Expected: FAIL, `Unable to find role="dialog" and name "Editar pedido #7"` (T13 
 
 En `src/modules/almacen/pedidos/PedidosPage.tsx` (T13):
 
-1. Imports (junto a los relativos que ya tiene; si `esCompra` ya se importa de `./reglas`, no duplicarlo):
+1. Imports (junto a los relativos que ya tiene): añadir `esCompra` al `import { chipDeEstado, entradasMenu, … } from './reglas'` que ya trae T13 (no un import suelto del mismo módulo), y:
 
 ```tsx
 import { EditarOtroPedidoDialog } from './formulario/EditarOtroPedidoDialog'
 import { EditarPedidoDialog } from './formulario/EditarPedidoDialog'
-import { esCompra } from './reglas'
 ```
 
-2. En el `switch` de acciones del menú, la línea `case 'editar': setEditando(pedido) // T17: editores` pasa a:
+2. Quitar el comentario `// T17: editores` de la rama `case 'editar'` del `switch` (el `setEditando(pedido)` y el `return` de T13 se quedan como están).
 
-```tsx
-      case 'editar': setEditando(pedido); break
-```
+No hace falta ningún efecto de congelado: T13 ya incluye `editando` en `hayModal`.
 
-(mantener la forma de las demás ramas del `switch` de T13: si usan `return` en vez de `break`, usar `return`).
-
-3. Congelado: si ningún efecto de la página marca ya `editando` como interacción abierta (buscar `editando` en el fichero), añadir tras los `useState`:
-
-```tsx
-  // El editor abierto congela el sondeo como los demás diálogos (D4 del 3a).
-  useEffect(() => {
-    if (!editando) return
-    marcar(true)
-    return () => marcar(false)
-  }, [editando, marcar])
-```
-
-(`marcar` es el de `useInteraccionesAbiertas()` que T13 ya usa; `useEffect` ya está importado si T13 fija `ultimaRutaStock` al entrar, como `StockPage.tsx:52`).
-
-4. En el JSX, justo después del último diálogo que pinta T13 (antes del cierre del contenedor raíz):
+3. En el JSX, justo después del último diálogo que pinta T13 (antes del cierre del contenedor raíz):
 
 ```tsx
       <EditarPedidoDialog pedido={tipo === 'componentes' && editando !== null && esCompra(editando) ? editando : null} onCerrar={() => setEditando(null)} />
@@ -10195,7 +10205,7 @@ Recuento: **+7 tests** (6 en `PanelNotificaciones.test.tsx`, 1 en `api.test.tsx`
 ## Task 19: Web — Stock actual: "Pedir" abre el formulario en el sitio y vuelta desde Pedidos
 
 **Files:**
-- Modify: `src/modules/almacen/stock/filtros.ts:1-5` (import de tipo) y final del fichero (`filtrosDesdePedidos`)
+- Modify: `src/modules/almacen/stock/filtros.ts` (final del fichero: `filtrosDesdePedidos`; el import de `EstadoStock` ya está en la l.2)
 - Test: `src/modules/almacen/stock/filtros.test.ts:3` (import) y `describe` nuevo al final
 - Modify: `src/modules/almacen/stock/StockPage.tsx` (fichero completo; cambian `:1-2`, `:7`, `:24`, `:42-47`, `:150` y el `DataTable`)
 - Test: `src/modules/almacen/stock/StockPage.test.tsx:1-13` (imports), `:161-175` (test sustituido), casos nuevos al final del `describe`
@@ -10625,7 +10635,7 @@ En `docs/paridad/stock.md`:
 
 Y, al final de la sección "## Tabla de stock", una línea nueva:
 
-`- [ ] Al volver desde el enlace Componente de Pedidos: desmarca OK, Bajo y Sin stock (conserva Desactivado), vacía el buscador, selecciona la fila con scroll y limpia la URL (`stock-desde-pedidos`, sub-proyecto 4b). (verificado por test: `StockPage.test.tsx` "?componente=<id> al llegar desde Pedidos: …" y "?componente= conserva \"Desactivado\" marcado (calco) …")`
+`- [x] Al volver desde el enlace Componente de Pedidos: desmarca OK, Bajo y Sin stock (conserva Desactivado), vacía el buscador, selecciona la fila con scroll y limpia la URL (`stock-desde-pedidos`, sub-proyecto 4b). (verificado por test: `StockPage.test.tsx` "?componente=<id> al llegar desde Pedidos: …" y "?componente= conserva \"Desactivado\" marcado (calco) …")`
 
 - [ ] **Step 8: Commit**
 
@@ -10940,13 +10950,15 @@ Las de la spec §10:
 - **Llegada desde "En Camino" siempre al toggle Componentes**; el JavaFX se quedaba en Otros si estaba ahí.
 - **Filtros Estado y Proveedor como `MultiSelect`** sin el buscador "Buscar…" del desplegable de proveedores (aceptado en 4a) y **fechas "Desde/Hasta" tecleables** (aceptado en Historial).
 - **Guards de estado y rangos en el servidor**: una transición no permitida responde 409 y una cantidad fuera de rango 422, con los textos del cliente; el JavaFX 0.16.x no los dispara porque su menú y sus validaciones ya lo impiden.
+- **Editar un pedido cuyo proveedor se desactivó después** responde 422 "El proveedor no está activo." aunque no se cambie el proveedor (spec §4.2); el JavaFX no lo bloqueaba, y es la única regla nueva que el JavaFX 0.16.x puede disparar al editar un pedido existente. El componente no se valida en la edición (el `PUT` no lo lleva).
 
 Inocuas:
 
 - **Recarga de compras, stock y campana tras cualquier acción**; el JavaFX recargaba stock solo en algunas.
 - **Los botones de pedir de la campana cierran el panel** antes de abrir el formulario (spec §6); en el JavaFX la ventana de notificaciones quedaba abierta detrás del formulario modal.
 - **"Pedir piezas" queda deshabilitado mientras relee** las pendientes; en el JavaFX la relectura bloqueaba la interfaz.
-
+- **El congelado del refresco con el formulario de pedido abierto aplica a Stock actual y Pedidos** (las vistas que leen el store del formulario); una vista del taller desde la que se abra el formulario por la campana sigue sondeando debajo del modal, sin tocar nada que el usuario esté editando.
+- **Clic derecho en una fila cancelada** muestra el menú nativo del navegador (no hay `preventDefault` sin menú propio), igual que hoy en las filas sin menú de ADMIN y TECNICO; el JavaFX no muestra nada.
 Decididas durante la ejecución y la comparación de capturas: se añaden aquí, cada una con la decisión del usuario.
 
 Internas, sin efecto visible: `crearClavesIdempotencia` vive en `shared/lib` (P9); el formulario de alta se abre con el store `shared/lib/formularioPedido.ts` y lo pinta un host en el shell; los helpers puros van en `.ts` propios por la regla de React Refresh.
@@ -11147,7 +11159,7 @@ node /c/Users/dev/Documents/Apuntes/herramientas/paridad-capturas/comparar-opena
 grep -l '0\.7\.0' /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web/dist/assets/*.js
 ```
 
-Expected: las dos ramas `feature/web-pedidos`; servidor en verde con **408 tests** (286 + 122 de T1-T6); web: lint y `tsc -b` limpios, Vitest en verde con **1320 tests** (1119 + 111 de T7-T13 + 77 de T14-T17 + 13 de T18-T19) y build correcto; cliente JavaFX con `git status` vacío y sus 284 tests en verde; `comparar-openapi.mjs` sin diferencias salvo `servers`; el bundle contiene `0.7.0`.
+Expected: las dos ramas `feature/web-pedidos`; servidor en verde con **408 tests** (286 + 122 de T1-T6); web: lint y `tsc -b` limpios, Vitest en verde con **1322 tests** (1119 + 112 de T7-T13 + 78 de T14-T17 + 13 de T18-T19) y build correcto; cliente JavaFX con `git status` vacío y sus 284 tests en verde; `comparar-openapi.mjs` sin diferencias salvo `servers`; el bundle contiene `0.7.0`.
 
 - [ ] **Step 4: Commit de cierre en la web**
 
@@ -11454,7 +11466,7 @@ Antes, completar en este plan un "### Cierre final" con el esquema del 4a (`2026
 
 Contrastado contra la spec §1-§12 y el código real por lectura; **nada compilado ni ejecutado**. Cada bloque lo redactó un subagente distinto sobre un documento de interfaces común; estos son los puntos cruzados que se reconciliaron al ensamblar (las notas originales de cada bloque están al final, en "Desviaciones respecto al reparto inicial de interfaces"):
 
-1. **503 del tipo de cambio al guardar (spec §8).** El clasificador de la web convertía cualquier 5xx en "sin conexión" y el mensaje del servidor no llegaba a la línea de error. Resuelto en T7 (Steps 13-16): un 503 **con mensaje** es `ReglaNegocioError` y se pinta inline (T15 lo testea; T17 lo hereda por `mensajeErrorGuardado`); un 503 sin cuerpo (nginx) sigue siendo sin conexión. La spec §8 queda como estaba.
+1. **503 del tipo de cambio al guardar (spec §8).** El clasificador de la web convertía cualquier 5xx en "sin conexión" y el mensaje del servidor no llegaba a la línea de error. Resuelto en T7 (Steps 13-16): un 503 **con mensaje** es `ReglaNegocioError` y se pinta inline (T15 lo testea; T17 lo hereda por `mensajeErrorGuardado`); un 503 sin cuerpo JSON (vacío, texto plano o el HTML de nginx) sigue siendo sin conexión, y `client.ts` solo enciende el banner si el error clasificado es `ConexionError`. La spec §8 queda como estaba.
 2. **`useTasas` silenciado.** T9 ya lleva `meta: { silenciarError: true }` en la consulta de la tasa, así que un fallo no abre el diálogo global además de "Error al obtener tasa" / "—" (lo pedía T15).
 3. **"Editar" del menú.** T13 crea `editando` y congela el sondeo con él; T17 solo pinta los dos editores con el type guard `esCompra` y no añade ningún efecto.
 4. **Rutas de otros.** El contrato real usa `{id}` en `/api/compras-otros/{id}/…`; T10 lo respeta (`useEditarOtro` recibe `idCompraOtro` y lo pasa como `path: { id }`).
@@ -11463,10 +11475,10 @@ Contrastado contra la spec §1-§12 y el código real por lectura; **nada compil
 7. **Nombres de tests del servidor en la trazabilidad** alineados con los que crea el bloque servidor (`*TransicionesTest`, `CompraControllerTest`/`CompraOtroControllerTest` para las validaciones, `CompraLoteControllerTest` para los dos lotes).
 8. **Literales del semáforo de Stock** en `filtrosDesdePedidos` (T19): `'OK' | 'Bajo' | 'Sin stock' | 'Desactivado'`, los reales de `shared/lib/semaforoStock.ts`.
 9. **`pedirDesplazamiento`** es un contador, no un índice (T13 y T19 lo usan igual): `DataTable` localiza la fila por `seleccionada`; la llegada desde Stock y la vuelta a Stock solo se consumen cuando la consulta tiene datos.
-10. **Recuentos:** servidor 286 → 408 (T1 +44, T2 +25, T3 +14, T4 +22, T5 +16, T6 +1); web 1119 → 1320 (T7 +9, T8 +4, T9 +32, T10 +18, T11 +10, T12 +12, T13 +26, T14 +20, T15 +25, T16 +7, T17 +25, T18 +7, T19 +6). Se comprueban en ejecución; son orientativos.
+10. **Recuentos:** servidor 286 → 408 (T1 +44, T2 +25, T3 +14, T4 +22, T5 +16, T6 +1); web 1119 → 1322 (T7 +10, T8 +4, T9 +32, T10 +18, T11 +10, T12 +12, T13 +26, T14 +20, T15 +26, T16 +7, T17 +25, T18 +7, T19 +6). Se comprueban en ejecución; son orientativos.
 11. **Orden del cierre (T21):** capturas de la web comparadas con las del JavaFX **antes del merge** de la rama web (Global Constraints, lección del 4a), y toma de las capturas del JavaFX de Pedidos como paso del usuario antes de esa comparación.
 12. **Diferencias nuevas detectadas al redactar, para la ficha y la spec §10:** "Pedir todas las piezas" sin alertas no hace nada (calco); el panel de la campana se cierra al pedir (el JavaFX lo deja abierto: diferencia inocua); "Pedir piezas" se deshabilita mientras relee y avisa si la relectura falla (calco); una línea sin proveedor se calcula como EUR; en los formularios de alta Enter no confirma (en los editores sí); las solicitudes del lote se filtran por `idCom` literal (el servidor resuelve al master); un proveedor desactivado después del pedido hace que su `PUT` dé 422 aunque no se toque el proveedor (spec §4.2).
-13. **Puntos a vigilar en ejecución** (marcados en cada tarea): `verify(jdbc, never()).update(eq(SQL), any(), any())` con varargs en Mockito 5 (T1); `react-hooks/set-state-in-effect` en la llegada desde Stock (T13, T19); los nombres de esquema que produzca springdoc para los records anidados (T6, T7); los nombres accesibles que el smoke (T20) supone de T13 y T15-T17.
+13. **Puntos a vigilar en ejecución** (marcados en cada tarea): el `verify(jdbc, never()).update(eq(SQL), any(), any())` de T1 compilaba contra la sobrecarga `update(String, Object[], int[])` y no comprobaba nada; corregido en la revisión previa con `any(Object[].class)` (resuelve a `update(String, Object...)`); `react-hooks/set-state-in-effect` en la llegada desde Stock (T13, T19); los nombres de esquema que produzca springdoc para los records anidados (T6, T7); los nombres accesibles que el smoke (T20) supone de T13 y T15-T17.
 
 **Revisión previa antes de la Task 1** (lección del 4a): tres subagentes aplican el código del plan en copias (servidor T1-T6; web T7-T13; web T14-T19), ejecutan las suites y devuelven los desajustes; se corrige el plan antes de despachar nada.
 
@@ -11497,11 +11509,11 @@ Cada bloque del plan lo redactó un subagente contra el código real a partir de
 3. **`MenuPedido` con `onInteraccion?: (abierto: boolean) => void`.** Mismo aviso de montar/desmontar que `MenuComponente` (`stock/MenuComponente.tsx:13-24`); sin él, el menú abierto no congela el sondeo (§7). Opcional.
 4. **Botón "Confirmar" también en "Recibir unidades".** La spec lo fija solo para el parcial; el resto usa el mismo `DialogoAlmacen` con el mismo texto de acción. Y una recibida nula en la cabecera de "Recibir unidades" se pinta `0` (el JavaFX concatenaría `null`; en `parcial` no debería darse).
 5. **`key` en las dos rutas.** `<PedidosPage key="componentes" tipo="componentes" />` / `key="otros"`: con el mismo tipo de elemento en la misma posición, React Router reutilizaría la instancia al cambiar de toggle y arrastraría el estado local (diálogos, `editando`, refs de la llegada). La interfaz decía el elemento sin `key`.
-6. **Franja izquierda de 8 px en el `<tr>`, no con `box-shadow` ni pseudo-elemento.** El encargo supone que el fix de paridad del 4a movió la barra a la primera celda; el código real no: `claseFilaStock` (`stock/columnas.tsx:21-30`), Proveedores, Clientes, Historial, Pendientes y Asignaciones siguen con `border-l-8 border-l-<token>` en el `<tr>`, y el fix del 4a (`a1c7079`) solo cambió que el cuerpo quite el borde inferior de la última fila (`stock/columnas.test.tsx:71-79`). `claseFilaPedido` sigue ese patrón.
+6. **Franja izquierda de 8 px en el `<tr>`, no con `box-shadow` ni pseudo-elemento.** El encargo supone que el fix de paridad del 4a movió la barra a la primera celda; el código real no: `claseFilaStock` (`stock/columnas.tsx:20-27`), Proveedores, Clientes, Historial, Pendientes y Asignaciones siguen con `border-l-8 border-l-<token>` en el `<tr>`, y el fix del 4a (`a1c7079`) solo cambió que el cuerpo quite el borde inferior de la última fila (`stock/columnas.test.tsx:71-79`). `claseFilaPedido` sigue ese patrón.
 7. **`DataTable` y `ConfirmDialog` se tocan en la Task 13.** `DataTable`: si `menuFila` devuelve `null` la fila no lleva `ContextMenu` (sin esto, un cancelado abría un menú vacío; el JavaFX no lo muestra). `ConfirmDialog`: `whitespace-pre-line` en la descripción para las tres líneas de "Revertir a En camino" de componentes. Los dos cambios son compatibles con todos sus usos actuales y llevan test.
 8. **Recarga de la campana con `['notificaciones']` entero.** La spec §7 cita `['notificaciones','componentes']`; la interfaz de la Task 10 dice `['notificaciones']`, que es lo que se implementa (cubre también las solicitudes que el lote marca GESTIONADA y el contador).
 9. **`BadgeEstadoPedido` sin tipo de retorno `JSX.Element` explícito** (React 19 ya no expone el namespace global `JSX`; se infiere). Mismo contrato de uso.
-10. **Aviso para T15/T17 (no cambia estas tareas):** `clasificar` convierte cualquier 5xx en `ConexionError` con el texto genérico `MSG_SIN_CONEXION` y enciende el banner (`errors.ts:169`, `client.ts:66-68`). Un 503 del servidor por la tasa ("No se pudo obtener el tipo de cambio de USD. Inténtalo de nuevo.") llegará a los formularios como "Sin conexión con el servidor." con el banner encendido, no con el mensaje del servidor inline que pide la spec §8. `useTasa` lo trata como `error: true` (correcto para la vista previa), pero el guardado de un lote o de un `PUT` en USD necesitará decidirlo en T15/T17 (o mapear el 503 aparte en `clasificar`).
+10. **503 de la tasa (resuelto en T7 Steps 13-16):** un 503 con el JSON `{message}` del servidor ("No se pudo obtener el tipo de cambio de USD. Inténtalo de nuevo.") llega a los formularios como `ReglaNegocioError` y se pinta inline, sin banner (spec §8); un 503 con texto plano o HTML (nginx) sigue siendo `ConexionError` con el banner. `useTasa` lo trata como `error: true` (correcto para la vista previa).
 11. **Nombres de esquema del lote.** Esta parte no usa los nombres `LoteCompras*` directamente (los cuerpos van tipados por la ruta de openapi-fetch); si el generador produce otros, solo cambia la comprobación del Step 2 de la Task 7 y el `grep` del Step 3 de la Task 10.
 
 ### Bloque web: formularios (T14-T17)
@@ -11510,9 +11522,9 @@ Cada bloque del plan lo redactó un subagente contra el código real a partir de
 2. **Ficheros extra:** `formulario/datosPrueba.ts` (fixtures sintéticas compartidas por los tests de T14-T17; nombre elegido para no chocar con un posible `test/fabrica.ts` de T9-T13), `formulario/DialogoLineas.tsx` (armazón común de los dos formularios de alta, T15, reutilizado en T16), `formulario/errores.ts` (+test; mapeo de errores de guardado común a los cuatro formularios), `formulario/edicion.ts` (+test; validación y Total EUR de los editores), `src/app/shell/AppLayout.test.tsx` (no existía) y `pedidos/PedidosPage.editar.test.tsx` (para no reescribir el test de T13).
 3. **`DialogoAlmacen` gana `ancho?: 360 | 520`** (no admitía ancho): con 520 el título pasa de 20 a 24 px, el `vista-titulo` de `FormularioCompraEditar.fxml`. Por defecto no cambia nada para Stock y Proveedores.
 4. **Hook de componentes:** `useComponentesStock({ activo: false })` de `../../stock/api` (clave `['componentes','gestionados']`); el de `notificaciones/api.ts` está en `taller` (lint). Proveedores: `useProveedoresComponentes({ activo: false })` + filtro de activos en cliente.
-5. **Cableado en `PedidosPage`:** el `editando ? editando : null` de la tarea no compila (props tipadas `CompraComponente` / `CompraOtro`); se usa el type guard `esCompra(editando)` de T9. Si T13 no congela ya el sondeo con `editando`, T17 añade el efecto `marcar(true/false)`.
-6. **5xx al guardar (spec §8 "al guardar, el mensaje del servidor inline"): no es posible sin tocar `shared/api`.** `clasificar` (`src/shared/api/errors.ts:52-53`) convierte todo 5xx en `ConexionError` con el mensaje genérico y descarta el del servidor ("No se pudo obtener el tipo de cambio de USD…"); el `MutationCache` abre "Sin conexión con el servidor: HTTP 503" aunque la mutación esté silenciada (`queryClient.ts:65-72`). El plan deja ese comportamiento (diálogo global + banner, formulario abierto, sin línea de error, reintento con la misma clave) y lo testea. Si se quiere el texto del 503 inline, hace falta decidir con el usuario un cambio en `clasificar` (p. ej. conservar el mensaje del cuerpo en el `ConexionError` del 503), que afecta a toda la app.
-7. **Dependencia sobre T9:** `useTasas`/`useTasa` deberían llevar `meta: { silenciarError: true }` para que una tasa fallida no abra el diálogo global además del "—" / "Error al obtener tasa" (spec §8). Los tests de T15 y T17 no dependen de ello (buscan por etiqueta/`textContent`, no por rol, en esos casos), pero sin el `meta` el usuario vería el diálogo encima del formulario.
+5. **Cableado en `PedidosPage`:** el `editando ? editando : null` de la tarea no compila (props tipadas `CompraComponente` / `CompraOtro`); se usa el type guard `esCompra(editando)` de T9. T13 ya congela el sondeo con `editando` (`hayModal`), así que T17 no añade ningún efecto.
+6. **503 al guardar (spec §8 "al guardar, el mensaje del servidor inline"): resuelto en T7 (Steps 13-16).** Un 503 con el JSON `{message}` del servidor llega como `ReglaNegocioError` y se pinta inline por `mensajeErrorGuardado`, sin diálogo global ni banner; T15 lo testea ("503 del tipo de cambio al guardar…") y T17 lo hereda. No hay que tocar `clasificar` ni `client.ts` en estas tareas.
+7. **`useTasas`/`useTasa` silenciados: ya presente en T9** (`meta: { silenciarError: true }`, `retry: false`), así que una tasa fallida no abre el diálogo global además del "—" / "Error al obtener tasa" (spec §8). No hay que añadir nada en T15/T17.
 8. **Línea sin proveedor:** se calcula como EUR (tasa 1, símbolo "€"), calco de la tasa 1.0 por defecto de `LineaCompra`; el "—" de P7 aplica cuando la divisa del proveedor aún no tiene tasa o falló.
 9. **Preselección de "+ Añadir línea":** solo en modo `componentes` con un único id activo. "Pedir todas las piezas" con exactamente una alerta se comporta como "Pedir" (el store no distingue los dos orígenes; en el JavaFX `initConComponentes` no preseleccionaba). Inocuo.
 10. **Filtrado de solicitudes del lote por `idCom` literal**, sin resolver al master: si el usuario cambia la línea de un componente al master/slave del solicitado, esas solicitudes no viajan y siguen PENDIENTE (conservador; el servidor sí las aceptaría).
@@ -11535,3 +11547,15 @@ Cada bloque del plan lo redactó un subagente contra el código real a partir de
 10. **Smoke** (T20): el proveedor de prueba se crea por API, no por la interfaz, para que el combo del formulario ya lo tenga al entrar en Pedidos; su nombre es `e2e-proveedor-<marca>` (no `E2E <timestamp>` como en `stock.spec.ts`). Se reutiliza `E2E_SKU_PRUEBA` sin variables nuevas. `DELETE /api/compras/{id}` y `/api/compras-otros/{id}` responden **200** (métodos `void` sin `@ResponseStatus`), no 204. El test depende de nombres accesibles que producen T13 y T15-T17 (listados en "Supuestos" de T20): el proveedor de la línea se localiza como el primer `button[role="combobox"]` del diálogo, que no depende del `aria-label` que elija T15.
 11. **Versión** (T21): `npm version 0.7.0 --no-git-tag-version` actualiza `package.json` y `package-lock.json` a la vez; la versión visible sale solo de `package.json` (`vite.config.ts:8,14`), no hay otro sitio que tocar.
 12. **Recuento de T18**: +7 (no +6): el caso de "Pedir todas las piezas" sin alertas sale de la desviación 5.
+
+## Revisión previa (2026-09-25)
+
+Tres subagentes aplicaron el código del plan, copiado literalmente de los Steps, en copias locales de los repos (servidor T1-T6; web T7-T13; web T14-T19), sin push, y ejecutaron las suites. Resultados: servidor **408** tests en verde con los recuentos del plan; web **1231** tras T13 y **1321** tras T19 (**1322** con el test nuevo de `client.test.ts`), lint, `tsc -b` y build limpios tras las correcciones.
+
+Decisiones del usuario:
+
+1. **503 de negocio:** solo es `ReglaNegocioError` con el JSON `{message}`; texto plano o HTML sigue siendo `ConexionError`, y `client.ts` solo enciende el banner con `ConexionError` (T7 Steps 13-16, +1 test). Los mocks `text('boom', 503)` existentes no se cambian.
+2. **Spec §4.2:** "El componente no está activo." solo en el alta (POST y lotes); el PUT no lleva componente. Se mantiene el 422 del proveedor desactivado en el PUT (desviación 8 del servidor), anotado en la ficha de T21.
+3. **Spec §7:** el congelado del refresco con el formulario abierto aplica a Stock actual y Pedidos; una vista del taller sigue sondeando debajo del modal (diferencia inocua en la ficha y en la spec §10).
+
+Correcciones aplicadas: T1 `never()` con `any(Object[].class)` (antes era una aserción vacía); T2 Step 6 (fallos reales 11/15 y 7/10) y duplicado de la validación de divisa de `ProveedorController`; T4 referencias de `RegistroIdempotencia` y tasa por línea; T6 Step 4 `grep`; T7 líneas de `fechas.ts`, `client.ts` y su test; T11 `Array.from` (TS2488), typecheck en el Step 6 y mensaje del Step 2; comentarios y referencias de línea desfasados (`filtros.ts`, `columnas.tsx`, `fechaLocal`, `DialogoAlmacen`, `useErrorServidor`, `errors.ts`, `rutas.ts`); T15 18 tests (+26); T17 `within` en el test del cableado, `esCompra` en el import existente y Steps 10.2-10.3 simplificados; T19 "Files" y `[x]` en `stock.md`; desviaciones web 10 y formularios 6-7 marcadas como resueltas; acumulados, Autorrevisión 10 y 13; timeouts intermitentes en las Global Constraints; ficha de T21 (proveedor desactivado en el PUT, sondeo de las vistas del taller, clic derecho en cancelados).
