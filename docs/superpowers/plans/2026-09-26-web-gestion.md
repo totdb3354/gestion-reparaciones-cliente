@@ -7540,3 +7540,461 @@ Cada bloque del plan lo redactó un subagente contra el código real a partir de
 8. **"Descargar CSV" en el diálogo de contraseña**: la spec §6.4 dice "deshabilitado en las tres pantallas"; el diálogo se abre sobre la vista actual, así que la línea de `shell.md` dice que las tres pantallas no registran exportable y que el ítem queda deshabilitado en `/gestion/tecnicos` y `/gestion/logs` (con el diálogo abierto el menú no es accesible).
 9. **`.env.e2e.example` no tenía `ADMIN_USER`/`ADMIN_PASS`** (sí `~/.env.e2e`): la Task 14 los añade con su comentario.
 10. **Verificación del cliente JavaFX**: solo `git status --short gestion-reparaciones-cliente` vacío (como pide el encargo), sin `mvn test` del cliente, que el 4b sí lanzaba; el recuento de la web se expresa como 1333 + los recuentos de T6-T13 porque los de T6-T12 los fija otro bloque.
+
+## Ejecución y cierre (2026-09-26)
+
+**Código terminado; pendiente de smoke, capturas y OK del usuario.** Las catorce tareas de código (T1-T14) se ejecutaron con `superpowers:subagent-driven-development`: un implementador y una revisión por tarea (todas "Approved", ninguna con hallazgos críticos ni importantes), más una revisión final por repo (servidor "Ready to merge: Yes" tras un arreglo de comentarios; web "Ready to merge: With fixes" con un único importante de política, triado abajo). La Task 0 no se ejecutó (decisión del usuario del 2026-09-26). Nada está pusheado, mergeado ni etiquetado. El raíz sigue en `main`. Ledger en `.superpowers/sdd/progress.md` (`# SP6`); briefs, informes, paquetes de revisión e informes finales en `.superpowers/sdd/6/`.
+
+**Servidor**, rama `feature/web-gestion` desde `main` `3dccc4a`, head `64468c5` (READY TO MERGE):
+
+- `ebb84fd` feat(usuarios): 422 del alta de usuarios con los textos del cliente y nombres guardados sin espacios (T1)
+- `975b73e` feat(usuarios): 404 de técnico inexistente y 409 al borrar con datos asociados mirando todas las referencias (T2)
+- `b7ea79a` feat(seguridad): solo admin crea o borra en /api/tecnicos y 422 al cambiar la contraseña con los textos del cliente (T3)
+- `bb77d26` feat(logs): límite opcional, días de madrid en el filtro de fechas, orden estable y lista de acciones (T4)
+- `b742f4a` feat(contrato): nulos del log, lista de acciones, límite, idusu opcional y códigos reales de usuarios y contraseña (T5)
+- `64468c5` docs(tecnicos): los comentarios de la guarda de admin describen solo el comportamiento actual (arreglo tras la revisión final)
+
+**Web**, rama `feature/web-gestion` desde `main` `cd6853b`, head `a9c671d` (versión `0.8.0`; código en `afb6594`):
+
+- `f06ecfd` chore(web): contrato de gestion, alias de usuario y log, fecha con segundos, tokens y candados de gestion, y campo de contraseña compartido con el texto del login del javafx (T6)
+- `0ceaa6d` feat(gestion): guarda solo admin en tecnicos y logs, vuelta a la vista de origen, lista de usuarios tecnicos y fuera la ruta de cambiar contraseña (T7)
+- `0caee04` feat(gestion): validacion del alta y duplicados en vivo, textos, errores inline, badge de estado, columnas con candado y papelera, y escrituras de tecnicos (T8)
+- `e3ffb4f` feat(gestion): pagina de tecnicos con alta y duplicados en vivo, candado, borrado con comprobacion y confirmacion, errores inline y cerrar a la vista de origen (T9)
+- `cd7c56a` feat(gestion): filtros, columnas y consultas del log de actividad (T10; `.gitignore` con `/logs` anclado)
+- `72c0b5b` feat(gestion): página ver logs con filtros, aviso de tope y detalle por doble clic (T11)
+- `56c9d53` feat(gestion): diálogo de cambiar contraseña abierto desde el menú de usuario (T12)
+- `13f2ae5` feat(asignaciones): csv de la vista con las 14 columnas del hotfix y exportable registrado (T13)
+- `afb6594` test(e2e): smoke de gestion con alta, candado, log, cambio de contraseña y borrado de un tecnico de prueba (T14)
+- `a9c671d` docs(web): fichas de tecnicos, logs y cuenta sin marcar, lineas del shell, CHANGELOG y version 0.8.0 (T15)
+
+**Suites (Task 15, Step 6).** Servidor **485** tests en verde (421 + 64 de T1-T5; el arreglo final no añade tests). Web: lint y `tsc -b` limpios, **1488** tests en verde (1333 + 155 de T6-T13), build correcto con `0.8.0` en el bundle y `npx playwright test --list` con 9 tests en 7 ficheros. Cliente JavaFX sin cambios (`git status` vacío). El contrato `target/openapi.json` del servidor es idéntico a `api/openapi.json` de la web (`comparar-openapi.mjs`: 137/137 rutas, 123/123 esquemas). El smoke `tests/e2e/gestion.spec.ts` **no se ha ejecutado** (solo `--list`); va en U4. Trailers `Co-Authored-By`: 0 en los 16 commits.
+
+Desviaciones respecto al plan:
+
+- **Ninguna en el código.** Las catorce tareas compilaron y pasaron tal cual estaban en el plan (la revisión previa en copias ya había incorporado las correcciones). Recuentos exactos a los previstos: servidor 485, web 1488.
+- **Servidor, arreglo final `64468c5`.** Dos Javadoc (`TecnicoController.insertar` y la clase `RolesUsuarioTecnicoTest`) describían el estado previo a la guarda de ADMIN; el texto venía del plan, pero prevalece la regla de los repos públicos (sin descripciones de huecos de seguridad): se reescriben para decir solo lo que hace el código. Sin cambio de comportamiento ni de tests.
+- **Web, revisión final, importante de política (sin cambio).** `README.md` (párrafo del smoke) y `tests/e2e/gestion.spec.ts` (comentario del `afterAll`) citan el límite de inicios de sesión ("5 por minuto", "ráfaga de 3, uno cada 12 s"), texto mandado por el plan. El umbral ya es público en el propio repo desde la 0.1.0 (`deploy/nginx/default.conf:2,28`), así que no añade exposición; queda a decisión del usuario si se retiran los números.
+- **Paridad.** Las fichas `docs/paridad/{tecnicos,logs,cuenta}.md` (web) están **sin marcar** y recogen las diferencias y calcos; "Pendiente de decidir": placeholder de tabla vacía, columna de acciones a 80 px, ancho de Detalle en logs, título "Información" del aviso de éxito.
+
+Decisiones del usuario durante la ejecución: la Task 0 no se ejecuta (2026-09-26, antes de empezar). Pendientes de decisión del usuario (consultadas, no resueltas sobre la marcha):
+
+1. **Clic fuera del diálogo "Cambiar contraseña"**: hoy lo cierra y pierde lo tecleado (Radix por defecto); el `Stage` modal del JavaFX no se cierra así. Las dos revisiones finales recomiendan bloquearlo (`onInteractOutside` con `preventDefault`, una línea y un test) dejando Esc y Cancelar como salidas; si no, se anota en `cuenta.md` como diferencia inocua.
+2. **Spec §4.1, punto 1**: dice "nulos o vacíos tras el trim" para los tres campos, pero la contraseña se calca del cliente sin recortar (Desviación 7 del bloque servidor; test `losEspaciosCuentanComoCaracteres`). Corregir la frase de la spec en el cierre.
+3. Los números del límite de login en README y smoke (arriba).
+
+Backlog menor (de las revisiones de tarea y finales; va a `Apuntes/plan-futuro.md` al cerrar, U12):
+
+- **Servidor** (revisión final): carrera comprobación→borrado responde 500 en vez de 409 (rollback garantizado; `try/catch` de `DataIntegrityViolationException` con el mismo 409 y un test); `getIdUsuByIdTec` consultado dos veces en el `DELETE`; `LogDAO.getFiltered` de 4 args y `UsuarioDAO.tieneReparaciones` sin llamadores en producción (borrar o reescribir el Javadoc); 404 de `GET …/tiene-reparaciones` fuera del contrato (bastaría `@ApiResponses` con `content = @Content`); cuerpos `{message}` sin esquema en el contrato y sin test MockMvc de `$.message` (esquema `ErrorResponse` compartido, SP7); `RolesUsuarioTecnicoTest` arranca un segundo contexto Spring por el `@MockBean`; literal en vez de `MSG_LIMITE` en `LogControllerTest`; `@Parameter` cualificado inline; `limite=abc` es 400 de Spring; `hasta` extremo teórico → 500.
+- **Web** (revisión final): `ConexionError` en una escritura se trata distinto en técnicos (texto fijo inline + diálogo global) y en cuenta (solo global); `TecnicosPage` conserva las filas si falla una recarga tras una escritura (la spec solo describe la carga inicial); `MSG_TECNICO_NO_ENCONTRADO` duplica el literal del servidor porque `clasificar` descarta el cuerpo de los 404 (conservar `{message}` en 404 toca `shared`); accesibilidad (etiquetas `span` + `aria-label` en el diálogo, avisos en vivo sin `aria-describedby`, foco tras el aviso "Información" lanzado desde un diálogo que se cierra); `useUsuariosTecnicos` sin `refetchOnReconnect: false`; dos localizadores del smoke fuera del estilo del fichero (papelera por imagen, "Cerrar" por texto); `ANCHOS_TECNICOS` y `CodigoConMensaje` sin consumidor externo; `quitar()` fuera de `finally` en dos tests; `RequiereAdmin` con 2 de 4 combinaciones rol×ruta; candado sin guarda de pendiente (idempotente); sin test de `desde > hasta` en `LogsPage`; 12 s de `afterAll` aunque el POST falle; `hoyMadrid` a medianoche; `toContainText` sobre el textarea del detalle a confirmar en U4.
+
+### Pendiente, del usuario y uno a uno
+
+No hacer push, merge, tag ni despliegue sin OK. Claude no hace SSH a las VMs: los comandos de la VDC se preparan y los ejecuta el usuario. Las capturas de la web se comparan **antes del merge de la web** (spec §9).
+
+**U1. Push de las dos ramas** (copia de seguridad; con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git -C gestion-reparaciones-servidor push -u origin feature/web-gestion
+git -C gestion-reparaciones-web push -u origin feature/web-gestion
+```
+
+**U2. Merge del servidor en `main` y push** (con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor
+git checkout main && git pull --ff-only
+git merge --no-ff --no-edit feature/web-gestion
+export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH
+mvn -q test
+git push origin main
+```
+
+Expected: suite en verde en `main` antes del push.
+
+**U3. Despliegue del servidor en la VDC y contrato** (lo ejecuta el usuario; guía privada `Apuntes/despliegue_vdc_produccion.md` §P8). Solo el backend: la web 0.7.0 desplegada sigue funcionando con el servidor nuevo porque todo es aditivo (su `/cuenta/cambiar-password` es un "Pendiente de migrar" y no llama a nada).
+
+```bash
+ssh prod
+cd /opt/reparaciones && git -C gestion-reparaciones-servidor pull && git -C gestion-reparaciones-servidor log --oneline -1
+docker compose up -d --build backend
+docker compose logs --tail=80 backend | grep -E "Started|ERROR"
+exit
+```
+
+Expected: el `log -1` muestra el merge de U2 y los logs, `Started App`. Después, en el PC (Git Bash, desde la web, credenciales de `~/.env.e2e` exportadas y sin escribirlas en la línea de comandos):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+set -a; . ~/.env.e2e; set +a
+cp api/openapi.json "$TMPDIR/openapi-rama.json"
+API_URL="$E2E_BASE_URL" API_USER="$E2E_USER" API_PASS="$E2E_PASS" node scripts/fetch-openapi.mjs
+node /c/Users/dev/Documents/Apuntes/herramientas/paridad-capturas/comparar-openapi.mjs "$TMPDIR/openapi-rama.json" api/openapi.json
+git checkout api/openapi.json
+```
+
+Expected: `rutas A/B: 137 / 137` y sin diferencias salvo `servers`; `git checkout` devuelve el snapshot determinista. `node scripts/fetch-openapi.mjs` (no `npm run api:types`) para no regenerar `schema.d.ts`.
+
+**U4. Smoke contra producción con la web de la rama en local** (escribe en la BD de pruebas: crea y borra un usuario de prueba; con OK). `.env.local` con `VITE_API_PROXY_TARGET` apuntando a la API de producción (lección del 3b) y el puerto 5173 libre. **`E2E_BASE_URL=http://localhost:5173` explícito** (lección del 4b: con el valor de `~/.env.e2e` correría contra la web desplegada, que es la 0.7.0):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git checkout feature/web-gestion
+npm run dev   # en otra terminal
+set -a; . ~/.env.e2e; set +a
+E2E_BASE_URL=http://localhost:5173 npx playwright test tests/e2e/gestion.spec.ts
+```
+
+Expected: `gestion.spec.ts` en verde. **Esperar al menos un minuto** (límite de 5 inicios de sesión por minuto; el smoke hace cuatro) y después la suite completa, en serie (`workers: 1`):
+
+```bash
+E2E_BASE_URL=http://localhost:5173 npx playwright test
+```
+
+Expected: `stock`, `asignar`, `clientes`, `taller`, `pedidos` y `gestion` en verde (`formulario.spec.ts` depende de su precondición de datos, como en 4a y 4b). Si `gestion.spec.ts` falla, su anotación `e2e-creado` y los `expect.soft` de `afterAll` nombran el usuario y la ruta que quedaron: se anota en la limpieza del 6 (U12).
+
+**U5. Capturas del JavaFX** (el usuario; Claude maneja los scripts de `Apuntes/herramientas/paridad-capturas/` para capturar y navegar, **sin pulsar nada que escriba**: el alta, el candado, el cambio de contraseña y el borrado del usuario de prueba los pulsa el usuario). Worktree recreado desde el raíz, que se queda en `main`:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git worktree add ../_ref-hotfix-0163 hotfix/0.16.3
+cp gestion-reparaciones-cliente/src/main/resources/config.properties ../_ref-hotfix-0163/gestion-reparaciones-cliente/src/main/resources/config.properties
+```
+
+Editar esa copia para que apunte a producción (como en 4a y 4b; el fichero está ignorado por git), y lanzar:
+
+```bash
+cd /c/Users/dev/Documents/_ref-hotfix-0163/gestion-reparaciones-cliente
+export JAVA_HOME=/c/Users/dev/tools/jdk-17; export PATH=/c/Users/dev/tools/apache-maven-3.9.16/bin:$JAVA_HOME/bin:$PATH
+mvn -q javafx:run
+```
+
+Comprobar con `Get-NetTCPConnection -OwningProcess <pid>` que solo conecta con producción. Recorrer `Apuntes/paridad-capturas/gestion/CAPTURAS-6.md` una a una con el usuario de prueba que se describe allí (nunca uno real) y apuntar en "Datos creados" lo que quede. Al terminar: `git worktree remove ../_ref-hotfix-0163` desde el raíz.
+
+**U6. Capturas de la web y comparación lado a lado** (antes del merge de la web). Con la web de la rama en local contra producción (`npm run dev`, puerto 5173), crear `C:\Users\dev\Documents\Apuntes\herramientas\paridad-capturas\capturas-gestion.mjs` a partir de `capturas-pedidos.mjs` (misma cabecera, `paso`, `shot` con prefijo `web-`, `login`, contextos 1920×1080). Su guardia bloquea toda escritura **salvo las del flujo de prueba**: el alta de un técnico cuyo nombre empiece por `captura-` (incluido el 409 provocado con el usuario del ADMIN, que no escribe), el candado y el borrado del idTec del usuario de prueba que el propio script creó, y el cambio de contraseña **solo en el contexto de ese usuario**:
+
+```js
+// Capturas de paridad de la web, sub-proyecto 6 (Gestión), contra E2E_BASE_URL (web de la rama en local).
+// Credenciales: ADMIN_USER/ADMIN_PASS y E2E_USER/E2E_PASS (SUPERTECNICO). No se imprimen.
+// Escrituras: SOLO el flujo del usuario de prueba "captura-…" que crea el propio script (alta, candado, cambio de su
+// contraseña y restauración, borrado final) y el POST del 409 con el usuario del ADMIN (el servidor no escribe).
+import { createRequire } from 'node:module'
+import { mkdirSync } from 'node:fs'
+const require = createRequire('C:/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web/package.json')
+const { chromium } = require('@playwright/test')
+
+const OUT = process.env.OUT_DIR
+if (!OUT) { console.error('Falta OUT_DIR'); process.exit(1) }
+mkdirSync(OUT, { recursive: true })
+const base = process.env.E2E_BASE_URL.replace(/\/$/, '')
+const marca = Date.now()
+const P = { tecnico: `captura-tecnico-${marca}`, usuario: `captura-usuario-${marca}`, clave: `captura-${marca}`, nueva: `captura-n-${marca}` }
+let prueba = null // { idTec, idUsu } del usuario de prueba, cuando exista
+
+const paso = async (nombre, fn) => {
+  try { await fn(); console.log('ok  ', nombre) } catch (e) { console.log('FAIL', nombre, '->', String(e).split('\n')[0]) }
+}
+const shot = async (page, n) => { await page.waitForTimeout(350); await page.screenshot({ path: `${OUT}/web-${n}.png` }); console.log('     shot web-' + n) }
+const espera = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function guardia(ctx, { esUsuarioPrueba = false } = {}) {
+  await ctx.route('**/api/**', (route) => {
+    const req = route.request()
+    const ruta = new URL(req.url()).pathname
+    const m = req.method()
+    if (m === 'GET' || ruta === '/api/auth/login') return route.continue()
+    let cuerpo = null
+    try { cuerpo = req.postDataJSON() } catch { cuerpo = null }
+    const propias = prueba ? [`/api/usuarios/tecnicos/${prueba.idTec}/activar`, `/api/usuarios/tecnicos/${prueba.idTec}/desactivar`] : []
+    const ok =
+      (m === 'POST' && ruta === '/api/usuarios/tecnicos' && typeof cuerpo?.nombreTecnico === 'string' && cuerpo.nombreTecnico.startsWith('captura-')) ||
+      (m === 'PATCH' && propias.includes(ruta)) ||
+      (m === 'DELETE' && prueba !== null && ruta === `/api/usuarios/tecnicos/${prueba.idTec}`) ||
+      (esUsuarioPrueba && m === 'PATCH' && ruta === '/api/auth/cambiar-password')
+    if (ok) { console.log('     PERMITIDA', m, ruta); return route.continue() }
+    console.log('     BLOQUEADA', m, ruta)
+    return route.abort()
+  })
+}
+
+async function login(page, user, pass) {
+  await page.goto(base + '/login')
+  await page.getByPlaceholder('Usuario').fill(user)
+  await page.getByPlaceholder('Contraseña').fill(pass)
+  await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
+  await page.getByText('FSGR:').waitFor()
+}
+const menu = async (page, item) => {
+  await page.getByRole('button', { name: /Hola,/ }).click()
+  if (item) await page.getByRole('menuitem', { name: item, exact: true }).click()
+}
+const esc = async (page) => { await page.keyboard.press('Escape'); await page.waitForTimeout(250) }
+
+const browser = await chromium.launch()
+const nuevoContexto = async (opciones) => {
+  const c = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })
+  await guardia(c, opciones)
+  return c
+}
+
+// ================= ADMIN (inicio de sesión 1) =================
+const ctxAdmin = await nuevoContexto()
+const a = await ctxAdmin.newPage()
+await paso('login admin', () => login(a, process.env.ADMIN_USER, process.env.ADMIN_PASS))
+await paso('gestion-menu-usuario-admin', async () => { await menu(a); await shot(a, 'gestion-menu-usuario-admin'); await esc(a) })
+await paso('gestion-menu-usuario-posicion + barra', async () => {
+  await menu(a); await shot(a, 'gestion-menu-usuario-posicion'); await esc(a); await shot(a, 'gestion-barra-version')
+})
+await paso('gestion-csv-sin-exportable', async () => {
+  await a.goto(base + '/clientes'); await a.waitForTimeout(800); await menu(a); await shot(a, 'gestion-csv-sin-exportable'); await esc(a)
+})
+
+const filaT = (texto) => a.getByRole('row').filter({ hasText: texto })
+await paso('gestion-tecnicos-vacio-formulario', async () => {
+  await a.goto(base + '/reparaciones'); await menu(a, 'Gestionar técnicos')
+  await a.getByText('Gestión de usuarios', { exact: true }).waitFor(); await a.waitForTimeout(800)
+  await shot(a, 'gestion-tecnicos-vacio-formulario'); await shot(a, 'gestion-tecnicos-tabla')
+})
+await paso('gestion-tecnicos-fila-seleccionada', async () => { await a.getByRole('row').nth(1).click(); await shot(a, 'gestion-tecnicos-fila-seleccionada') })
+await paso('gestion-tecnicos-combo-rol', async () => {
+  await a.getByRole('combobox').filter({ hasText: 'TECNICO' }).first().click(); await shot(a, 'gestion-tecnicos-combo-rol'); await esc(a)
+})
+const campos = {
+  tecnico: () => a.getByPlaceholder('Nombre visible en reparaciones'), usuario: () => a.getByPlaceholder('Credencial de login'),
+  clave: () => a.getByPlaceholder('Contraseña', { exact: true }), confirmar: () => a.getByPlaceholder('Repite la contraseña'),
+}
+const vaciar = async () => { for (const c of Object.values(campos)) await c().fill('') }
+await paso('gestion-tecnicos-dup-tecnico / dup-usuario', async () => {
+  const primera = (await a.getByRole('row').nth(1).getByRole('cell').allTextContents()).map((t) => t.trim())
+  await campos.tecnico().fill(`  ${primera[0].toUpperCase()} `); await shot(a, 'gestion-tecnicos-dup-tecnico'); await vaciar()
+  await campos.usuario().fill(primera[1].toUpperCase()); await shot(a, 'gestion-tecnicos-dup-usuario'); await vaciar()
+})
+const registrar = () => a.getByRole('button', { name: 'Registrar técnico' }).click()
+await paso('errores de validación', async () => {
+  await registrar(); await shot(a, 'gestion-tecnicos-error-vacios')
+  await campos.tecnico().fill(P.tecnico); await campos.usuario().fill(P.usuario); await campos.clave().fill('secreta1'); await campos.confirmar().fill('otra123')
+  await registrar(); await shot(a, 'gestion-tecnicos-error-no-coinciden')
+  await campos.clave().fill('abc'); await campos.confirmar().fill('abc'); await registrar(); await shot(a, 'gestion-tecnicos-error-corta')
+})
+await paso('gestion-tecnicos-error-409-admin', async () => {
+  await campos.tecnico().fill(`captura-409-${marca}`); await campos.usuario().fill(process.env.ADMIN_USER)
+  await campos.clave().fill(P.clave); await campos.confirmar().fill(P.clave)
+  await registrar(); await a.waitForTimeout(800); await shot(a, 'gestion-tecnicos-error-409-admin'); await vaciar()
+})
+await paso('gestion-tecnicos-alta-ok', async () => {
+  await campos.tecnico().fill(P.tecnico); await campos.usuario().fill(P.usuario); await campos.clave().fill(P.clave); await campos.confirmar().fill(P.clave)
+  const alta = a.waitForResponse((r) => new URL(r.url()).pathname === '/api/usuarios/tecnicos' && r.request().method() === 'POST')
+  await registrar(); console.log('     POST ->', (await alta).status())
+  await filaT(P.tecnico).waitFor(); await filaT(P.tecnico).scrollIntoViewIfNeeded(); await shot(a, 'gestion-tecnicos-alta-ok')
+  prueba = await a.evaluate(async (usuario) => {
+    const s = JSON.parse(sessionStorage.getItem('fsgr.sesion') ?? '{}')
+    const l = await (await fetch('/api/usuarios/tecnicos', { headers: { Authorization: `Bearer ${s.token}` } })).json()
+    const u = l.find((x) => x.nombreUsuario === usuario)
+    return u ? { idTec: u.idTec, idUsu: u.idUsu } : null
+  }, P.usuario)
+  console.log('     usuario de prueba:', P.usuario, JSON.stringify(prueba))
+})
+await paso('tooltips y desactivado', async () => {
+  await filaT(P.tecnico).getByRole('button', { name: 'Desactivar acceso' }).hover(); await a.waitForTimeout(900); await shot(a, 'gestion-tecnicos-tooltip-desactivar')
+  await filaT(P.tecnico).getByRole('button', { name: 'Desactivar acceso' }).click(); await filaT(P.tecnico).getByText('Inactivo', { exact: true }).waitFor()
+  await shot(a, 'gestion-tecnicos-desactivado')
+  await filaT(P.tecnico).getByRole('button', { name: 'Activar acceso' }).hover(); await a.waitForTimeout(900); await shot(a, 'gestion-tecnicos-tooltip-activar')
+})
+// Login con el usuario inactivo (inicio de sesión 2): contexto aparte, falla sin escribir.
+await paso('gestion-tecnicos-login-inactivo', async () => {
+  const c = await nuevoContexto(); const p = await c.newPage()
+  await p.goto(base + '/login'); await p.getByPlaceholder('Usuario').fill(P.usuario); await p.getByPlaceholder('Contraseña').fill(P.clave)
+  await p.getByRole('button', { name: 'Iniciar Sesión' }).click(); await p.waitForTimeout(1500); await shot(p, 'gestion-tecnicos-login-inactivo'); await c.close()
+})
+await paso('reactivar', async () => {
+  await filaT(P.tecnico).getByRole('button', { name: 'Activar acceso' }).click(); await filaT(P.tecnico).getByText('Activo', { exact: true }).waitFor()
+})
+await paso('gestion-tecnicos-no-se-puede-eliminar', async () => {
+  // Solo lee (GET tiene-reparaciones): la primera fila que no sea la de prueba y dé "No se puede eliminar".
+  for (let i = 1; i <= 5; i++) {
+    const f = a.getByRole('row').nth(i)
+    if ((await f.textContent()).includes(P.tecnico)) continue
+    await f.locator('button:has(img[src="/borrar.png"])').click(); await a.waitForTimeout(800)
+    const aviso = a.getByRole('dialog', { name: 'No se puede eliminar' })
+    if (await aviso.count()) { await shot(a, 'gestion-tecnicos-no-se-puede-eliminar'); await aviso.getByRole('button', { name: 'Aceptar' }).click(); return }
+    await a.getByRole('dialog', { name: 'Eliminar técnico' }).getByRole('button', { name: 'Cancelar' }).click()
+  }
+})
+await paso('gestion-tecnicos-confirmar-eliminar', async () => {
+  await filaT(P.tecnico).locator('button:has(img[src="/borrar.png"])').click()
+  const d = a.getByRole('dialog', { name: 'Eliminar técnico' }); await d.waitFor(); await shot(a, 'gestion-tecnicos-confirmar-eliminar')
+  await d.getByRole('button', { name: 'Cancelar' }).click()
+})
+await paso('gestion-tecnicos-tras-cerrar', async () => { await a.getByText('Cerrar', { exact: true }).click(); await a.waitForTimeout(1200); await shot(a, 'gestion-tecnicos-tras-cerrar') })
+
+// Logs
+const accion = async (texto, opcion) => {
+  await a.getByPlaceholder('Acción...').fill(texto)
+  if (opcion) { await a.getByRole('option', { name: opcion, exact: true }).click(); await a.waitForTimeout(1200) }
+}
+await paso('gestion-logs-inicial', async () => {
+  await menu(a, 'Ver logs'); await a.getByText('Log de actividad', { exact: true }).waitFor(); await a.waitForTimeout(1500)
+  await shot(a, 'gestion-logs-inicial'); await shot(a, 'gestion-logs-maximizada')
+  await a.getByRole('row').nth(1).click(); await shot(a, 'gestion-logs-fila-seleccionada')
+  await a.getByRole('columnheader', { name: 'Fecha' }).click(); await shot(a, 'gestion-logs-orden-cabecera')
+})
+await paso('popups de acción y técnico', async () => {
+  await a.getByPlaceholder('Acción...').click(); await shot(a, 'gestion-logs-popup-accion')
+  await accion('pedido'); await shot(a, 'gestion-logs-popup-accion-filtrado')
+  await accion('LOGIN', 'LOGIN'); await shot(a, 'gestion-logs-filtro-accion')
+  await a.getByRole('button', { name: 'Limpiar filtros' }).click(); await a.waitForTimeout(1200)
+  await a.getByPlaceholder('Técnico...').click(); await shot(a, 'gestion-logs-popup-tecnico'); await esc(a)
+})
+await paso('fechas, buscador y vacío', async () => {
+  await a.getByLabel('Desde:').click(); await shot(a, 'gestion-logs-fechas'); await esc(a)
+  if (process.env.FECHA_MADRUGADA) { await a.getByLabel('Desde:').fill(process.env.FECHA_MADRUGADA); await a.getByLabel('Hasta:').fill(process.env.FECHA_MADRUGADA); await a.waitForTimeout(1500); await shot(a, 'gestion-logs-fechas-madrugada') }
+  await a.getByRole('button', { name: 'Limpiar filtros' }).click(); await a.waitForTimeout(1200)
+  if (process.env.IMEI_BUSCADOR) { await a.getByPlaceholder('Buscar...').fill(process.env.IMEI_BUSCADOR); await shot(a, 'gestion-logs-buscador') }
+  await a.getByPlaceholder('Buscar...').fill('zzzz-sin-resultados'); await shot(a, 'gestion-logs-vacio'); await a.getByPlaceholder('Buscar...').fill('')
+})
+for (const [nombre, codigo] of [['gestion-logs-detalle', 'CREAR_ASIGNACION'], ['gestion-logs-detalle-motivo', 'ELIMINAR_ASIGNACION'], ['gestion-logs-detalle-largo', 'EDITAR_REPARACION']]) {
+  await paso(nombre, async () => {
+    await accion(codigo, codigo); await a.getByRole('row').nth(1).dblclick()
+    await a.getByRole('dialog', { name: 'Detalle del log' }).waitFor(); await shot(a, nombre); await esc(a)
+    await a.getByRole('button', { name: 'Limpiar filtros' }).click(); await a.waitForTimeout(1000)
+  })
+}
+
+// ================= Usuario de prueba, TECNICO (inicio de sesión 3) =================
+await espera(13_000) // límite de nginx: 5 inicios por minuto con ráfaga de 3
+const ctxP = await nuevoContexto({ esUsuarioPrueba: true })
+const p = await ctxP.newPage()
+await paso('login usuario de prueba', () => login(p, P.usuario, P.clave))
+await paso('gestion-menu-usuario-tecnico', async () => { await menu(p); await shot(p, 'gestion-menu-usuario-tecnico'); await esc(p) })
+const dlg = () => p.getByRole('dialog', { name: 'Cambiar contraseña' })
+const rellenar = async (actual, nueva, confirmar) => {
+  await dlg().getByPlaceholder('Contraseña actual', { exact: true }).fill(actual)
+  await dlg().getByPlaceholder('Nueva contraseña', { exact: true }).fill(nueva)
+  await dlg().getByPlaceholder('Confirmar contraseña', { exact: true }).fill(confirmar)
+}
+const guardar = async () => { await dlg().getByRole('button', { name: 'Guardar' }).click(); await p.waitForTimeout(900) }
+await paso('contraseña: vacía, ojo y errores', async () => {
+  await menu(p, 'Cambiar contraseña'); await dlg().waitFor(); await shot(p, 'gestion-password-vacia')
+  await guardar(); await shot(p, 'gestion-password-error-vacios')
+  await rellenar(P.clave, 'abc', 'abc'); await guardar(); await shot(p, 'gestion-password-error-corta')
+  await rellenar(P.clave, 'nueva123', 'otra1234'); await guardar(); await shot(p, 'gestion-password-error-no-coinciden')
+  await rellenar(P.clave, 'nueva123', 'nueva123'); await dlg().getByRole('button', { name: 'Mostrar contraseña' }).first().click(); await shot(p, 'gestion-password-ojo')
+  await rellenar('incorrecta1', 'nueva123', 'nueva123'); await guardar(); await shot(p, 'gestion-password-error-actual')
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300); await shot(p, 'gestion-password-enter-esc')
+})
+await paso('gestion-password-exito y restaurar', async () => {
+  await menu(p, 'Cambiar contraseña'); await rellenar(P.clave, P.nueva, P.nueva); await guardar()
+  const aviso = p.getByRole('dialog', { name: 'Información' }); await aviso.waitFor(); await shot(p, 'gestion-password-exito')
+  await aviso.getByRole('button', { name: 'Aceptar' }).click()
+  await menu(p, 'Cambiar contraseña'); await rellenar(P.nueva, P.clave, P.clave); await guardar()
+  await p.getByRole('dialog', { name: 'Información' }).getByRole('button', { name: 'Aceptar' }).click()
+})
+await paso('gestion-cerrar-sesion-login', async () => { await menu(p, 'Cerrar Sesión'); await p.waitForTimeout(600); await shot(p, 'gestion-cerrar-sesion-login') })
+await ctxP.close()
+
+// ================= SUPERTECNICO (inicio de sesión 4) =================
+await espera(13_000)
+const ctxS = await nuevoContexto()
+const s = await ctxS.newPage()
+await paso('gestion-menu-usuario-supertecnico', async () => { await login(s, process.env.E2E_USER, process.env.E2E_PASS); await menu(s); await shot(s, 'gestion-menu-usuario-supertecnico'); await esc(s) })
+await paso('asig-csv', async () => {
+  await s.goto(base + '/reparaciones/asignaciones'); await s.waitForTimeout(1500); await menu(s); await shot(s, 'asig-csv'); await esc(s)
+})
+await ctxS.close()
+
+// ================= Borrado del usuario de prueba (sesión ADMIN abierta) =================
+await paso('borrar usuario de prueba', async () => {
+  await a.goto(base + '/gestion/tecnicos'); await filaT(P.tecnico).waitFor()
+  await filaT(P.tecnico).locator('button:has(img[src="/borrar.png"])').click()
+  const d = a.getByRole('dialog', { name: 'Eliminar técnico' }); await d.waitFor()
+  const borrado = a.waitForResponse((r) => r.request().method() === 'DELETE')
+  await d.getByRole('button', { name: 'Eliminar', exact: true }).click()
+  console.log('     DELETE ->', (await borrado).status(), '(si no es 204, borrar a mano y anotar)', P.usuario)
+})
+
+await browser.close()
+console.log('FIN')
+```
+
+Uso (credenciales de `~/.env.e2e` exportadas; `IMEI_BUSCADOR` y `FECHA_MADRUGADA` opcionales, sacados de la BD de pruebas, nunca escritos en el script):
+
+```bash
+set -a; . ~/.env.e2e; set +a
+E2E_BASE_URL=http://localhost:5173 OUT_DIR=/c/Users/dev/Documents/Apuntes/paridad-capturas/gestion node /c/Users/dev/Documents/Apuntes/herramientas/paridad-capturas/capturas-gestion.mjs
+```
+
+Anotar pareja a pareja en `Apuntes/paridad-capturas/gestion/COMPARACION-6.md` (formato de `almacen/COMPARACION-4b.md`): diferencia deliberada confirmada, calco, no comparable por datos o diferencia nueva. **Cada diferencia nueva se decide con el usuario**, no sobre la marcha; las que se corrijan van a `feature/web-gestion` con su test y su commit, y las aceptadas a la ficha correspondiente ("Decididas durante la ejecución y la comparación de capturas"). Se cierran también los "Pendiente de decidir" de las fichas (placeholder de tabla vacía, título del aviso de éxito y columna de acciones de técnicos a 80 px).
+
+**U7. Fichas marcadas** contra las capturas y los tests; commit en la rama:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git add docs/paridad/tecnicos.md docs/paridad/logs.md docs/paridad/cuenta.md docs/paridad/shell.md docs/paridad/asignaciones.md
+git commit -m "docs(web): fichas de gestion marcadas tras comparar capturas"
+git cat-file -p HEAD | tail -1
+git push origin feature/web-gestion
+```
+
+**U8. Merge de la web en `main` y push** (con OK):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git checkout main && git pull --ff-only
+git merge --no-ff --no-edit feature/web-gestion
+npm run check && npm run build
+git push origin main
+```
+
+**U9. Despliegue de la web en la VDC** (lo ejecuta el usuario):
+
+```bash
+ssh prod
+cd /opt/reparaciones && git -C gestion-reparaciones-web pull && git -C gestion-reparaciones-web log --oneline -1
+docker compose up -d --build nginx
+exit
+```
+
+Verificación del bundle desde el PC: el `index-*.js` que sirve producción es el del build local de U8.
+
+```bash
+set -a; . ~/.env.e2e; set +a
+curl -s "$E2E_BASE_URL/" | grep -o 'assets/index-[^"]*\.js'
+grep -o 'assets/index-[^"]*\.js' /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web/dist/index.html
+```
+
+Expected: el mismo nombre en las dos líneas. Si difiere con commits nuevos, la variante `--no-cache` de §P8 de la guía.
+
+**U10. Tag `v0.8.0`** (con OK): fijar antes la fecha de la entrada del CHANGELOG (commit `docs(web): fecha de la 0.8.0` en `main` y push) y después:
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
+git tag -a v0.8.0 -m "v0.8.0: gestion de tecnicos, logs, cambiar contraseña y csv de asignaciones"
+git push origin v0.8.0
+```
+
+**U11. Gitlinks en el raíz** (con OK para el push):
+
+```bash
+cd /c/Users/dev/Documents/ProgramaReparaciones
+git add gestion-reparaciones-servidor gestion-reparaciones-web docs/superpowers/plans/2026-09-26-web-gestion.md
+git commit -m "chore: gitlinks servidor y web tras el sub-proyecto 6 (web v0.8.0) y cierre del plan"
+git push origin main
+```
+
+Antes, completar en este plan un "## Cierre final" con el esquema del 4b (`docs/superpowers/plans/2026-09-25-web-almacen-pedidos.md:11770-11778`): merges, despliegues, smoke, comparación, tag y suites finales.
+
+**U12. `Apuntes/plan-futuro.md`, §9** (privado, sin commit): marcar `[x]` la casilla **6** con el mismo nivel de detalle que la del 4b (commits de `main`, tag, tests, despliegue, smoke, capturas comparadas, resultado de la Task 0), y añadir debajo:
+
+- `[ ] Limpieza en la VDC del 6 (se suma a las anteriores)`: el usuario de prueba de las capturas si no se borró (nombre en `CAPTURAS-6.md`, "Datos creados") y el del smoke si falló su limpieza (anotación `e2e-creado` y `expect.soft` de `afterAll`); los logs `CREAR_USUARIO`, `ACTIVAR_USUARIO`, `DESACTIVAR_USUARIO`, `ELIMINAR_USUARIO` y `LOGIN` del ADMIN que dejan el smoke y las capturas (no hay endpoint para borrarlos); los `CAMBIAR_PASSWORD` y `LOGIN` del usuario de prueba solo quedan si el usuario no llegó a borrarse (el `DELETE` borra su log, G8).
+- `[ ] Backlog 6 → web / servidor`: lo triado como backlog en las revisiones de las tareas y en la revisión final.
+
+**U13. Memoria** (Claude, con OK): actualizar `project_migracion_web_programa.md` (SP6 cerrado, web v0.8.0, siguiente el 7 en paralelo y después el 8, piloto y corte) y su línea en `MEMORY.md`.
+
+Recuento: **+0 tests** (documentación, versión y verificación).
+
+---
+
+---
+
+## Trazabilidad: reglas de los inventarios → test
+
