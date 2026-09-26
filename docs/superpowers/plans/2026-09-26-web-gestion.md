@@ -80,6 +80,8 @@
 
 ## Task 0: Arranque — limpieza pendiente de la BD de pruebas (4a y 4b) por la API
 
+> **NO SE EJECUTA (decisión del usuario, 2026-09-26).** La BD de la VM de producción es hoy una copia de pruebas que se vacía y se recarga con el dump definitivo en el corte (spec maestra §2), así que esta limpieza no aporta nada. La ejecución del plan empieza en la **Task 1**. Se conserva el procedimiento por si se quisiera usar antes del piloto; la lista de datos sigue en `Apuntes/plan-futuro.md`.
+
 Se ejecuta **antes de la Task 1**, contra producción (que hoy es la BD de pruebas, `project_preproduccion`), con el servidor desplegado actual (`main` 3dccc4a): todas las rutas que usa ya existen. **El plan es público: aquí no hay ids, nombres de proveedor ni valores de stock reales.** La lista concreta vive solo en los apuntes privados y el ejecutor la lee de allí. Esta tarea no toca ningún repo ni hace commits.
 
 **Files:**
@@ -7455,7 +7457,7 @@ Contrastado contra la spec §1-§12 y el código real; **el bloque servidor (T1-
 9. **Task 0 (U0):** `PATCH /api/componentes/{idCom}/stock` recibe un incremento (`{delta}`), "cerrar sin resto" es `confirmar-alterado`, `DELETE /api/proveedores/{id}` da 409 con pedidos aunque estén cancelados (se desactiva en su lugar). Cada escritura con OK del usuario, una a una; los ids y nombres reales viven solo en `Apuntes`.
 10. **Recuentos:** servidor 421 → 485 (ejecutado); web 1333 → ~1488 orientativo (T6 +6, T7 +12, T8 +23, T9 +25, T10 +29, T11 +18, T12 +33, T13 +9) y el smoke pasa de 8 a 9 tests en `--list`. Se comprueban en ejecución.
 11. **Supuesto de esquema (T2):** `tieneReferencias` consulta `Revision`, `Envio`, `Envio_Telefono` y `Movimiento_telefono`, que existen en `sql/crear_bd.sql` y en las migraciones F2; antes de desplegar (U3) el usuario comprueba con `SHOW TABLES` en la BD de producción que las cuatro existen (si faltara alguna, `tiene-reparaciones` y el `DELETE` darían 500).
-12. **Orden de ejecución:** T0 (limpieza, con OK uno a uno) → T1-T5 servidor → T6-T13 web → T14 smoke (se escribe; se ejecuta en U4 contra producción con la web en local) → T15 cierre; U1-U13 en el orden del 4b (capturas comparadas antes del merge de la web).
+12. **Orden de ejecución:** T0 no se ejecuta (decisión del usuario 2026-09-26) → T1-T5 servidor → T6-T13 web → T14 smoke (se escribe; se ejecuta en U4 contra producción con la web en local) → T15 cierre; U1-U13 en el orden del 4b (capturas comparadas antes del merge de la web).
 13. **Puntos a vigilar en ejecución** (marcados en cada tarea): `tailwind-merge` y el `pr-11` de `CampoPassword` en el login (T6, desviación 7 de B); la regla `react-hooks` con el estado ajustado durante el render (T11); `any(Object[].class)` en los `verify(...never())` de Mockito 5 (T1-T4); el límite de 5 inicios de sesión por minuto en el smoke (T14: cuatro seguidos caben, la limpieza espera 12 s); los recuentos de surefire solo tras una suite completa.
 
 **Revisión previa antes de la Task 1** (lección del 4a): el servidor ya está aplicado y ejecutado por su redactor; dos subagentes aplican el código de la web en copias (T6-T9; T6-T13 con foco en T10-T13 y el `--list` de T14), ejecutan `npm run check` y devuelven los desajustes; se corrige el plan antes de despachar nada.
