@@ -51,7 +51,7 @@ Todo es **aditivo**: ninguna respuesta que el JavaFX consuma cambia de forma; lo
 
 Clase `ValidacionUsuarios` (package-private, patrón de `ValidacionPedidos`) con los textos como constantes. Los dos nombres se recortan (`trim`) antes de validar y **se guardan recortados**. Orden de comprobación, parando en la primera:
 
-1. `nombreTecnico`, `nombreUsuario` o `password` nulos o vacíos tras el trim → **422 "Todos los campos son obligatorios."**
+1. `nombreTecnico` o `nombreUsuario` nulos o vacíos tras el trim, o `password` nula o vacía (sin trim, calco del cliente) → **422 "Todos los campos son obligatorios."**
 2. `password.length() < 6` → **422 "La contraseña debe tener al menos 6 caracteres."**
 3. `nombreUsuario` de más de 50 caracteres → **422 "El nombre de usuario no puede superar 50 caracteres."**
 4. `nombreTecnico` de más de 100 caracteres → **422 "El nombre del técnico no puede superar 100 caracteres."**
