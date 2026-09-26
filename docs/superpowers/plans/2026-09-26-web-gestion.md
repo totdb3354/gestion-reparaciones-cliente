@@ -68,6 +68,7 @@
 | `src/app/shell/UserMenu.tsx` (+ `TopBar.test.tsx`) | *Modificar.* `volverA` en los ítems de ADMIN (T7); "Cambiar contraseña" abre el diálogo (T12) |
 | `src/modules/gestion/tecnicos/validacion.ts`, `textos.ts`, `BadgeEstadoUsuario.tsx`, `columnas.tsx`, `api.ts` (+ tests) | *Crear.* Helpers puros, badge, columnas y mutaciones de técnicos (T8) |
 | `src/modules/gestion/tecnicos/TecnicosPage.tsx` (+ test) | *Crear.* La página "Gestión de usuarios" (T9) |
+| `.gitignore` | *Modificar.* `logs` → `/logs`, para que Git no ignore `src/modules/gestion/logs/` (T10) |
 | `src/modules/gestion/logs/filtros.ts`, `columnas.tsx`, `api.ts` (+ tests) | *Crear.* Filtros, buscador, columnas y consultas del log (T10) |
 | `src/modules/gestion/logs/LogsPage.tsx` (+ test) | *Crear.* La página "Log de actividad" (T11) |
 | `src/modules/gestion/cuenta/validacion.ts`, `api.ts`, `CambiarPasswordDialog.tsx` (+ tests) | *Crear.* Validación, mutación y diálogo de contraseña (T12) |
@@ -2010,7 +2011,7 @@ Tests añadidos: 1 (`elContratoPublicaLaGestion`). Total del servidor tras el bl
 
 **Supuestos:** la rama del servidor `feature/web-gestion` existe con T1-T5 commiteadas y `mvn -q -Dtest=OpenApiContractTest test` deja `target/openapi.json` (así lo hace hoy, README de la web l.16-21). T5 marca `detalle` y `motivo` de `LogActividad` como `nullable`, añade `/api/logs/acciones`, el parámetro `limite` de `/api/logs` y deja `idUsu` del `DELETE /api/usuarios/tecnicos/{idTec}` como opcional. El nombre de la operación de `GET /api/logs` (`getAll_6` hoy, `schema.d.ts:1902`) puede cambiar al regenerar: nadie en la web lo usa por nombre.
 
-> Búsqueda previa: `grep -rn "FMT_FECHA_LOG\|HH:mm:ss" src` sale vacío; `export type Usuario` no existe en `client.ts` (solo `Tecnico`, l.14); `ls public` no tiene `Lock.png` ni `Unlock.png` (sí `borrar.png`, `logo_inicio_sesion.png`, `ojo_activar.png`, `ojo_desactivar.png`); `src/shared/ui/CampoPassword.tsx` no existe; el ojo solo vive en `LoginPage.tsx:59-76`. `git -C /c/Users/dev/Documents/ProgramaReparaciones ls-tree hotfix/0.16.3 gestion-reparaciones-cliente/src/main/resources/images/` lista `Lock.png` (blob `7559daf1957e56798b09e17dbbc55590cafa7777`) y `Unlock.png` (blob `36792e5bc222445b199c29ac602921f0904caad9`), con mayúscula inicial. El texto del login del JavaFX es `"Rellena usuario y contraseña."` (`LoginController.java:98` en `hotfix/0.16.3`, con la misma condición `usuario.trim().isEmpty() || password.isEmpty()`).
+> Búsqueda previa: `grep -rn "FMT_FECHA_LOG\|HH:mm:ss" src` sale vacío; `export type Usuario` no existe en `client.ts` (solo `Tecnico`, l.14); `ls public` no tiene `Lock.png` ni `Unlock.png` (lista completa: `Badge.png`, `Historial.png`, `NotfON.png`, `NotifOFF.png`, `borrar.png`, `editar.png`, `icono_programa.png`, `logoNavBar.png`, `logo_inicio_sesion.png`, `ojo_activar.png`, `ojo_desactivar.png`, `user.png`); `src/shared/ui/CampoPassword.tsx` no existe; el ojo solo vive en `LoginPage.tsx:59-76`. `git -C /c/Users/dev/Documents/ProgramaReparaciones ls-tree hotfix/0.16.3 gestion-reparaciones-cliente/src/main/resources/images/` lista `Lock.png` (blob `7559daf1957e56798b09e17dbbc55590cafa7777`) y `Unlock.png` (blob `36792e5bc222445b199c29ac602921f0904caad9`), con mayúscula inicial. El texto del login del JavaFX es `"Rellena usuario y contraseña."` (`LoginController.java:98` en `hotfix/0.16.3`, con la misma condición `usuario.trim().isEmpty() || password.isEmpty()`).
 
 - [ ] **Step 1: Rama**
 
@@ -2421,7 +2422,7 @@ Expected: la última línea del commit no contiene `Co-Authored-By`.
 - Create: `src/modules/gestion/api.ts`, `src/modules/gestion/api.test.tsx`
 - Modify: `src/app/router.tsx:14` (import) y `:77-79` (rutas de gestión y `/cuenta/cambiar-password`)
 - Modify: `src/app/shell/UserMenu.tsx:1` (import), `:8-9` (`useLocation`), `:21-22` (navegaciones con `volverA`), `:27` ("Cambiar contraseña" sin navegación)
-- Modify: `src/app/shell/TopBar.test.tsx:4` (import de `useLocation`) y casos nuevos tras el de la l.47-52
+- Modify: `src/app/shell/TopBar.test.tsx:4` (import de `useLocation`), `Destino` tras los imports y casos nuevos tras el caso `'el admin ve además "Gestionar técnicos" y "Ver logs"'`
 
 **Interfaces:**
 - Consumes: `Usuario` de `@/shared/api/client` (Task 6); `MSG_SIN_PERMISOS` de `@/shared/api/errors` (`errors.ts:29`); `esAdmin` de `@/shared/session/storage`; `useAlerta` de `@/shared/ui/AlertaProvider`; `PendienteDeMigrar` de `app/shell/PendienteDeMigrar.tsx`.
@@ -2603,7 +2604,8 @@ describe('api de gestión', () => {
     const { result } = renderHook(() => useUsuariosTecnicos(), { wrapper })
     await waitFor(() => expect(result.current.data).toEqual(usuarios))
     expect(peticiones).toBe(1)
-    expect(qc.getQueryCache().find({ queryKey: CLAVE_USUARIOS_TECNICOS })?.options.refetchOnWindowFocus).toBe(false)
+    // `Query.options` es `QueryOptions` (sin las opciones de observer: tsc -b fallaría con TS2339); se lee del observer.
+    expect(qc.getQueryCache().find({ queryKey: CLAVE_USUARIOS_TECNICOS })?.observers[0]?.options.refetchOnWindowFocus).toBe(false)
   })
   it('con habilitada: false no pide nada', () => {
     const { wrapper } = envoltorio()
@@ -2667,7 +2669,7 @@ En `src/app/shell/TopBar.test.tsx`, la l.4 queda:
 import { Route, useLocation } from 'react-router'
 ```
 
-Tras las importaciones (l.10) se añade:
+Tras la última importación (hoy la l.10) se añade:
 
 ```tsx
 
@@ -2678,7 +2680,7 @@ function Destino({ texto }: { texto: string }) {
 }
 ```
 
-Y tras el caso `'el admin ve además "Gestionar técnicos" y "Ver logs"'` (l.47-52):
+Y tras el cierre (`})`) del caso `'el admin ve además "Gestionar técnicos" y "Ver logs"'` (se busca por el texto: tras añadir `Destino` ya no está en la l.47-52, y con el número de línea el bloque cae dentro del test del técnico):
 
 ```tsx
   it.each([
@@ -2698,6 +2700,8 @@ Y tras el caso `'el admin ve además "Gestionar técnicos" y "Ver logs"'` (l.47-
     expect(screen.getByRole('button', { name: /Hola, tecnico_n/ })).toBeInTheDocument()
   })
 ```
+
+(La Task 12, Step 13, sustituye la última aserción de este tercer caso por la del diálogo abierto: con el diálogo modal la barra queda `aria-hidden` y `getByRole('button', { name: /Hola, tecnico_n/ })` ya no la encuentra.)
 
 Run: `npx vitest run src/app/shell/TopBar.test.tsx`
 Expected: FAIL en los tres nuevos: los dos primeros encuentran `TECNICOS null` / `LOGS null` (se navega sin state) y el tercero encuentra `CUENTA`.
@@ -2735,7 +2739,7 @@ La l.27:
 import { RequiereAdmin } from '@/modules/gestion/rutas'
 ```
 
-Las l.77-79 quedan:
+Las tres rutas `PendienteDeMigrar` de gestión y cuenta (`/gestion/tecnicos`, `/gestion/logs` y `/cuenta/cambiar-password`; hoy l.77-79, l.78-80 tras el import de arriba) se sustituyen por:
 
 ```tsx
           {
@@ -3385,7 +3389,7 @@ Expected: PASS, 7 tests.
 npm run lint && npx tsc -b && npx vitest run src/modules/gestion
 ```
 
-Expected: lint y typecheck sin errores; PASS, 32 tests en `src/modules/gestion` (9 de la Task 7 + 7 de `validacion` + 4 de `errores` + 5 de `columnas` + 7 de `api`; los de `clientes` aparte). Acumulado: **1374**.
+Expected: lint y typecheck sin errores; PASS, 46 tests en 8 ficheros de `src/modules/gestion` (32 nuevos: 9 de la Task 7 + 7 de `validacion` + 4 de `errores` + 5 de `columnas` + 7 de `api`; más los 14 de `clientes/`, que la carpeta incluye). Acumulado: **1374**.
 
 - [ ] **Step 11: Commit**
 
@@ -3403,7 +3407,7 @@ Expected: la última línea del commit no contiene `Co-Authored-By`.
 
 **Files:**
 - Create: `src/modules/gestion/tecnicos/TecnicosPage.tsx`, `src/modules/gestion/tecnicos/TecnicosPage.test.tsx`
-- Modify: `src/app/router.tsx` (import de `TecnicosPage` tras `ClientesPage`, l.5; la ruta `/gestion/tecnicos` que la Task 7 dejó bajo `<RequiereAdmin />`)
+- Modify: `src/app/router.tsx` (import de `TecnicosPage` tras el de `RequiereAdmin`; la ruta `/gestion/tecnicos` que la Task 7 dejó bajo `<RequiereAdmin />`)
 
 **Interfaces:**
 - Consumes: `useUsuariosTecnicos` de `../api` y `rutaVolverA` de `../navegacion` (Task 7); `validarAlta`, `cuerpoAlta`, `duplicadosEnVivo`, `ROLES`, `rolDe`, `DatosAlta` de `./validacion`, textos de `./textos`, `mensajeInline` de `./errores`, `columnasTecnicos` de `./columnas`, `useRegistrar`, `useCambiarActivo`, `useEliminar`, `consultarTieneReparaciones` de `./api` (Task 8); `useAlerta().mostrarAviso` (`AlertaProvider.tsx:114`), `ConfirmDialog` (`ConfirmDialog.tsx:20`, descripción con `whitespace-pre-line`, l.45), `DataTable` (`ordenacion`, `vacio`, `altoFila`, `seleccionada`/`onSeleccionar`), `ComboNavy` (`ComboNavy.tsx:41`), `Input`, `Button`.
@@ -3977,7 +3981,7 @@ Expected: PASS, 25 tests.
 
 - [ ] **Step 3: Ruta**
 
-En `src/app/router.tsx`, tras `import { ClientesPage } from '@/modules/gestion/clientes/ClientesPage'` (l.5):
+En `src/app/router.tsx`, tras `import { RequiereAdmin } from '@/modules/gestion/rutas'` (lo añadió la Task 7 tras el de `ClientesPage`; así los imports de `@/modules/gestion` siguen en orden alfabético):
 
 ```tsx
 import { TecnicosPage } from '@/modules/gestion/tecnicos/TecnicosPage'
@@ -4019,6 +4023,7 @@ Expected: la última línea del commit no contiene `Co-Authored-By`.
 - Create: `src/modules/gestion/logs/filtros.ts`, `src/modules/gestion/logs/filtros.test.ts`
 - Create: `src/modules/gestion/logs/columnas.tsx`, `src/modules/gestion/logs/columnas.test.tsx`
 - Create: `src/modules/gestion/logs/api.ts`, `src/modules/gestion/logs/api.test.tsx`
+- Modify: `.gitignore:2` (`logs` → `/logs`, Step 15)
 
 **Interfaces:**
 - Consumes: `api`, `LogActividad` de `@/shared/api/client` (alias de la Task 6: `{ idLog, fecha, nombreUsuario, accion, detalle: string | null, motivo: string | null }`); `formatear`, `FMT_FECHA_LOG` de `@/shared/lib/fechas` (Task 6: patrón `'dd/MM/yyyy HH:mm:ss'` con segundos); `DataTable` de `@/shared/ui/DataTable` (`shared/ui/DataTable.tsx:129`); `crearQueryClient` de `@/shared/api/queryClient` (`queryClient.ts:30`); `server` de `@/test/server`. Contrato: `GET /api/logs` = `getAll_6` (`schema.d.ts:1895-1910` y `:6605-6629` en `main`; tras la regeneración de la Task 6 su `query` gana `limite?: number`), `GET /api/logs/acciones` (ruta nueva del servidor, Task 4; respuesta `string[]`).
@@ -4365,7 +4370,10 @@ function registrarLogs(respuesta: () => Response = () => HttpResponse.json([LOG]
   const peticiones: Record<string, string>[] = []
   server.use(
     http.get('*/api/logs', ({ request }) => {
-      peticiones.push(Object.fromEntries(new URL(request.url).searchParams))
+      // Sin `Object.fromEntries(searchParams)`: el `lib` de tsconfig.app.json no trae DOM.Iterable (tsc -b daría TS2769).
+      const params: Record<string, string> = {}
+      new URL(request.url).searchParams.forEach((valor, clave) => { params[clave] = valor })
+      peticiones.push(params)
       return respuesta()
     }),
   )
@@ -4388,7 +4396,7 @@ describe('useLogs (GET /api/logs, contrato getAll_6)', () => {
   it('sin filtros solo manda el límite; cambiar un filtro cambia la clave y relanza la carga', async () => {
     const peticiones = registrarLogs()
     const { qc, wrapper } = envoltorio()
-    const { result, rerender } = renderHook(({ q }: { q: QueryLogs }) => useLogs(q), { wrapper, initialProps: { q: { limite: 1000 } } })
+    const { result, rerender } = renderHook(({ q }: { q: QueryLogs }) => useLogs(q), { wrapper, initialProps: { q: { limite: 1000 } as QueryLogs } })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     rerender({ q: { limite: 1000, accion: 'LOGIN' } })
     await waitFor(() => expect(peticiones).toHaveLength(2))
@@ -4487,10 +4495,21 @@ npm run lint && npx tsc -b
 
 Expected: lint sin errores ni warnings nuevos; `tsc -b` sin salida. Si `tsc` marca `params.query.limite` o la ruta `/api/logs/acciones` como inexistentes, el contrato no está regenerado (Task 6): parar.
 
-- [ ] **Step 15: Commit**
+- [ ] **Step 15: Anclar `logs` en `.gitignore` y commit**
+
+La l.2 de `.gitignore` es `logs` sin anclar: Git ignora `src/modules/gestion/logs/` entero y el `git add` de abajo falla con "The following paths are ignored by one of your .gitignore files" (vitest, lint y tsc no se enteran; un `git add -A` lo dejaría fuera sin avisar). Se ancla a la raíz (no afecta a los `*.log`):
 
 ```bash
-git add src/modules/gestion/logs/filtros.ts src/modules/gestion/logs/filtros.test.ts src/modules/gestion/logs/columnas.tsx src/modules/gestion/logs/columnas.test.tsx src/modules/gestion/logs/api.ts src/modules/gestion/logs/api.test.tsx
+grep -n "^logs$" .gitignore
+sed -i 's/^logs$/\/logs/' .gitignore
+grep -n "logs" .gitignore
+git check-ignore src/modules/gestion/logs/api.ts || echo "no ignorado"
+```
+
+Expected: el primer `grep` da `2:logs`; el segundo, `2:/logs` (y la línea `*.log` sin cambios); `git check-ignore` no imprime la ruta y sale `no ignorado`.
+
+```bash
+git add .gitignore src/modules/gestion/logs/filtros.ts src/modules/gestion/logs/filtros.test.ts src/modules/gestion/logs/columnas.tsx src/modules/gestion/logs/columnas.test.tsx src/modules/gestion/logs/api.ts src/modules/gestion/logs/api.test.tsx
 git commit -m "feat(gestion): filtros, columnas y consultas del log de actividad"
 git cat-file -p HEAD | tail -1
 ```
@@ -4557,7 +4576,10 @@ function registrarLogs(respuesta: (n: number) => Response = () => HttpResponse.j
   const peticiones: Peticion[] = []
   server.use(
     http.get('*/api/logs', ({ request }) => {
-      peticiones.push(Object.fromEntries(new URL(request.url).searchParams))
+      // `forEach` y no `Object.fromEntries(searchParams)`: sin DOM.Iterable en el `lib`, tsc -b da TS2769.
+      const params: Peticion = {}
+      new URL(request.url).searchParams.forEach((valor, clave) => { params[clave] = valor })
+      peticiones.push(params)
       return respuesta(peticiones.length)
     }),
   )
@@ -4774,6 +4796,12 @@ describe('LogsPage: errores', () => {
     expect(screen.getByText('CREAR_ASIGNACION')).toBeInTheDocument()
   })
   it('sin conexión: solo el banner de la política global, sin "Error al cargar los logs"', async () => {
+    // Las dos listas también fallan (sin conexión real caerían todas): si respondieran 200, `client.ts` llamaría a
+    // `reportarExito()` y el banner se apagaría solo. Mismo recurso que `ClientesPage.test.tsx:148`.
+    server.use(
+      http.get('*/api/logs/acciones', () => new HttpResponse(null, { status: 500 })),
+      http.get('*/api/usuarios/tecnicos', () => new HttpResponse(null, { status: 500 })),
+    )
     registrarLogs(() => new HttpResponse(null, { status: 500 }))
     abrir()
     await waitFor(() => expect(estaConectado()).toBe(false))
@@ -5402,7 +5430,8 @@ describe('CambiarPasswordDialog: guardado', () => {
     await rellenar('secreta1', 'nueva123', 'nueva123')
     await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
     expect(await screen.findByRole('dialog', { name: 'Error' })).toHaveTextContent('Sin conexión con el servidor: HTTP 500')
-    expect(within(screen.getByRole('dialog', { name: 'Cambiar contraseña' })).queryByRole('alert')).not.toBeInTheDocument()
+    // El diálogo de error deja el de contraseña con aria-hidden (fuera del árbol accesible): se mira el formulario por el DOM.
+    expect(screen.getByLabelText('Contraseña actual').closest('form')?.querySelector('[role="alert"]')).toBeNull()
   })
 })
 
@@ -5580,8 +5609,8 @@ En `src/app/shell/TopBar.test.tsx`, sustituir los imports (`:1-10`) por:
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
-import { describe, expect, it } from 'vitest'
-import { Route } from 'react-router'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { Route, useLocation } from 'react-router'
 import { ultimaRutaStock } from '@/modules/almacen/estado'
 import { handlersNotificaciones } from '@/modules/taller/notificaciones/test/handlers'
 import { renderConProviders, SESION_ADMIN, SESION_SUPER, SESION_TEC } from '@/test/render'
@@ -5589,10 +5618,29 @@ import { server } from '@/test/server'
 import { AppLayout } from './AppLayout'
 ```
 
-(si la Task 7 ya añadió alguno de estos nombres, no se duplica) y añadir al final del fichero:
+(`useLocation` se conserva: lo añadió la Task 7 para `Destino` y los dos tests de `volverA` lo usan; si falta, sale TS2552 y "ReferenceError: useLocation is not defined". Si la Task 7 ya añadió alguno de estos nombres, no se duplica.)
+
+En el tercer caso que añadió la Task 7 (`'"Cambiar contraseña" ya no navega a /cuenta/cambiar-password …'`), la última línea
+
+```tsx
+    expect(screen.getByRole('button', { name: /Hola, tecnico_n/ })).toBeInTheDocument()
+```
+
+pasa a ser (con el diálogo modal abierto la barra queda `aria-hidden` y el botón ya no está en el árbol accesible):
+
+```tsx
+    expect(await screen.findByRole('dialog', { name: 'Cambiar contraseña' })).toBeInTheDocument()
+```
+
+Y añadir al final del fichero:
 
 ```tsx
 describe('"Cambiar contraseña" desde el menú de usuario (spec §6.3, G6)', () => {
+  // En /reparaciones el lateral de TECNICO y SUPERTECNICO pide los contadores: sin handler, MSW corta la petición,
+  // sale el diálogo modal de conexión y el menú queda con pointer-events: none. Mismo handler que la Task 13.
+  beforeEach(() => {
+    server.use(http.get('*/api/reparaciones/pendientes/contadores', () => HttpResponse.json({ reparaciones: 0, glass: 0, pulidos: 0 })))
+  })
   it.each([
     ['técnico', SESION_TEC, /Hola, tecnico_n/],
     ['supertécnico', SESION_SUPER, /Hola, tecnico_f/],
@@ -5641,7 +5689,7 @@ describe('"Cambiar contraseña" desde el menú de usuario (spec §6.3, G6)', () 
 (`act` ya se importaba en `main` desde otra línea, `TopBar.test.tsx:5`; queda en la primera.)
 
 Run: `npx vitest run src/app/shell/TopBar.test.tsx`
-Expected: FAIL en los 5 tests nuevos (el ítem no abre nada: `Unable to find role="dialog" and name "Cambiar contraseña"`); los anteriores siguen en verde.
+Expected: FAIL en los 5 tests nuevos y en el de la Task 7 recién cambiado (el ítem no abre nada: `Unable to find role="dialog" and name "Cambiar contraseña"`); los anteriores siguen en verde.
 
 - [ ] **Step 14: Abrir el diálogo desde `UserMenu`**
 
@@ -5659,7 +5707,7 @@ import { useExportable } from '@/shared/ui/exportable'
 export function UserMenu() {
   const { sesion, logout } = useSession()
   const navigate = useNavigate()
-  const location = useLocation()
+  const { pathname } = useLocation()
   const exportar = useExportable()
   // "Cambiar contraseña" es un diálogo sobre la vista actual (G6, calco del Stage modal): estado local, sin ruta.
   const [passwordAbierto, setPasswordAbierto] = useState(false)
@@ -5674,8 +5722,8 @@ export function UserMenu() {
         <DropdownMenuContent align="end">
           {esAdmin(sesion) && (
             <>
-              <DropdownMenuItem onSelect={() => navigate('/gestion/tecnicos', { state: { volverA: location.pathname } })}>Gestionar técnicos</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => navigate('/gestion/logs', { state: { volverA: location.pathname } })}>Ver logs</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/gestion/tecnicos', { state: { volverA: pathname } })}>Gestionar técnicos</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate('/gestion/logs', { state: { volverA: pathname } })}>Ver logs</DropdownMenuItem>
               <DropdownMenuSeparator />
             </>
           )}
@@ -6033,7 +6081,7 @@ Recuento: **+9 tests** (8 de `csv.test.ts` + 1 de `AsignacionesPage.test.tsx`).
 
 **Files:**
 - Create: `tests/e2e/gestion.spec.ts`
-- Modify: `.env.e2e.example` (hoy sin `ADMIN_USER`/`ADMIN_PASS`: bloque nuevo al final, tras `:26`), `README.md` (sección "Smoke e2e", `:28-54`: párrafo nuevo tras el de `pedidos.spec.ts` en `:48-52` y frase final `:53-54`)
+- Modify: `.env.e2e.example` (hoy sin `ADMIN_USER`/`ADMIN_PASS`: bloque nuevo al final del fichero, que tiene 22 líneas: tras `:22`), `README.md` (sección "Smoke e2e", `:28-54`: párrafo nuevo tras el de `pedidos.spec.ts` en `:48-52` y frase final `:53-54`)
 
 **Interfaces:**
 - Consumes: `credenciales(variableUsuario, variableClave)` de `tests/e2e/credenciales.ts:5-10`; el patrón de login de `tests/e2e/stock.spec.ts:22-29` y de llamada a la API con el token de `sessionStorage['fsgr.sesion']` de `tests/e2e/pedidos.spec.ts` (`llamarApi`; clave en `src/shared/session/storage.ts:9`); `workers: 1` de `playwright.config.ts:7`. La forma `Usuario { idUsu, nombreUsuario, rol, idTec, nombreTecnico, activo }` del contrato (`schema.d.ts:2751-2760`) se repite a mano (el e2e no importa código de la app, `asignar.spec.ts:4-9`).
@@ -6077,6 +6125,9 @@ async function entrarCon(page: Page, usuario: string, clave: string) {
   await page.getByPlaceholder('Contraseña').fill(clave)
   await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
   await expect(page.getByText('FSGR:')).toBeVisible()
+  // La barra se pinta antes de que `<Navigate>` lleve de /reparaciones a /historial (ADMIN) o /pendientes (TECNICO):
+  // se espera la URL final porque `origen` y la `ruta` de `cambiarPassword` leen `page.url()` después de la redirección.
+  await expect(page).toHaveURL(/\/reparaciones\/(historial|pendientes)$/)
 }
 
 async function menuUsuario(page: Page, item: string) {
@@ -6304,7 +6355,7 @@ test.afterAll(async ({ playwright }, testInfo) => {
 
 - [ ] **Step 2: `.env.e2e.example` y README**
 
-Al final de `.env.e2e.example` (tras `:26`):
+Al final de `.env.e2e.example` (el fichero tiene 22 líneas: el bloque va tras la l.22):
 
 ```
 # gestion.spec.ts ESCRIBE: con ADMIN_USER registra un técnico de prueba "e2e-tecnico-<marca>" (usuario
@@ -6414,6 +6465,7 @@ Decididas durante la ejecución y la comparación de capturas: se añaden aquí,
 ## Pendiente de decidir
 
 - Placeholder de la tabla vacía: previsto "No hay contenido en la tabla" (texto por defecto del `TableView`); se fija con `gestion-tecnicos-tabla-vacia` o, si no es reproducible, con la JVM del JavaFX.
+- Columna de acciones: la web la deja en 80 px y el sobrante va a la columna de relleno de `DataTable`; en el JavaFX la última columna absorbe el resto (`FLEX_LAST_COLUMN`, spec §6.1). Se acepta como diferencia o se le da el sobrante, según `gestion-tecnicos-tabla`.
 
 ## Ruta y acceso
 
@@ -7164,7 +7216,7 @@ set -a; . ~/.env.e2e; set +a
 E2E_BASE_URL=http://localhost:5173 OUT_DIR=/c/Users/dev/Documents/Apuntes/paridad-capturas/gestion node /c/Users/dev/Documents/Apuntes/herramientas/paridad-capturas/capturas-gestion.mjs
 ```
 
-Anotar pareja a pareja en `Apuntes/paridad-capturas/gestion/COMPARACION-6.md` (formato de `almacen/COMPARACION-4b.md`): diferencia deliberada confirmada, calco, no comparable por datos o diferencia nueva. **Cada diferencia nueva se decide con el usuario**, no sobre la marcha; las que se corrijan van a `feature/web-gestion` con su test y su commit, y las aceptadas a la ficha correspondiente ("Decididas durante la ejecución y la comparación de capturas"). Se cierran también los dos "Pendiente de decidir" (placeholder de tabla vacía y título del aviso de éxito).
+Anotar pareja a pareja en `Apuntes/paridad-capturas/gestion/COMPARACION-6.md` (formato de `almacen/COMPARACION-4b.md`): diferencia deliberada confirmada, calco, no comparable por datos o diferencia nueva. **Cada diferencia nueva se decide con el usuario**, no sobre la marcha; las que se corrijan van a `feature/web-gestion` con su test y su commit, y las aceptadas a la ficha correspondiente ("Decididas durante la ejecución y la comparación de capturas"). Se cierran también los "Pendiente de decidir" de las fichas (placeholder de tabla vacía, título del aviso de éxito y columna de acciones de técnicos a 80 px).
 
 **U7. Fichas marcadas** contra las capturas y los tests; commit en la rama:
 
@@ -7397,7 +7449,7 @@ Contrastado contra la spec §1-§12 y el código real; **el bloque servidor (T1-
 3. **`UserMenu.tsx`:** la Task 7 añade `volverA` a los dos ítems de ADMIN y deja "Cambiar contraseña" con `onSelect` vacío (con test de que no navega); la Task 12 da el fichero completo, que es un superconjunto exacto de lo que deja la Task 7 (import, `useState` y el `onSelect` que abre el diálogo), y sustituye ese test por el de apertura.
 4. **404 "Técnico no encontrado.":** `clasificar` (`errors.ts:52-53`) descarta el `message` de cualquier 404, así que la web no puede leerlo; la Task 8 lo fija como constante `MSG_TECNICO_NO_ENCONTRADO` en `tecnicos/textos.ts` con el helper `mensajeInline` de `tecnicos/errores.ts`. Es el mismo texto que `ValidacionUsuarios.MSG_NO_ENCONTRADO` (T1-T2): si uno cambia, cambia el otro. También aplica al 404 del `GET tiene-reparaciones` (regla G9), que la spec §6.1 dejaba con texto fijo: prevalece G9 (`message` del servidor).
 5. **Nombres accesibles que supone el smoke (T14) contra lo que producen T6-T12:** candado `aria-label`/`title` "Desactivar acceso" / "Activar acceso" (T8), papelera `aria-label="Eliminar"` (T8; el smoke la localiza por la imagen `borrar.png`, que también vale), `ConfirmDialog` "Eliminar técnico" con botón "Eliminar" (T9), placeholders exactos de los cuatro campos del alta (T9) y de los tres del diálogo (T12), `dialog` "Cambiar contraseña" (`DialogTitle`, T12), aviso "Información" (T12), `CampoAutocompletar` con `role="option"` (existente), `RangoFechas` con etiquetas "Desde:"/"Hasta:" (existente). Coinciden.
-6. **Anchos de columna con sobrante:** la web deja el sobrante en la columna de relleno de `DataTable`, no en la última como el JavaFX (`FLEX_LAST_COLUMN`): acciones de técnicos a 80 px (T8) y Detalle de logs con `size: 400` y `ajuste="estirar"` (T10-T11). Diferencia a revisar en la comparación de capturas (U6); si se corrige, es un ajuste de `DataTable`, no de las páginas.
+6. **Anchos de columna con sobrante:** la web deja el sobrante en la columna de relleno de `DataTable`, no en la última como el JavaFX (`FLEX_LAST_COLUMN`): acciones de técnicos a 80 px (T8) y Detalle de logs con `size: 400` y `ajuste="estirar"` (T10-T11). Diferencia a revisar en la comparación de capturas (U6); si se corrige, es un ajuste de `DataTable`, no de las páginas. La columna de acciones de técnicos a 80 px (la spec §6.1 dice que absorbe el resto) queda como diferencia a decidir con la captura `gestion-tecnicos-tabla`, y la ficha `tecnicos.md` (Task 15) la lista en "Pendiente de decidir".
 7. **Diálogo de contraseña (T12):** mientras responde el servidor se deshabilitan "Guardar" y "Cancelar" y se ignora Esc; un 401 o un fallo de conexión no se pintan en la línea roja (los avisa la política global: login o banner), a diferencia del JavaFX. Van a la ficha `cuenta.md` (T15) como diferencias inocuas.
 8. **Logs sin conexión (T11):** solo banner, sin "Error al cargar los logs: …" ni diálogo de conexión (spec §6.2); la tabla conserva las últimas filas buenas cuando falla un cambio de filtro (estado ajustado durante el render, patrón de `CampoAutocompletar`), y "Limpiar filtros" remonta los dos autocompletar con `key`.
 9. **Task 0 (U0):** `PATCH /api/componentes/{idCom}/stock` recibe un incremento (`{delta}`), "cerrar sin resto" es `confirmar-alterado`, `DELETE /api/proveedores/{id}` da 409 con pedidos aunque estén cancelados (se desactiva en su lugar). Cada escritura con OK del usuario, una a una; los ids y nombres reales viven solo en `Apuntes`.
@@ -7407,6 +7459,29 @@ Contrastado contra la spec §1-§12 y el código real; **el bloque servidor (T1-
 13. **Puntos a vigilar en ejecución** (marcados en cada tarea): `tailwind-merge` y el `pr-11` de `CampoPassword` en el login (T6, desviación 7 de B); la regla `react-hooks` con el estado ajustado durante el render (T11); `any(Object[].class)` en los `verify(...never())` de Mockito 5 (T1-T4); el límite de 5 inicios de sesión por minuto en el smoke (T14: cuatro seguidos caben, la limpieza espera 12 s); los recuentos de surefire solo tras una suite completa.
 
 **Revisión previa antes de la Task 1** (lección del 4a): el servidor ya está aplicado y ejecutado por su redactor; dos subagentes aplican el código de la web en copias (T6-T9; T6-T13 con foco en T10-T13 y el `--list` de T14), ejecutan `npm run check` y devuelven los desajustes; se corrige el plan antes de despachar nada.
+
+## Revisión previa (2026-09-26)
+
+Servidor: las Tasks 1-5 las aplicó y ejecutó su redactor en un worktree desechable de `main` 3dccc4a (421 → 485 tests). Web: dos subagentes aplicaron el código del plan en copias desde `cd6853b` (W1, Tasks 6-9 → 1399 tests; W2, Tasks 6-13 → 1488 tests, y `npx playwright test --list` de la Task 14 con 9 tests en 7 ficheros, sin ejecutar); `npm run lint`, `npx tsc -b` y `npm run build` limpios tras las correcciones de abajo. El contrato (`schema.d.ts`) se editó a mano en las copias porque la rama del servidor con las Tasks 1-5 no existía (`api/openapi.json` sin tocar). Con varios procesos node en paralelo hubo 3-4 timeouts intermitentes de 5 s en ficheros ajenos al plan (`StockPage`, `FormularioReparacion`, `NuevoOtroPedidoDialog`), que pasan relanzados aislados.
+
+Decisiones del controlador (rutinarias; el usuario puede cambiarlas): 1. `.gitignore` `/logs` (no renombrar el módulo). 2. `forEach` en los dos tests, sin tocar `tsconfig`. 3. Handler de contadores en los tests del menú (siguen montados en `/reparaciones`). 4. Columna de acciones a 80 px → diferencia a decidir con la captura.
+
+Correcciones aplicadas:
+1. Task 10, Files + Step 15 (y tabla "Estructura de ficheros"): `.gitignore:2` `logs` → `/logs` con `grep`/`sed`/`git check-ignore` y `.gitignore` en el `git add` (sin esto Git ignora `src/modules/gestion/logs/` y el `git add` falla).
+2. Task 10, Step 10 (`logs/api.test.tsx`) y Task 11, Step 1 (`LogsPage.test.tsx`, `registrarLogs`): `searchParams.forEach` sobre un `Record<string, string>` / `Peticion` en vez de `Object.fromEntries` (TS2769 sin DOM.Iterable); en `api.test.tsx`, `initialProps: { q: { limite: 1000 } as QueryLogs }` (TS2353).
+3. Task 11, Step 1, test "sin conexión: solo el banner…": `/api/logs/acciones` y `/api/usuarios/tecnicos` responden 500 antes de montar (precedente `ClientesPage.test.tsx:148`).
+4. Task 12, Step 9 (`CambiarPasswordDialog.test.tsx`, "sin conexión"): la aserción mira el `form` por el DOM (`closest('form')?.querySelector('[role="alert"]')` → `null`), porque el diálogo de error deja el de contraseña `aria-hidden`.
+5. Task 12, Step 13: el import de `react-router` de `TopBar.test.tsx` conserva `useLocation` (`import { Route, useLocation } from 'react-router'`).
+6. Task 12, Step 13: `beforeEach` con el handler de `/api/reparaciones/pendientes/contadores` en el `describe` nuevo y `beforeEach` en el import de `vitest`.
+7. Task 12, Step 13 (y aviso en la Task 7, Step 7): la última aserción del caso de la Task 7 "Cambiar contraseña ya no navega…" pasa a `expect(await screen.findByRole('dialog', { name: 'Cambiar contraseña' })).toBeInTheDocument()`.
+8. Task 12, Step 14 (`UserMenu.tsx`): `const { pathname } = useLocation()` y `volverA: pathname`, como la Task 7.
+9. Task 14, Files + Step 2: `.env.e2e.example` tiene 22 líneas; el bloque va al final (tras la l.22, no la `:26`).
+10. Task 14, `gestion.spec.ts`: `entrarCon` termina con `await expect(page).toHaveURL(/\/reparaciones\/(historial|pendientes)$/)` (comentario: `origen` y `ruta` leen `page.url()` tras la redirección).
+11. Task 7, Step 5 (`api.test.tsx`): `refetchOnWindowFocus` se lee de `observers[0]?.options` (TS2339 con `Query.options`).
+12. Task 7, Steps 7-8 y Task 9, Files + Step 3: anclas por texto (caso `'el admin ve además "Gestionar técnicos" y "Ver logs"'`; las tres rutas `PendienteDeMigrar`; import de `TecnicosPage` tras el de `RequiereAdmin`).
+13. Task 8, Step 10: `npx vitest run src/modules/gestion` → 46 tests en 8 ficheros (32 nuevos + 14 de `clientes/`), acumulado 1374.
+14. Task 6, "Búsqueda previa": lista completa de `ls public`.
+15. Autorrevisión, punto 6, ficha `tecnicos.md` ("Pendiente de decidir") y comparación de capturas de la Task 15: columna de acciones a 80 px como diferencia a decidir con `gestion-tecnicos-tabla`.
 
 ## Desviaciones respecto al reparto inicial de interfaces
 
