@@ -1139,7 +1139,7 @@ git commit -m "feat: borrar un telefono exige supertecnico y explica cuando tien
 - Produces: `FrenoLookup.comprobar(int idUsu)` (lanza 429), `FrenoLookup.MSG_DEMASIADAS` (`String`), constructor de test `FrenoLookup(Supplier<Long> reloj)`.
 - Consumes: nada.
 
-**Contexto:** `GET /api/telefonos/{imei}/modelo` **no cambia de rol**: el técnico lo usa en el formulario. Dispara una consulta a un servicio externo de pago (`ImeiLookupService.lookupModeloInterno`) y hoy el único freno lo pone el cliente. El patrón de reloj inyectable es el de `idempotencia/RegistroIdempotencia`.
+**Contexto:** `GET /api/telefonos/{imei}/modelo` **no cambia de rol**: el técnico lo usa en el formulario. Dispara una consulta a un servicio externo gratuito (`ImeiLookupService.lookupModeloInterno`) y el freno de ritmo lo pone el servidor. El patrón de reloj inyectable es el de `idempotencia/RegistroIdempotencia`.
 
 - [ ] **Step 1: Leer el ritmo que aplica hoy el cliente**
 
@@ -1213,8 +1213,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * Ritmo máximo por usuario de la consulta de modelo por IMEI, que llama a un servicio externo de pago. Hasta ahora
- * el ritmo lo ponía solo el cliente (spec sp7b §4.4). En memoria y por instancia, igual que el registro de
+ * Ritmo máximo por usuario de la consulta de modelo por IMEI, que llama a un servicio externo gratuito (spec sp7b
+ * §4.4). En memoria y por instancia, igual que el registro de
  * reintentos: si el servidor se reinicia, el contador arranca de cero, lo que es inocuo para lo que protege.
  */
 @Component

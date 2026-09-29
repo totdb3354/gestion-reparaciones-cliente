@@ -108,9 +108,13 @@ comprobado.** Este es el grupo delicado:
   por una asignación de pulido ya cerrada, el servidor responde con conflicto y un
   mensaje que dice qué lo impide, en lugar de un error interno.
 - **Consulta del modelo por IMEI**: se queda accesible al técnico, porque la usa en
-  el formulario, y se le añade en el servidor el freno de peticiones que hoy solo
-  aplica el cliente, con el mismo ritmo que este usa (el valor exacto se toma de su
-  código en el plan). Dispara una consulta a un servicio externo.
+  el formulario, y el servidor le pone un freno de ritmo. Dispara una consulta a un
+  servicio externo **gratuito**, de modo que el
+  freno no evita un coste: evita que una llamada repetida sin control lleve al
+  proveedor a limitar el acceso, y que la latencia acumulada de muchas llamadas
+  seguidas empuje una respuesta por encima del tiempo máximo aceptado. El ritmo
+  permitido son treinta consultas cada diez segundos **por usuario**, y solo gasta
+  cupo la consulta que de verdad sale fuera: un IMEI que ya está en la base no cuenta.
 - **Los cuatro toggles del menú contextual de pendientes** ya comprueban el dueño;
   se confirma en el código y se les añade cobertura de test.
 
