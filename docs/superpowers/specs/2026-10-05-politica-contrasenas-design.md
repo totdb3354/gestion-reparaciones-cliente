@@ -63,8 +63,8 @@ Consejos en **español** (los trae `zxcvbn4j`). El objeto `Zxcvbn` se construye 
 
 ### 3.2 Endpoints
 
-- **Nuevo `POST /api/auth/evaluar-password`.** Cuerpo `{password}`. Respuesta `{nota, aceptable, mensaje, consejos}`,
-  donde `mensaje` es el de la tabla de 3.1 o `null`.
+- **Nuevo `POST /api/auth/evaluar-password`.** Cuerpo `{password}`. Respuesta `{nota, aceptable, mensaje}`, donde
+  `mensaje` es el de la tabla de 3.1 (con el consejo principal en la regla 5) o `null`.
   - Exige sesión; cualquier rol. Usuario, técnico y rol salen de la sesión, nunca del cuerpo.
   - Se permite **también con la contraseña temporal** (excepción en `JwtAuthFilter`, junto a `cambiar-password`).
   - No consulta la contraseña actual (no la conoce): la regla 4 solo se aplica al guardar.
@@ -75,6 +75,8 @@ Consejos en **español** (los trae `zxcvbn4j`). El objeto `Zxcvbn` se construye 
 - **`POST /api/usuarios/tecnicos` (alta):** deja de recibir `password`. Genera la temporal con
   `PasswordTemporal.generar()`, la guarda marcada como temporal (como hoy) y la devuelve una sola vez en la
   respuesta (`ValorTexto`, igual que restablecer). El resto de validaciones del alta y los 409 de duplicado, igual.
+  Un `password` que llegue en el cuerpo (cliente antiguo) se ignora. Con clave de reintento, el reintento devuelve la
+  **misma** temporal: la respuesta guardada vive solo en la memoria del proceso hasta que caduca su entrada.
 - **Restablecer** (`POST /api/usuarios/{idUsu}/password-temporal`): sin cambios. Las temporales generadas no pasan
   por la política.
 
@@ -96,7 +98,7 @@ Mínimo 10 caracteres.
 
 - Barra de 5 tramos (nota 0-4) con texto: Muy débil, Débil, Poco segura, Segura, Muy segura. Colores: rojo (0-1),
   naranja (2), verde (3), verde oscuro (4).
-- Debajo, el mensaje y los consejos que devuelve el servidor (si los hay).
+- Debajo, el mensaje que devuelve el servidor (si lo hay).
 - Ayuda fija: `Mínimo 10 caracteres.` Para el administrador, además: `Para el administrador se pide «Muy segura».`
 - Pide la nota **0,3 s después de la última tecla**; descarta las respuestas que lleguen tarde; con el campo vacío
   no pinta la barra.
@@ -108,6 +110,9 @@ Mínimo 10 caracteres.
   "Guardar" desactivado mientras la nota no llegue al umbral del rol (salvo si la comprobación falló). La
   validación local pasa a: campos rellenos → 10-64 caracteres → distinta de la actual → nueva y repetida
   coinciden. Los 422 del servidor se enseñan como hoy.
+- **Pantalla de cambio obligatorio:** su explicación pasa a valer también para quien entra con su contraseña de
+  siempre (tras la orden SQL del corte): *"Para seguir tienes que elegir una contraseña nueva. Será la que quede
+  asociada a tu nombre en el registro de actividad."*
 - **Alta de técnico** (Gestión → Técnicos): desaparecen "Contraseña" y "Confirmar". Tras el alta se abre la ventana
   de la contraseña temporal (la de restablecer), con su texto de entrega en persona.
 
