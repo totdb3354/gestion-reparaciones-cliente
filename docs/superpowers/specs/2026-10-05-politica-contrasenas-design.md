@@ -36,7 +36,8 @@ Hoy la única regla es un mínimo de 6 caracteres, heredado del cliente JavaFX.
 Una sola clase con una sola entrada, usada por todos los sitios que fijan una contraseña elegida por una persona.
 
 Entrada: la contraseña propuesta, la actual (si la hay), el nombre de usuario, el nombre del técnico (si lo hay) y
-el rol. Salida: la nota (0-4), si es aceptable, el primer motivo de rechazo y los consejos.
+el rol. Salida: la nota (0-4), si es aceptable y el primer motivo de rechazo (en la regla 5, con el consejo principal
+de zxcvbn dentro del mismo texto; los demás consejos no se devuelven).
 
 Comprobaciones, en este orden; se para en la primera que falla (código 422, como el resto de reglas):
 
@@ -150,7 +151,7 @@ válidas (son hashes BCrypt normales).
 
 ## 8. Documentación
 
-- `CHANGELOG.md` de servidor y web; `docs/novedades/NOVEDADES-v0.9.2.md` en la raíz, en lenguaje del taller
+- `CHANGELOG.md` de la web (el servidor no tiene CHANGELOG); `docs/novedades/NOVEDADES-v0.9.2.md` en la raíz, en lenguaje del taller
   ("al entrar te pedirá una contraseña nueva; la barra te dice cuándo es suficientemente segura").
 - Fuera de git: guion del corte (paso de la orden SQL y la regla del administrador), guía de la máquina (variable
   nueva del compose, registro de la sesión de despliegue) y `plan-futuro.md` (la política pasa a hecha).
