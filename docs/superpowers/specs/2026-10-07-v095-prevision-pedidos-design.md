@@ -90,7 +90,8 @@ Filas de `Reparacion_componente` unidas a su `Reparacion`, que cumplan todo esto
 - `ID_COM` no nulo, `ES_REUTILIZADO = 0`.
 - El componente no es de tipo `otro%`.
 - Fecha = `DATE(r.FECHA_FIN)`. En las filas resultantes coincide con `FECHA_ASIG` (las dos se ponen a `NOW()` al
-  crearlas); se usa `FECHA_FIN` porque es el momento en que se montó la pieza.
+  crearlas); se usa `FECHA_FIN` porque es el momento en que se montó la pieza. La base guarda las horas en UTC y el
+  día se toma tal cual: solo difiere del día de Madrid entre las 22:00 y las 02:00, cuando el taller no trabaja.
 - Cantidad = `rc.CANTIDAD`.
 
 El consumo de una fila cuyo `ID_COM` es un slave se suma a su master (`COALESCE(ID_COM_MASTER, ID_COM)`). Todas las
@@ -102,13 +103,17 @@ reutilizadas bajo `R…`/`G…` de los últimos 90 días cuadre con un recuento 
 
 ### 3.3 Servidor
 
-- **`PrevisionPedido`** (`util/`): clase pura con la regla de §3.1. Entrada: `t1..t3`, pesos, mínimo, stock,
-  en camino. Salida: consumo/día (`BigDecimal` con 2 decimales), `pedir15`, `pedir30`. Sin acceso a BD.
+- **`PrevisionPedido`** (`util/`): clase pura con la regla de §3.1 y el reparto en tramos. `agrupar(consumos, hoy)`
+  reparte las unidades de cada día en `t1..t3` por master; `calcular(tramos, pesos, mínimo, stock, en camino)`
+  devuelve consumo/día (2 decimales), `pedir15` y `pedir30`. Sin acceso a BD.
 - **`ComponenteDAO`**:
-  - `getConsumoPorTramos(LocalDate hoy)`: una consulta que devuelve, por master, `t1`, `t2` y `t3` (§3.2), con
-    `SUM(CASE …)` sobre los 90 días anteriores a `hoy`.
+  - `getConsumoDiario(desde, hasta)`: una consulta que devuelve, por master y día, las unidades consumidas en
+    `[desde, hasta)` (§3.2). El reparto en tramos va en Java para poder probarlo: los tests de DAO del servidor usan
+    un `JdbcTemplate` simulado, no una base real.
   - `getAllGestionados()` no cambia su SQL.
 - **`ParametroDAO`** (nuevo): leer y guardar los tres pesos.
+- **`PrevisionPedidoService`** (nuevo): junta pesos, consumo y listado, y rellena la previsión de cada componente
+  activo.
 - **`GET /api/componentes/gestionados`**:
   - Recibe el usuario autenticado.
   - Si el rol es SUPERTECNICO o ADMIN, rellena en cada componente activo `consumoDiario`, `pedir15` y `pedir30`;
@@ -154,10 +159,13 @@ previsión usa 50/30/20 y lo anota en el log (no rompe el listado de Stock).
     "Los tres pesos tienen que ser enteros entre 0 y 100 y sumar 100.".
   - Guarda los tres en una transacción.
   - Lo anota en `Log_Actividad`: acción `EDITAR_PARAMETROS`, detalle `PREVISION: 50/30/20 → 40/35/25`.
-- **`PATCH /api/componentes/{idCom}/stock-minimo`**: de `hasRole('SUPERTECNICO')` a **`hasRole('ADMIN')`**.
+- **`PATCH /api/componentes/{idCom}/stock-minimo`**: de `hasRole('SUPERTECNICO')` a **`hasRole('ADMIN')`**, y guarda
+  el mínimo **en el master** del grupo compartido. Hasta ahora, en una fila slave cambiaba el mínimo del propio slave,
+  que no se ve en ninguna pantalla (Stock enseña el del master) y que la previsión no usa.
 - **`PUT /api/componentes/{idCom}`** ("Editar stock", SUPERTECNICO): **deja de cambiar `STOCK_MINIMO`**. El campo
   `stockMinimo` del cuerpo se ignora y la fila conserva el suyo. El mínimo solo se cambia por el `PATCH` de arriba.
-- **`POST /api/componentes`** (alta; la web no la usa): un no ADMIN no fija el mínimo, que se guarda con **2**.
+- **`POST /api/componentes`** (alta) no se toca: es una de las rutas retiradas, responde 403 a todos desde la 0.9.0 y
+  se borra en la tarea 27 del SP7b.
 - `autorizacion_endpoints.md` del servidor se actualiza con las tres rutas.
 
 ### 4.3 Web
@@ -168,7 +176,8 @@ previsión usa 50/30/20 y lo anota en el log (no rompe el listado de Stock).
   - Tres campos enteros en %: "Días 1-30", "Días 31-60" y "Días 61-90", cargados con los valores actuales.
   - Ayuda: "Lo reciente pesa más. Los tres tienen que sumar 100."
   - Suma en vivo ("Suma: 100 %"), en rojo si no es 100.
-  - "Guardar" desactivado mientras la suma no sea 100 o algún campo no sea un entero entre 0 y 100.
+  - "Guardar" desactivado mientras la suma no sea 100 o algún campo no sea un entero entre 0 y 100 (`DialogoAlmacen`
+    gana una propiedad para desactivar su botón de acción).
   - Un 422 del servidor se pinta dentro del diálogo, como en los demás diálogos de Stock.
   - Al guardar, se cierra y se recarga el listado de Stock.
 - **Menú de clic derecho en Stock**:
@@ -225,13 +234,12 @@ la nota fallaba.
 
 - `PrevisionPedidoTest`: los seis casos de §3.1, pesos distintos (40/35/25), un caso que en coma flotante
   redondearía mal y en enteros no, y el mínimo 0.
-- Test de la consulta de tramos (BD de test):
-  - límites de cada tramo (día 30 frente a 31, hoy excluido, día 91 fuera);
-  - solo `R…`/`G…`;
-  - reutilizadas fuera;
-  - solicitudes fuera (pendiente, gestionada, rechazada y apagada);
-  - slave sumado al master;
-  - `otro%` fuera.
+- Reparto en tramos (`PrevisionPedido.agrupar`): límites de cada tramo (día 30 frente a 31, hoy excluido, día 91
+  fuera) y masters separados.
+- Consulta de consumo (`JdbcTemplate` simulado, como el resto de DAOs): el SQL lleva el filtro `R…`/`G…`, las
+  reutilizadas fuera, `otro%` fuera, el master del grupo y el intervalo `[desde, hasta)`; las filas se leen bien. Que
+  las solicitudes nunca caen bajo `R…`/`G…` se comprueba con datos reales en preprod (§3.2).
+- `PATCH stock-minimo` guarda en el master.
 - Controlador:
   - TECNICO recibe la previsión nula;
   - SUPERTECNICO y ADMIN la reciben;
