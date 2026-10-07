@@ -2234,3 +2234,86 @@ En `Apuntes/plan-futuro.md`: la Fase 5 "Stock mínimo por consumo mensual" pasa 
 - **Cobertura de la spec:** §2 decisiones → Tasks 1-4 y 7-11; §3.1 regla y ejemplos → Task 1; §3.2 consumo → Task 2 (SQL) y Task 12 (comprobación con datos reales); §3.3 servidor → Tasks 2-3; §3.4 web → Task 7; §4.1 migración → Task 2; §4.2 permisos y parámetros → Task 4; §4.3 web → Tasks 8-9; §5 inactividad → Task 10; §6 Enter → Task 11; §7 versión y despliegue → Tasks 12-13; §8 pruebas → tests de cada tarea y Tasks 12-13; §9 backlog → Task 13 Step 4.
 - **Tipos:** `PrevisionPedido.{Pesos,Tramos,ConsumoDia,Resultado}`, `agrupar`, `calcular`, `ComponenteDAO.getConsumoDiario(desde, hasta)`, `ParametroDAO.getPesosPrevision/guardarPesosPrevision`, `PrevisionPedidoService.rellenar(lista, hoy)`, `PesosPrevision(peso1, peso2, peso3)`, `Componente.setPrevision(consumo, p15, p30)`, `crearColumnasStock({ onEnCamino, conPrevision })`, `filaCsvStock(c, conPrevision)`, `cabecerasCsvStock`, `leerPesos`, `sumaPesos`, `useParametrosPrevision`, `useGuardarParametrosPrevision`, `MotivoExpiracion`, `mensajeSesionCerrada`, `bloqueaGuardar`: mismos nombres en todas las tareas.
 - **Cambio respecto a la spec, ya reflejado en ella:** `POST /api/componentes` no se toca (ruta retirada, 403 para todos).
+
+---
+
+## AMPLIACIÓN (2026-10-07): una fila por grupo compartido (spec §10)
+
+Solo web, en una rama nueva `feature/grupos-compartidos` desde `main` (`1d261f4`). Mismas restricciones globales.
+Textos literales: `stock compartido` (gris pequeño bajo el nombre), separador de nombres ` / `, y en Solicitar pieza la
+etiqueta `Modelo` con el aviso de validación `Elige el modelo.`.
+
+### Task 14: Una fila por grupo en Stock (tabla, buscador, CSV, donut, desactivados, llegada desde Pedidos)
+
+**Files:**
+- Create: `gestion-reparaciones-web/src/modules/almacen/stock/grupos.ts` + `grupos.test.ts`
+- Modify: `stock/filtros.ts` (`nombreComponente` y `aplicarFiltrosStock`), `stock/columnas.tsx` (columna Componente y CSV), `stock/StockPage.tsx`
+- Modify tests: `stock/filtros.test.ts`, `stock/columnas.test.tsx`, `stock/StockPage.test.tsx`, `stock/graficos.test.ts` si hace falta
+
+**Interfaces:**
+- Produces:
+  - `type FilaStock = Componente & { miembros: Componente[] }`: `miembros[0]` es el propio componente (el master o uno suelto) y después sus slaves en el orden de la lista; un componente sin grupo tiene `miembros = [c]`.
+  - `agruparCompartidos(lista: Componente[]): FilaStock[]`: conserva el orden de `lista`, quita los slaves cuyo master está en la lista y los añade a `miembros` de su master; un slave cuyo master no está en la lista queda como fila suelta (`miembros = [slave]`).
+  - `nombreGrupo(f: Pick<FilaStock, 'miembros'>): string` → `miembros.map(m => m.tipo).join(' / ')`.
+  - `esGrupo(f): boolean` → `miembros.length > 1`.
+
+**Requisitos:**
+1. `StockPage` agrupa una vez (`useMemo(() => agruparCompartidos(data), [data])`) y usa las filas agrupadas para la tabla, el buscador, el CSV, `conteosDonut`, el contador de desactivados y la fila seleccionada (`seleccionado`), en lugar de `data`.
+2. Columna Componente: primera línea `nombreGrupo(fila)`; si `esGrupo`, segunda línea `stock compartido` en gris y más pequeño (mismo estilo que los textos de ayuda: `text-[11px] text-azul-gris`), legible también en la fila seleccionada (`CREMA_EN_FILA_SELECCIONADA`). El nombre puede saltar de línea si no cabe (la celda no debe cortar ni desbordar). Desaparece el sufijo `  (compartido)`: `nombreComponente` se sustituye o se adapta (borrar lo que quede sin uso).
+3. Buscador (`aplicarFiltrosStock`): coincide si el texto está en el `tipo` de **cualquier** miembro (sin mayúsculas, "contiene", como hoy). El filtro por estado usa la fila (el master).
+4. CSV: misma forma de hoy (con o sin las columnas de previsión), una fila por grupo, columna "Tipo" = `nombreGrupo`.
+5. Llegada desde Pedidos (`?componente=<id>`): si el id es de un slave cuyo master está en la lista, se selecciona y se desplaza a la fila del master (la comprobación contra la lista filtrada sigue igual, ahora sobre las filas agrupadas).
+6. Los handlers del menú y los diálogos siguen recibiendo el componente de la fila (el master), salvo Solicitar pieza (Task 15).
+
+**Tests (TDD):**
+- `grupos.test.ts`: master + 2 slaves → una fila con `miembros` [master, s1, s2] y `nombreGrupo` "a / b / c"; componente suelto → `miembros` [c]; slave huérfano → fila suelta; el orden de la lista se conserva; una lista sin grupos sale igual.
+- `filtros.test.ts`: el buscador encuentra el grupo por el nombre del slave y por el del master; no encuentra por un texto que no está en ninguno.
+- `columnas.test.tsx`: fila de grupo → nombre `bat-x / bat-y` y `stock compartido`; fila suelta → sin `stock compartido`; CSV de grupo con "Tipo" = nombre del grupo.
+- `StockPage.test.tsx`: con un master y su slave en los datos, la tabla tiene una sola fila para los dos (con `stock compartido`), el buscador con el nombre del slave la muestra, el donut cuenta el grupo una vez, y `?componente=<id del slave>` selecciona la fila del grupo. Ajustar los tests existentes que esperaban `(compartido)` o una fila por slave.
+
+**Commit:** `feat: stock muestra una fila por grupo de stock compartido con el nombre de todos`
+
+### Task 15: "Solicitar pieza" elige el modelo en una fila de grupo
+
+**Files:**
+- Modify: `stock/SolicitarPiezaDialog.tsx`, `stock/StockPage.tsx` (cuerpo de la solicitud), `stock/dialogos.ts` si el subtítulo necesita el nombre del grupo
+- Test: `stock/SolicitarPiezaDialog.test.tsx` (crear si no existe), `stock/StockPage.test.tsx`
+
+**Interfaces:**
+- Consumes: `FilaStock`, `esGrupo`, `nombreGrupo` (Task 14).
+- Produces: `SolicitarPiezaDialog` con `componente: FilaStock | null` y `onConfirmar: (idCom: number, descripcion: string | null) => void`.
+
+**Requisitos:**
+1. Fila sin grupo: igual que hoy (título, subtítulo, textarea, botón "Solicitar"); `onConfirmar(c.idCom, descripcion)`.
+2. Fila de grupo: subtítulo con el nombre del grupo (`Componente: cami13 / cami13pro   ·   Stock actual: 4 ud(s).`) y, antes de la descripción, un campo **`Modelo`** con una opción por miembro (su `tipo`), **sin ninguna elegida** al abrir. Mientras no se elija, "Solicitar" queda desactivado (`accionDeshabilitada` de `DialogoAlmacen`) y, si aun así se confirma (Enter), sale el error `Elige el modelo.` dentro del diálogo y no se envía. Al elegir, se envía con el `idCom` del miembro elegido. Usar un componente que ya exista en `src/shared/ui` (por ejemplo `ComboNavy` o `SelectorLista`, el que encaje con el estilo de los diálogos de almacén); no añadir dependencias.
+3. Al reabrir el diálogo, la elección y la descripción empiezan vacías.
+4. `StockPage` construye el cuerpo con el `idCom` que devuelve el diálogo (la clave de idempotencia sigue calculándose sobre el cuerpo).
+
+**Tests (TDD):** fila suelta envía su idCom; fila de grupo: "Solicitar" desactivado hasta elegir, Enter sin elegir muestra `Elige el modelo.` y no envía, elegir el slave envía el idCom del slave; al reabrir no queda elegido nada. En `StockPage.test.tsx`, la solicitud desde la fila del grupo llega al servidor con el idCom elegido.
+
+**Commit:** `feat: solicitar pieza en un grupo compartido pide elegir el modelo`
+
+### Task 16: Nuevo pedido con una opción por grupo
+
+**Files:**
+- Modify: `gestion-reparaciones-web/src/modules/almacen/pedidos/formulario/NuevoPedidoDialog.tsx`, `pedidos/formulario/lineas.ts`
+- Test: `pedidos/formulario/lineas.test.ts`, `pedidos/formulario/NuevoPedidoDialog.test.tsx`
+
+**Interfaces:**
+- Consumes: `agruparCompartidos`, `nombreGrupo` (Task 14, importados de `../../stock/grupos`).
+
+**Requisitos:**
+1. Opciones del selector de SKU: una por fila de `agruparCompartidos(activos)`, con `etiqueta = nombreGrupo(fila)` y `clave = String(fila.idCom)` (el master).
+2. `precargarComponentes` y `precargarSolicitudes` llevan cada id de slave a su master (el master del slave según la lista de componentes recibida) antes de comprobar si está activo; las solicitudes de varios miembros de un mismo grupo se juntan en una sola línea con la suma, en el orden de la primera aparición. Un id de slave cuyo master no está activo cuenta como omitido, como hoy.
+3. El resto del diálogo no cambia.
+
+**Tests (TDD):** `lineas.test.ts`: slave → línea con el id del master; solicitudes de master y slave del mismo grupo → una línea con cantidad 2; un id suelto sigue igual. `NuevoPedidoDialog.test.tsx`: el selector muestra `bat-x / bat-y` una vez y no muestra `bat-y` como opción propia. (Los datos de prueba de `datosPrueba.ts` ya tienen un slave `bat-y` del master `bat-x`.)
+
+**Commit:** `feat: nuevo pedido ofrece una opcion por grupo de stock compartido`
+
+### Task 17: Cierre de la ampliación (versión, docs, revisión, merge, preprod)
+
+1. En `CHANGELOG.md` de la web, en la entrada `## [0.9.5]`, una línea: "**Stock compartido en una sola fila**: los SKU que comparten stock (p. ej. `cami13 / cami13pro`) salen en una fila con «stock compartido», el buscador los encuentra por cualquier nombre, «Solicitar pieza» pide elegir el modelo y «Nuevo pedido» los ofrece una vez." Y en `docs/novedades/NOVEDADES-v0.9.5.md` (raíz, sin commit) un punto equivalente en lenguaje de usuario.
+2. `npm run check` y `npm run build`; revisión de la rama `feature/grupos-compartidos` (`superpowers:requesting-code-review`).
+3. Merge `--no-ff` a `main` y push, con OK uno a uno.
+4. Preprod (usuario, `ssh preprod`): `git -C gestion-reparaciones-web pull --ff-only` y `docker compose up -d --build nginx`. Comprobación: `cami13 / cami13pro` y `bati12 / bati12pro` en una fila, buscador, CSV, Solicitar pieza con elección y Nuevo pedido.

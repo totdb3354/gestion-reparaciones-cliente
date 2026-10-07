@@ -281,3 +281,42 @@ la nota fallaba.
   criterio de §3.2.
 - Lista "propuesta de pedido" ordenada por necesidad.
 - Hacer editables los tramos (30 días) o los horizontes (15/30).
+
+## 10. Ampliación (2026-10-07, tras preprod): una fila por grupo de stock compartido
+
+Decidida por el usuario tras ver la 0.9.5 en preprod: con la previsión, las dos filas de un grupo compartido (master
+y slaves, `ID_COM_MASTER`) enseñan el mismo stock, en camino y "Pedir", y se podría pedir dos veces. Además "(compartido)"
+solo salía en la slave y sin decir con qué. Entra en la 0.9.5 (aún sin producción ni tags). **Solo web**: ni servidor ni
+base ni contrato cambian.
+
+### 10.1 Stock actual
+
+- **Una fila por grupo.** Los slaves dejan de tener fila propia. La fila es la del master, con el nombre de todos los
+  miembros en el orden de la lista (master primero): `cami13 / cami13pro`, y debajo, en gris y más pequeño,
+  **`stock compartido`**. Un componente sin grupo se ve como siempre (sin el texto gris). Si el nombre no cabe en la
+  columna, salta de línea (no se corta).
+- **Buscador:** encuentra el grupo por cualquiera de sus nombres (`cami13pro` → fila `cami13 / cami13pro`).
+- **CSV:** una fila por grupo; la columna "Tipo" lleva el nombre del grupo (`cami13 / cami13pro`).
+- **Donut y pie de desactivados:** cuentan el grupo una vez.
+- **Menú de la fila:** igual que hoy (Pedir, Editar stock, Activar/Desactivar y Ajustar mínimo ya actúan sobre el
+  master y el grupo). **"Solicitar pieza"** en una fila de grupo **obliga a elegir el modelo** (uno de los miembros) antes
+  de poder enviar; la solicitud se guarda con el modelo elegido. En una fila sin grupo, como hoy.
+- **Llegada desde Pedidos** (`?componente=<id>`): si el id es de un slave, se selecciona la fila de su grupo.
+- Un slave cuyo master no está en la lista (no debería pasar) se ve como fila suelta con su propio nombre.
+
+### 10.2 Nuevo pedido
+
+- El selector de SKU ofrece **una opción por grupo** con el nombre del grupo (`cami13 / cami13pro`); el pedido se
+  guarda en el master (como ya hacía el servidor).
+- **Precargas:** "Pedir" desde Stock o la campana y "Pedir piezas" desde solicitudes llevan cada id de slave a su master;
+  las solicitudes de miembros del mismo grupo se juntan en **una línea** con la suma.
+
+### 10.3 Sin cambios
+
+El selector de piezas del formulario de reparación (cada modelo por su nombre: interesa saber cuál se usó), la campana
+(ya mira solo masters), el servidor y la base.
+
+### 10.4 Datos (fuera del código)
+
+El grupo `cami13` (master) ← `cami13pro` se crea por SQL, primero en preprod (hecho el 2026-10-07, stock 4) y en
+producción en la sesión de la 0.9.5 con el stock real de ese momento (guion en Apuntes).
