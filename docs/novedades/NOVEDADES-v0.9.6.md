@@ -27,3 +27,10 @@ cuenta lo que tienes y lo que ya está en camino, y nunca te deja por debajo del
 4. El **precio** puede quedarse en 0 y ponerse después con **«Editar pedido»**.
 
 Si una pieza marcada ya estaba en el pedido, no se repite: se sube su cantidad a la de la previsión si es mayor.
+
+---
+
+## 🔢 Pedidos: número de pedido
+
+En **Pedidos** (Componentes y Otros) hay una columna estrecha **ID** a la izquierda con el número de cada pedido. También
+sale al principio del CSV, para poder citarlo o buscarlo.
