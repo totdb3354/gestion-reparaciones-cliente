@@ -33,7 +33,7 @@ SUPERTECNICO; cuando se amplíe, el botón de esta spec le funcionará igual sin
 | Quién ve y cambia la marca | **SUPERTECNICO y ADMIN**. Al TECNICO el servidor no le envía el dato | Es información de compras, como la previsión |
 | Cantidad que pone el botón | **«Pedir 60 d»**; las marcadas con 0 **no se añaden** y se avisa cuántas son | Una línea con cantidad 0 no se puede confirmar; si no hace falta pedir, no se pide |
 | Líneas que ya estaban | No se duplican. Si la pieza está marcada: cantidad = **máx(la de la línea, la previsión)** | Nunca baja lo que alguien puso a mano (p. ej. una solicitud urgente) |
-| Proveedor | Un **proveedor general opcional** en el modal que **solo rellena** las líneas sin proveedor; sin él, las líneas se añaden sin proveedor | No pisa lo elegido a mano; no obliga a decidir el proveedor antes de ver las líneas (cambio del 2026-10-08 tras probarlo en preprod) |
+| Proveedor | Un **proveedor general opcional** en el modal que **solo rellena** las líneas sin proveedor: al elegirlo, en las que ya hay, y en las que se añadan después (previsión o «+ Añadir línea»); sin él, las líneas se añaden sin proveedor | No pisa lo elegido a mano; no obliga a decidir el proveedor antes de ver las líneas (cambio del 2026-10-08 tras probarlo en preprod) |
 | Sobrescribir proveedor | Botón explícito **«Aplicar a todas»** | Para corregir de golpe un general mal elegido |
 | Deseleccionar proveedor | **No** | El proveedor es obligatorio para confirmar; se cambia por otro |
 | `UPDATED_AT` al marcar | **No cambia** | «Editar stock» lo usa para detectar ediciones simultáneas; marcar no es editar el stock |

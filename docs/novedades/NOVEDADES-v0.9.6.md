@@ -20,9 +20,10 @@ cuenta lo que tienes y lo que ya está en camino, y nunca te deja por debajo del
    en **Auto** o en **Manual** (y combinarlo, p. ej. **Bajo** + **Auto**).
 2. En **«Nuevo pedido»**, pulsa **«Añadir previsión (N)»**: se añaden las piezas marcadas con la cantidad de
    «Pedir 60 d». **N** es cuántas necesitan pedido; las que no, no se añaden y se avisa.
-3. El **Proveedor** de arriba es una ayuda, no es obligatorio. Si lo eliges antes de pulsar, las líneas nuevas ya lo
-   llevan puesto; si no, salen sin proveedor y lo eliges en cada línea, o lo eliges arriba y pulsas **«Aplicar a
-   todas»** para ponerlo en todas las líneas.
+3. El **Proveedor** de arriba es una ayuda, no es obligatorio. Al elegirlo se pone en todas las líneas que aún no
+   tienen proveedor (las que ya tienen uno no cambian) y lo llevan también las líneas que añadas después. Para ponerlo
+   en **todas** las líneas, también en las que ya tenían otro, pulsa **«Aplicar a todas»**. La ventana de pedido es más
+   grande: caben más líneas a la vista.
 4. El **precio** puede quedarse en 0 y ponerse después con **«Editar pedido»**.
 
 Si una pieza marcada ya estaba en el pedido, no se repite: se sube su cantidad a la de la previsión si es mayor.
