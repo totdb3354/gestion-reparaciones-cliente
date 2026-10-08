@@ -32,7 +32,7 @@ SUPERTECNICO; cuando se amplíe, el botón de esta spec le funcionará igual sin
 | Quién ve y cambia la marca | **SUPERTECNICO y ADMIN**. Al TECNICO el servidor no le envía el dato | Es información de compras, como la previsión |
 | Cantidad que pone el botón | **«Pedir 60 d»**; las marcadas con 0 **no se añaden** y se avisa cuántas son | Una línea con cantidad 0 no se puede confirmar; si no hace falta pedir, no se pide |
 | Líneas que ya estaban | No se duplican. Si la pieza está marcada: cantidad = **máx(la de la línea, la previsión)** | Nunca baja lo que alguien puso a mano (p. ej. una solicitud urgente) |
-| Proveedor | Un **proveedor general** en el modal que **solo rellena** las líneas sin proveedor | No pisa lo elegido a mano |
+| Proveedor | Un **proveedor general opcional** en el modal que **solo rellena** las líneas sin proveedor; sin él, las líneas se añaden sin proveedor | No pisa lo elegido a mano; no obliga a decidir el proveedor antes de ver las líneas (cambio del 2026-10-08 tras probarlo en preprod) |
 | Sobrescribir proveedor | Botón explícito **«Aplicar a todas»** | Para corregir de golpe un general mal elegido |
 | Deseleccionar proveedor | **No** | El proveedor es obligatorio para confirmar; se cambia por otro |
 | `UPDATED_AT` al marcar | **No cambia** | «Editar stock» lo usa para detectar ediciones simultáneas; marcar no es editar el stock |
@@ -93,11 +93,11 @@ Proveedor: [ ▼ ]   [Aplicar a todas]   [Añadir previsión (N)]
 
 - **Proveedor:** combo con los proveedores activos (los mismos del combo de cada línea). Empieza vacío.
 - **N** = número de piezas activas, marcadas y con `pedir60 > 0`, contadas una vez por grupo (master).
-- **«Añadir previsión (N)»**, deshabilitado sin proveedor general o con N = 0. Al pulsarlo, para cada pieza marcada:
+- **«Añadir previsión (N)»**, deshabilitado con N = 0 (el proveedor general es opcional). Al pulsarlo, para cada pieza marcada:
 
   | Situación | Resultado |
   |---|---|
-  | Sin línea y `pedir60 > 0` | Línea nueva al final: cantidad = `pedir60`, proveedor general, precio 0,00, sin urgente |
+  | Sin línea y `pedir60 > 0` | Línea nueva al final: cantidad = `pedir60`, proveedor general (o sin proveedor si no hay), precio 0,00, sin urgente |
   | Sin línea y `pedir60 = 0` | No se añade; cuenta para el aviso |
   | Con línea | Cantidad = máx(cantidad de la línea, `pedir60`), y nunca menor que 1; si la cantidad de la línea no es un número válido, se pone `pedir60` (o 1 si es 0). Proveedor: el general **solo si la línea no tenía** |
 
