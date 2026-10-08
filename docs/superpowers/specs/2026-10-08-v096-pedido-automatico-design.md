@@ -26,7 +26,8 @@ SUPERTECNICO; cuando se amplíe, el botón de esta spec le funcionará igual sin
 | Tema | Decisión | Por qué |
 |---|---|---|
 | Horizonte del pedido | **Una columna, 60 días**, fijo en el código (`DIAS_PEDIDO`) | Petición del usuario; un parámetro editable no hace falta todavía |
-| Control en Stock | **Casilla** (`Checkbox` existente) en la columna «Auto» | Ya existe en `shared/ui`; sin dependencias nuevas |
+| Control en Stock | **Interruptor Auto / Manual** en la columna «Modo»: Auto en verde, Manual en gris (cambio del 2026-10-08 tras verlo en preprod; antes, casilla) | Se lee mejor que una casilla; el gris y no el rojo porque el rojo es «Sin stock» y casi todas las piezas van en Manual |
+| Filtro | **Auto** y **Manual** en el desplegable Estado, bajo una línea; se combinan con Y con los estados | Son otra dimensión que el semáforo: «Bajo + Auto» = las bajas en Auto |
 | Dónde se guarda la marca | Columna nueva `Componente.AUTO_PEDIDO` (booleana, `FALSE` por defecto) | Una sola lista compartida por supertécnicos y admin, en cualquier PC |
 | Grupos compartidos | La marca vive en el **master**, como el stock mínimo | En Stock el grupo es una fila y el pedido siempre va al master |
 | Quién ve y cambia la marca | **SUPERTECNICO y ADMIN**. Al TECNICO el servidor no le envía el dato | Es información de compras, como la previsión |
@@ -75,13 +76,17 @@ Ninguna pieza queda marcada tras la migración.
 
 ### 4.3 Web — Stock
 
-- Columna **«Auto»** con una casilla (el `Checkbox` de `shared/ui`; no se añade un componente nuevo), justo después de «Pedir 60 d». Solo para SUPERTECNICO y ADMIN (las
-  mismas condiciones que las columnas de previsión).
-- Cada clic guarda al momento (`PATCH …/auto-pedido`). Mientras se guarda, la casilla muestra el valor nuevo; si
-  falla, vuelve al anterior y sale el error por el camino habitual. Al terminar se refresca el listado.
-- En una fila desactivada la casilla se ve deshabilitada.
-- El clic en la casilla no selecciona la fila ni abre el menú.
-- CSV de Stock con previsión: columna «Auto» con `Sí` / `No` (tras «Pedir 60 d»).
+- Columna **«Modo»** con un interruptor (`role="switch"`) que dice **Auto** (verde) o **Manual** (gris), justo después
+  de «Pedir 60 d». Solo para SUPERTECNICO y ADMIN (las mismas condiciones que las columnas de previsión).
+- Cada clic cambia y guarda al momento (`PATCH …/auto-pedido`). Mientras se guarda, el interruptor muestra el valor
+  nuevo; si falla, vuelve al anterior y sale el error por el camino habitual. Al terminar se refresca el listado. Las
+  peticiones de clics seguidos van en orden (la última es la que queda).
+- En una fila desactivada el interruptor se ve atenuado y no se puede pulsar.
+- El clic en el interruptor no selecciona la fila ni abre el menú.
+- Filtro **Estado**: tras OK / Bajo / Sin stock / Desactivado, una línea horizontal y **Auto** / **Manual** (solo
+  SUPERTECNICO y ADMIN). Los estados se combinan entre sí con O; el modo es otra condición con Y; los dos modos = todos.
+  «Limpiar filtros» los quita; al llegar desde Pedidos se quitan.
+- CSV de Stock con previsión: columna «Modo» con `Auto` / `Manual` (tras «Pedir 60 d»; «—» en desactivadas).
 
 ### 4.4 Web — «Nuevo pedido»
 
@@ -136,6 +141,6 @@ Orden (preprod primero, refrescada desde producción, y después producción fue
 1. Copia de la base.
 2. `migracion-auto-pedido.sql`. Verificación: `SELECT COUNT(*) FROM Componente WHERE AUTO_PEDIDO;` → 0.
 3. P8 (`pull` de servidor y web, `docker compose up -d --build`).
-4. Comprobar `/version.json` = 0.9.6, la columna «Pedir 60 d», la casilla «Auto» y el botón en «Nuevo pedido».
+4. Comprobar `/version.json` = 0.9.6, la columna «Pedir 60 d», el interruptor «Modo», el filtro Auto / Manual y el botón en «Nuevo pedido».
 
 La web 0.9.6 necesita el servidor 0.9.6 (`pedir60`, `autoPedido`, el PATCH). Sin cambios en nginx.
