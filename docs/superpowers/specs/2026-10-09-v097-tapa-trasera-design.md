@@ -44,7 +44,7 @@ Hecho en producción el 2026-10-09, sin código. Se resume porque las tapas se g
 | Colores | **Los mismos que el chasis de cada modelo**, mismos nombres y alias | La tapa es del color del teléfono |
 | Variante eSIM | **No** | La diferencia eSIM está en la bandeja SIM del chasis; la tapa es la misma |
 | Cuántas | **65** (una por color de chasis activo, sin `esim`, de los 15 modelos) | Se generan desde los chasis, no a mano |
-| Stock y mínimo iniciales | **Stock 0, mínimo 2**, activas, sin grupo compartido | Hay que contarlas; con mínimo 2 salen en «Sin stock» y en la previsión desde el primer día |
+| Stock y mínimo iniciales | **Stock 9999, mínimo 2**, activas, sin grupo compartido, modo Manual | Como los chasis: su stock no se cuenta (cambio del 2026-10-09 tras desplegar en preprod; antes, stock 0) |
 | Puntos | Clave `tapa` en `Dificultad_puntos` con **1,00** | Decisión del usuario; antes puntuaba como «otro» (0,50) |
 | Formulario | Solo en **Reparación**, nunca en Glass; fila **después de Chasis** | La hace el técnico de reparación; chasis y tapa van por color, juntos |
 | Historial «otro» | Las acciones «otro» antiguas que describían una tapa **se quedan como están** | No guardaron el color (no hay SKU al que pasarlas) y cambiarían a posteriori puntos ya calculados |
@@ -121,7 +121,7 @@ SELECT COUNT(*) FROM Componente
 
 -- Una tapa por chasis activo sin eSIM de los 15 modelos, mismo nombre con 'tapa' en vez de 'cha' (idempotente)
 INSERT INTO Componente (TIPO, STOCK, STOCK_MINIMO, ACTIVO)
-SELECT CONCAT('tapa', SUBSTRING(c.TIPO, 4)), 0, 2, 1
+SELECT CONCAT('tapa', SUBSTRING(c.TIPO, 4)), 9999, 2, 1
   FROM Componente c
  WHERE c.TIPO LIKE 'chai%' AND c.TIPO NOT LIKE '%esim' AND c.ACTIVO = 1
    AND c.TIPO REGEXP '^chai(14|15|16|17|air)' AND c.TIPO NOT REGEXP '^chai14pro'
@@ -139,7 +139,7 @@ refrescar antes la base desde una copia de producción posterior al saneamiento 
 - **Web:** `categoriaPieza` y `nombreTipo` de `tapa`; `prefijosDeFila` con la tapa tras chasis en Reparación y fuera de
   Glass; las tres filas de la tabla del §5.2 y la salvaguarda (fila guardada de un tipo inexistente no se oculta).
 - **Preprod (a mano, con la base refrescada):** un 15 Pro muestra «Tapa trasera» tras Chasis con sus 4 colores; un 13
-  no muestra la fila; Stock lista las 65 en «Sin stock» con mínimo 2; guardar una reparación con tapa descuenta stock.
+  no muestra la fila; Stock lista las 65 con stock 9999 y mínimo 2; guardar una reparación con tapa descuenta stock.
 
 ## 8. Despliegue
 
