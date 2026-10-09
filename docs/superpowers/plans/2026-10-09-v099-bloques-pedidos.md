@@ -12,11 +12,12 @@
 
 ## Global Constraints
 
-- Versión **0.9.9**. Se empieza cuando la **0.9.8** esté mergeada en `main` de servidor y web. Servidor y web se etiquetan juntos al final, **solo con OK del usuario**.
-- Se trabaja en **worktrees** (los clones normales pueden tener otra sesión en curso):
+- Versión **0.9.9**. Se desarrolla **en paralelo con la 0.9.8** (otra sesión, worktrees `wt/servidor-098` y `wt/web-098`, rama `feature/cliente-por-trabajo`): los worktrees de la 0.9.9 salen del `main` actual (con la 0.9.7). La **integración va en orden**: merge de la 0.9.8 en `main`; después `main` dentro de `feature/bloques-pedidos` (Task 13, Step 0); después merge de la 0.9.9. Preprod y producción, igual: primero la 0.9.8. Servidor y web se etiquetan juntos al final, **solo con OK del usuario**.
+- Todo el desarrollo va en la rama **`feature/bloques-pedidos`** (servidor y web), en **worktrees** (los clones normales no se tocan: otra sesión puede estar usándolos):
   `git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor worktree add /c/Users/dev/Documents/wt/servidor-099 -b feature/bloques-pedidos main`
   `git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web worktree add /c/Users/dev/Documents/wt/web-099 -b feature/bloques-pedidos main`
   y `npm ci` dentro de `wt/web-099`. Todas las rutas `gestion-reparaciones-servidor/…` y `gestion-reparaciones-web/…` de este plan se refieren a esos worktrees; `docs/…` sin prefijo es la raíz.
+- Registro de progreso de los subagentes en **`.superpowers/sdd/v099/`** (raíz), no en el `progress.md` común: la sesión de la 0.9.8 escribe allí.
 - Merge `--no-ff`, push, gitlinks y tags **solo con OK del usuario**. Commits en español sin tildes, prefijo `feat:` / `test:` / `docs:` / `chore:`, **sin** línea `Co-Authored-By`.
 - Repos **públicos**: nada de IPs, nombres reales ni datos del taller en código, tests ni docs. Datos de tests sintéticos (proveedores «Proveedor A/B», SKUs tipo `lcd-x-negro`).
 - **Reglas del bloque** (spec §3, el servidor las garantiza): un proveedor por bloque; un bloque sin líneas se borra en la misma transacción; **abierto** = todas sus líneas `pendiente`; el estado del bloque no se guarda; total = suma de `totalFila` de las no canceladas; orden: bloques por `FECHA` y número descendentes, líneas por `FECHA_PEDIDO` e `ID_COMPRA` ascendentes.
@@ -55,14 +56,14 @@
 - [ ] **Step 1: Worktrees**
 
 ```bash
-git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor switch main && git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor pull --ff-only
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor worktree add /c/Users/dev/Documents/wt/servidor-099 -b feature/bloques-pedidos main
-git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web switch main && git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web pull --ff-only
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web worktree add /c/Users/dev/Documents/wt/web-099 -b feature/bloques-pedidos main
 cd /c/Users/dev/Documents/wt/web-099 && npm ci
 ```
 
-Si un clon normal no está en `main` (otra sesión trabajando), **no** se hace `switch`: se crea el worktree desde `main` igualmente (`worktree add … main` no toca el clon).
+Sin `switch` ni `pull` en los clones normales (la sesión de la 0.9.8 puede estar usándolos): `worktree add … main` parte del
+`main` local sin tocarlos. Comprobar que la base es la de la 0.9.7: `git -C /c/Users/dev/Documents/wt/servidor-099 log --oneline -1`
+(`d5b3812` o posterior) y `git -C /c/Users/dev/Documents/wt/web-099 log --oneline -1` (`60218be` o posterior).
 
 - [ ] **Step 2: Tests que fallan**
 
@@ -5667,6 +5668,29 @@ git commit -m "feat: nuevo pedido con resumen de bloques, anadir lineas a un blo
 - Modify: `gestion-reparaciones-web/docs/paridad/pedidos.md`
 - Create: `docs/novedades/NOVEDADES-v0.9.9.md` (raíz, clon normal)
 - Modify: `C:\Users\dev\Documents\Apuntes\plan-futuro.md` (fuera de git)
+
+- [ ] **Step 0: Traer la 0.9.8 a la rama (solo cuando esté mergeada en `main`)**
+
+Requisito: `feature/cliente-por-trabajo` (0.9.8) mergeada en `main` de servidor y web. Si no lo está, se espera aquí:
+las Tasks 1-12 ya están hechas en la rama y no hace falta nada más hasta entonces.
+
+```bash
+cd /c/Users/dev/Documents/wt/servidor-099 && git merge --no-ff main -m "merge: main con la 0.9.8 en los pedidos por bloques"
+```
+
+Conflictos esperables y cómo resolverlos: `sql/crear_bd.sql` (zonas distintas: quedarse con las dos) y
+`OpenApiContractTest.java` (quedarse con los cambios de las dos). Después `mvn -q test` → todo en verde y
+`target/openapi.json` con lo de las dos versiones.
+
+```bash
+cd /c/Users/dev/Documents/wt/web-099 && git merge --no-ff main -m "merge: main con la 0.9.8 en los pedidos por bloques"
+```
+
+Conflictos esperables: `api/openapi.json` y `src/shared/api/schema.d.ts` (se resuelven regenerándolos:
+`cp /c/Users/dev/Documents/wt/servidor-099/target/openapi.json api/openapi.json && npm run api:types:offline`),
+`CHANGELOG.md` (quedarse con la sección `[0.9.8]` de `main`; la `[0.9.9]` se añade en el Step 2) y `package.json` /
+`package-lock.json` (quedarse con la `0.9.8` de `main`; el Step 1 la sube). Después
+`npx tsc -b && npm run lint && npx vitest run` → todo en verde. Commit del merge en cada repo si git no lo cerró solo.
 
 - [ ] **Step 1: Versión**
 
