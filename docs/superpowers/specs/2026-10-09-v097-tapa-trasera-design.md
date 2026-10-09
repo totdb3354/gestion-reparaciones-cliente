@@ -147,3 +147,72 @@ refrescar antes la base desde una copia de producción posterior al saneamiento 
    (`preprod/refresco-preprod.md`) → servidor y web 0.9.7 → `datos-tapa-trasera.sql` → pruebas del §7.
 2. Producción, en horario (corte despreciable, sin cambio de esquema): servidor y web 0.9.7 → `datos-tapa-trasera.sql`.
 3. Tags `v0.9.7` en servidor y web, novedades de la 0.9.7 y gitlinks en la raíz.
+
+## 9. Añadido (2026-10-09, tras validar en preprod): selector de chasis y tapa trasera
+
+Antes de llevar la 0.9.7 a producción se le añade una mejora **solo de la web** para reducir el error humano al elegir
+el color: hoy el desplegable viene con un SKU preseleccionado (el primero con stock; como chasis y tapas están a 9999,
+siempre el primero de la lista) y un «+» con prisa registra un color que no es. Servidor y datos no cambian.
+
+### 9.1 Decisiones
+
+| Tema | Decisión | Por qué |
+|---|---|---|
+| Filas afectadas | Solo **Chasis** (`cha`) y **Tapa trasera** (`tapa`) | Son las que van por color; el resto sigue igual |
+| SKU por defecto | **Ninguno**: el botón dice **«— Elige color —»** (con modelo y sin modelo) | Obliga a elegir el color a conciencia |
+| Sin SKU elegido | «+» y «Reutilizado» **desactivados**; Stock «—» | Primero se elige y luego se suma: nunca hay una fila usada sin color, sin bloqueos ni avisos al guardar |
+| Al cambiar de modelo | Chasis y tapa vuelven a «— Elige color —» (salvo filas bloqueadas, §9.3) | El color del modelo anterior no vale |
+| Muestra de color | **Círculo** (~12 px) del tono aproximado del color, con **borde fino semitransparente en todos** | Ayuda visual; el borde hace visibles blanco, starlight o plata sobre fondo blanco |
+| Texto en la lista | **Nombre oficial legible** del color («Ultramarine», «Black Titanium», «(PRODUCT)RED»); el SKU completo en el `title` | Menos que leer, menos confusión |
+| Texto en el botón (elegido) | Círculo + **SKU completo** (`chai16ultramarineesim`) | Se ve exactamente qué pieza queda registrada |
+| SIM / eSIM (solo chasis) | Lista en dos bloques con título **«SIM»** y **«eSIM»**, en ese orden; sin títulos si el modelo solo tiene SIM. La tapa, sin bloques | Facilita e incentiva elegir bien la variante |
+| Enlace chasis → tapa | Elegir el color del chasis pone la tapa en **ese color** | La tapa es siempre del color del chasis |
+| Enlace tapa → chasis | Con chasis ya elegido, elegir la tapa cambia el chasis a ese color **conservando su SIM/eSIM**. Con chasis **sin elegir**, el chasis **sigue sin elegir** y en su lista se **resaltan** las opciones de ese color (SIM y eSIM) | La tapa no puede saber si el teléfono es SIM o eSIM (decisión del usuario, opción A) |
+| Qué cambia el enlace | Solo el **SKU elegido**, nunca la cantidad ni «Reutilizado» (usa la misma regla que elegir el SKU a mano) | Elegir no es usar |
+| Dónde se ve el círculo | Solo en el formulario de reparación | Es donde se elige y donde está el riesgo |
+| Aviso de color distinto al del teléfono | **Fuera** (plan maestro, cuando exista el importador; nunca bloqueante: hay cambios de color) | Depende de datos que hoy no están garantizados |
+
+### 9.2 Color de un SKU
+
+- Del SKU se saca el **modelo** (`extraerModelo`), la **variante** (`esim` al final) y el **token de color** (lo que queda
+  entre el modelo y `esim`): `chai16ultramarineesim` → modelo `16`, eSIM, `ultramarine`; `tapai16ultramarine` → `16`,
+  `ultramarine`.
+- Una **tabla de colores** en la web da, por token, el **nombre oficial** y un **tono** aproximado; los tokens que Apple
+  repite con tono distinto según el modelo (`blue`, `green`, `pink`, `purple`, `yellow`, `gold`…) llevan tono propio por
+  modelo. `red` se muestra como «(PRODUCT)RED».
+- Token desconocido (no está en la tabla): se muestra el token tal cual y un círculo **gris con borde discontinuo**; no
+  rompe nada.
+- Chasis y tapa «coinciden» si tienen el mismo modelo y el mismo token.
+
+### 9.3 Filas que el enlace y el reseteo no tocan
+
+Nunca se cambia el SKU de una fila **bloqueada** (guardada, con agotado confirmado, «ya reparada», guardando o sin SKU),
+**con solicitud**, ni de la fila **en edición** (`editada`): esa fila es una reparación ya registrada. Al abrir:
+- **Editar** una reparación: su fila sale con su SKU guardado, como hoy.
+- **Solicitud** de pieza: sigue preseleccionando su SKU, como hoy.
+- **Borrador**: recupera lo elegido, como hoy (una fila sin elegir vuelve sin elegir).
+- Si el chasis abre ya con SKU (edición o solicitud), la tapa empieza con su color (si la tapa no está bloqueada).
+
+### 9.4 Componentes
+
+- `ComboNavy` (`shared/ui`) gana campos **opcionales** por opción: `color` (muestra), `grupo` (título del bloque),
+  `resaltada` (marca de «coincide con la tapa») y `titulo` (texto al pasar el ratón); y una `etiquetaBoton` opcional para
+  que el botón muestre el SKU completo mientras la lista muestra el nombre del color. Los demás usos de `ComboNavy` no
+  cambian.
+- `formulario/estado.ts`: chasis y tapa arrancan sin SKU; el enlace vive en el reductor (`CAMBIAR_SKU`), puro y testeable.
+- Tabla de colores y lectura del SKU en un fichero propio de `taller/lib`.
+
+### 9.5 Pruebas
+
+- Lectura del SKU (modelo, eSIM, token) y tabla de colores (nombre, tono por modelo, desconocido).
+- Estado: chasis y tapa sin SKU al elegir modelo; «+»/«Reutilizado» desactivados hasta elegir; enlace chasis → tapa;
+  tapa → chasis conservando SIM/eSIM; tapa con chasis sin elegir → chasis sin elegir y resaltado; filas bloqueadas,
+  con solicitud y en edición no se tocan; edición/solicitud/borrador como hoy; las demás filas siguen preseleccionando.
+- `ComboNavy`: círculo, bloques con título, resaltado, `title` y `etiquetaBoton`; sin campos nuevos se pinta igual que hoy.
+- Formulario (interfaz): en un 16, «— Elige color —», bloques SIM/eSIM, elegir chasis pone la tapa.
+- E2E `formulario.spec.ts`: revisar que no dependa de un chasis preseleccionado.
+
+### 9.6 Entrega
+
+Va en la **0.9.7** (sin tag todavía). En preprod solo cambia la web: `git pull` de la web y reconstruir `nginx`; probar a
+mano el §9.5 en un 16 (chasis y tapa) y en un 13 (solo chasis, sin bloques eSIM). Producción, como en §8, con todo junto.
