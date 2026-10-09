@@ -26,3 +26,6 @@ desactivada.
 
 Las tapas aparecen en **Stock** con stock 0 y mínimo 2 hasta que se cuenten: salen como «Sin stock» y entran en la
 previsión de pedidos como el resto de piezas.
+
+Nacen en modo **Manual**: «Añadir previsión» no las mete en el pedido hasta que las pases a **Auto** en la columna
+«Modo» de Stock.
