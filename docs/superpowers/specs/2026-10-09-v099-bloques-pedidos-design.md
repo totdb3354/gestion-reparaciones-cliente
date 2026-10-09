@@ -94,7 +94,7 @@ ALTER TABLE Compra_componente
 - Borrar un proveedor sigue protegido por `tienePedidos`: un bloque nunca está vacío, así que un proveedor con bloques
   siempre tiene compras.
 
-**Reconstrucción** (en el mismo fichero, después del esquema; **se puede repetir**):
+**Reconstrucción** (`sql/reconstruir-bloques-compra.sql`, aparte del esquema para **poder repetirla**):
 
 1. Un bloque `RECONSTRUIDO` por cada pareja (proveedor, día de `FECHA_PEDIDO`) que tenga líneas sin bloque y que aún
    no tenga bloque reconstruido; su `FECHA` es la `FECHA_PEDIDO` más antigua del grupo.
@@ -140,9 +140,10 @@ Sin los campos nuevos funcionan como hoy (la web 0.9.8 sigue funcionando contra 
   líneas…»). Crear los bloques nuevos va en la misma transacción que las líneas. La clave de idempotencia cubre el
   cuerpo entero, `destinos` incluido.
 - **`POST /api/compras`** (alta de una línea, sin uso desde la web pero no retirada): aplica la regla por defecto.
-- **`PUT /api/compras/{id}` (Editar)**: campo opcional `idBloque` que solo cuenta si cambia el proveedor (nulo = bloque
-  nuevo). Si cambia el proveedor y no llega, regla por defecto: línea pendiente → bloque abierto más reciente del
-  proveedor nuevo o uno nuevo; en otro estado → bloque nuevo. Mismas validaciones de destino. Si el bloque de origen
+- **`PUT /api/compras/{id}` (Editar)**: campo opcional `destino: { idBloque }` que solo cuenta si cambia el proveedor
+  (`idBloque` nulo = bloque nuevo; un objeto aparte para distinguir «no lo mando» de «bloque nuevo»). Si cambia el
+  proveedor y no llega, regla por defecto: línea pendiente → bloque abierto más reciente del proveedor nuevo o uno nuevo;
+  en otro estado → bloque nuevo. Mismas validaciones de destino. Si el bloque de origen
   queda vacío, se borra. La comprobación de `updatedAt` de la línea sigue igual.
 - **`DELETE /api/compras/{id}`** (borrar pendiente): si el bloque queda vacío, se borra.
 
@@ -305,7 +306,9 @@ stock no cambia. El movimiento queda apuntado en el registro de actividad.»; bo
   «Añadir a Bloque n · dd/MM · k líneas» por cada abierto (el más reciente elegido por defecto) y «Bloque nuevo»; si no
   tiene ninguno, «Bloque nuevo (no tiene ninguno abierto)». Las líneas sin proveedor: «k líneas sin proveedor
   todavía». Debajo: «Solo se ofrecen bloques abiertos (sin nada confirmado). Para sumar a uno ya confirmado: ⋮ del
-  bloque → «Añadir líneas…».». Lo elegido viaja como `destinos`. Un 409 de destino se enseña como error del modal,
+  bloque → «Añadir líneas…».». Lo elegido viaja como `destinos`: solo los proveedores con desplegable (los que tienen
+  bloques abiertos); los demás no viajan y el servidor les crea uno nuevo (su regla por defecto); sin ninguno, `destinos`
+  va a `null`. Un 409 de destino se enseña como error del modal,
   que sigue abierto, y se recargan los pedidos para que el resumen ofrezca los bloques que existen ahora (con el modal
   abierto el sondeo está congelado).
 - **Modo «Añadir líneas»** (precarga nueva `{ modo: 'bloque', idBloque, idProv }` de `formularioPedido`): título
@@ -336,8 +339,8 @@ bloque»** justo después de «ID».
    `~/.env.e2e`).
 2. **Producción:** según la norma de despliegue en horario (migración que solo añade, web 0.9.8 compatible con el
    servidor 0.9.9, vuelta atrás simple); se confirma ese día según cómo haya ido en preproducción. Copia a mano antes.
-3. **Orden en las dos máquinas:** migración → servidor → web → **repetir la reconstrucción** (recoge las líneas creadas
-   por el servidor 0.9.8 en el hueco entre la migración y el servidor nuevo).
+3. **Orden en las dos máquinas:** migración → reconstrucción → servidor → web → **repetir la reconstrucción** (recoge
+   las líneas creadas por el servidor 0.9.8 en el hueco entre la migración y el servidor nuevo).
 4. **Vuelta atrás:** servidor y web 0.9.8 funcionan sobre el esquema nuevo. Al volver a desplegar la 0.9.9, repetir la
    reconstrucción.
 5. Las copias nocturnas cuentan las tablas solas (pasan de 23 a 24): no hay que tocar el script.
