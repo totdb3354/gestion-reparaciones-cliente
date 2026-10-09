@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Pedidos por bloques</title>
+<style>
+:root{
+  --azul-noche:#001232; --azul-noche-hover:#0A2040; --azul-medio:#2C3B54; --azul-gris:#586376; --crema:#F6F6F6;
+  --fondo-vista:#DDE1E7; --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --texto-accion:#4A6FA5; --texto-sub:#8A94A6;
+  --sep:#C2C8D0; --maestro:#EEF0F5; --sel-suave:#EAF1FF; --nav-switch:#E8EAF0; --borde-input:#D4D8DE;
+  --pend-brd:#C8961E; --pend-bg:#FFF3D6; --pend-tx:#B26A00; --neutro-bg:#E8EAF0;
+  --sol-bg:#FDEBC8; --sol-brd:#C07800; --rec-bg:#C8E6C9; --rec-brd:#3A7D44;
+  --par-bg:#E8E0F7; --par-brd:#7B5EA7; --can-bg:#E0E0E0; --can-tx:#9E9E9E;
+  --error:#B03040; --verde:#4CAF50; --rojo:#A84040;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio);background:var(--fondo-vista);font-size:13px}
+button{font:inherit}
+.top{height:56px;background:var(--azul-noche);color:var(--crema);display:flex;align-items:center;gap:28px;padding:0 20px}
+.top .marca{font-weight:800;letter-spacing:.12em;font-size:15px}
+.top nav{display:flex;gap:4px}
+.top nav span{color:#AEB6C4;font-weight:600;padding:7px 12px;border-radius:999px}
+.top nav span.act{background:var(--azul-noche-hover);color:#FAFAFA}
+.top .usu{margin-left:auto;color:#AEB6C4;font-weight:600}
+.proto{background:#F6C453;color:#5A4500;padding:8px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.proto b{letter-spacing:.04em}
+.proto .grupo{display:inline-flex;gap:4px;align-items:center}
+.proto .opt{border:1px solid #B8922E;background:transparent;color:#5A4500;border-radius:999px;padding:3px 10px;cursor:pointer;font-weight:600}
+.proto .opt.act{background:#5A4500;color:#FFF3D0;border-color:#5A4500}
+.guia{background:#FFF8E1;border-bottom:1px solid #E8C870;padding:10px 24px 12px;color:#5A4500;font-size:12.5px}
+.guia ol{margin:4px 0 0;padding-left:20px;columns:2;column-gap:44px}
+.guia li{margin:3px 0;break-inside:avoid}
+.pagina{padding:18px 20px 8px}
+.cab-pag{display:flex;align-items:center;justify-content:space-between;gap:16px}
+h1{font-size:24px;margin:0;color:var(--azul-medio)}
+.toggle{display:inline-flex;background:var(--nav-switch);border-radius:999px;padding:3px}
+.toggle button{border:0;background:transparent;padding:6px 16px;border-radius:999px;font-weight:600;color:var(--azul-gris);cursor:pointer}
+.toggle button.act{background:var(--azul-noche);color:var(--crema)}
+.barra{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+.btn{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-medio);border-radius:999px;padding:6px 14px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:#E4E7EC}
+.btn.prim{background:var(--azul-noche);border-color:var(--azul-noche);color:var(--crema)}
+.btn.prim:hover:not(:disabled){background:var(--azul-noche-hover)}
+.btn.peligro{background:var(--rojo);border-color:var(--rojo);color:#fff}
+.btn.peligro:hover:not(:disabled){background:#923535}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.link{border:0;background:transparent;color:var(--texto-accion);padding:6px 6px}
+.btn.link:hover:not(:disabled){background:transparent;text-decoration:underline}
+.multi{position:relative}
+.multi>.btn{min-width:130px;text-align:left}
+.pop{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:6px;z-index:20;min-width:190px}
+.pop label{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.pop label:hover{background:var(--sel-suave)}
+input[type=text],input[type=date],input[type=number],select,textarea{font:inherit;color:var(--azul-medio);border:1px solid var(--borde-input);background:#fff;border-radius:6px;padding:5px 8px}
+input:focus,select:focus,textarea:focus{outline:2px solid #9DB6DB;outline-offset:0}
+.fechas{display:inline-flex;gap:6px;align-items:center;color:var(--azul-gris)}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;user-select:none;border:0;background:transparent;color:var(--azul-medio)}
+.switch .sw{width:34px;height:18px;border-radius:999px;background:#C8CDD5;position:relative;transition:.15s}
+.switch .sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s}
+.switch.on .sw{background:var(--verde)}
+.switch.on .sw::after{left:18px}
+.sepv{width:1px;height:22px;background:#B9C0CB;margin:0 4px}
+.tabla-wrap{background:#fff;border-radius:8px;overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border:1px solid #CFD3DA}
+table.tabla{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
+.tabla th{position:sticky;top:0;background:#E8EAF0;color:var(--azul-gris);font-size:12px;font-weight:700;text-align:left;padding:8px;border-bottom:1px solid var(--sep);z-index:2}
+.tabla td{padding:0 8px;height:32px;border-bottom:1px solid #EEF0F3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabla td.num,.tabla th.num{text-align:right}
+tr.fila td:first-child{border-left:8px solid transparent}
+.agr tr.fila td:first-child{padding-left:26px}
+tr.fila.e-pendiente td:first-child{border-left-color:var(--pend-brd)}
+tr.fila.e-en_camino.urg td:first-child{border-left-color:var(--sol-brd)}
+tr.fila.e-recibido td:first-child{border-left-color:var(--rec-brd)}
+tr.fila.e-parcial td:first-child{border-left-color:var(--par-brd)}
+tr.fila.e-cancelado td{opacity:.45}
+tr.fila:hover td{background:#F5F7FA}
+tr.fila.sel td{background:var(--azul-noche);color:var(--crema);opacity:1}
+tr.fila.sel td:first-child{border-left-color:transparent}
+.idc{color:var(--azul-gris)}
+tr.fila.sel .idc{color:var(--crema)}
+.comp{color:var(--texto-accion);cursor:pointer;border:0;background:transparent;padding:0}
+.comp:hover{text-decoration:underline}
+tr.fila.sel .comp{color:var(--crema)}
+.badge{display:inline-block;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700}
+.b-pendiente{background:var(--pend-bg);color:var(--pend-tx)}
+.b-en_camino{background:var(--neutro-bg);color:var(--azul-gris)}
+.b-en_camino.urg{background:var(--sol-bg);color:var(--sol-brd)}
+.b-parcial{background:var(--par-bg);color:var(--par-brd)}
+.b-recibido{background:var(--rec-bg);color:var(--rec-brd)}
+.b-cancelado{background:var(--can-bg);color:var(--can-tx)}
+.avisol{color:var(--sol-brd);font-size:13px;margin-left:6px}
+tr.cab td{background:var(--maestro);border-top:1px solid var(--sep);border-bottom:1px solid var(--sep);height:40px;padding:0 6px 0 4px}
+tr.cab:hover td{background:#E6E9F0}
+tr.cab.plegado td{border-bottom-color:#D5D9E0}
+.cab-in{display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
+.chev{border:0;background:transparent;cursor:pointer;width:22px;font-size:12px;color:var(--azul-medio);flex:none}
+.cab-tit{cursor:pointer;flex:none}
+.pt{color:var(--texto-sub);margin:0 6px}
+.chips{display:inline-flex;gap:4px;flex:none}
+.chip{display:inline-block;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+.mostrando{font-size:11px;color:#fff;background:var(--texto-accion);border-radius:10px;padding:2px 8px;flex:none}
+.nota{color:var(--azul-gris);font-style:italic;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nota::before{content:'📝 ';font-style:normal}
+.tag{font-size:10.5px;border:1px dashed var(--texto-sub);color:var(--texto-sub);border-radius:8px;padding:1px 6px;flex:none}
+.aviso{color:var(--sol-brd);font-size:14px;flex:none}
+.kebab{border:0;background:transparent;font-size:18px;line-height:1;cursor:pointer;color:var(--azul-medio);width:30px;height:30px;border-radius:50%;flex:none}
+.kebab:hover{background:#D5DAE2}
+.flex1{flex:1}
+.vacio{text-align:center;color:#A0A0A0;height:120px!important}
+.aviso-otros{padding:40px;text-align:center;color:var(--azul-gris)}
+.actualizado{color:var(--azul-gris);font-size:12px;margin-top:6px}
+.menu{position:fixed;background:#fff;border:1px solid #C4C9D4;border-radius:8px;box-shadow:0 8px 24px rgba(0,18,50,.22);padding:5px 0;min-width:230px;z-index:50;font-size:13px}
+.menu .mi{padding:6px 14px;cursor:pointer;position:relative;display:flex;justify-content:space-between;align-items:center;gap:18px;white-space:nowrap}
+.menu .mi:hover{background:var(--sel-suave)}
+.menu .mi.dis{color:#B0B5BF;cursor:default}
+.menu .mi.dis:hover{background:transparent}
+.menu .mi .det{color:var(--texto-sub);font-size:11.5px}
+.menu .mi.peligro{color:var(--rojo)}
+.menu .mi.dis.peligro{color:#D8B0B0}
+.menu .msep{height:1px;background:#E3E6EB;margin:4px 0}
+.menu .titulo-menu{padding:4px 14px 6px;font-size:11px;color:var(--texto-sub);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.submenu{display:none;position:absolute;left:100%;top:-6px;background:#fff;border:1px solid #C4C9D4;border-radius:8px;box-shadow:0 8px 24px rgba(0,18,50,.22);padding:5px 0;min-width:280px}
+.mi.has-sub:hover>.submenu{display:block}
+.menu.izq .submenu{left:auto;right:100%}
+.overlay{position:fixed;inset:0;background:rgba(0,18,50,.35);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.dlg{background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(0,18,50,.35);width:min(540px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.dlg.ancho{width:min(900px,100%)}
+.dlg h2{margin:0;padding:16px 20px 6px;font-size:17px;color:var(--azul-medio)}
+.dlg .sub{color:var(--azul-gris);font-size:12.5px;padding:0 20px}
+.dlg .cuerpo{padding:8px 20px 12px;overflow:auto}
+.dlg .pie{padding:12px 20px 16px;display:flex;justify-content:flex-end;align-items:center;gap:10px;border-top:1px solid #EEF0F3}
+.dlg .pie .izq{margin-right:auto}
+.lista{border:1px solid #E3E6EB;border-radius:8px;margin:6px 0 10px}
+.lista .it{display:flex;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid #F0F2F5}
+.lista .it:last-child{border-bottom:0}
+.lista .it .r{margin-left:auto;color:var(--texto-sub);font-size:12px}
+.lista h4{margin:0;padding:6px 10px;font-size:12px;background:#F6F7F9;border-bottom:1px solid #E3E6EB;border-radius:8px 8px 0 0}
+.lista.no h4{color:var(--texto-sub)}
+.caja{border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12.5px}
+.caja.aviso-c{background:#FFF3E0;color:#B34700}
+.caja.info{background:#EAF1FF;color:var(--azul-medio)}
+.caja.error{background:#FBE9EB;color:var(--error);font-weight:600}
+.simular{font-size:12px;color:var(--texto-sub);border:0;background:transparent;cursor:pointer;text-decoration:underline;padding:0}
+.lineas-nuevo{width:100%;border-collapse:collapse;margin-top:8px}
+.lineas-nuevo th{font-size:11.5px;color:var(--azul-gris);text-align:left;padding:6px;background:#E8EAF0}
+.lineas-nuevo td{padding:4px 6px;border-bottom:1px solid #F0F2F5}
+.lineas-nuevo td.n{color:var(--texto-sub);width:24px}
+.lineas-nuevo select{width:100%}
+.lineas-nuevo input[type=number]{width:72px}
+.lineas-nuevo .div{color:var(--azul-gris);font-size:12px}
+.quitar{border:0;background:transparent;color:var(--rojo);cursor:pointer;font-size:14px}
+.fijo{display:inline-block;background:var(--nav-switch);border-radius:999px;padding:4px 10px;font-weight:600}
+.barra-nuevo{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.destinos{margin-top:12px;border:1px solid #D5DCE8;background:#F6F8FC;border-radius:10px;padding:10px 12px}
+.destinos h4{margin:0 0 6px;font-size:12.5px}
+.dest{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap}
+.dest .flecha{color:var(--texto-sub)}
+.campo{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.campo>span{font-size:12px;font-weight:700;color:var(--azul-gris)}
+.fila-campos{display:flex;gap:14px;flex-wrap:wrap}
+.cont{font-size:11.5px;color:var(--texto-sub);text-align:right}
+.radio{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid #F0F2F5;cursor:pointer}
+.radio:hover{background:var(--sel-suave)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--azul-noche);color:var(--crema);padding:10px 18px;border-radius:999px;box-shadow:0 8px 24px rgba(0,18,50,.3);z-index:60;font-weight:600;max-width:calc(100vw - 40px)}
+.log{margin:14px 20px 30px;background:#fff;border-radius:8px;border:1px solid #CFD3DA}
+.log summary{padding:10px 14px;font-weight:700;cursor:pointer}
+.log ol{margin:0;padding:0 14px 12px 40px;max-height:220px;overflow:auto;font-size:12px;font-family:ui-monospace,Consolas,monospace;color:var(--azul-gris)}
+.log li b{color:var(--azul-medio)}
+pre.csv{background:#F6F7F9;border:1px solid #E3E6EB;border-radius:8px;padding:10px;font-size:11.5px;overflow:auto;max-height:340px}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="marca">FONESTORE</span>
+  <nav><span>Taller</span><span>Asignaciones</span><span class="act">Stock</span><span>Gestión</span></nav>
+  <span class="usu" id="usu"></span>
+</div>
+<div id="proto"></div>
+<main class="pagina">
+  <div class="cab-pag">
+    <h1>Pedidos</h1>
+    <div class="toggle" id="toggleTipo"></div>
+  </div>
+  <div id="barra"></div>
+  <div id="tabla" class="tabla-wrap"></div>
+  <div class="actualizado">Actualizado a las 12:30 ⟳</div>
+</main>
+<div id="log"></div>
+<div id="menu"></div>
+<div id="dlg"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ───────────────────────── datos de ejemplo (inventados) ─────────────────────────
+const TASA = { EUR: 1, USD: 0.92 };
+const PROVS = [
+  { id: 1, nombre: 'PantallasPro', divisa: 'EUR' },
+  { id: 2, nombre: 'MobileParts HK', divisa: 'USD' },
+  { id: 3, nombre: 'BateríasYa', divisa: 'EUR' },
+  { id: 4, nombre: 'Repuestos Express', divisa: 'EUR' },
+];
+// pedir = «Pedir 60 d» de las piezas en modo Auto (null = manual o nada que pedir)
+const COMPS = [
+  { id: 1, tipo: 'lcd-11', pedir: null, ref: 18 }, { id: 2, tipo: 'mc-11', pedir: null, ref: 4.5 },
+  { id: 3, tipo: 'lcd-12', pedir: null, ref: 22 }, { id: 4, tipo: 'lcd-12pro', pedir: null, ref: 30 },
+  { id: 5, tipo: 'mc-12', pedir: null, ref: 5 }, { id: 6, tipo: 'lcd-13', pedir: 4, ref: 33 },
+  { id: 7, tipo: 'lcd-13pro', pedir: null, ref: 38 }, { id: 8, tipo: 'mc-13pro', pedir: null, ref: 6.5 },
+  { id: 9, tipo: 'chasis-13pro-azul', pedir: null, ref: 24 }, { id: 10, tipo: 'cami13 / cami13pro', pedir: 0, ref: 14.5 },
+  { id: 11, tipo: 'flex-carga-12', pedir: null, ref: 2.9 }, { id: 12, tipo: 'flex-carga-13', pedir: null, ref: 3.1 },
+  { id: 13, tipo: 'lcd-14', pedir: null, ref: 52 }, { id: 14, tipo: 'lcd-14pro', pedir: null, ref: 61 },
+  { id: 15, tipo: 'tapa-14-negro', pedir: null, ref: 7 }, { id: 16, tipo: 'mc-14', pedir: 3, ref: 5.5 },
+  { id: 17, tipo: 'lcd-15', pedir: null, ref: 64 }, { id: 18, tipo: 'bat-11', pedir: null, ref: 7.5 },
+  { id: 19, tipo: 'bat-xr', pedir: null, ref: 7 }, { id: 20, tipo: 'bat-12', pedir: null, ref: 9 },
+  { id: 21, tipo: 'bat-13', pedir: null, ref: 10.5 }, { id: 22, tipo: 'bat-14', pedir: 6, ref: 11 },
+  { id: 23, tipo: 'altavoz-13', pedir: null, ref: 2.4 }, { id: 24, tipo: 'boton-power-12', pedir: null, ref: 1.2 },
+  { id: 25, tipo: 'bandeja-sim-14-azul', pedir: null, ref: 0.9 },
+];
+const ESTADOS = ['pendiente', 'en_camino', 'parcial', 'recibido', 'cancelado'];
+const USUARIO = 'supertécnico';
+
+function d(dia, h, m, mes) { return new Date(2026, (mes || 10) - 1, dia, h, m); }
+function round2(n) { return Math.round(n * 100) / 100; }
+const prov = (id) => PROVS.find((p) => p.id === id);
+const comp = (id) => COMPS.find((c) => c.id === id);
+
+function datosIniciales() {
+  const bloques = [], lineas = [];
+  const B = (id, idProv, fecha, nota, lns, migrado) => {
+    bloques.push({ id, idProv, fecha, nota: nota || '', migrado: !!migrado, v: 1 });
+    const p = prov(idProv);
+    for (const [idL, idCom, cant, precio, estado, x] of lns) {
+      const ex = x || {};
+      lineas.push({
+        id: idL, idBloque: id, idCom, idProv, cantidad: cant,
+        recibida: ex.rec !== undefined ? ex.rec : (estado === 'recibido' ? cant : null),
+        urgente: !!ex.urg, fecha: ex.fecha || fecha, precio, divisa: p.divisa,
+        precioEur: round2(precio * TASA[p.divisa]), estado, v: 1,
+      });
+    }
+  };
+  B(47, 1, d(9, 10, 2), '', [[320, 7, 5, 38, 'pendiente'], [321, 8, 5, 6.5, 'pendiente'], [322, 9, 2, 24, 'pendiente', { fecha: d(9, 12, 14) }]]);
+  B(46, 3, d(9, 9, 15), '', [[318, 20, 10, 9, 'pendiente'], [319, 21, 8, 10.5, 'pendiente', { urg: true }]]);
+  B(45, 2, d(8, 17, 20), 'Ped. MP-88231 · DHL 1Z999AA10123456784', [[314, 10, 4, 15.5, 'en_camino'], [315, 13, 3, 56, 'en_camino', { urg: true }], [316, 12, 6, 3.4, 'en_camino'], [317, 14, 2, 66, 'en_camino']]);
+  B(44, 1, d(8, 10, 5), 'Pagado con tarjeta, factura PP-2291', [[309, 3, 4, 22, 'en_camino', { urg: true }], [310, 4, 3, 30, 'recibido'], [311, 15, 2, 7, 'parcial', { rec: 1 }], [312, 5, 4, 5, 'pendiente', { fecha: d(8, 16, 40) }]]);
+  B(43, 1, d(7, 16, 45), '', [[308, 17, 2, 64, 'en_camino']]);
+  B(42, 4, d(6, 11, 30), '', [[305, 23, 5, 2.4, 'recibido'], [306, 24, 10, 1.2, 'recibido'], [307, 25, 4, 0.9, 'recibido']]);
+  B(41, 3, d(3, 9, 40), '', [[303, 18, 6, 7.5, 'recibido'], [304, 19, 4, 7, 'cancelado']]);
+  B(40, 2, d(1, 18, 0), 'Ped. MP-87990', [[300, 6, 6, 36, 'recibido'], [301, 10, 2, 15.5, 'recibido'], [302, 11, 5, 3.2, 'recibido']]);
+  B(39, 1, d(29, 10, 10, 9), '', [[296, 1, 3, 18, 'recibido'], [297, 2, 3, 4.5, 'recibido']], true);
+  return { bloques, lineas, log: [] };
+}
+
+let S, U, reloj, sigL, sigB, toastT;
+function reiniciar(conservarVista) {
+  S = datosIniciales();
+  reloj = new Date(2026, 9, 9, 12, 30);
+  sigL = 330; sigB = 48;
+  const prev = U;
+  U = {
+    rol: 'super', tipo: 'componentes', agrupar: true, manual: {}, manualFiltro: {},
+    f: { estados: new Set(), provs: new Set(), texto: '', desde: '', hasta: '' },
+    pop: null, sel: null, menu: null, dlg: null, dlgPrev: null, guia: true, logAbierto: true,
+  };
+  if (conservarVista && prev) { U.rol = prev.rol; U.guia = prev.guia; }
+}
+function ahora() { reloj = new Date(reloj.getTime() + 60000); return new Date(reloj); }
+
+// ───────────────────────── reglas derivadas ─────────────────────────
+const lin = (id) => S.lineas.find((l) => l.id === id);
+const bloque = (id) => S.bloques.find((b) => b.id === id);
+const porFecha = (a, b) => b.fecha - a.fecha || b.id - a.id;
+const lineasDe = (idB) => S.lineas.filter((l) => l.idBloque === idB).sort((a, b) => a.fecha - b.fecha || a.id - b.id);
+const unidades = (l) => (l.estado === 'recibido' && l.recibida != null ? l.recibida : l.cantidad);
+const totalFila = (l) => unidades(l) * l.precioEur;
+const llevaAviso = (l) => l.urgente && (l.estado === 'en_camino' || l.estado === 'parcial');
+const chipTxt = (e) => e.replace('_', ' ');
+const esAbierto = (idB) => lineasDe(idB).every((l) => l.estado === 'pendiente');
+const esVivo = (idB) => lineasDe(idB).some((l) => ['pendiente', 'en_camino', 'parcial'].includes(l.estado));
+const situacion = (idB) => (esAbierto(idB) ? 'abierto' : esVivo(idB) ? 'en curso' : 'terminado');
+const totalBloque = (idB) => lineasDe(idB).filter((l) => l.estado !== 'cancelado').reduce((s, l) => s + totalFila(l), 0);
+const abiertosDe = (idProv) => S.bloques.filter((b) => b.idProv === idProv && esAbierto(b.id)).sort(porFecha);
+const destinoPorDefecto = (idProv) => { const a = abiertosDe(idProv); return a.length ? a[0].id : 'nuevo'; };
+function resumen(idB) { const c = {}; lineasDe(idB).forEach((l) => { c[l.estado] = (c[l.estado] || 0) + 1; }); return c; }
+function textoCantidad(l) {
+  if (l.estado === 'parcial') return l.recibida != null ? `${l.recibida}/${l.cantidad}` : String(l.cantidad);
+  if (l.estado === 'recibido') return String(l.recibida ?? l.cantidad);
+  return String(l.cantidad);
+}
+
+// ───────────────────────── formato ─────────────────────────
+const p2 = (n) => String(n).padStart(2, '0');
+const fFecha = (x) => `${p2(x.getDate())}/${p2(x.getMonth() + 1)}/${String(x.getFullYear()).slice(2)} ${p2(x.getHours())}:${p2(x.getMinutes())}`;
+const fDia = (x) => `${p2(x.getDate())}/${p2(x.getMonth() + 1)}/${x.getFullYear()}`;
+const fCorto = (x) => `${p2(x.getDate())}/${p2(x.getMonth() + 1)}`;
+const fHora = (x) => `${p2(x.getHours())}:${p2(x.getMinutes())}`;
+const fNum = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fImp = (n, div) => fNum(n) + (div === 'USD' ? ' $' : ' €');
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nLineas = (n) => `${n} ${n === 1 ? 'línea' : 'líneas'}`;
+
+// ───────────────────────── filtros ─────────────────────────
+function filtroActivo() { const f = U.f; return !!(f.estados.size || f.provs.size || f.texto.trim() || f.desde || f.hasta); }
+function cumple(l) {
+  const f = U.f;
+  if (f.estados.size && !f.estados.has(l.estado)) return false;
+  if (f.provs.size && !f.provs.has(l.idProv)) return false;
+  const t = f.texto.trim().toLowerCase();
+  if (t && !comp(l.idCom).tipo.toLowerCase().includes(t)) return false;
+  if (f.desde && l.fecha < new Date(f.desde + 'T00:00:00')) return false;
+  if (f.hasta && l.fecha > new Date(f.hasta + 'T23:59:59')) return false;
+  return true;
+}
+function desplegado(idB) {
+  if (filtroActivo()) return U.manualFiltro[idB] ?? true;
+  return U.manual[idB] ?? esVivo(idB);
+}
+function filtrosCambiados() { U.manualFiltro = {}; renderBarra(); renderTabla(); }
+
+// ───────────────────────── registro y operaciones ─────────────────────────
+function registrar(accion, detalle, usuario) { S.log.push({ t: new Date(reloj), usuario: usuario || USUARIO, accion, detalle }); }
+function crearBloque(idProv) {
+  const b = { id: sigB++, idProv, fecha: ahora(), nota: '', migrado: false, v: 1 };
+  S.bloques.push(b);
+  registrar('CREAR_BLOQUE', `Bloque ${b.id}, PROVEEDOR: ${prov(idProv).nombre}`);
+  U.manual[b.id] = true;
+  return b;
+}
+function limpiarVacio(idB) {
+  if (lineasDe(idB).length) return false;
+  S.bloques = S.bloques.filter((b) => b.id !== idB);
+  registrar('BORRAR_BLOQUE', `Bloque ${idB} (se quedó sin líneas)`);
+  return true;
+}
+function moverLinea(idL, destino, motivo) {
+  const l = lin(idL);
+  const origen = l.idBloque;
+  const idDest = destino === 'nuevo' ? crearBloque(l.idProv).id : destino;
+  l.idBloque = idDest; l.v++;
+  registrar('MOVER_LINEA_BLOQUE', `ID_COMPRA: ${l.id} (${comp(l.idCom).tipo}, ${chipTxt(l.estado)}), DE: Bloque ${origen} A: Bloque ${idDest}${motivo ? ', ' + motivo : ''}`);
+  const vacio = limpiarVacio(origen);
+  U.manual[idDest] = true;
+  return { idDest, origen, vacio };
+}
+
+// ───────────────────────── render: barra superior y prototipo ─────────────────────────
+function renderProto() {
+  document.getElementById('usu').textContent = U.rol === 'super' ? 'supertécnico ▾' : 'administrador ▾';
+  const guia = U.guia ? `<div class="guia"><b>Qué probar</b> (clic derecho en una línea o en una cabecera abre su menú; ⋮ abre el del bloque):<ol>
+    <li>Clic derecho en una línea pendiente del <b>Bloque 47</b> → «Mover a bloque ▸»: se mueve sin preguntar.</li>
+    <li>Mueve una línea <b>en camino</b> (Bloque 45 o 43): pide confirmación y queda en el registro.</li>
+    <li>⋮ del <b>Bloque 44</b> (mezclado): mira los contadores y «Borrar bloque» deshabilitado con su motivo.</li>
+    <li>Bloque 44 → «Recibir todo (1)»: la confirmación lista lo que cambia y lo que no. Prueba «simular otro usuario».</li>
+    <li>«Nuevo pedido» con líneas de PantallasPro, BateríasYa y MobileParts: mira «Bloques» al pie.</li>
+    <li>⋮ del <b>Bloque 45</b> (ya en camino) → «Añadir líneas…» con el destino fijado.</li>
+    <li>Escribe <b>lcd</b> en el buscador o filtra por estado: solo las líneas que cumplen y «mostrando k de n».</li>
+    <li>⋮ del Bloque 47 → «Separar líneas…»; ⋮ del Bloque 43 → «Juntar con…».</li>
+    <li>Clic derecho → «Editar» en una línea y cambia el proveedor: aparece el campo «Bloque».</li>
+    <li>Apaga «Agrupar por bloque»: la vista plana de hoy con columna Bloque. Prueba también «CSV» y «Ver como: Administrador».</li>
+  </ol></div>` : '';
+  document.getElementById('proto').innerHTML = `<div class="proto">
+    <b>PROTOTIPO</b><span>Datos inventados · nada se guarda · 09/10/2026</span>
+    <span class="grupo">Ver como:
+      <button class="opt ${U.rol === 'super' ? 'act' : ''}" data-a="rol" data-v="super">Supertécnico</button>
+      <button class="opt ${U.rol === 'admin' ? 'act' : ''}" data-a="rol" data-v="admin">Administrador</button></span>
+    <button class="opt ${U.guia ? 'act' : ''}" data-a="guia">Qué probar</button>
+    <button class="opt" data-a="reiniciar">Reiniciar datos</button>
+  </div>${guia}`;
+  document.getElementById('toggleTipo').innerHTML =
+    `<button class="${U.tipo === 'componentes' ? 'act' : ''}" data-a="tipo" data-v="componentes">Componentes</button>` +
+    `<button class="${U.tipo === 'otros' ? 'act' : ''}" data-a="tipo" data-v="otros">Otros</button>`;
+}
+
+function renderBarra() {
+  const f = U.f;
+  const estTxt = f.estados.size === 0 ? 'Estado' : f.estados.size === 1 ? chipTxt([...f.estados][0]) : `${f.estados.size} estados`;
+  const provTxt = f.provs.size === 0 ? 'Proveedor' : f.provs.size === 1 ? prov([...f.provs][0]).nombre : `${f.provs.size} proveedores`;
+  const popEst = U.pop === 'estado' ? `<div class="pop">${ESTADOS.map((e) => `<label><input type="checkbox" data-fe="${e}" ${f.estados.has(e) ? 'checked' : ''}>${chipTxt(e)}</label>`).join('')}</div>` : '';
+  const popProv = U.pop === 'prov' ? `<div class="pop">${PROVS.map((p) => `<label><input type="checkbox" data-fp="${p.id}" ${f.provs.has(p.id) ? 'checked' : ''}>${esc(p.nombre)}</label>`).join('')}</div>` : '';
+  const comps = U.tipo === 'componentes';
+  // Un solo botón: si hay algún bloque visible desplegado, pliega todo; si no, despliega todo.
+  const hayDesplegado = S.bloques.some((b) => lineasDe(b.id).some(cumple) && desplegado(b.id));
+  document.getElementById('barra').innerHTML = `<div class="barra">
+    <span class="multi"><button class="btn" data-a="pop" data-v="estado">${esc(estTxt)} ▾</button>${popEst}</span>
+    <span class="multi"><button class="btn" data-a="pop" data-v="prov">${esc(provTxt)} ▾</button>${popProv}</span>
+    <input type="text" id="buscar" placeholder="Buscar componente…" value="${esc(f.texto)}" style="width:170px">
+    <span class="fechas"><input type="date" id="desde" value="${f.desde}" style="width:135px"> – <input type="date" id="hasta" value="${f.hasta}" style="width:135px"></span>
+    <button class="btn" data-a="limpiar">Limpiar filtros</button>
+    ${U.rol === 'super' ? `<button class="btn prim" data-a="nuevo" style="margin-left:14px">${comps ? 'Nuevo pedido' : 'Nuevo otro pedido'}</button>` : ''}
+    ${comps ? `<span class="sepv"></span>
+    <button class="switch ${U.agrupar ? 'on' : ''}" data-a="agrupar"><span class="sw"></span>Agrupar por bloque</button>
+    ${U.agrupar ? `<button class="btn link" data-a="todo" data-v="${hayDesplegado ? '0' : '1'}">${hayDesplegado ? 'Plegar todo' : 'Desplegar todo'}</button>` : ''}` : ''}
+    <span class="flex1"></span>
+    <button class="btn" data-a="csv">CSV</button>
+  </div>`;
+}
+
+// ───────────────────────── render: tabla ─────────────────────────
+function cabeceraTabla(plano) {
+  const c = plano
+    ? [['ID', 62], ['Bloque', 64], ['Pedido', 115], ['Componente', null], ['Proveedor', 140], ['Cant.', 60, 'num'], ['P.Unit.', 84, 'num'], ['EUR', 84, 'num'], ['Estado', 130]]
+    : [['ID', 80], ['Pedido', 115], ['Componente', null], ['Cant.', 60, 'num'], ['P.Unit.', 84, 'num'], ['EUR', 84, 'num'], ['Estado', 130]];
+  return `<colgroup>${c.map(([, w]) => `<col${w ? ` style="width:${w}px"` : ''}>`).join('')}</colgroup>
+    <thead><tr>${c.map(([t, , cl]) => `<th class="${cl || ''}">${t}</th>`).join('')}</tr></thead>`;
+}
+function badge(l) {
+  return `<span class="badge b-${l.estado}${l.urgente && l.estado === 'en_camino' ? ' urg' : ''}">${l.estado}</span>${llevaAviso(l) ? '<span class="avisol">⚠</span>' : ''}`;
+}
+function filaLinea(l, plano) {
+  const cls = `fila e-${l.estado}${l.urgente ? ' urg' : ''}${U.sel === l.id ? ' sel' : ''}`;
+  return `<tr class="${cls}" data-id="${l.id}">
+    <td><span class="idc">${l.id}</span></td>
+    ${plano ? `<td><span class="idc">${l.idBloque}</span></td>` : ''}
+    <td>${fFecha(l.fecha)}</td>
+    <td><button class="comp" data-a="comp" data-id="${l.id}">${esc(comp(l.idCom).tipo)}</button></td>
+    ${plano ? `<td>${esc(prov(l.idProv).nombre)}</td>` : ''}
+    <td class="num">${textoCantidad(l)}</td>
+    <td class="num">${fImp(l.precio, l.divisa)}</td>
+    <td class="num">${fImp(totalFila(l), 'EUR')}</td>
+    <td>${badge(l)}</td></tr>`;
+}
+function filaCabecera(b, todas, vis, abierto) {
+  const r = resumen(b.id);
+  const chips = ESTADOS.filter((e) => r[e]).map((e) => `<span class="chip b-${e}">${r[e]} ${chipTxt(e)}</span>`).join('');
+  const aviso = todas.some(llevaAviso) ? '<span class="aviso" title="Hay líneas urgentes en camino o parciales">⚠</span>' : '';
+  const mostrando = vis.length < todas.length ? `<span class="mostrando">mostrando ${vis.length} de ${todas.length}</span>` : '';
+  const nota = b.nota ? `<span class="nota" title="${esc(b.nota)}">${esc(b.nota)}</span>` : '';
+  const migr = b.migrado ? '<span class="tag" title="Reconstruido al migrar: mismo proveedor y mismo día">antiguo</span>' : '';
+  const kebab = U.rol === 'super' ? `<button class="kebab" data-a="menuBloque" data-id="${b.id}" title="Acciones del bloque">⋮</button>` : '';
+  return `<tr class="cab${abierto ? '' : ' plegado'}" data-bloque="${b.id}"><td colspan="7"><div class="cab-in">
+    <button class="chev" data-a="plegar" data-id="${b.id}">${abierto ? '▼' : '▶'}</button>
+    <span class="cab-tit" data-a="plegar" data-id="${b.id}"><b>Bloque ${b.id}</b><span class="pt">·</span>${esc(prov(b.idProv).nombre)}<span class="pt">·</span>${fDia(b.fecha)}<span class="pt">·</span>${nLineas(todas.length)}<span class="pt">·</span><b>${fNum(totalBloque(b.id))} €</b></span>
+    ${aviso}${migr}<span class="chips">${chips}</span>${mostrando}${nota}<span class="flex1"></span>${kebab}
+  </div></td></tr>`;
+}
+function ordenVista() {
+  // Líneas visibles en el orden en que se pintan (también para el CSV).
+  if (U.agrupar) {
+    const out = [];
+    for (const b of [...S.bloques].sort(porFecha)) out.push(...lineasDe(b.id).filter(cumple));
+    return out;
+  }
+  return S.lineas.filter(cumple).sort(porFecha);
+}
+function renderTabla() {
+  const el = document.getElementById('tabla');
+  if (U.tipo === 'otros') {
+    el.innerHTML = '<div class="aviso-otros"><b>Otros</b> sigue como hoy, sin bloques (fuera de esta versión).<br>La tabla de otros pedidos se vería exactamente igual que ahora.</div>';
+    return;
+  }
+  if (U.agrupar) {
+    let filas = '';
+    for (const b of [...S.bloques].sort(porFecha)) {
+      const todas = lineasDe(b.id);
+      const vis = todas.filter(cumple);
+      if (!vis.length) continue;
+      const abierto = desplegado(b.id);
+      filas += filaCabecera(b, todas, vis, abierto);
+      if (abierto) filas += vis.map((l) => filaLinea(l, false)).join('');
+    }
+    el.innerHTML = `<table class="tabla agr">${cabeceraTabla(false)}<tbody>${filas || '<tr><td colspan="7" class="vacio">Sin pedidos</td></tr>'}</tbody></table>`;
+  } else {
+    const ls = ordenVista();
+    el.innerHTML = `<table class="tabla">${cabeceraTabla(true)}<tbody>${ls.length ? ls.map((l) => filaLinea(l, true)).join('') : '<tr><td colspan="9" class="vacio">Sin pedidos</td></tr>'}</tbody></table>`;
+  }
+}
+
+// ───────────────────────── render: registro ─────────────────────────
+function renderLog() {
+  const items = [...S.log].reverse().map((e) => `<li>${fHora(e.t)} · ${esc(e.usuario)} · <b>${e.accion}</b> · ${esc(e.detalle)}</li>`).join('');
+  document.getElementById('log').innerHTML = `<details class="log" ${U.logAbierto ? 'open' : ''} id="logDet">
+    <summary>Registro de actividad: lo que quedaría apuntado (${S.log.length})</summary>
+    ${S.log.length ? `<ol reversed>${items}</ol>` : '<div style="padding:0 14px 12px;color:#8A94A6">Aún no has hecho nada. Cada acción de bloque, movimiento y cambio de nota aparecerá aquí.</div>'}
+  </details>`;
+}
+
+// ───────────────────────── menús contextuales ─────────────────────────
+function abrirMenu(x, y, titulo, items) { U.menu = { x, y, titulo, items }; renderMenu(); }
+function cerrarMenu() { if (U.menu) { U.menu = null; renderMenu(); } }
+function htmlItems(items, ruta) {
+  return items.map((it, i) => {
+    if (it === '-') return '<div class="msep"></div>';
+    const p = ruta === '' ? String(i) : `${ruta}.${i}`;
+    const cls = `mi${it.dis ? ' dis' : ''}${it.peligro ? ' peligro' : ''}${it.sub ? ' has-sub' : ''}`;
+    const det = it.det ? `<span class="det">${esc(it.det)}</span>` : it.sub ? '<span class="det">▸</span>' : '';
+    const sub = it.sub ? `<div class="submenu">${htmlItems(it.sub, p)}</div>` : '';
+    return `<div class="${cls}" data-mi="${p}"${it.ayuda ? ` title="${esc(it.ayuda)}"` : ''}><span>${esc(it.t)}</span>${det}${sub}</div>`;
+  }).join('');
+}
+function renderMenu() {
+  const el = document.getElementById('menu');
+  if (!U.menu) { el.innerHTML = ''; return; }
+  const m = U.menu;
+  el.innerHTML = `<div class="menu" style="left:${m.x}px;top:${m.y}px">${m.titulo ? `<div class="titulo-menu">${esc(m.titulo)}</div>` : ''}${htmlItems(m.items, '')}</div>`;
+  const box = el.firstElementChild;
+  const r = box.getBoundingClientRect();
+  if (r.right > innerWidth - 8) box.style.left = Math.max(8, innerWidth - r.width - 8) + 'px';
+  if (r.bottom > innerHeight - 8) box.style.top = Math.max(8, innerHeight - r.height - 8) + 'px';
+  if (box.getBoundingClientRect().right + 300 > innerWidth) box.classList.add('izq');
+}
+function itemDeRuta(ruta) {
+  let items = U.menu.items, it = null;
+  for (const k of ruta.split('.')) { it = items[Number(k)]; items = it.sub || []; }
+  return it;
+}
+
+function menuLinea(l) {
+  const it = [];
+  const E = l.estado;
+  const editar = { t: 'Editar', fn: () => abrirEditar(l.id) };
+  if (E === 'pendiente') it.push({ t: 'Confirmar pedido', fn: () => transLinea(l.id, 'confirmar') }, '-', editar, { t: 'Borrar', fn: () => confirmarLinea(l.id, 'borrar') });
+  if (E === 'en_camino') it.push({ t: 'Recepción parcial', fn: () => abrirCantidad(l.id, 'parcial') }, { t: 'Confirmar recibido', fn: () => transLinea(l.id, 'recibido') }, '-', editar, { t: 'Cancelar pedido', fn: () => confirmarLinea(l.id, 'cancelar') });
+  if (E === 'parcial') it.push({ t: 'Recibir resto', fn: () => abrirCantidad(l.id, 'resto') }, { t: 'Cerrar sin resto', fn: () => transLinea(l.id, 'cerrar') });
+  if (E === 'recibido') it.push({ t: 'Revertir a En camino', fn: () => confirmarLinea(l.id, 'revertir') }, '-', editar);
+  if (it.length) it.push('-');
+  it.push({ t: 'Mover a bloque', sub: destinosMover(l) });
+  return it;
+}
+function destinosMover(l) {
+  const otros = S.bloques.filter((b) => b.idProv === l.idProv && b.id !== l.idBloque).sort(porFecha).slice(0, 8);
+  const sub = otros.map((b) => ({ t: `Bloque ${b.id}`, det: `${fCorto(b.fecha)} · ${nLineas(lineasDe(b.id).length)} · ${situacion(b.id)}`, fn: () => pedirMover(l.id, b.id) }));
+  if (sub.length) sub.push('-');
+  const sola = lineasDe(l.idBloque).length === 1;
+  sub.push({ t: 'Bloque nuevo', det: sola ? 'ya está sola en su bloque' : prov(l.idProv).nombre, dis: sola, fn: () => pedirMover(l.id, 'nuevo') });
+  return sub;
+}
+function menuBloque(idB) {
+  const b = bloque(idB);
+  const ls = lineasDe(idB);
+  const n = (e) => ls.filter((l) => l.estado === e).length;
+  const pend = n('pendiente'), enc = n('en_camino');
+  const otros = S.bloques.some((x) => x.idProv === b.idProv && x.id !== idB);
+  const todasPend = ls.every((l) => l.estado === 'pendiente');
+  return [
+    { t: `Confirmar bloque (${pend})`, dis: !pend, det: pend ? '' : 'nada pendiente', fn: () => abrirAccionBloque(idB, 'confirmar') },
+    { t: `Recibir todo (${enc})`, dis: !enc, det: enc ? '' : 'nada en camino', fn: () => abrirAccionBloque(idB, 'recibir') },
+    '-',
+    { t: 'Añadir líneas…', fn: () => abrirNuevo({ modo: 'bloque', idBloque: idB }) },
+    { t: 'Separar líneas…', dis: ls.length < 2, det: ls.length < 2 ? 'solo tiene una línea' : '', fn: () => abrirSeparar(idB) },
+    { t: 'Juntar con…', dis: !otros, det: otros ? '' : 'no hay otro bloque de este proveedor', fn: () => abrirJuntar(idB) },
+    { t: b.nota ? 'Editar nota…' : 'Añadir nota…', fn: () => abrirNota(idB) },
+    '-',
+    { t: `Cancelar bloque (${enc})`, dis: !enc, peligro: true, det: enc ? '' : 'nada en camino', fn: () => abrirAccionBloque(idB, 'cancelar') },
+    { t: 'Borrar bloque', dis: !todasPend, peligro: true, det: todasPend ? '' : 'hay líneas ya pedidas', fn: () => abrirAccionBloque(idB, 'borrar') },
+  ];
+}
+
+// ───────────────────────── acciones de línea (como hoy) ─────────────────────────
+function transLinea(idL, acc) {
+  const l = lin(idL);
+  const tipo = comp(l.idCom).tipo;
+  if (acc === 'confirmar') { l.estado = 'en_camino'; registrar('CONFIRMAR_PEDIDO', `ID_COMPRA: ${l.id} (${tipo})`); }
+  if (acc === 'recibido') { l.estado = 'recibido'; l.recibida = l.cantidad; registrar('RECIBIR_PEDIDO', `ID_COMPRA: ${l.id}, COMPONENTE: ${tipo}, CANT: ${l.cantidad}`); }
+  if (acc === 'cerrar') { l.estado = 'recibido'; registrar('CONFIRMAR_ALTERADO', `ID_COMPRA: ${l.id} (${tipo})`); }
+  if (acc === 'cancelar') { l.estado = 'cancelado'; registrar('CANCELAR_PEDIDO', `ID_COMPRA: ${l.id} (${tipo})`); }
+  if (acc === 'revertir') { l.estado = 'en_camino'; l.recibida = null; registrar('DESRECIBIR_PEDIDO', `ID_COMPRA: ${l.id} (${tipo})`); }
+  if (acc === 'borrar') {
+    S.lineas = S.lineas.filter((x) => x.id !== idL);
+    registrar('BORRAR_PEDIDO', `ID_COMPRA: ${l.id} (${tipo})`);
+    if (limpiarVacio(l.idBloque)) toast(`Línea borrada. El Bloque ${l.idBloque} se quedó vacío y desaparece.`);
+  }
+  l.v++;
+  renderTodo();
+}
+const TEXTO_CONF = {
+  cancelar: (l) => ({ titulo: 'Cancelar pedido', html: `¿Cancelar el pedido de <b>${esc(comp(l.idCom).tipo)}</b>? Una línea cancelada no se puede reactivar.`, boton: 'Cancelar pedido', peligro: true }),
+  borrar: (l) => ({ titulo: 'Borrar pedido', html: `¿Borrar el pedido pendiente de <b>${esc(comp(l.idCom).tipo)}</b>?`, boton: 'Borrar', peligro: true }),
+  revertir: (l) => ({ titulo: 'Revertir a En camino', html: `¿Revertir <b>${esc(comp(l.idCom).tipo)}</b> a en camino? Se descuentan del stock las unidades recibidas.`, boton: 'Revertir' }),
+};
+function confirmarLinea(idL, acc) {
+  const t = TEXTO_CONF[acc](lin(idL));
+  abrirConfirm({ ...t, ok: () => transLinea(idL, acc) });
+}
+function abrirCantidad(idL, modo) {
+  const l = lin(idL);
+  U.dlg = { tipo: 'cantidad', idL, modo, max: modo === 'parcial' ? l.cantidad - 1 : l.cantidad - (l.recibida || 0), error: null };
+  renderDlg();
+}
+function confirmarCantidad() {
+  const D = U.dlg, l = lin(D.idL);
+  const v = Number(document.getElementById('cantTxt').value);
+  if (!Number.isInteger(v) || v < 1 || v > D.max) { D.error = `Introduce un número entre 1 y ${D.max}.`; renderDlg(); return; }
+  if (D.modo === 'parcial') { l.estado = 'parcial'; l.recibida = v; registrar('RECEPCION_PARCIAL', `ID_COMPRA: ${l.id}, RECIBIDAS: ${v}/${l.cantidad}`); }
+  else { l.recibida = (l.recibida || 0) + v; if (l.recibida >= l.cantidad) l.estado = 'recibido'; registrar('RECIBIR_RESTO', `ID_COMPRA: ${l.id}, +${v}`); }
+  l.v++; cerrarDlg(); renderTodo();
+}
+
+// ───────────────────────── mover ─────────────────────────
+function pedirMover(idL, destino) {
+  const l = lin(idL);
+  const nombreDest = destino === 'nuevo' ? 'un bloque nuevo' : `el Bloque ${destino}`;
+  const hacer = () => {
+    const r = moverLinea(idL, destino);
+    toast(`${comp(l.idCom).tipo} movida al Bloque ${r.idDest}${r.vacio ? ` · el Bloque ${r.origen} se quedó vacío y desaparece` : ''}`);
+    renderTodo();
+  };
+  if (l.estado === 'pendiente') { hacer(); return; }
+  abrirConfirm({
+    titulo: 'Mover línea ya pedida',
+    html: `La línea <b>${esc(comp(l.idCom).tipo)}</b> (ID ${l.id}) está <b>${chipTxt(l.estado)}</b>. ¿Moverla a ${nombreDest} igualmente?
+      <div class="caja info">El stock no cambia. El movimiento queda apuntado en el registro de actividad.</div>`,
+    boton: 'Mover', ok: hacer,
+  });
+}
+
+// ───────────────────────── acciones de bloque ─────────────────────────
+const ACC = {
+  confirmar: { titulo: 'Confirmar bloque', de: 'pendiente', boton: 'Confirmar', cambian: 'Pasan a en camino', peligro: false },
+  recibir: { titulo: 'Recibir todo', de: 'en_camino', boton: 'Recibir', cambian: 'Se reciben (suman al stock)', peligro: false },
+  cancelar: { titulo: 'Cancelar bloque', de: 'en_camino', boton: 'Cancelar líneas', cambian: 'Se cancelan (no se pueden reactivar)', peligro: true },
+  borrar: { titulo: 'Borrar bloque', de: 'pendiente', boton: 'Borrar bloque', cambian: 'Se borran el bloque y todas sus líneas', peligro: true },
+};
+function razonNo(l, acc) {
+  const E = l.estado;
+  if (acc === 'confirmar') return E === 'cancelado' ? 'cancelado' : `ya ${chipTxt(E)}`;
+  if (acc === 'recibir') {
+    if (E === 'pendiente') return 'pendiente: aún no se ha pedido';
+    if (E === 'parcial') return `parcial (${l.recibida}/${l.cantidad}): usa «Recibir resto» en su fila`;
+    return E === 'recibido' ? 'ya recibido' : 'cancelado';
+  }
+  if (acc === 'cancelar') {
+    if (E === 'pendiente') return 'pendiente: se borra, no se cancela';
+    if (E === 'parcial') return 'parcial: usa «Cerrar sin resto» en su fila';
+    return E === 'recibido' ? 'ya recibido' : 'ya cancelado';
+  }
+  return chipTxt(E);
+}
+function abrirAccionBloque(idB, acc) {
+  const ls = lineasDe(idB);
+  const cambian = ls.filter((l) => l.estado === ACC[acc].de);
+  U.dlg = { tipo: 'accion', idB, acc, snap: cambian.map((l) => [l.id, l.v]), simulado: null };
+  renderDlg();
+}
+function simularOtro() {
+  const D = U.dlg;
+  const [idL] = D.snap[0];
+  const l = lin(idL);
+  if (D.acc === 'recibir' || D.acc === 'cancelar') { l.estado = 'recibido'; l.recibida = l.cantidad; registrar('RECIBIR_PEDIDO', `ID_COMPRA: ${l.id}`, 'otro supertécnico'); }
+  else { l.estado = 'en_camino'; registrar('CONFIRMAR_PEDIDO', `ID_COMPRA: ${l.id}`, 'otro supertécnico'); }
+  l.v++;
+  D.simulado = `Otro usuario acaba de cambiar ${comp(l.idCom).tipo} (ID ${l.id}). Pulsa «${ACC[D.acc].boton}» para ver qué pasa.`;
+  renderDlg(); renderLog();
+}
+function ejecutarAccionBloque() {
+  const D = U.dlg;
+  const valido = D.snap.every(([id, v]) => { const l = lin(id); return l && l.v === v && l.estado === ACC[D.acc].de; });
+  if (!valido) {
+    U.dlg = { tipo: 'aviso', titulo: 'Advertencia', html: `Este bloque fue modificado por otro usuario. Los datos se han recargado.<div class="caja info">No se ha aplicado <b>ningún</b> cambio: o todo, o nada. Vuelve a abrir la acción si sigue haciendo falta.</div>` };
+    renderDlg(); renderTabla(); return;
+  }
+  const ids = D.snap.map(([id]) => id);
+  const b = bloque(D.idB);
+  if (D.acc === 'borrar') {
+    S.lineas = S.lineas.filter((l) => l.idBloque !== D.idB);
+    S.bloques = S.bloques.filter((x) => x.id !== D.idB);
+    registrar('BORRAR_BLOQUE', `Bloque ${D.idB} (${prov(b.idProv).nombre}), ${nLineas(ids.length)}: ${ids.join(', ')}`);
+    toast(`Bloque ${D.idB} borrado`);
+  } else {
+    for (const id of ids) {
+      const l = lin(id);
+      if (D.acc === 'confirmar') l.estado = 'en_camino';
+      if (D.acc === 'recibir') { l.estado = 'recibido'; l.recibida = l.cantidad; }
+      if (D.acc === 'cancelar') l.estado = 'cancelado';
+      l.v++;
+    }
+    const nombre = { confirmar: 'CONFIRMAR_BLOQUE', recibir: 'RECIBIR_BLOQUE', cancelar: 'CANCELAR_BLOQUE' }[D.acc];
+    registrar(nombre, `Bloque ${D.idB}, ${nLineas(ids.length)}: ID_COMPRA ${ids.join(', ')}`);
+    toast(`Bloque ${D.idB}: ${nLineas(ids.length)} ${{ confirmar: 'confirmadas', recibir: 'recibidas', cancelar: 'canceladas' }[D.acc]}`);
+  }
+  cerrarDlg(); renderTodo();
+}
+
+function abrirSeparar(idB) { U.dlg = { tipo: 'separar', idB, marcadas: new Set() }; renderDlg(); }
+function ejecutarSeparar() {
+  const D = U.dlg, b = bloque(D.idB);
+  const nuevo = crearBloque(b.idProv);
+  for (const id of D.marcadas) moverLinea(id, nuevo.id, 'SEPARAR');
+  registrar('SEPARAR_BLOQUE', `De Bloque ${D.idB} a Bloque ${nuevo.id}: ${nLineas(D.marcadas.size)}`);
+  toast(`${nLineas(D.marcadas.size)} separadas al Bloque ${nuevo.id} (nuevo)`);
+  cerrarDlg(); renderTodo();
+}
+function abrirJuntar(idB) { U.dlg = { tipo: 'juntar', idB, destino: null }; renderDlg(); }
+function ejecutarJuntar() {
+  const D = U.dlg, b = bloque(D.idB), dest = bloque(D.destino);
+  for (const l of lineasDe(D.idB)) moverLinea(l.id, D.destino, 'JUNTAR');
+  if (b.nota) dest.nota = (dest.nota ? `${dest.nota} · ${b.nota}` : b.nota).slice(0, 200);
+  registrar('JUNTAR_BLOQUE', `Bloque ${D.idB} → Bloque ${D.destino}`);
+  toast(`Bloque ${D.idB} juntado en el Bloque ${D.destino}`);
+  cerrarDlg(); renderTodo();
+}
+function abrirNota(idB) { U.dlg = { tipo: 'nota', idB }; renderDlg(); }
+function guardarNota() {
+  const D = U.dlg, b = bloque(D.idB);
+  b.nota = document.getElementById('notaTxt').value.trim();
+  b.v++;
+  registrar('EDITAR_NOTA_BLOQUE', `Bloque ${b.id}: "${b.nota}"`);
+  cerrarDlg(); renderTodo();
+}
+
+// ───────────────────────── nuevo pedido / añadir líneas ─────────────────────────
+function abrirNuevo(op) {
+  const fijo = op.modo === 'bloque';
+  const b = fijo ? bloque(op.idBloque) : null;
+  U.dlg = { tipo: 'nuevo', modo: op.modo, idBloque: op.idBloque, provGeneral: fijo ? b.idProv : null, lineas: [], destinos: {}, error: null, info: null };
+  renderDlg();
+}
+function lineaVacia(D) { return { idCom: null, idProv: D.provGeneral, cant: 1, precio: 0, urg: false }; }
+function gruposNuevo(D) {
+  const m = new Map();
+  D.lineas.forEach((x) => { if (x.idProv) m.set(x.idProv, (m.get(x.idProv) || 0) + 1); });
+  return [...m.entries()];
+}
+function anadirPrevision() {
+  const D = U.dlg;
+  let n = 0;
+  for (const c of COMPS.filter((c) => c.pedir > 0)) {
+    const ya = D.lineas.find((x) => x.idCom === c.id);
+    if (ya) ya.cant = Math.max(ya.cant, c.pedir);
+    else D.lineas.push({ idCom: c.id, idProv: D.provGeneral, cant: c.pedir, precio: c.ref, urg: false });
+    n++;
+  }
+  D.info = `Previsión: ${n} piezas en modo Auto con «Pedir 60 d» > 0 (se ha saltado 1 con 0: cami13 / cami13pro).`;
+  D.error = null;
+  renderDlg();
+}
+function confirmarNuevo() {
+  const D = U.dlg;
+  if (!D.lineas.length) { D.error = 'Añade al menos una línea.'; renderDlg(); return; }
+  for (let i = 0; i < D.lineas.length; i++) {
+    const x = D.lineas[i];
+    if (!x.idCom) { D.error = `Línea ${i + 1}: selecciona un componente.`; renderDlg(); return; }
+    if (!x.idProv) { D.error = `Línea ${i + 1}: selecciona un proveedor.`; renderDlg(); return; }
+    if (!(x.cant > 0)) { D.error = `Línea ${i + 1}: la cantidad debe ser mayor que 0.`; renderDlg(); return; }
+    if (!(x.precio >= 0)) { D.error = `Línea ${i + 1}: el precio no puede ser negativo.`; renderDlg(); return; }
+  }
+  const resumenToast = [];
+  for (const [idProv, n] of gruposNuevo(D)) {
+    let dest = D.modo === 'bloque' ? D.idBloque : (D.destinos[idProv] ?? destinoPorDefecto(idProv));
+    let esNuevo = false;
+    if (dest === 'nuevo') { dest = crearBloque(idProv).id; esNuevo = true; }
+    for (const x of D.lineas.filter((y) => y.idProv === idProv)) {
+      const p = prov(idProv);
+      const l = { id: sigL++, idBloque: dest, idCom: x.idCom, idProv, cantidad: x.cant, recibida: null, urgente: x.urg, fecha: ahora(), precio: x.precio, divisa: p.divisa, precioEur: round2(x.precio * TASA[p.divisa]), estado: 'pendiente', v: 1 };
+      S.lineas.push(l);
+      registrar('CREAR_PEDIDO', `ID_COMPRA: ${l.id}, COMPONENTE: ${comp(x.idCom).tipo}, PROVEEDOR: ${p.nombre}, CANT: ${x.cant}, Bloque ${dest}`);
+    }
+    U.manual[dest] = true;
+    resumenToast.push(`Bloque ${dest}${esNuevo ? ' (nuevo)' : ''}: ${n}`);
+  }
+  toast(`Guardado · ${resumenToast.join(' · ')}`);
+  cerrarDlg(); renderTodo();
+}
+
+// ───────────────────────── editar línea ─────────────────────────
+function abrirEditar(idL) {
+  const l = lin(idL);
+  U.dlg = { tipo: 'editar', idL, idProv: l.idProv, cant: l.cantidad, precio: l.precio, urg: l.urgente, destino: null, error: null };
+  renderDlg();
+}
+function guardarEditar() {
+  const D = U.dlg, l = lin(D.idL);
+  if (!(D.cant > 0)) { D.error = 'La cantidad debe ser mayor que 0.'; renderDlg(); return; }
+  if (!(D.precio >= 0)) { D.error = 'El precio no puede ser negativo.'; renderDlg(); return; }
+  const cambiaProv = D.idProv !== l.idProv;
+  const aplicar = () => {
+    const p = prov(D.idProv);
+    l.cantidad = D.cant; l.precio = D.precio; l.divisa = p.divisa; l.precioEur = round2(D.precio * TASA[p.divisa]); l.urgente = D.urg; l.v++;
+    registrar('EDITAR_PEDIDO', `ID_COMPRA: ${l.id}${cambiaProv ? `, PROVEEDOR: ${prov(l.idProv).nombre} → ${p.nombre}` : ''}`);
+    let txt = `${comp(l.idCom).tipo} guardada`;
+    if (cambiaProv) {
+      l.idProv = D.idProv;
+      const r = moverLinea(l.id, D.destino, 'CAMBIO DE PROVEEDOR');
+      txt += ` · ahora en el Bloque ${r.idDest}${r.vacio ? ` (el Bloque ${r.origen} desaparece)` : ''}`;
+    }
+    cerrarDlg(); toast(txt); renderTodo();
+  };
+  if (cambiaProv && l.estado !== 'pendiente') {
+    abrirConfirm({
+      titulo: 'Mover línea ya pedida',
+      html: `La línea <b>${esc(comp(l.idCom).tipo)}</b> está <b>${chipTxt(l.estado)}</b>. Al cambiarle el proveedor pasa a ${D.destino === 'nuevo' ? 'un bloque nuevo' : `el Bloque ${D.destino}`} de <b>${esc(prov(D.idProv).nombre)}</b>. ¿Continuar?
+        <div class="caja info">El stock no cambia. Queda apuntado en el registro de actividad.</div>`,
+      boton: 'Guardar y mover', ok: aplicar, volver: true,
+    });
+    return;
+  }
+  aplicar();
+}
+
+// ───────────────────────── diálogos ─────────────────────────
+function abrirConfirm(c) { if (c.volver) U.dlgPrev = U.dlg; U.dlg = { tipo: 'confirm', ...c }; renderDlg(); }
+function cerrarDlg() { U.dlg = null; U.dlgPrev = null; renderDlg(); }
+function cancelarDlg() {
+  if (U.dlg && U.dlg.tipo === 'confirm' && U.dlgPrev) { U.dlg = U.dlgPrev; U.dlgPrev = null; renderDlg(); return; }
+  cerrarDlg();
+}
+
+function htmlDlg(D) {
+  const pie = (izq, botones) => `<div class="pie">${izq ? `<span class="izq">${izq}</span>` : ''}${botones}</div>`;
+  const cancelar = '<button class="btn" data-a="dlgCancelar">Cancelar</button>';
+
+  if (D.tipo === 'confirm') {
+    return `<div class="dlg"><h2>${esc(D.titulo)}</h2><div class="cuerpo">${D.html}</div>
+      ${pie('', `${cancelar}<button class="btn ${D.peligro ? 'peligro' : 'prim'}" data-a="dlgOk">${esc(D.boton)}</button>`)}</div>`;
+  }
+  if (D.tipo === 'aviso') {
+    return `<div class="dlg"><h2>${esc(D.titulo)}</h2><div class="cuerpo">${D.html}</div>${pie('', '<button class="btn prim" data-a="dlgCancelar">Aceptar</button>')}</div>`;
+  }
+  if (D.tipo === 'cantidad') {
+    const l = lin(D.idL);
+    const preg = D.modo === 'parcial' ? `¿Cuántas unidades de <b>${esc(comp(l.idCom).tipo)}</b> han llegado? (pedidas ${l.cantidad})` : `¿Cuántas unidades más de <b>${esc(comp(l.idCom).tipo)}</b> han llegado? (faltan ${D.max})`;
+    return `<div class="dlg"><h2>${D.modo === 'parcial' ? 'Recepción parcial' : 'Recibir resto'}</h2><div class="cuerpo">${preg}
+      <div class="campo"><input type="number" id="cantTxt" min="1" max="${D.max}" value="1" style="width:110px"></div>
+      ${D.error ? `<div class="caja error">${esc(D.error)}</div>` : ''}</div>
+      ${pie('', `${cancelar}<button class="btn prim" data-a="cantOk">Confirmar</button>`)}</div>`;
+  }
+  if (D.tipo === 'accion') {
+    const b = bloque(D.idB), A = ACC[D.acc];
+    const ls = lineasDe(D.idB);
+    const ids = new Set(D.snap.map(([id]) => id));
+    const cambian = ls.filter((l) => ids.has(l.id));
+    const quedan = ls.filter((l) => !ids.has(l.id));
+    const it = (l, r) => `<div class="it"><span class="idc">${l.id}</span><b>${esc(comp(l.idCom).tipo)}</b><span>× ${l.cantidad}</span>${r ? `<span class="r">${esc(r)}</span>` : `<span class="r">${badge(l)}</span>`}</div>`;
+    const sim = D.simulado ? `<div class="caja aviso-c">${esc(D.simulado)}</div>`
+      : (D.acc !== 'borrar' ? `<button class="simular" data-a="simular">Prueba del prototipo: simular que otro usuario cambia una línea ahora</button>` : '');
+    return `<div class="dlg"><h2>${A.titulo} · Bloque ${b.id}</h2><div class="sub">${esc(prov(b.idProv).nombre)} · ${fDia(b.fecha)}</div><div class="cuerpo">
+      <div class="lista"><h4>${A.cambian} (${cambian.length})</h4>${cambian.map((l) => it(l)).join('')}</div>
+      ${quedan.length ? `<div class="lista no"><h4>No cambian (${quedan.length})</h4>${quedan.map((l) => it(l, razonNo(l, D.acc))).join('')}</div>` : ''}
+      ${sim}</div>
+      ${pie('', `${cancelar}<button class="btn ${A.peligro ? 'peligro' : 'prim'}" data-a="accionOk">${A.boton}${D.acc !== 'borrar' ? ` (${cambian.length})` : ''}</button>`)}</div>`;
+  }
+  if (D.tipo === 'separar') {
+    const b = bloque(D.idB), ls = lineasDe(D.idB);
+    const pedidas = ls.filter((l) => D.marcadas.has(l.id) && l.estado !== 'pendiente').length;
+    const todas = D.marcadas.size === ls.length;
+    const okDis = D.marcadas.size === 0 || todas;
+    return `<div class="dlg"><h2>Separar líneas · Bloque ${b.id}</h2><div class="sub">Las marcadas pasan a un <b>bloque nuevo</b> de ${esc(prov(b.idProv).nombre)} con fecha de hoy.</div><div class="cuerpo">
+      <div class="lista">${ls.map((l) => `<label class="radio"><input type="checkbox" data-sep="${l.id}" ${D.marcadas.has(l.id) ? 'checked' : ''}><span class="idc">${l.id}</span><b>${esc(comp(l.idCom).tipo)}</b><span>× ${l.cantidad}</span><span class="r" style="margin-left:auto">${badge(l)}</span></label>`).join('')}</div>
+      ${todas ? '<div class="caja info">Deja al menos una línea en el Bloque ' + b.id + '.</div>' : ''}
+      ${pedidas ? `<div class="caja aviso-c">${nLineas(pedidas)} de las marcadas ya ${pedidas === 1 ? 'se pidió' : 'se pidieron'}: el movimiento quedará apuntado en el registro.</div>` : ''}
+      </div>${pie('', `${cancelar}<button class="btn prim" data-a="separarOk" ${okDis ? 'disabled' : ''}>${pedidas ? 'Separar igualmente' : 'Separar'}${D.marcadas.size ? ` (${D.marcadas.size})` : ''}</button>`)}</div>`;
+  }
+  if (D.tipo === 'juntar') {
+    const b = bloque(D.idB);
+    const cands = S.bloques.filter((x) => x.idProv === b.idProv && x.id !== D.idB).sort(porFecha);
+    const pedidas = lineasDe(D.idB).filter((l) => l.estado !== 'pendiente').length;
+    return `<div class="dlg"><h2>Juntar Bloque ${b.id} con…</h2><div class="sub">Sus ${nLineas(lineasDe(D.idB).length)} pasan al bloque que elijas y el Bloque ${b.id} desaparece.${b.nota ? ' Su nota se añade a la del destino.' : ''}</div><div class="cuerpo">
+      <div class="lista">${cands.map((x) => `<label class="radio"><input type="radio" name="juntar" value="${x.id}" ${D.destino === x.id ? 'checked' : ''}><b>Bloque ${x.id}</b><span>${fDia(x.fecha)} · ${nLineas(lineasDe(x.id).length)} · ${fNum(totalBloque(x.id))} € · ${situacion(x.id)}</span></label>`).join('')}</div>
+      ${pedidas ? `<div class="caja aviso-c">El Bloque ${b.id} tiene ${nLineas(pedidas)} ya ${pedidas === 1 ? 'pedida' : 'pedidas'}: el movimiento quedará apuntado en el registro.</div>` : ''}
+      </div>${pie('', `${cancelar}<button class="btn prim" data-a="juntarOk" ${D.destino ? '' : 'disabled'}>Juntar</button>`)}</div>`;
+  }
+  if (D.tipo === 'nota') {
+    const b = bloque(D.idB);
+    return `<div class="dlg"><h2>Nota · Bloque ${b.id}</h2><div class="sub">Nº de pedido o factura del proveedor, seguimiento, forma de pago… Sale en la cabecera y en el CSV.</div><div class="cuerpo">
+      <textarea id="notaTxt" maxlength="200" rows="3" style="width:100%">${esc(b.nota)}</textarea><div class="cont" id="notaCont">${b.nota.length}/200</div></div>
+      ${pie('', `${cancelar}<button class="btn prim" data-a="notaOk">Guardar</button>`)}</div>`;
+  }
+  if (D.tipo === 'editar') {
+    const l = lin(D.idL);
+    const cambiaProv = D.idProv !== l.idProv;
+    const pr = prov(D.idProv);
+    const cantDis = l.estado === 'recibido';
+    let bloqueCampo = '';
+    if (cambiaProv) {
+      const cands = S.bloques.filter((b) => b.idProv === D.idProv).sort(porFecha).slice(0, 8);
+      bloqueCampo = `<label class="campo"><span>Bloque</span><select data-ed="destino">${cands.map((b) => `<option value="${b.id}" ${D.destino === b.id ? 'selected' : ''}>Bloque ${b.id} · ${fCorto(b.fecha)} · ${nLineas(lineasDe(b.id).length)} · ${situacion(b.id)}</option>`).join('')}<option value="nuevo" ${D.destino === 'nuevo' ? 'selected' : ''}>Bloque nuevo</option></select></label>
+        <div class="caja info">Al cambiar el proveedor, la línea sale del Bloque ${l.idBloque} y pasa a un bloque de <b>${esc(pr.nombre)}</b>. ${l.estado === 'pendiente' ? 'Sugerido: su bloque abierto, si tiene.' : 'Como ya se pidió, se sugiere un bloque nuevo.'}${pr.divisa !== prov(l.idProv).divisa ? ` <b>Ojo:</b> ${esc(pr.nombre)} trabaja en ${pr.divisa}; revisa el precio.` : ''}</div>`;
+    }
+    return `<div class="dlg"><h2>Editar pedido</h2><div class="sub"><b>${esc(comp(l.idCom).tipo)}</b> · ID ${l.id} · Bloque ${l.idBloque} · ${chipTxt(l.estado)}</div><div class="cuerpo">
+      <label class="campo"><span>Proveedor</span><select data-ed="idProv">${PROVS.map((p) => `<option value="${p.id}" ${D.idProv === p.id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select></label>
+      ${bloqueCampo}
+      <div class="fila-campos">
+        <label class="campo"><span>Cantidad</span><input type="number" min="1" data-ed="cant" value="${D.cant}" ${cantDis ? 'disabled title="En recibido no se cambia la cantidad"' : ''} style="width:100px"></label>
+        <label class="campo"><span>P.Unit. (${pr.divisa})</span><input type="number" min="0" step="0.01" data-ed="precio" value="${D.precio}" style="width:110px"></label>
+        <label class="campo"><span>Urgente</span><input type="checkbox" data-ed="urg" ${D.urg ? 'checked' : ''} style="margin-top:6px"></label>
+      </div>
+      ${D.error ? `<div class="caja error">${esc(D.error)}</div>` : ''}</div>
+      ${pie('', `${cancelar}<button class="btn prim" data-a="editarOk">Guardar</button>`)}</div>`;
+  }
+  if (D.tipo === 'nuevo') {
+    const fijo = D.modo === 'bloque';
+    const b = fijo ? bloque(D.idBloque) : null;
+    const titulo = fijo ? `Añadir líneas · Bloque ${b.id}` : 'Nuevo pedido';
+    const sub = fijo ? `<div class="sub">${esc(prov(b.idProv).nombre)} · ${situacion(b.id)} · las líneas nuevas entran como <b>pendientes</b> y el bloque mostrará «Confirmar bloque (n)».</div>` : '';
+    const nPrev = COMPS.filter((c) => c.pedir > 0).length;
+    const optsComp = (sel) => `<option value="">Escribe componente...</option>${COMPS.map((c) => `<option value="${c.id}" ${sel === c.id ? 'selected' : ''}>${esc(c.tipo)}</option>`).join('')}`;
+    const optsProv = (sel) => `<option value=""></option>${PROVS.map((p) => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}`;
+    const filas = D.lineas.map((x, i) => `<tr>
+      <td class="n">${i + 1}</td>
+      <td><select data-nl="${i}" data-k="idCom">${optsComp(x.idCom)}</select></td>
+      <td>${fijo ? `<span class="fijo">${esc(prov(b.idProv).nombre)}</span>` : `<select data-nl="${i}" data-k="idProv">${optsProv(x.idProv)}</select>`}</td>
+      <td><input type="number" min="1" data-nl="${i}" data-k="cant" value="${x.cant}"></td>
+      <td><input type="number" min="0" step="0.01" data-nl="${i}" data-k="precio" value="${x.precio}"> <span class="div">${x.idProv ? (prov(x.idProv).divisa === 'USD' ? '$' : '€') : ''}</span></td>
+      <td><input type="checkbox" data-nl="${i}" data-k="urg" ${x.urg ? 'checked' : ''}></td>
+      <td><button class="quitar" data-a="nlQuitar" data-i="${i}" title="Quitar línea">✕</button></td></tr>`).join('');
+    const grupos = gruposNuevo(D);
+    let dest = '';
+    if (fijo) {
+      dest = D.lineas.length ? `<div class="dest"><b>${esc(prov(b.idProv).nombre)}</b> (${nLineas(D.lineas.length)}) <span class="flecha">→</span> <b>Bloque ${b.id}</b> <span class="idc">(fijado)</span></div>` : '<div class="idc">Añade líneas para ver su destino.</div>';
+    } else {
+      dest = grupos.map(([idProv, n]) => {
+        const ab = abiertosDe(idProv);
+        const val = D.destinos[idProv] ?? destinoPorDefecto(idProv);
+        const ctrl = ab.length
+          ? `<select data-dest="${idProv}">${ab.map((bb) => `<option value="${bb.id}" ${val === bb.id ? 'selected' : ''}>Añadir a Bloque ${bb.id} · ${fCorto(bb.fecha)} · ${nLineas(lineasDe(bb.id).length)}</option>`).join('')}<option value="nuevo" ${val === 'nuevo' ? 'selected' : ''}>Bloque nuevo</option></select>`
+          : '<b>Bloque nuevo</b> <span class="idc">(no tiene ninguno abierto)</span>';
+        return `<div class="dest"><b>${esc(prov(idProv).nombre)}</b> (${nLineas(n)}) <span class="flecha">→</span> ${ctrl}</div>`;
+      }).join('');
+      const sinProv = D.lineas.filter((x) => !x.idProv).length;
+      if (sinProv) dest += `<div class="dest idc">${nLineas(sinProv)} sin proveedor todavía</div>`;
+      if (!D.lineas.length) dest = '<div class="idc">Añade líneas: aquí verás a qué bloque va cada proveedor.</div>';
+    }
+    return `<div class="dlg ancho"><h2>${titulo}</h2>${sub}<div class="cuerpo">
+      <div class="barra-nuevo"><b>Proveedor:</b>
+        ${fijo ? `<span class="fijo">${esc(prov(b.idProv).nombre)}</span>` : `<select id="provGeneral">${optsProv(D.provGeneral)}</select>
+        <button class="btn" data-a="aplicarTodas" ${D.provGeneral && D.lineas.length ? '' : 'disabled'}>Aplicar a todas</button>`}
+        <button class="btn" data-a="prevision">Añadir previsión (${nPrev})</button>
+      </div>
+      <table class="lineas-nuevo"><thead><tr><th></th><th>Componente</th><th style="width:170px">Proveedor</th><th>Cant.</th><th>P.Unit.</th><th>Urg.</th><th></th></tr></thead>
+      <tbody>${filas || '<tr><td colspan="7" class="idc" style="padding:14px">Sin líneas. Usa «+ Añadir línea» o «Añadir previsión».</td></tr>'}</tbody></table>
+      <button class="btn link" data-a="nlAnadir">+ Añadir línea</button>
+      ${D.info ? `<div class="caja info">${esc(D.info)}</div>` : ''}
+      <div class="destinos"><h4>Bloques</h4>${dest}
+        ${fijo ? '' : '<div class="idc" style="margin-top:6px;font-size:11.5px">Solo se ofrecen bloques <b>abiertos</b> (sin nada confirmado). Para sumar a uno ya confirmado: ⋮ del bloque → «Añadir líneas…».</div>'}</div>
+      ${D.error ? `<div class="caja error">${esc(D.error)}</div>` : ''}</div>
+      ${pie('', `<button class="btn" data-a="dlgCancelar">Atrás</button><button class="btn prim" data-a="nuevoOk">Confirmar</button>`)}</div>`;
+  }
+  if (D.tipo === 'csv') {
+    const ls = ordenVista();
+    const cab = 'ID;Bloque;Nota del bloque;Pedido;Componente;Proveedor;Cant.;P.Unit.;Divisa;EUR;Estado';
+    const filas = ls.slice(0, 16).map((l) => [l.id, l.idBloque, bloque(l.idBloque).nota, fFecha(l.fecha), comp(l.idCom).tipo, prov(l.idProv).nombre, textoCantidad(l), fNum(l.precio), l.divisa, fNum(totalFila(l)), l.estado].join(';'));
+    return `<div class="dlg ancho"><h2>CSV de pedidos</h2><div class="sub">Siempre plano, en el orden de la vista y con los filtros aplicados. Columnas nuevas: <b>Bloque</b> y <b>Nota del bloque</b>.</div><div class="cuerpo">
+      <pre class="csv">${esc([cab, ...filas].join('\n'))}${ls.length > 16 ? `\n… (${ls.length} filas en total)` : ''}</pre></div>
+      ${pie('', '<button class="btn prim" data-a="dlgCancelar">Cerrar</button>')}</div>`;
+  }
+  return '';
+}
+function renderDlg() {
+  const el = document.getElementById('dlg');
+  if (!U.dlg) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="overlay">${htmlDlg(U.dlg)}</div>`;
+  const f = el.querySelector('#cantTxt, #notaTxt');
+  if (f) { f.focus(); if (f.select) f.select(); }
+}
+
+// ───────────────────────── toast y render general ─────────────────────────
+function toast(txt) {
+  const el = document.getElementById('toast');
+  el.innerHTML = `<div class="toast">${esc(txt)}</div>`;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { el.innerHTML = ''; }, 3800);
+}
+function renderTodo() { renderProto(); renderBarra(); renderTabla(); renderLog(); renderMenu(); renderDlg(); }
+
+// ───────────────────────── eventos ─────────────────────────
+const ACCIONES = {
+  rol: (t) => { U.rol = t.dataset.v; U.menu = null; renderTodo(); },
+  guia: () => { U.guia = !U.guia; renderProto(); },
+  reiniciar: () => { reiniciar(true); renderTodo(); toast('Datos reiniciados'); },
+  tipo: (t) => { U.tipo = t.dataset.v; renderTodo(); },
+  pop: (t) => { U.pop = U.pop === t.dataset.v ? null : t.dataset.v; renderBarra(); },
+  limpiar: () => { U.f = { estados: new Set(), provs: new Set(), texto: '', desde: '', hasta: '' }; U.pop = null; filtrosCambiados(); },
+  agrupar: () => { U.agrupar = !U.agrupar; renderBarra(); renderTabla(); },
+  todo: (t) => {
+    const v = t.dataset.v === '1';
+    const mapa = filtroActivo() ? U.manualFiltro : U.manual;
+    S.bloques.forEach((b) => { mapa[b.id] = v; });
+    renderBarra(); renderTabla();
+  },
+  csv: () => { U.dlg = { tipo: 'csv' }; renderDlg(); },
+  nuevo: () => { if (U.tipo === 'otros') { toast('«Nuevo otro pedido» sigue como hoy'); return; } abrirNuevo({ modo: 'normal' }); },
+  plegar: (t) => {
+    const id = Number(t.dataset.id);
+    const mapa = filtroActivo() ? U.manualFiltro : U.manual;
+    mapa[id] = !desplegado(id);
+    renderBarra(); renderTabla();
+  },
+  menuBloque: (t) => {
+    const r = t.getBoundingClientRect();
+    abrirMenu(r.right - 230, r.bottom + 4, `Bloque ${t.dataset.id}`, menuBloque(Number(t.dataset.id)));
+  },
+  comp: (t) => { U.sel = Number(t.dataset.id); renderTabla(); toast(`En la app real iría a Stock con ${comp(lin(Number(t.dataset.id)).idCom).tipo} seleccionado`); },
+  dlgCancelar: () => cancelarDlg(),
+  dlgOk: () => { const ok = U.dlg.ok; U.dlg = null; U.dlgPrev = null; renderDlg(); ok(); },
+  cantOk: () => confirmarCantidad(),
+  accionOk: () => ejecutarAccionBloque(),
+  simular: () => simularOtro(),
+  separarOk: () => ejecutarSeparar(),
+  juntarOk: () => ejecutarJuntar(),
+  notaOk: () => guardarNota(),
+  editarOk: () => guardarEditar(),
+  nuevoOk: () => confirmarNuevo(),
+  prevision: () => anadirPrevision(),
+  aplicarTodas: () => { const D = U.dlg; D.lineas.forEach((x) => { x.idProv = D.provGeneral; }); renderDlg(); },
+  nlAnadir: () => { const D = U.dlg; D.lineas.push(lineaVacia(D)); D.error = null; renderDlg(); },
+  nlQuitar: (t) => { const D = U.dlg; D.lineas.splice(Number(t.dataset.i), 1); D.error = null; renderDlg(); },
+};
+
+document.addEventListener('click', (e) => {
+  const enMenu = e.target.closest('.menu');
+  if (enMenu) {
+    const mi = e.target.closest('[data-mi]');
+    if (!mi) return;
+    const it = itemDeRuta(mi.dataset.mi);
+    if (!it || it.dis || it.sub) return;
+    U.menu = null; renderMenu();
+    it.fn();
+    return;
+  }
+  const t = e.target.closest('[data-a]');
+  if (U.menu) { U.menu = null; renderMenu(); if (!t || t.dataset.a !== 'menuBloque') { if (!t) return; } }
+  if (U.pop && !e.target.closest('.pop') && !(t && t.dataset.a === 'pop')) { U.pop = null; renderBarra(); }
+  if (t) { const f = ACCIONES[t.dataset.a]; if (f) f(t, e); return; }
+  const tr = e.target.closest('tr.fila');
+  if (tr) { U.sel = Number(tr.dataset.id); renderTabla(); }
+});
+
+document.addEventListener('contextmenu', (e) => {
+  const tr = e.target.closest('tr.fila, tr.cab');
+  if (!tr) return;
+  e.preventDefault();
+  if (U.rol !== 'super') { toast('El administrador solo consulta: sin menús'); return; }
+  if (tr.classList.contains('cab')) {
+    const id = Number(tr.dataset.bloque);
+    abrirMenu(e.clientX, e.clientY, `Bloque ${id}`, menuBloque(id));
+  } else {
+    const l = lin(Number(tr.dataset.id));
+    U.sel = l.id; renderTabla();
+    abrirMenu(e.clientX, e.clientY, `${comp(l.idCom).tipo} · ID ${l.id}`, menuLinea(l));
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.id === 'buscar') { U.f.texto = t.value; U.manualFiltro = {}; renderTabla(); return; }
+  if (t.id === 'notaTxt') { document.getElementById('notaCont').textContent = `${t.value.length}/200`; return; }
+  if (t.dataset.nl !== undefined && (t.dataset.k === 'cant' || t.dataset.k === 'precio')) {
+    U.dlg.lineas[Number(t.dataset.nl)][t.dataset.k] = Number(t.value); return;
+  }
+  if (t.dataset.ed === 'cant' || t.dataset.ed === 'precio') { U.dlg[t.dataset.ed] = Number(t.value); }
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.id === 'desde' || t.id === 'hasta') { U.f[t.id] = t.value; filtrosCambiados(); return; }
+  if (t.dataset.fe) { const s = U.f.estados; t.checked ? s.add(t.dataset.fe) : s.delete(t.dataset.fe); filtrosCambiados(); return; }
+  if (t.dataset.fp) { const s = U.f.provs, v = Number(t.dataset.fp); t.checked ? s.add(v) : s.delete(v); filtrosCambiados(); return; }
+  const D = U.dlg;
+  if (!D) return;
+  if (t.id === 'provGeneral') {
+    D.provGeneral = t.value ? Number(t.value) : null;
+    if (D.provGeneral) D.lineas.forEach((x) => { if (!x.idProv) x.idProv = D.provGeneral; });
+    renderDlg(); return;
+  }
+  if (t.dataset.nl !== undefined) {
+    const x = D.lineas[Number(t.dataset.nl)], k = t.dataset.k;
+    if (k === 'idCom') { x.idCom = t.value ? Number(t.value) : null; if (x.idCom && !x.precio) x.precio = comp(x.idCom).ref; }
+    if (k === 'idProv') x.idProv = t.value ? Number(t.value) : null;
+    if (k === 'urg') x.urg = t.checked;
+    if (k === 'cant' || k === 'precio') x[k] = Number(t.value);
+    D.error = null; renderDlg(); return;
+  }
+  if (t.dataset.dest) { D.destinos[Number(t.dataset.dest)] = t.value === 'nuevo' ? 'nuevo' : Number(t.value); return; }
+  if (t.dataset.ed === 'idProv') {
+    const l = lin(D.idL);
+    D.idProv = Number(t.value);
+    D.destino = D.idProv === l.idProv ? null : (l.estado === 'pendiente' ? destinoPorDefecto(D.idProv) : 'nuevo');
+    renderDlg(); return;
+  }
+  if (t.dataset.ed === 'destino') { D.destino = t.value === 'nuevo' ? 'nuevo' : Number(t.value); return; }
+  if (t.dataset.ed === 'urg') { D.urg = t.checked; return; }
+  if (t.dataset.sep) { const id = Number(t.dataset.sep); t.checked ? D.marcadas.add(id) : D.marcadas.delete(id); renderDlg(); return; }
+  if (t.name === 'juntar') { D.destino = Number(t.value); renderDlg(); }
+});
+
+document.addEventListener('toggle', (e) => { if (e.target.id === 'logDet') U.logAbierto = e.target.open; }, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (U.menu) { cerrarMenu(); return; }
+  if (U.pop) { U.pop = null; renderBarra(); return; }
+  if (U.dlg) cancelarDlg();
+});
+
+reiniciar(false);
+renderTodo();
+</script>
+</body>
+</html>
