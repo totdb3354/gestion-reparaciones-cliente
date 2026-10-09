@@ -83,9 +83,10 @@ En cada cierre, la sentencia copia el cliente del teléfono: `(SELECT t.ID_CLI F
 
 ## 6. Relleno de lo ya cerrado
 
-**Fuente.** El registro de actividad apunta cada asignación y cambio de cliente de un teléfono con el mismo formato
-desde que existe el vínculo: `ASIGNAR_CLIENTE` y `CAMBIAR_CLIENTE` con detalle `IMEI: <imei>, ID_CLI: <id>` (`—` =
-sin cliente) y su `FECHA`.
+**Fuente.** El registro de actividad apunta cada asignación, cambio y retirada de cliente de un teléfono con el mismo
+formato desde que existe el vínculo: `ASIGNAR_CLIENTE` y `CAMBIAR_CLIENTE` con detalle `IMEI: <imei>, ID_CLI: <id>`
+(`—` = sin cliente), y `QUITAR_CLIENTE` con detalle `IMEI: <imei>` («— Sin cliente —» del modal de asignación y del
+alta de teléfono, desde el 2026-07-02), cada uno con su `FECHA`. `QUITAR_CLIENTE` cuenta como apunte «sin cliente».
 
 **Regla, para cada trabajo cerrado** (`FECHA_FIN` no nula, anterior al arranque del servidor 0.9.8):
 1. Si su IMEI tiene apuntes: el `ID_CLI` del **último apunte con `FECHA <= FECHA_FIN`**; si todos son posteriores al
@@ -98,9 +99,12 @@ sin cliente) y su `FECHA`.
 **Fechas.** `Reparacion.FECHA_FIN` es `DATETIME` y `Log_Actividad.FECHA` es `TIMESTAMP`; el servidor las escribe en UTC.
 La sesión del relleno fija `time_zone = '+00:00'` para compararlas en la misma zona.
 
-**Hueco conocido.** Quitar el cliente con «— Sin cliente —» en el modal de asignación no deja apunte; tras una de
-esas, la regla 1 seguiría viendo el cliente anterior. El análisis lo hace visible (trabajos donde reconstruido y
-actual difieren).
+**Sin hueco por las retiradas.** Una primera versión de esta spec creía que quitar el cliente con «— Sin cliente —» no
+dejaba apunte; sí lo deja (`QUITAR_CLIENTE`, corregido en la revisión del script del relleno). El análisis muestra
+cuántos apuntes de cada acción se han leído.
+
+**Collation.** Las tablas temporales del relleno declaran `utf8mb4_unicode_ci` (una temporal toma la de la base, que
+puede no coincidir con la de las tablas) y el script comprueba antes la base y la collation de las tablas.
 
 **Cómo se aplica (decisión del usuario).** Todo en una transacción, en este orden:
 1. Relleno.

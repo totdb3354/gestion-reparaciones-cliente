@@ -67,17 +67,23 @@ Contenido completo de `Apuntes/quitar-clientes-incidencias.sql`:
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET @usuario := 'NOMBRE_DE_USUARIO';  -- <- cambiar por el usuario de la web que firma el registro (el tuyo)
 
--- 0.1 Debe salir 1 fila
-SELECT ID_USU, NOMBRE_USUARIO FROM Usuario WHERE NOMBRE_USUARIO = @usuario;
+-- 0.0 BASE = gestion_reparaciones. Si no, PARAR (la consola no esta en la base del ERP).
+SELECT DATABASE() AS BASE;
 
--- 0.2 Las cinco tablas deben salir con utf8mb4_unicode_ci.
---     Si salen con otra, cambiar la collation del SET NAMES de arriba por esa y volver a pegar el bloque 0.
+-- 0.1 Las cinco tablas deben salir con utf8mb4_unicode_ci. Si alguna sale con otra, PARAR
+--     (las variables, los literales y la tabla temporal tel_inc van con utf8mb4_unicode_ci).
 SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME IN ('Cliente', 'Telefono', 'Reparacion', 'Usuario', 'Log_Actividad');
 
+-- 0.2 Debe salir 1 fila (el usuario que firma el registro)
+SELECT ID_USU, NOMBRE_USUARIO FROM Usuario WHERE NOMBRE_USUARIO = @usuario;
+
 -- 0.3 Relleno de la 0.9.8 hecho: CERRADAS_CON_CLIENTE > 0. Si sale 0 (o error de columna), PARAR.
 SELECT COUNT(*) AS CERRADAS_CON_CLIENTE FROM Reparacion WHERE FECHA_FIN IS NOT NULL AND ID_CLI IS NOT NULL;
+
+-- 0.4 El bloque 2 usa READ COMMITTED: si LOG_BIN = 1 y FORMATO = STATEMENT, PARAR (los UPDATE darian error).
+SELECT @@log_bin AS LOG_BIN, @@binlog_format AS FORMATO;
 
 -- == Bloque 1: comprobacion (solo lectura) ===================================
 -- 1.1 Los clientes: deben salir exactamente los dos de incidencias
@@ -117,58 +123,69 @@ SELECT COUNT(*) AS TELEFONOS FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
 
 -- == Bloque 2: cambio y analisis (una transaccion) ===========================
 -- Pegar entero. Comparar cada "Changed" / "rows affected" con el bloque 1.4:
+--   2.0 = TELEFONOS (filas de la foto)    SIGUEN = TELEFONOS
 --   2.1 = ABIERTAS - YA_LLEVAN_NOMBRE    2.2 = URGENTES    2.3 = TELEFONOS    2.4 = TELEFONOS    2.5 QUEDAN = 0
 -- Revisar el analisis 2.6 y terminar a mano con COMMIT; (todo cuadra) o ROLLBACK; (algo no cuadra o ha salido
 -- cualquier ERROR: la consola sigue con las siguientes sentencias aunque una falle).
--- Mientras la transaccion esta abierta, las filas de esos telefonos quedan bloqueadas: no tardar mas de un par de minutos.
-START TRANSACTION;
+-- Bloqueos: READ COMMITTED (sin bloqueos de huecos) y cada cambio entra por la foto tel_inc (por clave), asi que hasta
+-- el COMMIT/ROLLBACK solo quedan bloqueadas las filas de esos telefonos: no tardar mas de un par de minutos.
+SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
--- Foto de los telefonos afectados y su cliente, antes de quitarlo (tabla temporal: no confirma la transaccion)
+-- 2.0 Foto de los telefonos afectados y su cliente, ANTES de abrir la transaccion (no deja nada bloqueado)
 DROP TEMPORARY TABLE IF EXISTS tel_inc;
-CREATE TEMPORARY TABLE tel_inc (IMEI VARCHAR(15) NOT NULL PRIMARY KEY, CLIENTE VARCHAR(150) NOT NULL)
-SELECT t.IMEI, c.NOMBRE AS CLIENTE
+-- Collation explicita: una tabla temporal toma la de la base, que puede no ser la de las tablas.
+CREATE TEMPORARY TABLE tel_inc (
+    IMEI    VARCHAR(15)  COLLATE utf8mb4_unicode_ci NOT NULL PRIMARY KEY,
+    ID_CLI  INT          NOT NULL,
+    CLIENTE VARCHAR(150) COLLATE utf8mb4_unicode_ci NOT NULL
+)
+SELECT t.IMEI, t.ID_CLI, c.NOMBRE AS CLIENTE
 FROM Telefono t JOIN Cliente c ON c.ID_CLI = t.ID_CLI
 WHERE FIND_IN_SET(t.ID_CLI, @ids);
 
+START TRANSACTION;
+
+-- Bloquea los telefonos de la foto para toda la transaccion (un cambio desde la web espera y luego da
+-- "Dato modificado por otro usuario"). SIGUEN = TELEFONOS; si sale menos, alguno cambio de cliente: ROLLBACK.
+SELECT COUNT(*) AS SIGUEN FROM tel_inc x STRAIGHT_JOIN Telefono t ON t.IMEI = x.IMEI AND t.ID_CLI = x.ID_CLI
+FOR UPDATE;
+
 -- 2.1 Nombre del cliente delante del comentario de las asignaciones abiertas
-UPDATE Reparacion r
-JOIN Telefono t ON t.IMEI = r.IMEI
-JOIN Cliente c ON c.ID_CLI = t.ID_CLI
+UPDATE tel_inc x STRAIGHT_JOIN Reparacion r ON r.IMEI = x.IMEI
 SET r.COMENTARIO_ASIGNACION = CASE
-      WHEN r.COMENTARIO_ASIGNACION IS NULL OR TRIM(r.COMENTARIO_ASIGNACION) = '' THEN c.NOMBRE
-      ELSE CONCAT(c.NOMBRE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_unicode_ci, r.COMENTARIO_ASIGNACION)
+      WHEN r.COMENTARIO_ASIGNACION IS NULL OR TRIM(r.COMENTARIO_ASIGNACION) = '' THEN x.CLIENTE
+      ELSE CONCAT(x.CLIENTE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_unicode_ci, r.COMENTARIO_ASIGNACION)
     END
-WHERE FIND_IN_SET(t.ID_CLI, @ids) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL
-  AND (r.COMENTARIO_ASIGNACION IS NULL OR r.COMENTARIO_ASIGNACION NOT LIKE CONCAT('%', c.NOMBRE, '%'));
+WHERE r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL
+  AND (r.COMENTARIO_ASIGNACION IS NULL OR r.COMENTARIO_ASIGNACION NOT LIKE CONCAT('%', x.CLIENTE, '%'));
 
 -- 2.2 Quitar el urgente. UPDATED_AT se conserva, como hace la web (ReparacionDAO.propagarUrgente).
-UPDATE Reparacion r
-JOIN Telefono t ON t.IMEI = r.IMEI
+UPDATE tel_inc x STRAIGHT_JOIN Reparacion r ON r.IMEI = x.IMEI
 SET r.URGENTE = FALSE, r.UPDATED_AT = r.UPDATED_AT
-WHERE FIND_IN_SET(t.ID_CLI, @ids) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
+WHERE r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
 
 -- 2.3 Una linea CAMBIAR_CLIENTE por telefono, con el mismo detalle que pone la web (TelefonoController.actualizarCliente)
 INSERT INTO Log_Actividad (ID_USU, NOMBRE_USUARIO, ACCION, DETALLE, MOTIVO)
 SELECT u.ID_USU, u.NOMBRE_USUARIO, 'CAMBIAR_CLIENTE',
-       CONCAT('IMEI: ', t.IMEI, ', ID_CLI: ', _utf8mb4 X'E28094' COLLATE utf8mb4_unicode_ci),
-       CONCAT('Limpieza de clientes ficticios: ', c.NOMBRE,
+       CONCAT('IMEI: ', x.IMEI, ', ID_CLI: ', _utf8mb4 X'E28094' COLLATE utf8mb4_unicode_ci),
+       CONCAT('Limpieza de clientes ficticios: ', x.CLIENTE,
               ' pasa al comentario de sus asignaciones abiertas y se les quita el urgente')
-FROM Telefono t
-JOIN Cliente c ON c.ID_CLI = t.ID_CLI
-JOIN Usuario u ON u.NOMBRE_USUARIO = @usuario
+FROM tel_inc x
+JOIN Usuario u ON u.NOMBRE_USUARIO = @usuario;
+
+-- 2.4 Telefonos sin cliente (los de la foto que siguen con uno de esos clientes)
+UPDATE tel_inc x STRAIGHT_JOIN Telefono t ON t.IMEI = x.IMEI
+SET t.ID_CLI = NULL
 WHERE FIND_IN_SET(t.ID_CLI, @ids);
 
--- 2.4 Telefonos sin cliente
-UPDATE Telefono SET ID_CLI = NULL WHERE FIND_IN_SET(ID_CLI, @ids);
-
--- 2.5 QUEDAN = 0
+-- 2.5 QUEDAN = 0. Si sale mas, alguien puso uno de esos clientes despues de la foto: ROLLBACK y repetir desde el 1.
 SELECT COUNT(*) AS QUEDAN FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
 
 -- 2.6 Analisis antes de confirmar
 -- a) IMEIs que se quedan sin cliente: el que tenian, asignaciones abiertas y trabajos hechos (R/G/P)
 SELECT x.IMEI, x.CLIENTE AS TENIA,
        COALESCE(SUM(r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL), 0) AS ABIERTAS,
-       COALESCE(SUM(r.ID_REP NOT LIKE 'A%'), 0) AS HECHOS
+       COALESCE(SUM(r.ID_REP NOT LIKE 'A%' AND r.FECHA_FIN IS NOT NULL), 0) AS HECHOS
 FROM tel_inc x LEFT JOIN Reparacion r ON r.IMEI = x.IMEI
 GROUP BY x.IMEI, x.CLIENTE ORDER BY x.CLIENTE, x.IMEI;
 -- b) Sus trabajos hechos por cliente guardado: es lo que seguira mostrando el Historial
@@ -176,7 +193,7 @@ SELECT x.CLIENTE AS TENIA, COALESCE(cg.NOMBRE, '(sin cliente)') AS GUARDADO, COU
 FROM tel_inc x
 JOIN Reparacion r ON r.IMEI = x.IMEI
 LEFT JOIN Cliente cg ON cg.ID_CLI = r.ID_CLI
-WHERE r.ID_REP NOT LIKE 'A%'
+WHERE r.ID_REP NOT LIKE 'A%' AND r.FECHA_FIN IS NOT NULL
 GROUP BY TENIA, GUARDADO ORDER BY TENIA, TRABAJOS DESC;
 -- c) Sus asignaciones abiertas tal como quedan: URGENTE = 0 y el nombre al principio del comentario
 SELECT r.ID_REP, r.IMEI, r.URGENTE, r.COMENTARIO_ASIGNACION
@@ -197,7 +214,14 @@ WHERE ACCION = 'CAMBIAR_CLIENTE' AND MOTIVO LIKE 'Limpieza de clientes ficticios
 -- 3.2 Tras desactivarlos en la web: los dos con ACTIVO = 0
 SELECT ID_CLI, NOMBRE, ACTIVO FROM Cliente WHERE FIND_IN_SET(ID_CLI, @ids);
 
+-- 3.3 Estado final (spec 4): QUEDAN = 0 y URGENTES_ABIERTAS = 0. Si no (alguien asigno durante la transaccion y el
+--     urgente o el cliente volvieron), repetir los bloques 1 y 2 sobre lo que quede.
+SELECT COUNT(*) AS QUEDAN FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
+SELECT COUNT(*) AS URGENTES_ABIERTAS FROM tel_inc x JOIN Reparacion r ON r.IMEI = x.IMEI
+WHERE r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
+
 DROP TEMPORARY TABLE IF EXISTS tel_inc;
+SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ```
 
 Por qué así (para quien revise):
@@ -256,7 +280,7 @@ La misma sesión del relleno de la 0.9.8 sirve; si se cerró: `ssh preprod` y la
 - [ ] **Step 2: Bloque 0 (usuario pega, Claude revisa)**
 
 Con `NOMBRE_DE_USUARIO` sustituido por el nombre de usuario del administrador.
-Expected: 0.1 una fila; 0.2 las cinco tablas con `utf8mb4_unicode_ci`; 0.3 `CERRADAS_CON_CLIENTE` > 0.
+Expected: 0.0 `BASE` = `gestion_reparaciones`; 0.1 las cinco tablas con `utf8mb4_unicode_ci`; 0.2 una fila; 0.3 `CERRADAS_CON_CLIENTE` > 0; 0.4 `LOG_BIN` 0 o `FORMATO` distinto de `STATEMENT`.
 
 - [ ] **Step 3: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
 
@@ -265,7 +289,7 @@ Expected: 1.1 exactamente dos clientes; `@ids` con sus dos ID. Anotar `ABIERTAS`
 
 - [ ] **Step 4: Bloque 2, análisis y COMMIT (usuario pega, Claude compara y revisa con el usuario)**
 
-Expected: 2.1 `Changed` = `ABIERTAS − YA_LLEVAN_NOMBRE`; 2.2 = `URGENTES`; 2.3 y 2.4 = `TELEFONOS`; 2.5 `QUEDAN 0`;
+Expected: 2.0 y `SIGUEN` = `TELEFONOS`; 2.1 `Changed` = `ABIERTAS − YA_LLEVAN_NOMBRE`; 2.2 = `URGENTES`; 2.3 y 2.4 = `TELEFONOS`; 2.5 `QUEDAN 0`;
 ningún `ERROR`. Análisis 2.6, revisado juntos antes de confirmar:
 - a) un IMEI por teléfono afectado (`TELEFONOS` filas), con su cliente, abiertas y hechos;
 - b) los trabajos hechos de esos teléfonos conservan «Incidencias …» en `GUARDADO` (los que salgan «(sin cliente)»
@@ -287,9 +311,9 @@ Con el administrador:
   los IMEIs y que salga.
 - **Pestaña Clientes:** desactivar «Incidencias Amazon» y «Incidencias profesionales» (no ofrecen «Borrar»).
 
-- [ ] **Step 7: Bloque 3.2**
+- [ ] **Step 7: Bloques 3.2 y 3.3**
 
-Expected: los dos con `ACTIVO = 0`.
+Expected: 3.2 los dos con `ACTIVO = 0`; 3.3 `QUEDAN` 0 y `URGENTES_ABIERTAS` 0.
 
 - [ ] **Step 8: Registrar el ensayo**
 
@@ -325,7 +349,7 @@ relleno de la 0.9.8: sirve de vuelta atrás de esta limpieza sola.)
 - [ ] **Step 3: Consola de MariaDB y bloque 0**
 
 La misma línea de consola que en preprod (Task 2, Step 1), ahora en `ssh prod`.
-Expected: 0.1 una fila; 0.2 `utf8mb4_unicode_ci` en las cinco tablas; 0.3 > 0.
+Expected: las mismas cifras-regla del bloque 0 que en preprod (Task 2, Step 2).
 
 - [ ] **Step 4: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
 
