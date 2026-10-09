@@ -22,6 +22,17 @@ desactivada.
 
 ---
 
+## 🎨 Chasis y tapa: se eligen a mano y con color
+
+- El desplegable de **Chasis** y el de **Tapa trasera** ya no traen nada elegido: dicen **«— Elige color —»** y no
+  puedes sumar hasta elegir. Así nadie registra un color por despiste.
+- Cada opción lleva un **círculo con su color** y su nombre oficial; al elegirla, el botón enseña el SKU completo.
+- En el chasis, las opciones van en dos bloques: **SIM** y **eSIM**. Fíjate en cuál es el teléfono.
+- Van enlazados: al elegir el **chasis**, la tapa se pone del **mismo color**. Si eliges primero la **tapa**, el chasis
+  te marca en verde las opciones de ese color para que elijas SIM o eSIM.
+
+---
+
 ## 📦 Stock
 
 Las tapas aparecen en **Stock** con stock **9999**, igual que los chasis (su stock no se cuenta), y en modo **Manual**.
