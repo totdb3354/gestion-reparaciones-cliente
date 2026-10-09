@@ -36,7 +36,7 @@ cliente nuevo.
 | Trabajos ya cerrados | Pierden la etiqueta | Aceptado por el usuario |
 | Urgente de esas asignaciones abiertas | Se **quita a todas** (reparación, glass y pulido) | Lo puso el urgente automático por tener cliente. El urgente es por teléfono: se quita en las tres categorías a la vez. El supertécnico vuelve a marcar a mano la que sea urgente de verdad |
 | Rastro en el registro de actividad | Una línea **`CAMBIAR_CLIENTE` por teléfono**, con el mismo detalle que pone el programa (`IMEI: x, ID_CLI: —`) y un motivo que explica la limpieza, a nombre del usuario que la ejecuta | La búsqueda por IMEI del registro la encuentra igual que un cambio de cliente hecho desde la web |
-| Borrado de los dos clientes | Desde **Gestión → Clientes**, con el botón de siempre | Queda `BORRAR_CLIENTE` con el usuario, y el propio programa comprueba que ya no les queda ningún teléfono |
+| Borrado de los dos clientes | Desde la **pestaña Clientes** de la web, con el botón de siempre | Queda `BORRAR_CLIENTE` con el usuario, y el propio programa comprueba que ya no les queda ningún teléfono |
 
 ## 3. Operación
 
@@ -58,23 +58,24 @@ En este orden, porque el comentario necesita saber el cliente antes de quitarlo:
 3. Una línea `CAMBIAR_CLIENTE` por teléfono en `Log_Actividad`.
 4. `Telefono.ID_CLI = NULL` en esos teléfonos.
 
-Si falla cualquier paso, no se aplica nada. `UPDATED_AT` se actualiza como en cualquier cambio: si un técnico tiene
-abierto el editor de comentario de una de esas filas, al guardar recibe «Dato modificado por otro usuario» en vez de
-pisar el cambio.
+Si falla cualquier paso, no se aplica nada. El comentario y el teléfono actualizan `UPDATED_AT` como cualquier cambio:
+si un técnico tiene abierto el editor de comentario de una de esas filas, al guardar recibe «Dato modificado por otro
+usuario» en vez de pisar el cambio. Quitar el urgente **conserva** `UPDATED_AT`, igual que hace la web al cambiarlo
+(`ReparacionDAO.propagarUrgente`).
 
 ### 3.3 Después
 
-1. Borrar los dos clientes en Gestión → Clientes.
+1. Borrar los dos clientes en la pestaña Clientes.
 2. Avisar a los técnicos: las devoluciones van en el Comentario de la asignación, y deben recargar la página para que
    los dos clientes desaparezcan de sus listas.
 
 ## 4. Verificación
 
-- **En preproducción primero**: crear los dos clientes con los mismos nombres, ponérselos a unos pocos teléfonos con
-  asignaciones abiertas (con y sin comentario, alguna urgente, alguna con el nombre ya en el comentario) y alguno sin
-  asignaciones abiertas. Ejecutar la comprobación y el cambio, revisar el resultado y borrar los clientes desde la web.
+- **En preproducción primero**: se refrescó desde producción el 2026-10-09 a las 10:50, así que ya tiene los dos
+  clientes y sus teléfonos reales de esa hora. Ensayo completo sobre esos datos: comprobación, cambio, revisión en la
+  web (comentario con `·` y acentos bien, sin urgente, línea del registro buscable por IMEI) y borrado de los clientes.
 - **En producción**: copia de seguridad antes. Al terminar, la comprobación debe devolver 0 teléfonos con esos clientes,
-  las asignaciones con el comentario esperado y sin urgente, y el borrado desde Gestión → Clientes debe funcionar.
+  las asignaciones con el comentario esperado y sin urgente, y el borrado desde la pestaña Clientes debe funcionar.
 - Al día siguiente: el urgente automático de las 00:00 ya no marca esos teléfonos.
 
 ## 5. Fuera de alcance
