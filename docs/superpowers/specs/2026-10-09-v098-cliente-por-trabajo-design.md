@@ -56,7 +56,7 @@ En cada cierre, la sentencia copia el cliente del teléfono: `(SELECT t.ID_CLI F
 | `guardarFilaIndividual` | cada fila de pieza `R…`/`G…` (nace cerrada) |
 | `completar` | la asignación (`FECHA_FIN = NOW()`) |
 | `completarPulido` | el `P…` (nace cerrado) y su `AP…` al ponerle `FECHA_FIN` |
-| `insertar` (alta antigua de una `R…` con fecha de fin) | la `R…` si trae `FECHA_FIN` |
+| `insertar` (alta antigua de una `R…`) | la `R…` (si no trae `FECHA_FIN`, la regla de lectura ignora el valor) |
 
 **Reabrir** (`eliminar` de una `R…` que resolvía una incidencia: `FECHA_FIN = NULL` en su `A…`): también
 `ID_CLI = NULL`.
@@ -76,6 +76,10 @@ En cada cierre, la sentencia copia el cliente del teléfono: `(SELECT t.ID_CLI F
   del trabajo. Urgente automático (`marcarUrgentesClienteVencidas`), orden de la cola, carga y predicción de glass
   trabajan con abiertas: siguen con el teléfono.
 - Inventario (`TelefonoDAO`) es por teléfono: sin cambios.
+- **Borrar un cliente:** `ClienteDAO.tieneTelefonos` (lo que mira el menú de la pestaña Clientes para ofrecer «Borrar»
+  y lo que comprueba `DELETE /api/clientes/{idCli}`) cuenta también los trabajos con ese cliente guardado. Así un
+  cliente con historial no ofrece «Borrar» y el servidor responde 409 («…tiene teléfonos o trabajos asociados;
+  desactívalo…») en vez de un error de la clave ajena.
 
 ## 6. Relleno de lo ya cerrado
 

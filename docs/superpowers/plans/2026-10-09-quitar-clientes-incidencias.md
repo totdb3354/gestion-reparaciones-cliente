@@ -2,26 +2,23 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Quitar los clientes «Incidencias Amazon» e «Incidencias profesionales»: sus teléfonos quedan sin cliente, el
-nombre pasa al Comentario de sus asignaciones abiertas, esas asignaciones pierden el urgente y los dos clientes se borran.
+**Goal:** Quitar los clientes «Incidencias Amazon» e «Incidencias profesionales» de los teléfonos: el nombre pasa al Comentario de sus asignaciones abiertas, esas asignaciones pierden el urgente, los teléfonos quedan sin cliente y los dos clientes se desactivan. Los trabajos ya cerrados conservan la etiqueta gracias a la 0.9.8.
 
-**Architecture:** Operación **solo de datos**, una vez. Un script SQL en `Apuntes/` que se pega bloque a bloque en la
-consola de MariaDB: parámetros → comprobación de solo lectura → cambio en una transacción con `COMMIT` a mano →
-comprobación posterior. El borrado de los clientes se hace desde la web (pestaña Clientes). Ensayo completo en
-preproducción antes de producción.
+**Architecture:** Operación **solo de datos**, una vez por entorno, **después** de la 0.9.8 y su relleno. Un script SQL en `Apuntes/` que se pega bloque a bloque en la consola de MariaDB: parámetros y requisitos → comprobación de solo lectura → cambio en una transacción con **análisis antes del `COMMIT`** y `COMMIT` a mano → comprobación posterior. La desactivación de los clientes se hace desde la web (pestaña Clientes). Ensayo completo en preproducción antes de producción.
 
 **Tech Stack:** MariaDB 11 (consola `mariadb` dentro del contenedor), web del ERP.
 
-**Spec:** `docs/superpowers/specs/2026-10-09-quitar-clientes-incidencias-design.md`.
+**Spec:** `docs/superpowers/specs/2026-10-09-quitar-clientes-incidencias-design.md`. Requisito: `docs/superpowers/plans/2026-10-09-v098-cliente-por-trabajo.md` (Tasks 6 y 7).
 
 ## Global Constraints
 
 - **Solo datos:** sin código, sin esquema, sin despliegue, sin versión.
+- **Requisito en cada entorno:** 0.9.8 desplegada y su relleno confirmado (el bloque 0.3 lo comprueba).
 - **Claude no hace SSH** a las máquinas: prepara y revisa; el usuario ejecuta en la consola y pega aquí la salida.
 - **Repos públicos:** el script, los comandos de las máquinas y el registro de la ejecución van en `Apuntes/`, nunca en
   `docs/`.
-- **Producción es el ERP real del taller:** copia a mano antes (`/usr/local/sbin/backup-erp.sh`), momento tranquilo y
-  aviso previo a los técnicos.
+- **Producción es el ERP real del taller:** copia a mano antes (`/usr/local/sbin/backup-erp.sh`), momento sin
+  actividad y aviso previo a los técnicos.
 - **Asignación abierta** = `ID_REP LIKE 'A%' AND FECHA_FIN IS NULL` (reparación `A…`, glass `AG…`, pulido `AP…`).
 - **Comentario:** `<NOMBRE DEL CLIENTE> · <comentario anterior>`, o solo el nombre si estaba vacío; si ya contiene el
   nombre, no se toca.
@@ -29,23 +26,26 @@ preproducción antes de producción.
   `Limpieza de clientes ficticios:`, a nombre del usuario que ejecuta.
 - **Urgente:** se quita en todas las asignaciones abiertas de esos teléfonos y se conserva `UPDATED_AT` (como
   `ReparacionDAO.propagarUrgente`).
+- **Los dos clientes se desactivan, no se borran** (el historial los nombra por la clave ajena de la 0.9.8).
+- **Confirmación:** el análisis 2.6 se revisa con el usuario **dentro de la transacción** y solo entonces `COMMIT;`.
 
 ---
 
 ### Task 1: Script SQL y nota en el plan maestro
 
+Hecho el 2026-10-09 (primera versión con borrado; rehecho el mismo día para la opción B: requisito 0.9.8, análisis
+dentro de la transacción, desactivar en vez de borrar).
+
 **Files:**
 - Create: `C:\Users\dev\Documents\Apuntes\quitar-clientes-incidencias.sql` (fuera de git)
 - Modify: `C:\Users\dev\Documents\Apuntes\plan-futuro.md` (§2, «F2c — Ciclo completo»; fuera de git)
-- Commit (repo raíz): este plan y el ajuste de la spec (§3.2, `UPDATED_AT` del urgente)
 
 **Interfaces:**
-- Produces: el script con los bloques **0** (parámetros), **1** (comprobación), **2** (cambio en transacción),
-  **3** (después). Variables de sesión `@usuario`, `@ids` (ID de los dos clientes, separados por comas) e `@imeis`
-  (IMEIs afectados, capturados al empezar el bloque 2). Cifras del bloque 1.4: `ABIERTAS`, `YA_LLEVAN_NOMBRE`,
-  `URGENTES`, `TELEFONOS`.
+- Produces: bloques **0** (parámetros y requisitos), **1** (comprobación), **2** (cambio y análisis en transacción),
+  **3** (después). Variables `@usuario`, `@ids`; tabla temporal `tel_inc` (IMEI y cliente que tenían). Cifras del
+  bloque 1.4: `ABIERTAS`, `YA_LLEVAN_NOMBRE`, `URGENTES`, `TELEFONOS`.
 
-- [ ] **Step 1: Crear el script**
+- [x] **Step 1: Crear el script**
 
 Contenido completo de `Apuntes/quitar-clientes-incidencias.sql`:
 
@@ -54,14 +54,16 @@ Contenido completo de `Apuntes/quitar-clientes-incidencias.sql`:
 -- Spec: docs/superpowers/specs/2026-10-09-quitar-clientes-incidencias-design.md (repo raiz)
 -- Plan: docs/superpowers/plans/2026-10-09-quitar-clientes-incidencias.md
 --
--- Se pega en la consola de MariaDB BLOQUE A BLOQUE y en la MISMA sesion: usa variables de sesion
--- (@usuario, @ids, @imeis). Si se cierra la consola, volver a empezar por el bloque 0.
+-- REQUISITO: en este entorno, la 0.9.8 desplegada y su relleno (relleno-cliente-por-trabajo.sql) confirmado.
+--
+-- Se pega en la consola de MariaDB BLOQUE A BLOQUE y en la MISMA sesion: usa variables y una tabla temporal de
+-- sesion (@usuario, @ids, tel_inc). Si se cierra la consola, volver a empezar por el bloque 0.
 --
 -- Los caracteres especiales van en hexadecimal para no depender de la terminal:
 --   X'20C2B720' = " · " (separador del comentario)
 --   X'E28094'   = "—"   (lo que escribe la web en el registro al dejar un IMEI sin cliente)
 
--- == Bloque 0: parametros ====================================================
+-- == Bloque 0: parametros y requisitos =======================================
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET @usuario := 'NOMBRE_DE_USUARIO';  -- <- cambiar por el usuario de la web que firma el registro (el tuyo)
 
@@ -73,6 +75,9 @@ SELECT ID_USU, NOMBRE_USUARIO FROM Usuario WHERE NOMBRE_USUARIO = @usuario;
 SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME IN ('Cliente', 'Telefono', 'Reparacion', 'Usuario', 'Log_Actividad');
+
+-- 0.3 Relleno de la 0.9.8 hecho: CERRADAS_CON_CLIENTE > 0. Si sale 0 (o error de columna), PARAR.
+SELECT COUNT(*) AS CERRADAS_CON_CLIENTE FROM Reparacion WHERE FECHA_FIN IS NOT NULL AND ID_CLI IS NOT NULL;
 
 -- == Bloque 1: comprobacion (solo lectura) ===================================
 -- 1.1 Los clientes: deben salir exactamente los dos de incidencias
@@ -110,19 +115,20 @@ JOIN Cliente c ON c.ID_CLI = t.ID_CLI
 WHERE FIND_IN_SET(t.ID_CLI, @ids) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL;
 SELECT COUNT(*) AS TELEFONOS FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
 
--- 1.5 Envios con esos clientes: debe ser 0.
---     Si da error "Table ... doesn't exist", tambien vale (no hay envios). Si da mas de 0, PARAR.
-SELECT COUNT(*) AS ENVIOS FROM Envio WHERE FIND_IN_SET(ID_CLI, @ids);
-
--- == Bloque 2: cambio (una transaccion) ======================================
+-- == Bloque 2: cambio y analisis (una transaccion) ===========================
 -- Pegar entero. Comparar cada "Changed" / "rows affected" con el bloque 1.4:
 --   2.1 = ABIERTAS - YA_LLEVAN_NOMBRE    2.2 = URGENTES    2.3 = TELEFONOS    2.4 = TELEFONOS    2.5 QUEDAN = 0
--- y terminar a mano con COMMIT; (todo cuadra) o ROLLBACK; (algo no cuadra o ha salido cualquier ERROR:
--- la consola sigue con las siguientes sentencias aunque una falle).
--- Mientras la transaccion esta abierta, esas filas quedan bloqueadas: no dejarla abierta mas de un par de minutos.
+-- Revisar el analisis 2.6 y terminar a mano con COMMIT; (todo cuadra) o ROLLBACK; (algo no cuadra o ha salido
+-- cualquier ERROR: la consola sigue con las siguientes sentencias aunque una falle).
+-- Mientras la transaccion esta abierta, las filas de esos telefonos quedan bloqueadas: no tardar mas de un par de minutos.
 START TRANSACTION;
 
-SELECT GROUP_CONCAT(IMEI) INTO @imeis FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
+-- Foto de los telefonos afectados y su cliente, antes de quitarlo (tabla temporal: no confirma la transaccion)
+DROP TEMPORARY TABLE IF EXISTS tel_inc;
+CREATE TEMPORARY TABLE tel_inc (IMEI VARCHAR(15) NOT NULL PRIMARY KEY, CLIENTE VARCHAR(150) NOT NULL)
+SELECT t.IMEI, c.NOMBRE AS CLIENTE
+FROM Telefono t JOIN Cliente c ON c.ID_CLI = t.ID_CLI
+WHERE FIND_IN_SET(t.ID_CLI, @ids);
 
 -- 2.1 Nombre del cliente delante del comentario de las asignaciones abiertas
 UPDATE Reparacion r
@@ -155,27 +161,43 @@ WHERE FIND_IN_SET(t.ID_CLI, @ids);
 -- 2.4 Telefonos sin cliente
 UPDATE Telefono SET ID_CLI = NULL WHERE FIND_IN_SET(ID_CLI, @ids);
 
--- 2.5 Comprobar dentro de la transaccion
+-- 2.5 QUEDAN = 0
 SELECT COUNT(*) AS QUEDAN FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
 
--- Si todas las cifras cuadran:  COMMIT;
--- Si alguna no cuadra:          ROLLBACK;
-
--- == Bloque 3: despues del COMMIT ============================================
--- 3.1 Sus asignaciones abiertas: URGENTE = 0 y el nombre del cliente al principio del comentario
+-- 2.6 Analisis antes de confirmar
+-- a) IMEIs que se quedan sin cliente: el que tenian, asignaciones abiertas y trabajos hechos (R/G/P)
+SELECT x.IMEI, x.CLIENTE AS TENIA,
+       COALESCE(SUM(r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL), 0) AS ABIERTAS,
+       COALESCE(SUM(r.ID_REP NOT LIKE 'A%'), 0) AS HECHOS
+FROM tel_inc x LEFT JOIN Reparacion r ON r.IMEI = x.IMEI
+GROUP BY x.IMEI, x.CLIENTE ORDER BY x.CLIENTE, x.IMEI;
+-- b) Sus trabajos hechos por cliente guardado: es lo que seguira mostrando el Historial
+SELECT x.CLIENTE AS TENIA, COALESCE(cg.NOMBRE, '(sin cliente)') AS GUARDADO, COUNT(*) AS TRABAJOS
+FROM tel_inc x
+JOIN Reparacion r ON r.IMEI = x.IMEI
+LEFT JOIN Cliente cg ON cg.ID_CLI = r.ID_CLI
+WHERE r.ID_REP NOT LIKE 'A%'
+GROUP BY TENIA, GUARDADO ORDER BY TENIA, TRABAJOS DESC;
+-- c) Sus asignaciones abiertas tal como quedan: URGENTE = 0 y el nombre al principio del comentario
 SELECT r.ID_REP, r.IMEI, r.URGENTE, r.COMENTARIO_ASIGNACION
-FROM Reparacion r
-WHERE FIND_IN_SET(r.IMEI, @imeis) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL
+FROM tel_inc x JOIN Reparacion r ON r.IMEI = x.IMEI
+WHERE r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL
 ORDER BY r.IMEI, r.ID_REP;
 
--- 3.2 Lineas del registro de esta limpieza (= TELEFONOS)
+-- Si todo cuadra:  COMMIT;
+-- Si no:           ROLLBACK;
+
+-- == Bloque 3: despues del COMMIT ============================================
+-- 3.1 Lineas del registro de esta limpieza (= TELEFONOS)
 SELECT COUNT(*) AS LINEAS FROM Log_Actividad
 WHERE ACCION = 'CAMBIAR_CLIENTE' AND MOTIVO LIKE 'Limpieza de clientes ficticios:%';
 
--- Ahora borrar los dos clientes en la web: pestana Clientes -> Borrar (uno y otro).
+-- Ahora desactivar los dos clientes en la web: pestana Clientes -> interruptor de activo (uno y otro).
 
--- 3.3 Tras borrarlos en la web: debe salir vacio
-SELECT ID_CLI, NOMBRE FROM Cliente WHERE FIND_IN_SET(ID_CLI, @ids);
+-- 3.2 Tras desactivarlos en la web: los dos con ACTIVO = 0
+SELECT ID_CLI, NOMBRE, ACTIVO FROM Cliente WHERE FIND_IN_SET(ID_CLI, @ids);
+
+DROP TEMPORARY TABLE IF EXISTS tel_inc;
 ```
 
 Por qué así (para quien revise):
@@ -184,23 +206,22 @@ Por qué así (para quien revise):
   lo comprueba antes de tocar nada.
 - Los literales con `·` y `—` en hexadecimal con introductor y `COLLATE` explícito: el resultado no depende de cómo
   envíe la terminal los caracteres, y el `COLLATE` explícito evita el mismo error en el `CONCAT`.
-- `@ids` en vez de una tabla temporal: MariaDB no deja abrir dos veces una tabla temporal en la misma sentencia.
-- `@imeis` se captura antes de quitar el cliente: después ya no hay forma de encontrarlos por cliente.
+- `@ids` en vez de una tabla temporal para los clientes: MariaDB no deja abrir dos veces una tabla temporal en la misma
+  sentencia. `tel_inc` sí es temporal, pero cada consulta la nombra una sola vez; se crea dentro de la transacción (una
+  tabla temporal no la confirma) para tener el cliente que tenían después de quitarlo.
 
-- [ ] **Step 2: Revisar el script contra la spec**
+- [x] **Step 2: Revisar el script contra la spec**
 
-Comprobar uno a uno: §2 (comentario delante con ` · `, no tocar si ya lo contiene; urgente fuera en las tres
-categorías; `CAMBIAR_CLIENTE` por teléfono con `IMEI: x, ID_CLI: —`), §3.1 (los cuatro puntos de la comprobación),
-§3.2 (orden comentario → urgente → registro → teléfono, una transacción), §3.3 (borrado desde la web).
+§2 (comentario delante con ` · `, no tocar si ya lo contiene; urgente fuera en las tres categorías; `CAMBIAR_CLIENTE`
+por teléfono con `IMEI: x, ID_CLI: —`; desactivar), §3.1 (requisito y los tres puntos de la comprobación), §3.2 (orden
+comentario → urgente → registro → teléfono y análisis antes del `COMMIT`), §3.3 (desactivación desde la web).
 
-Comprobar que los únicos caracteres no ASCII del script están en comentarios:
+Run: `grep -nP '[^\x00-\x7F]' /c/Users/dev/Documents/Apuntes/quitar-clientes-incidencias.sql | grep -v '^[0-9]*:--' || echo SOLO_EN_COMENTARIOS`
+Expected: `SOLO_EN_COMENTARIOS`.
 
-Run: `grep -nP '[^\x00-\x7F]' /c/Users/dev/Documents/Apuntes/quitar-clientes-incidencias.sql`
-Expected: solo líneas que empiezan por `--`.
+- [x] **Step 3: Nota en el plan maestro**
 
-- [ ] **Step 3: Nota en el plan maestro**
-
-En `Apuntes/plan-futuro.md`, sección «F2c — Ciclo completo», añadir tras la línea de «Enviar a externo…»:
+En `Apuntes/plan-futuro.md`, sección «F2c — Ciclo completo», tras la línea de «Enviar a externo…»:
 
 ```markdown
 - [ ] Devoluciones de venta (Amazon / profesional) en la web: hoy se apuntan a mano en el **Comentario de la asignación** (decisión 2026-10-09, al quitar los clientes ficticios «Incidencias Amazon» / «Incidencias profesionales»: spec `2026-10-09-quitar-clientes-incidencias-design.md`). Su sitio es el módulo de ubicaciones/devoluciones (`FLUJO_UBICACIONES_v17.drawio`, `Modulo Ubicaciones - Spec.md`) cuando llegue a la web
@@ -209,77 +230,78 @@ En `Apuntes/plan-futuro.md`, sección «F2c — Ciclo completo», añadir tras l
 - [ ] **Step 4: Commit (repo raíz)**
 
 ```bash
-git add docs/superpowers/plans/2026-10-09-quitar-clientes-incidencias.md docs/superpowers/specs/2026-10-09-quitar-clientes-incidencias-design.md
-git commit -m "docs: plan para quitar los clientes ficticios de incidencias"
+git add docs/superpowers/plans/2026-10-09-quitar-clientes-incidencias.md
+git commit -m "docs: plan de la limpieza de incidencias tras la 0.9.8 (desactivar y analisis antes del commit)"
 ```
 
 ---
 
 ### Task 2: Ensayo en preproducción
 
-Preproducción se refrescó desde producción el 2026-10-09 a las 10:50 (`Apuntes/despliegue_preprod.md`, registro de ese
-día): debería tener los dos clientes y sus teléfonos reales de esa hora. El ensayo es el procedimiento completo de
-producción sobre esos datos.
+Después de la Task 6 de la 0.9.8 (Steps 1–3: desplegada, relleno confirmado y probada). Preproducción tiene la base de
+producción del 2026-10-09 10:50: debería tener los dos clientes y sus teléfonos reales de esa hora.
 
 **Files:**
-- Modify: `C:\Users\dev\Documents\Apuntes\despliegue_preprod.md` (§Registro de sesiones: entrada nueva)
+- Modify: `C:\Users\dev\Documents\Apuntes\despliegue_preprod.md` (la entrada de la sesión de la 0.9.8)
 
 **Interfaces:**
 - Consumes: el script de la Task 1 y el usuario administrador (mismo nombre en preprod y en producción; contraseña de
   preprod en `~/.env.e2e`, `ADMIN_USER`/`ADMIN_PASS`).
-- Produces: las cifras del ensayo y, si hubo que tocarlo, el script corregido.
 
-- [ ] **Step 1: Abrir la consola de MariaDB en preprod (usuario)**
+- [ ] **Step 1: Consola de MariaDB en preprod (usuario)**
 
-Desde PowerShell: `ssh preprod`, y en la máquina la línea de consola de `Apuntes/despliegue_vdc_produccion.md`
-§«Entrar en MariaDB sin escribir la contraseña» (la primera, con `-it`).
+La misma sesión del relleno de la 0.9.8 sirve; si se cerró: `ssh preprod` y la línea de consola de
+`Apuntes/despliegue_vdc_produccion.md` §«Entrar en MariaDB sin escribir la contraseña» (la primera, con `-it`).
 
 - [ ] **Step 2: Bloque 0 (usuario pega, Claude revisa)**
 
 Con `NOMBRE_DE_USUARIO` sustituido por el nombre de usuario del administrador.
-Expected: 0.1 una fila; 0.2 las cinco tablas con `utf8mb4_unicode_ci`.
+Expected: 0.1 una fila; 0.2 las cinco tablas con `utf8mb4_unicode_ci`; 0.3 `CERRADAS_CON_CLIENTE` > 0.
 
 - [ ] **Step 3: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
 
-Expected: 1.1 exactamente dos clientes; `@ids` con sus dos ID; 1.5 = 0 (o «doesn't exist»). Anotar `ABIERTAS`,
-`YA_LLEVAN_NOMBRE`, `URGENTES` y `TELEFONOS`.
+Expected: 1.1 exactamente dos clientes; `@ids` con sus dos ID. Anotar `ABIERTAS`, `YA_LLEVAN_NOMBRE`, `URGENTES` y
+`TELEFONOS`.
 
-Si la base no trae ningún caso de alguna variante (asignación con comentario, asignación sin comentario, urgente,
-teléfono sin asignaciones abiertas), seguir igualmente: el ensayo vale para comprobar sintaxis, collations y cifras, y
-las variantes que falten se miran en la salida del 1.3 de producción antes de su bloque 2.
-
-- [ ] **Step 4: Bloque 2 y COMMIT (usuario pega, Claude compara cifras)**
+- [ ] **Step 4: Bloque 2, análisis y COMMIT (usuario pega, Claude compara y revisa con el usuario)**
 
 Expected: 2.1 `Changed` = `ABIERTAS − YA_LLEVAN_NOMBRE`; 2.2 = `URGENTES`; 2.3 y 2.4 = `TELEFONOS`; 2.5 `QUEDAN 0`;
-ningún `ERROR`. Si todo cuadra, `COMMIT;`; si no, `ROLLBACK;`, se corrige el script (Task 1) y se repite desde el
-bloque 0.
+ningún `ERROR`. Análisis 2.6, revisado juntos antes de confirmar:
+- a) un IMEI por teléfono afectado (`TELEFONOS` filas), con su cliente, abiertas y hechos;
+- b) los trabajos hechos de esos teléfonos conservan «Incidencias …» en `GUARDADO` (los que salgan «(sin cliente)»
+  son los de antes de que el teléfono tuviera esa etiqueta, según el relleno);
+- c) las asignaciones abiertas con `URGENTE 0` y el comentario empezando por el nombre (` · ` delante del anterior).
+Si todo cuadra, `COMMIT;`; si no, `ROLLBACK;`, se corrige el script (Task 1) y se repite desde el bloque 0.
 
-- [ ] **Step 5: Bloque 3.1 y 3.2**
+- [ ] **Step 5: Bloque 3.1**
 
-Expected: 3.1 todas con `URGENTE = 0` y el comentario empezando por el nombre del cliente (con ` · ` delante del
-comentario anterior cuando lo había); 3.2 = `TELEFONOS`.
+Expected: `LINEAS` = `TELEFONOS`.
 
 - [ ] **Step 6: Comprobar en la web de preprod**
 
 Con el administrador:
 - **Asignaciones / Pendientes:** esos IMEIs sin cliente, sin «Urgente», y el Comentario con el nombre; el `·` y los
   acentos del comentario anterior se ven bien (no `Â·` ni similares).
-- **Menú de usuario → Ver logs:** filtrar por `CAMBIAR_CLIENTE`: las líneas con `ID_CLI: —` y el motivo; buscar
-  uno de los IMEIs y que salga.
-- **Pestaña Clientes:** borrar «Incidencias Amazon» y «Incidencias profesionales». Debe dejar.
+- **Historial:** un trabajo hecho de uno de esos IMEIs sigue con «Incidencias …» en Cliente.
+- **Menú de usuario → Ver logs:** filtrar por `CAMBIAR_CLIENTE`: las líneas con `ID_CLI: —` y el motivo; buscar uno de
+  los IMEIs y que salga.
+- **Pestaña Clientes:** desactivar «Incidencias Amazon» y «Incidencias profesionales» (no ofrecen «Borrar»).
 
-- [ ] **Step 7: Bloque 3.3**
+- [ ] **Step 7: Bloque 3.2**
 
-Expected: vacío.
+Expected: los dos con `ACTIVO = 0`.
 
 - [ ] **Step 8: Registrar el ensayo**
 
-Entrada nueva en `Apuntes/despliegue_preprod.md` §Registro de sesiones: fecha y hora, cifras del bloque 1.4 y de cada
-paso del bloque 2, incidencias y correcciones del script si las hubo.
+En la entrada de la sesión de la 0.9.8 de `Apuntes/despliegue_preprod.md`: cifras del bloque 1.4 y de cada paso del
+bloque 2, lo visto en el análisis 2.6, incidencias y correcciones del script si las hubo.
 
 ---
 
 ### Task 3: Producción
+
+Después de la Task 7 de la 0.9.8 (Steps 1–3: desplegada, relleno confirmado y comprobada), en la misma ventana sin
+actividad.
 
 **Files:**
 - Modify: `C:\Users\dev\Documents\Apuntes\despliegue_vdc_produccion.md` (registro de sesiones: entrada nueva, mismo
@@ -297,24 +319,25 @@ asignación, no en Cliente. Esos dos clientes desaparecen; cuando acabe, recarga
 - [ ] **Step 2: Copia a mano (usuario)**
 
 `ssh prod` → `/usr/local/sbin/backup-erp.sh` → `tail -n 1 /var/log/backup-erp.log`.
-Expected: línea `OK` con el nombre de la copia (`erp-2026-10-…sql.gz`). Anotar nombre y tamaño.
+Expected: línea `OK` con el nombre de la copia (`erp-2026-10-…sql.gz`). Anotar nombre y tamaño. (Es posterior al
+relleno de la 0.9.8: sirve de vuelta atrás de esta limpieza sola.)
 
 - [ ] **Step 3: Consola de MariaDB y bloque 0**
 
 La misma línea de consola que en preprod (Task 2, Step 1), ahora en `ssh prod`.
-Expected: 0.1 una fila; 0.2 `utf8mb4_unicode_ci` en las cinco tablas.
+Expected: 0.1 una fila; 0.2 `utf8mb4_unicode_ci` en las cinco tablas; 0.3 > 0.
 
 - [ ] **Step 4: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
 
-Expected: dos clientes; 1.5 = 0. **Guardar la salida del 1.3** (es la vuelta atrás): Claude la pega en la entrada del
-registro de producción de `Apuntes/` (Step 8).
+Expected: dos clientes. **Guardar la salida del 1.3** (es la vuelta atrás): Claude la pega en la entrada del registro de
+producción de `Apuntes/` (Step 8).
 
-- [ ] **Step 5: Bloque 2 y COMMIT**
+- [ ] **Step 5: Bloque 2, análisis y COMMIT**
 
-Expected: las mismas reglas que en preprod (Task 2, Step 4) con las cifras de producción. `COMMIT;` solo si todo
-cuadra y no hay ningún `ERROR`.
+Expected: las mismas reglas que en preprod (Task 2, Step 4) con las cifras de producción. El análisis 2.6 se repasa en
+un par de minutos (ya visto en preprod) y `COMMIT;` solo si todo cuadra y no hay ningún `ERROR`.
 
-- [ ] **Step 6: Bloque 3.1–3.2, borrado en la web y bloque 3.3**
+- [ ] **Step 6: Bloque 3.1, desactivación en la web y bloque 3.2**
 
 Expected: como en preprod (Task 2, Steps 5–7), con la web de producción.
 
@@ -325,11 +348,11 @@ Avisar de que recarguen la página. Si alguien tenía abierto el editor de comen
 
 - [ ] **Step 8: Registrar en `Apuntes/despliegue_vdc_produccion.md`**
 
-Entrada «2026-10-09 (…, sin corte) — Quitar los clientes ficticios de incidencias (solo datos)» con: qué y por qué
-(enlace a la spec), copia a mano (nombre, tamaño), cifras del 1.4 y de cada paso del 2, salida del 1.3 (vuelta atrás),
-borrado de los clientes y **vuelta atrás**: volver a crear los dos clientes en la web, `UPDATE Telefono SET ID_CLI = <id
-nuevo> WHERE IMEI IN (…)` con los IMEIs del 1.3/registro, y devolver `COMENTARIO_ASIGNACION`/`URGENTE` a lo que dice
-el 1.3 (`UPDATE Reparacion … WHERE ID_REP = …`, uno por fila).
+Entrada «2026-10-… (…, sin corte) — Quitar los clientes ficticios de incidencias (solo datos)» con: qué y por qué
+(enlace a la spec), copia a mano (nombre, tamaño), cifras del 1.4 y de cada paso del 2, el análisis 2.6, salida del 1.3
+(vuelta atrás), desactivación de los clientes y **vuelta atrás**: reactivar los dos clientes en la web,
+`UPDATE Telefono SET ID_CLI = <id> WHERE IMEI IN (…)` con los IMEIs del 2.6 a) por cliente, y devolver
+`COMENTARIO_ASIGNACION`/`URGENTE` a lo que dice el 1.3 (`UPDATE Reparacion … WHERE ID_REP = …`, uno por fila).
 
 - [ ] **Step 9: Comprobar al día siguiente**
 
@@ -337,12 +360,12 @@ Tras las 00:00: esos IMEIs siguen sin urgente (el urgente automático ya no los 
 
 ```sql
 SELECT r.ID_REP, r.IMEI, r.URGENTE FROM Reparacion r
-WHERE r.IMEI IN (<IMEIs del 1.3>) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
+WHERE r.IMEI IN (<IMEIs del 2.6 a)>) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
 ```
 
 Expected: vacío, salvo las que el supertécnico haya vuelto a marcar a mano (salen en el registro como `MARCAR_URGENTE`).
 
 - [ ] **Step 10: Memoria**
 
-Actualizar `project_produccion_vdc.md` con una línea: «2026-10-09: clientes ficticios de incidencias quitados (solo
-datos); las devoluciones van en el Comentario de la asignación».
+Actualizar `project_produccion_vdc.md` con una línea: «clientes ficticios de incidencias quitados y desactivados (solo
+datos, tras la 0.9.8); las devoluciones van en el Comentario de la asignación».
