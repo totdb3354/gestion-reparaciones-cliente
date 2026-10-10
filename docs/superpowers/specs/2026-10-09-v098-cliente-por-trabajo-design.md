@@ -128,6 +128,16 @@ Primero preproducción y después producción, en el mismo orden:
 3. Relleno de §6 (solo trabajos cerrados antes del corte), con su análisis y `COMMIT` a mano.
 4. Comprobación (§8).
 
+**Ventana entre el arranque y el relleno.** Desde que arranca el servidor 0.9.8 hasta el `COMMIT` del relleno, los
+trabajos cerrados antes del corte leen su columna vacía: el Historial (reparación, glass y pulido), sus filtros de
+cliente y sus CSV los muestran «(sin cliente)», y la barra «Pedidos» de lo hecho hoy no cuenta lo cerrado hoy antes del
+corte. Los trabajos abiertos no cambian. Por eso el relleno va justo después del arranque, en la misma ventana sin
+actividad.
+
+**Si el análisis no cuadra y se hace `ROLLBACK`.** Se corrige el script y se repite en la misma ventana. Si no se puede
+resolver en esa ventana, se vuelve servidor y web a la 0.9.7 (la columna se queda: la 0.9.7 no la nombra), con lo que el
+Historial vuelve a enseñar el cliente del teléfono, y el relleno se reintenta en otra ventana.
+
 Después, en cada entorno, la limpieza de los clientes de incidencias ya ajustada (§9).
 
 ## 8. Pruebas

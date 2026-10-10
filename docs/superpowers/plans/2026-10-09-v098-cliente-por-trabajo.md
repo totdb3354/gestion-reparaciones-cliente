@@ -1127,13 +1127,17 @@ Los mismos bloques que en preprod (Task 6, Step 1, puntos 1–3) con `ssh prod`,
 de la jornada): la clave ajena de la migración puede bloquear `Reparacion` unos segundos y la transacción del relleno
 bloquea las filas cerradas mientras está abierta. **Vuelta atrás:** servidor y web a los commits de la 0.9.7
 (`git -C … checkout <commit>` + `docker compose up -d --build`); la columna puede quedarse (el 0.9.7 no la nombra); el
-relleno se deshace con `UPDATE Reparacion SET ID_CLI = NULL, UPDATED_AT = UPDATED_AT WHERE FECHA_FIN < '<corte>';`.
+relleno se deshace con `SET time_zone = '+00:00';` y `UPDATE Reparacion SET ID_CLI = NULL, UPDATED_AT = UPDATED_AT WHERE
+FECHA_FIN < '<corte>';` (el `<corte>` es UTC, como `FECHA_FIN`). El guion dice además (spec §7): mientras no haya
+`COMMIT` del relleno, el Historial muestra lo cerrado «(sin cliente)», así que el relleno va justo tras el arranque; y la
+regla tras un `ROLLBACK`.
 
 - [ ] **Step 2: Ejecutar (usuario) y revisar (Claude)**
 
 Expected: las mismas cifras-regla que en preprod (Task 6, Step 2). El análisis del bloque 2 se repasa contra el de
 preprod (mismo orden de magnitud; las diferencias son lo ocurrido desde el refresco de preprod) y `COMMIT;` en un par
-de minutos.
+de minutos. Si no cuadra: `ROLLBACK;`, corregir y repetir en la misma ventana; si no se resuelve en ella, servidor y web
+a la 0.9.7 (vuelta atrás de arriba, sin tocar la columna) y el relleno en otra ventana (spec §7).
 
 - [ ] **Step 3: Comprobación ligera sin escribir datos**
 
