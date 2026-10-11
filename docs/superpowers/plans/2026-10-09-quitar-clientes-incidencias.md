@@ -352,7 +352,7 @@ git commit -m "docs: plan de la limpieza de incidencias tras la 0.9.8 (desactiva
 
 ### Task 2: Ensayo en preproducción
 
-**Hecho el 2026-10-10** (Steps 1–8; el registro, Step 9, va con la sesión del añadido de la 0.9.8). En el Step 6 el
+**Hecho el 2026-10-10** (Steps 1–8; el registro, Step 9, el 2026-10-11 con la sesión del añadido de la 0.9.8). En el Step 6 el
 usuario decidió **borrar** los clientes en vez de desactivarlos: de ahí el bloque 4 y la spec §2 actual.
 
 Después de la Task 6 de la 0.9.8 (Steps 1–3: desplegada, relleno confirmado y probada). Preproducción tiene la base de
@@ -416,7 +416,7 @@ vuelta atrás); 4.2 = filas de pieza de `REP_GLASS` que no llevan ya el nombre; 
 (` · `). `COMMIT;`, y en la web, pestaña Clientes: **Borrar** los dos (aparece «Borrar» al no tener referencias).
 Comprobación final del script: vacía. En «Ver logs», `BORRAR_CLIENTE` con los dos nombres.
 
-- [ ] **Step 9: Registrar el ensayo**
+- [x] **Step 9: Registrar el ensayo**
 
 En la entrada de la sesión de la 0.9.8 de `Apuntes/despliegue_preprod.md`: cifras del bloque 1.4 y de cada paso de los
 bloques 2 y 4, lo visto en los análisis 2.6 y 4.5, incidencias y correcciones del script (collation, sesión, bloque 4,
