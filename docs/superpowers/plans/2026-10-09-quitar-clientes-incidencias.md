@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Quitar los clientes «Incidencias Amazon» e «Incidencias profesionales» de los teléfonos: el nombre pasa al Comentario de sus asignaciones abiertas, esas asignaciones pierden el urgente, los teléfonos quedan sin cliente y los dos clientes se desactivan. Los trabajos ya cerrados conservan la etiqueta gracias a la 0.9.8.
+**Goal:** Quitar los clientes «Incidencias Amazon» e «Incidencias profesionales» de los teléfonos: el nombre pasa al Comentario de sus asignaciones abiertas, esas asignaciones pierden el urgente y los teléfonos quedan sin cliente; los trabajos cerrados que guardaron uno de esos clientes pasan la etiqueta a su Observaciones/Comentario y quedan sin cliente; y los dos clientes, ya sin referencias, se borran.
 
-**Architecture:** Operación **solo de datos**, una vez por entorno, **después** de la 0.9.8 y su relleno. Un script SQL en `Apuntes/` que se pega bloque a bloque en la consola de MariaDB: parámetros y requisitos → comprobación de solo lectura → cambio en una transacción con **análisis antes del `COMMIT`** y `COMMIT` a mano → comprobación posterior. La desactivación de los clientes se hace desde la web (pestaña Clientes). Ensayo completo en preproducción antes de producción.
+**Architecture:** Operación **solo de datos**, una vez por entorno, **después** de la 0.9.8 y su relleno. Un script SQL en `Apuntes/` que se pega bloque a bloque en la consola de MariaDB: parámetros y requisitos → comprobación de solo lectura → cambio en una transacción con **análisis antes del `COMMIT`** y `COMMIT` a mano → comprobación posterior → bloque 4 (trabajos cerrados, con la misma mecánica). El borrado de los clientes se hace desde la web (pestaña Clientes). Ensayo completo en preproducción antes de producción.
 
 **Tech Stack:** MariaDB 11 (consola `mariadb` dentro del contenedor), web del ERP.
 
@@ -26,7 +26,10 @@
   `Limpieza de clientes ficticios:`, a nombre del usuario que ejecuta.
 - **Urgente:** se quita en todas las asignaciones abiertas de esos teléfonos y se conserva `UPDATED_AT` (como
   `ReparacionDAO.propagarUrgente`).
-- **Los dos clientes se desactivan, no se borran** (el historial los nombra por la clave ajena de la 0.9.8).
+- **Los dos clientes se borran** desde la web tras el bloque 4: sus trabajos cerrados pasan la etiqueta a su
+  Observaciones (reparación/glass, la de su pieza) o a su Comentario (pulido y asignaciones cerradas), delante y con
+  ` · `, y quedan sin cliente; sin referencias, la web ofrece «Borrar». Decisión del usuario en el ensayo (2026-10-10).
+- **Collation:** `utf8mb4_uca1400_ai_ci`, la de las tablas de preproducción y producción.
 - **Confirmación:** el análisis 2.6 se revisa con el usuario **dentro de la transacción** y solo entonces `COMMIT;`.
 
 ---
@@ -34,7 +37,8 @@
 ### Task 1: Script SQL y nota en el plan maestro
 
 Hecho el 2026-10-09 (primera versión con borrado; rehecho el mismo día para la opción B: requisito 0.9.8, análisis
-dentro de la transacción, desactivar en vez de borrar).
+dentro de la transacción, desactivar en vez de borrar). Rehecho el 2026-10-10 en el ensayo: collation `uca1400_ai_ci`,
+bloques 2 y 3 que no dependen de la sesión, bloque 4 (trabajos cerrados) y **borrar** los clientes al final.
 
 **Files:**
 - Create: `C:\Users\dev\Documents\Apuntes\quitar-clientes-incidencias.sql` (fuera de git)
@@ -42,8 +46,9 @@ dentro de la transacción, desactivar en vez de borrar).
 
 **Interfaces:**
 - Produces: bloques **0** (parámetros y requisitos), **1** (comprobación), **2** (cambio y análisis en transacción),
-  **3** (después). Variables `@usuario`, `@ids`; tabla temporal `tel_inc` (IMEI y cliente que tenían). Cifras del
-  bloque 1.4: `ABIERTAS`, `YA_LLEVAN_NOMBRE`, `URGENTES`, `TELEFONOS`.
+  **3** (después), **4** (trabajos cerrados). Variables `@usuario`, `@ids`; tablas temporales `tel_inc` (IMEI y cliente
+  que tenían) y `trab_inc` (trabajos cerrados y su cliente). Cifras del bloque 1.4: `ABIERTAS`, `YA_LLEVAN_NOMBRE`,
+  `URGENTES`, `TELEFONOS`; del 4.1: `TRABAJOS`, `REP_GLASS`, `PULIDO_O_ASIG`.
 
 - [x] **Step 1: Crear el script**
 
@@ -64,14 +69,14 @@ Contenido completo de `Apuntes/quitar-clientes-incidencias.sql`:
 --   X'E28094'   = "—"   (lo que escribe la web en el registro al dejar un IMEI sin cliente)
 
 -- == Bloque 0: parametros y requisitos =======================================
-SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET NAMES utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
 SET @usuario := 'NOMBRE_DE_USUARIO';  -- <- cambiar por el usuario de la web que firma el registro (el tuyo)
 
 -- 0.0 BASE = gestion_reparaciones. Si no, PARAR (la consola no esta en la base del ERP).
 SELECT DATABASE() AS BASE;
 
--- 0.1 Las cinco tablas deben salir con utf8mb4_unicode_ci. Si alguna sale con otra, PARAR
---     (las variables, los literales y la tabla temporal tel_inc van con utf8mb4_unicode_ci).
+-- 0.1 Las cinco tablas deben salir con utf8mb4_uca1400_ai_ci. Si alguna sale con otra, PARAR
+--     (las variables, los literales y la tabla temporal tel_inc van con utf8mb4_uca1400_ai_ci).
 SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME IN ('Cliente', 'Telefono', 'Reparacion', 'Usuario', 'Log_Actividad');
@@ -129,15 +134,22 @@ SELECT COUNT(*) AS TELEFONOS FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
 -- cualquier ERROR: la consola sigue con las siguientes sentencias aunque una falle).
 -- Bloqueos: READ COMMITTED (sin bloqueos de huecos) y cada cambio entra por la foto tel_inc (por clave), asi que hasta
 -- el COMMIT/ROLLBACK solo quedan bloqueadas las filas de esos telefonos: no tardar mas de un par de minutos.
+-- Variables otra vez (por si la consola es nueva) y comprobacion: IDS = los dos ID y USUARIO = el tuyo.
+-- Si alguno sale NULL, PARAR: sin @ids la foto sale vacia y todo cuadra "a cero" sin hacer nada.
+SET NAMES utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+SET @usuario := 'NOMBRE_DE_USUARIO';  -- <- el mismo que en el bloque 0
+SELECT GROUP_CONCAT(ID_CLI ORDER BY ID_CLI) INTO @ids FROM Cliente WHERE NOMBRE LIKE '%incidencia%';
+SELECT @ids AS IDS, @usuario AS USUARIO;
+
 SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
 -- 2.0 Foto de los telefonos afectados y su cliente, ANTES de abrir la transaccion (no deja nada bloqueado)
 DROP TEMPORARY TABLE IF EXISTS tel_inc;
 -- Collation explicita: una tabla temporal toma la de la base, que puede no ser la de las tablas.
 CREATE TEMPORARY TABLE tel_inc (
-    IMEI    VARCHAR(15)  COLLATE utf8mb4_unicode_ci NOT NULL PRIMARY KEY,
+    IMEI    VARCHAR(15)  COLLATE utf8mb4_uca1400_ai_ci NOT NULL PRIMARY KEY,
     ID_CLI  INT          NOT NULL,
-    CLIENTE VARCHAR(150) COLLATE utf8mb4_unicode_ci NOT NULL
+    CLIENTE VARCHAR(150) COLLATE utf8mb4_uca1400_ai_ci NOT NULL
 )
 SELECT t.IMEI, t.ID_CLI, c.NOMBRE AS CLIENTE
 FROM Telefono t JOIN Cliente c ON c.ID_CLI = t.ID_CLI
@@ -154,7 +166,7 @@ FOR UPDATE;
 UPDATE tel_inc x STRAIGHT_JOIN Reparacion r ON r.IMEI = x.IMEI
 SET r.COMENTARIO_ASIGNACION = CASE
       WHEN r.COMENTARIO_ASIGNACION IS NULL OR TRIM(r.COMENTARIO_ASIGNACION) = '' THEN x.CLIENTE
-      ELSE CONCAT(x.CLIENTE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_unicode_ci, r.COMENTARIO_ASIGNACION)
+      ELSE CONCAT(x.CLIENTE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_uca1400_ai_ci, r.COMENTARIO_ASIGNACION)
     END
 WHERE r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL
   AND (r.COMENTARIO_ASIGNACION IS NULL OR r.COMENTARIO_ASIGNACION NOT LIKE CONCAT('%', x.CLIENTE, '%'));
@@ -167,7 +179,7 @@ WHERE r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
 -- 2.3 Una linea CAMBIAR_CLIENTE por telefono, con el mismo detalle que pone la web (TelefonoController.actualizarCliente)
 INSERT INTO Log_Actividad (ID_USU, NOMBRE_USUARIO, ACCION, DETALLE, MOTIVO)
 SELECT u.ID_USU, u.NOMBRE_USUARIO, 'CAMBIAR_CLIENTE',
-       CONCAT('IMEI: ', x.IMEI, ', ID_CLI: ', _utf8mb4 X'E28094' COLLATE utf8mb4_unicode_ci),
+       CONCAT('IMEI: ', x.IMEI, ', ID_CLI: ', _utf8mb4 X'E28094' COLLATE utf8mb4_uca1400_ai_ci),
        CONCAT('Limpieza de clientes ficticios: ', x.CLIENTE,
               ' pasa al comentario de sus asignaciones abiertas y se les quita el urgente')
 FROM tel_inc x
@@ -204,41 +216,119 @@ ORDER BY r.IMEI, r.ID_REP;
 -- Si todo cuadra:  COMMIT;
 -- Si no:           ROLLBACK;
 
--- == Bloque 3: despues del COMMIT ============================================
+-- == Bloque 3: despues del COMMIT (no depende de la sesion: vale en una consola nueva) ======
+SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+DROP TEMPORARY TABLE IF EXISTS tel_inc;
+
 -- 3.1 Lineas del registro de esta limpieza (= TELEFONOS)
 SELECT COUNT(*) AS LINEAS FROM Log_Actividad
 WHERE ACCION = 'CAMBIAR_CLIENTE' AND MOTIVO LIKE 'Limpieza de clientes ficticios:%';
 
--- Ahora desactivar los dos clientes en la web: pestana Clientes -> interruptor de activo (uno y otro).
+-- Los dos clientes NO se desactivan: tras el bloque 4 quedan sin referencias y se BORRAN desde la web.
 
--- 3.2 Tras desactivarlos en la web: los dos con ACTIVO = 0
-SELECT ID_CLI, NOMBRE, ACTIVO FROM Cliente WHERE FIND_IN_SET(ID_CLI, @ids);
+-- 3.2 Los dos clientes siguen ahi (se borran al final del bloque 4)
+SELECT ID_CLI, NOMBRE, ACTIVO FROM Cliente WHERE NOMBRE LIKE '%incidencia%';
 
 -- 3.3 Estado final (spec 4): QUEDAN = 0 y URGENTES_ABIERTAS = 0. Si no (alguien asigno durante la transaccion y el
 --     urgente o el cliente volvieron), repetir los bloques 1 y 2 sobre lo que quede.
-SELECT COUNT(*) AS QUEDAN FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids);
-SELECT COUNT(*) AS URGENTES_ABIERTAS FROM tel_inc x JOIN Reparacion r ON r.IMEI = x.IMEI
-WHERE r.FECHA_FIN IS NULL AND r.URGENTE = TRUE;
+SELECT COUNT(*) AS QUEDAN FROM Telefono t JOIN Cliente c ON c.ID_CLI = t.ID_CLI WHERE c.NOMBRE LIKE '%incidencia%';
+SELECT COUNT(*) AS URGENTES_ABIERTAS FROM Reparacion r
+WHERE r.FECHA_FIN IS NULL AND r.URGENTE = TRUE
+  AND r.IMEI IN (SELECT TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(l.DETALLE, 'IMEI: ', -1), ',', 1)) FROM Log_Actividad l
+                 WHERE l.ACCION = 'CAMBIAR_CLIENTE' AND l.MOTIVO LIKE 'Limpieza de clientes ficticios:%');
 
-DROP TEMPORARY TABLE IF EXISTS tel_inc;
-SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+-- == Bloque 4: pasar la etiqueta de los trabajos CERRADOS a su observacion y quitarles el cliente ==========
+-- (decision del usuario 2026-10-10 en el ensayo de preprod: el Historial de reparacion/glass no muestra el cliente,
+--  la Observaciones si; asi el cliente de incidencias queda sin referencias y se puede BORRAR desde la web)
+--   Reparacion/glass (R..., G...): OBSERVACIONES de su pieza (Reparacion_componente, ES_SOLICITUD = 0) -> columna
+--                                  "Observaciones" del Historial.
+--   Pulido (P...) y asignaciones cerradas (A..., AG..., AP...): COMENTARIO_ASIGNACION -> "Comentario" del Historial
+--                                  de pulidos (en las A no se ve, queda coherente).
+--   Formato: "<CLIENTE> · <lo que hubiera>", o solo el cliente si estaba vacio; si ya lo contiene, no se toca.
+-- Variables otra vez (por si la consola es nueva) y foto de los trabajos ANTES de la transaccion.
+SET NAMES utf8mb4 COLLATE utf8mb4_uca1400_ai_ci;
+SELECT GROUP_CONCAT(ID_CLI ORDER BY ID_CLI) INTO @ids FROM Cliente WHERE NOMBRE LIKE '%incidencia%';
+SELECT @ids AS IDS;   -- si sale NULL, PARAR
+SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
+DROP TEMPORARY TABLE IF EXISTS trab_inc;
+CREATE TEMPORARY TABLE trab_inc (
+    ID_REP  VARCHAR(30)  COLLATE utf8mb4_uca1400_ai_ci NOT NULL PRIMARY KEY,
+    CLIENTE VARCHAR(150) COLLATE utf8mb4_uca1400_ai_ci NOT NULL
+)
+SELECT r.ID_REP, c.NOMBRE AS CLIENTE
+FROM Reparacion r JOIN Cliente c ON c.ID_CLI = r.ID_CLI
+WHERE FIND_IN_SET(r.ID_CLI, @ids);
+
+-- 4.1 Comprobacion (solo lectura): los trabajos y lo que tienen hoy. Guardar la salida (vuelta atras).
+SELECT x.ID_REP, r.IMEI, r.FECHA_FIN, x.CLIENTE, rc.ID_RC, rc.OBSERVACIONES, r.COMENTARIO_ASIGNACION
+FROM trab_inc x
+JOIN Reparacion r ON r.ID_REP = x.ID_REP
+LEFT JOIN Reparacion_componente rc ON rc.ID_REP = r.ID_REP AND rc.ES_SOLICITUD = 0
+ORDER BY r.IMEI, x.ID_REP;
+SELECT COUNT(*) AS TRABAJOS,
+       COALESCE(SUM(ID_REP LIKE 'R%' OR ID_REP LIKE 'G%'), 0) AS REP_GLASS,
+       COALESCE(SUM(ID_REP LIKE 'P%' OR ID_REP LIKE 'A%'), 0) AS PULIDO_O_ASIG
+FROM trab_inc;
+
+-- 4.2-4.4 Cambio (una transaccion). Esperado: 4.2 = filas de pieza de REP_GLASS que no llevan ya el nombre;
+-- 4.3 = PULIDO_O_ASIG que no lo llevan; 4.4 = TRABAJOS; 4.5 QUEDAN_TRABAJOS = 0 y REFERENCIAS = 0.
+-- Terminar a mano con COMMIT; o ROLLBACK;.
+START TRANSACTION;
+
+UPDATE trab_inc x STRAIGHT_JOIN Reparacion_componente rc ON rc.ID_REP = x.ID_REP
+SET rc.OBSERVACIONES = CASE
+      WHEN rc.OBSERVACIONES IS NULL OR TRIM(rc.OBSERVACIONES) = '' THEN x.CLIENTE
+      ELSE CONCAT(x.CLIENTE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_uca1400_ai_ci, rc.OBSERVACIONES)
+    END
+WHERE (x.ID_REP LIKE 'R%' OR x.ID_REP LIKE 'G%') AND rc.ES_SOLICITUD = 0
+  AND (rc.OBSERVACIONES IS NULL OR rc.OBSERVACIONES NOT LIKE CONCAT('%', x.CLIENTE, '%'));
+
+UPDATE trab_inc x STRAIGHT_JOIN Reparacion r ON r.ID_REP = x.ID_REP
+SET r.COMENTARIO_ASIGNACION = CASE
+      WHEN r.COMENTARIO_ASIGNACION IS NULL OR TRIM(r.COMENTARIO_ASIGNACION) = '' THEN x.CLIENTE
+      ELSE CONCAT(x.CLIENTE, _utf8mb4 X'20C2B720' COLLATE utf8mb4_uca1400_ai_ci, r.COMENTARIO_ASIGNACION)
+    END
+WHERE (x.ID_REP LIKE 'P%' OR x.ID_REP LIKE 'A%')
+  AND (r.COMENTARIO_ASIGNACION IS NULL OR r.COMENTARIO_ASIGNACION NOT LIKE CONCAT('%', x.CLIENTE, '%'));
+
+-- 4.4 Quitar el cliente guardado (UPDATED_AT se conserva: es un dato derivado, no una edicion)
+UPDATE trab_inc x STRAIGHT_JOIN Reparacion r ON r.ID_REP = x.ID_REP
+SET r.ID_CLI = NULL, r.UPDATED_AT = r.UPDATED_AT;
+
+-- 4.5 Analisis antes de confirmar
+SELECT COUNT(*) AS QUEDAN_TRABAJOS FROM Reparacion WHERE FIND_IN_SET(ID_CLI, @ids);
+SELECT (SELECT COUNT(*) FROM Telefono WHERE FIND_IN_SET(ID_CLI, @ids))
+     + (SELECT COUNT(*) FROM Reparacion WHERE FIND_IN_SET(ID_CLI, @ids)) AS REFERENCIAS;
+SELECT x.ID_REP, r.IMEI, r.ID_CLI, rc.OBSERVACIONES, r.COMENTARIO_ASIGNACION
+FROM trab_inc x
+JOIN Reparacion r ON r.ID_REP = x.ID_REP
+LEFT JOIN Reparacion_componente rc ON rc.ID_REP = r.ID_REP AND rc.ES_SOLICITUD = 0
+ORDER BY r.IMEI, x.ID_REP;
+
+-- Si cuadra:  COMMIT;   Si no: ROLLBACK;
+-- Despues: SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;  DROP TEMPORARY TABLE IF EXISTS trab_inc;
+-- y en la web, pestana Clientes: BORRAR los clientes de incidencias (ya sin referencias, "Borrar" aparece).
+-- Comprobacion final: SELECT ID_CLI, NOMBRE FROM Cliente WHERE NOMBRE LIKE '%incidencia%';  -> vacio
 ```
 
 Por qué así (para quien revise):
-- `SET NAMES … COLLATE utf8mb4_unicode_ci` (la de `crear_bd.sql`): las variables de usuario toman la collation de la
+- `SET NAMES … COLLATE utf8mb4_uca1400_ai_ci` (la de las tablas de preproducción y producción; `crear_bd.sql` dice
+  `unicode_ci`, pero las tablas reales no): las variables de usuario toman la collation de la
   conexión; si no coincide con la de las columnas, `u.NOMBRE_USUARIO = @usuario` da «Illegal mix of collations». El 0.2
   lo comprueba antes de tocar nada.
 - Los literales con `·` y `—` en hexadecimal con introductor y `COLLATE` explícito: el resultado no depende de cómo
   envíe la terminal los caracteres, y el `COLLATE` explícito evita el mismo error en el `CONCAT`.
 - `@ids` en vez de una tabla temporal para los clientes: MariaDB no deja abrir dos veces una tabla temporal en la misma
-  sentencia. `tel_inc` sí es temporal, pero cada consulta la nombra una sola vez; se crea dentro de la transacción (una
-  tabla temporal no la confirma) para tener el cliente que tenían después de quitarlo.
+  sentencia. `tel_inc` y `trab_inc` sí son temporales, pero cada consulta las nombra una sola vez; se crean **antes** de
+  abrir la transacción (foto con el cliente que tenían, sin dejar nada bloqueado) y las escrituras entran por ellas, por
+  clave (`STRAIGHT_JOIN`), con `READ COMMITTED` para no bloquear huecos.
 
 - [x] **Step 2: Revisar el script contra la spec**
 
 §2 (comentario delante con ` · `, no tocar si ya lo contiene; urgente fuera en las tres categorías; `CAMBIAR_CLIENTE`
-por teléfono con `IMEI: x, ID_CLI: —`; desactivar), §3.1 (requisito y los tres puntos de la comprobación), §3.2 (orden
-comentario → urgente → registro → teléfono y análisis antes del `COMMIT`), §3.3 (desactivación desde la web).
+por teléfono con `IMEI: x, ID_CLI: —`; trabajos cerrados; borrar), §3.1 (requisito y los tres puntos de la comprobación),
+§3.2 (orden comentario → urgente → registro → teléfono y análisis antes del `COMMIT`), §3.3 (bloque 4 y borrado desde la web).
 
 Run: `grep -nP '[^\x00-\x7F]' /c/Users/dev/Documents/Apuntes/quitar-clientes-incidencias.sql | grep -v '^[0-9]*:--' || echo SOLO_EN_COMENTARIOS`
 Expected: `SOLO_EN_COMENTARIOS`.
@@ -262,6 +352,9 @@ git commit -m "docs: plan de la limpieza de incidencias tras la 0.9.8 (desactiva
 
 ### Task 2: Ensayo en preproducción
 
+**Hecho el 2026-10-10** (Steps 1–8; el registro, Step 9, va con la sesión del añadido de la 0.9.8). En el Step 6 el
+usuario decidió **borrar** los clientes en vez de desactivarlos: de ahí el bloque 4 y la spec §2 actual.
+
 Después de la Task 6 de la 0.9.8 (Steps 1–3: desplegada, relleno confirmado y probada). Preproducción tiene la base de
 producción del 2026-10-09 10:50: debería tener los dos clientes y sus teléfonos reales de esa hora.
 
@@ -272,22 +365,22 @@ producción del 2026-10-09 10:50: debería tener los dos clientes y sus teléfon
 - Consumes: el script de la Task 1 y el usuario administrador (mismo nombre en preprod y en producción; contraseña de
   preprod en `~/.env.e2e`, `ADMIN_USER`/`ADMIN_PASS`).
 
-- [ ] **Step 1: Consola de MariaDB en preprod (usuario)**
+- [x] **Step 1: Consola de MariaDB en preprod (usuario)**
 
 La misma sesión del relleno de la 0.9.8 sirve; si se cerró: `ssh preprod` y la línea de consola de
 `Apuntes/despliegue_vdc_produccion.md` §«Entrar en MariaDB sin escribir la contraseña» (la primera, con `-it`).
 
-- [ ] **Step 2: Bloque 0 (usuario pega, Claude revisa)**
+- [x] **Step 2: Bloque 0 (usuario pega, Claude revisa)**
 
 Con `NOMBRE_DE_USUARIO` sustituido por el nombre de usuario del administrador.
-Expected: 0.0 `BASE` = `gestion_reparaciones`; 0.1 las cinco tablas con `utf8mb4_unicode_ci`; 0.2 una fila; 0.3 `CERRADAS_CON_CLIENTE` > 0; 0.4 `LOG_BIN` 0 o `FORMATO` distinto de `STATEMENT`.
+Expected: 0.0 `BASE` = `gestion_reparaciones`; 0.1 las cinco tablas con `utf8mb4_uca1400_ai_ci`; 0.2 una fila; 0.3 `CERRADAS_CON_CLIENTE` > 0; 0.4 `LOG_BIN` 0 o `FORMATO` distinto de `STATEMENT`.
 
-- [ ] **Step 3: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
+- [x] **Step 3: Bloque 1 (usuario pega la salida aquí, Claude la revisa)**
 
 Expected: 1.1 exactamente dos clientes; `@ids` con sus dos ID. Anotar `ABIERTAS`, `YA_LLEVAN_NOMBRE`, `URGENTES` y
 `TELEFONOS`.
 
-- [ ] **Step 4: Bloque 2, análisis y COMMIT (usuario pega, Claude compara y revisa con el usuario)**
+- [x] **Step 4: Bloque 2, análisis y COMMIT (usuario pega, Claude compara y revisa con el usuario)**
 
 Expected: 2.0 y `SIGUEN` = `TELEFONOS`; 2.1 `Changed` = `ABIERTAS − YA_LLEVAN_NOMBRE`; 2.2 = `URGENTES`; 2.3 y 2.4 = `TELEFONOS`; 2.5 `QUEDAN 0`;
 ningún `ERROR`. Análisis 2.6, revisado juntos antes de confirmar:
@@ -297,28 +390,37 @@ ningún `ERROR`. Análisis 2.6, revisado juntos antes de confirmar:
 - c) las asignaciones abiertas con `URGENTE 0` y el comentario empezando por el nombre (` · ` delante del anterior).
 Si todo cuadra, `COMMIT;`; si no, `ROLLBACK;`, se corrige el script (Task 1) y se repite desde el bloque 0.
 
-- [ ] **Step 5: Bloque 3.1**
+- [x] **Step 5: Bloque 3.1**
 
 Expected: `LINEAS` = `TELEFONOS`.
 
-- [ ] **Step 6: Comprobar en la web de preprod**
+- [x] **Step 6: Comprobar en la web de preprod**
 
 Con el administrador:
 - **Asignaciones / Pendientes:** esos IMEIs sin cliente, sin «Urgente», y el Comentario con el nombre; el `·` y los
   acentos del comentario anterior se ven bien (no `Â·` ni similares).
-- **Historial:** un trabajo hecho de uno de esos IMEIs sigue con «Incidencias …» en Cliente.
+- **Historial:** un trabajo hecho de uno de esos IMEIs sigue con «Incidencias …» en Cliente (hasta el bloque 4).
 - **Menú de usuario → Ver logs:** filtrar por `CAMBIAR_CLIENTE`: las líneas con `ID_CLI: —` y el motivo; buscar uno de
   los IMEIs y que salga.
-- **Pestaña Clientes:** desactivar «Incidencias Amazon» y «Incidencias profesionales» (no ofrecen «Borrar»).
+- **Pestaña Clientes:** no tocar todavía (se borran al final del bloque 4).
 
-- [ ] **Step 7: Bloques 3.2 y 3.3**
+- [x] **Step 7: Bloques 3.2 y 3.3**
 
-Expected: 3.2 los dos con `ACTIVO = 0`; 3.3 `QUEDAN` 0 y `URGENTES_ABIERTAS` 0.
+Expected: 3.2 los dos clientes siguen ahí; 3.3 `QUEDAN` 0 y `URGENTES_ABIERTAS` 0.
 
-- [ ] **Step 8: Registrar el ensayo**
+- [x] **Step 8: Bloque 4 y borrar los clientes en la web**
 
-En la entrada de la sesión de la 0.9.8 de `Apuntes/despliegue_preprod.md`: cifras del bloque 1.4 y de cada paso del
-bloque 2, lo visto en el análisis 2.6, incidencias y correcciones del script si las hubo.
+Expected: `IDS` con los dos ID; 4.1 `TRABAJOS` = `REP_GLASS` + `PULIDO_O_ASIG` (**guardar la salida del 4.1**: es la
+vuelta atrás); 4.2 = filas de pieza de `REP_GLASS` que no llevan ya el nombre; 4.3 = `PULIDO_O_ASIG` que no lo llevan;
+4.4 = `TRABAJOS`; 4.5 `QUEDAN_TRABAJOS` 0, `REFERENCIAS` 0 y el listado con `ID_CLI` vacío y la etiqueta delante
+(` · `). `COMMIT;`, y en la web, pestaña Clientes: **Borrar** los dos (aparece «Borrar» al no tener referencias).
+Comprobación final del script: vacía. En «Ver logs», `BORRAR_CLIENTE` con los dos nombres.
+
+- [ ] **Step 9: Registrar el ensayo**
+
+En la entrada de la sesión de la 0.9.8 de `Apuntes/despliegue_preprod.md`: cifras del bloque 1.4 y de cada paso de los
+bloques 2 y 4, lo visto en los análisis 2.6 y 4.5, incidencias y correcciones del script (collation, sesión, bloque 4,
+borrar en vez de desactivar).
 
 ---
 
@@ -361,24 +463,32 @@ producción de `Apuntes/` (Step 8).
 Expected: las mismas reglas que en preprod (Task 2, Step 4) con las cifras de producción. El análisis 2.6 se repasa en
 un par de minutos (ya visto en preprod) y `COMMIT;` solo si todo cuadra y no hay ningún `ERROR`.
 
-- [ ] **Step 6: Bloque 3.1, desactivación en la web y bloque 3.2**
+- [ ] **Step 6: Bloque 3**
 
-Expected: como en preprod (Task 2, Steps 5–7), con la web de producción.
+Expected: como en preprod (Task 2, Steps 5 y 7). Los clientes **no** se desactivan.
 
-- [ ] **Step 7: Recargar (técnicos)**
+- [ ] **Step 7: Bloque 4, COMMIT y borrar los clientes en la web**
+
+Expected: como en preprod (Task 2, Step 8), con las cifras de producción. **Guardar la salida del 4.1** (vuelta atrás):
+Claude la pega en la entrada del registro de producción (Step 9). Después, pestaña Clientes de la web de producción:
+**Borrar** los dos.
+
+- [ ] **Step 8: Recargar (técnicos)**
 
 Avisar de que recarguen la página. Si alguien tenía abierto el editor de comentario de una de esas filas y le sale
 «Dato modificado por otro usuario», que cierre, recargue y vuelva a escribir.
 
-- [ ] **Step 8: Registrar en `Apuntes/despliegue_vdc_produccion.md`**
+- [ ] **Step 9: Registrar en `Apuntes/despliegue_vdc_produccion.md`**
 
 Entrada «2026-10-… (…, sin corte) — Quitar los clientes ficticios de incidencias (solo datos)» con: qué y por qué
-(enlace a la spec), copia a mano (nombre, tamaño), cifras del 1.4 y de cada paso del 2, el análisis 2.6, salida del 1.3
-(vuelta atrás), desactivación de los clientes y **vuelta atrás**: reactivar los dos clientes en la web,
-`UPDATE Telefono SET ID_CLI = <id> WHERE IMEI IN (…)` con los IMEIs del 2.6 a) por cliente, y devolver
-`COMENTARIO_ASIGNACION`/`URGENTE` a lo que dice el 1.3 (`UPDATE Reparacion … WHERE ID_REP = …`, uno por fila).
+(enlace a la spec), copia a mano (nombre, tamaño), cifras del 1.4, de cada paso del 2 y del 4, los análisis 2.6 y 4.5,
+salidas del 1.3 y del 4.1 (vuelta atrás), borrado de los clientes y **vuelta atrás**: volver a crear los dos clientes
+con su `ID_CLI` y su nombre (`INSERT INTO Cliente (ID_CLI, NOMBRE, ACTIVO) VALUES …`), `UPDATE Telefono SET ID_CLI = <id>
+WHERE IMEI IN (…)` con los IMEIs del 2.6 a) por cliente, devolver `ID_CLI`, `OBSERVACIONES` y `COMENTARIO_ASIGNACION` de
+los trabajos cerrados a lo que dice el 4.1, y `COMENTARIO_ASIGNACION`/`URGENTE` de las abiertas a lo que dice el 1.3
+(`UPDATE … WHERE ID_REP = …` / `WHERE ID_RC = …`, uno por fila). O, si es todo, la copia a mano del Step 2.
 
-- [ ] **Step 9: Comprobar al día siguiente**
+- [ ] **Step 10: Comprobar al día siguiente**
 
 Tras las 00:00: esos IMEIs siguen sin urgente (el urgente automático ya no los ve). Desde la consola:
 
@@ -389,7 +499,8 @@ WHERE r.IMEI IN (<IMEIs del 2.6 a)>) AND r.ID_REP LIKE 'A%' AND r.FECHA_FIN IS N
 
 Expected: vacío, salvo las que el supertécnico haya vuelto a marcar a mano (salen en el registro como `MARCAR_URGENTE`).
 
-- [ ] **Step 10: Memoria**
+- [ ] **Step 11: Memoria**
 
-Actualizar `project_produccion_vdc.md` con una línea: «clientes ficticios de incidencias quitados y desactivados (solo
-datos, tras la 0.9.8); las devoluciones van en el Comentario de la asignación».
+Actualizar `project_produccion_vdc.md` con una línea: «clientes ficticios de incidencias quitados y borrados (solo
+datos, tras la 0.9.8; su etiqueta, en el Comentario de las abiertas y en Observaciones/Comentario de los cerrados); las
+devoluciones van en el Comentario de la asignación».

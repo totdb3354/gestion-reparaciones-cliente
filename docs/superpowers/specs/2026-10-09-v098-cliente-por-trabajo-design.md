@@ -103,8 +103,10 @@ La sesión del relleno fija `time_zone = '+00:00'` para compararlas en la misma 
 dejaba apunte; sí lo deja (`QUITAR_CLIENTE`, corregido en la revisión del script del relleno). El análisis muestra
 cuántos apuntes de cada acción se han leído.
 
-**Collation.** Las tablas temporales del relleno declaran `utf8mb4_unicode_ci` (una temporal toma la de la base, que
-puede no coincidir con la de las tablas) y el script comprueba antes la base y la collation de las tablas.
+**Collation.** Las tablas temporales del relleno declaran `utf8mb4_uca1400_ai_ci`, la de las tablas de preproducción y
+producción (visto en el ensayo; `crear_bd.sql` dice `unicode_ci`, pero las tablas reales no la tienen). Una temporal toma
+la de la base, que puede no coincidir con la de las tablas, y el script comprueba antes la base y la collation de las
+tablas.
 
 **Cómo se aplica (decisión del usuario).** Todo en una transacción, en este orden:
 1. Relleno.
