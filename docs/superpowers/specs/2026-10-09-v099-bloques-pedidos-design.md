@@ -47,7 +47,7 @@ líneas). Esta versión la añade sin cambiar cómo funciona cada línea.
 | Arrastrar filas | **Fuera** (backlog) | Choca con el pintado parcial y el sondeo; WCAG 2.2 §2.5.7 exige alternativa igualmente |
 | Gastos de envío | **Fuera** (backlog) | Hoy no se registran; la nota sirve si hace falta |
 | Pedidos «Otros» | **Fuera** (backlog): siguen planos | Otra tabla con otras columnas; casi dobla el trabajo |
-| Auto con bloques | **Fuera**: versión aparte tras unas semanas de uso | El proveedor depende de la pieza y cambia; los bloques darán los datos para diseñarlo |
+| Auto con bloques | ~~Fuera: versión aparte tras unas semanas de uso~~ **Cambiado el 2026-10-11:** entra en la 0.9.9 antes de producción como lista de piezas por proveedor puesta a mano y previsión por proveedor (spec `2026-10-11-v099-catalogo-proveedores-design.md`); el «Ya que pides a X…» sigue fuera | El usuario prefirió terminarlo antes de llevar la 0.9.9 a producción |
 | Versión | **0.9.9**, después de la 0.9.8 | Sin mezclar migraciones de dos versiones |
 
 ## 3. Reglas del bloque
@@ -379,9 +379,9 @@ bloque»** justo después de «ID».
 
 ## 9. Fuera de alcance (al backlog de `plan-futuro`)
 
-- **Auto con bloques**: proveedor habitual por pieza (sacado de los bloques) y «Ya que pides a X…» (política
-  *can-order* del *joint replenishment problem*: al pedir a X, sugerir piezas de X que se agotarán pronto). Versión
-  aparte, tras unas semanas de uso.
+- ~~**Auto con bloques**~~: la previsión por proveedor (con lista de piezas puesta a mano) entra en la 0.9.9 (spec
+  `2026-10-11-v099-catalogo-proveedores-design.md`). Sigue fuera el «Ya que pides a X…» (política *can-order* del
+  *joint replenishment problem*: al pedir a X, sugerir piezas de X que se agotarán pronto).
 - **Plazo real por proveedor** (fecha del bloque → llegadas), ya en el backlog de la previsión: con los bloques pasa a
   ser directo.
 - Gastos de envío por bloque.
