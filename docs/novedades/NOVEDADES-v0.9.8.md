@@ -11,6 +11,9 @@ Cada trabajo **recuerda para qué cliente se hizo**.
   cambian**: el Historial sigue mostrando el cliente con el que se hicieron.
 - Los trabajos **pendientes** siguen al cliente del teléfono, como siempre.
 - Los trabajos anteriores a esta versión se han completado con el registro de cambios de cliente.
+- En el **Historial** y en el **detalle de un IMEI** hay una columna **Cliente**; en el Historial, también un filtro «Cliente».
+- ¿Se apuntó mal el cliente? Clic derecho en el trabajo → **«Corregir cliente»**: eliges el cliente correcto y qué
+  trabajos de ese teléfono se corrigen (de entrada salen marcados los del mismo día). Supertécnicos y administrador.
 
 ---
 
