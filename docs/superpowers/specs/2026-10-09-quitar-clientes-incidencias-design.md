@@ -33,10 +33,11 @@ Una devolución debe tratarse como **trabajo normal**.
 | Orden respecto a la 0.9.8 | **Después** del relleno de la 0.9.8 | Con el relleno hecho, los trabajos cerrados de esas devoluciones conservan la etiqueta en el Historial; después de quitar el cliente de los teléfonos ya no habría de dónde sacarla |
 | Teléfonos que los tienen | Quedan **sin cliente** | Para que dejen de comportarse como pedido |
 | Asignaciones abiertas de esos teléfonos | El nombre del cliente pasa **delante** del comentario: `Incidencias Amazon · <comentario>`, o solo el nombre si estaba vacío; si el comentario ya lo contiene, no se toca | Se conserva la etiqueta donde los técnicos la ven mientras el trabajo está abierto |
-| Trabajos ya cerrados | **Conservan** la etiqueta en el Historial (su cliente guardado, 0.9.8) | No se tocan |
+| Trabajos ya cerrados | Los que guardaron **otro** cliente no se tocan. Los que guardaron uno de los de incidencias pasan la etiqueta a su **Observaciones** (reparación/glass, la de su pieza) o a su **Comentario** (pulido y asignaciones cerradas), delante y con ` · `, y se les quita el cliente guardado | Decisión del usuario en el ensayo (2026-10-10): el Historial de reparación/glass no enseña el cliente (añadido de la 0.9.8 del 2026-10-11) y la Observaciones sí; además deja los clientes sin referencias |
 | Urgente de esas asignaciones abiertas | Se **quita a todas** (reparación, glass y pulido) | Lo puso el urgente automático por tener cliente. El urgente es por teléfono: se quita en las tres categorías a la vez. El supertécnico vuelve a marcar a mano la que sea urgente de verdad |
 | Rastro en el registro de actividad | Una línea **`CAMBIAR_CLIENTE` por teléfono**, con el mismo detalle que pone el programa (`IMEI: x, ID_CLI: —`) y un motivo que explica la limpieza, a nombre del usuario que la ejecuta | La búsqueda por IMEI del registro la encuentra igual que un cambio de cliente hecho desde la web |
-| Los dos clientes | Se **desactivan** desde la pestaña Clientes de la web, con el interruptor de siempre (no se borran) | El historial los sigue nombrando (clave ajena de la 0.9.8). Desactivados no salen para elegir. Queda `BAJA_CLIENTE` con el usuario |
+| Los dos clientes | Se **borran** desde la pestaña Clientes de la web una vez sin referencias (sin teléfonos ni trabajos guardados: entonces la web ofrece «Borrar») | Decisión del usuario en el ensayo (2026-10-10). Queda `BORRAR_CLIENTE` con el usuario y el nombre. Mientras tengan referencias, la web no ofrece «Borrar» (0.9.8) |
+| Collation | Las tablas de preprod y producción están en **`utf8mb4_uca1400_ai_ci`** (no `unicode_ci`): los scripts usan esa | Visto en el ensayo: la comprobación del bloque 0 paró el relleno a tiempo |
 | Confirmación | Todo en una transacción con **análisis antes del `COMMIT`**; se confirma a mano | Decisión del usuario: ver primero qué IMEIs se quedan sin cliente y qué se podría perder |
 
 ## 3. Operación
@@ -73,17 +74,19 @@ en producción, el análisis ya revisado en preproducción se repasa en un par d
 
 ### 3.3 Después
 
-1. Desactivar los dos clientes en la pestaña Clientes.
-2. Avisar a los técnicos: las devoluciones van en el Comentario de la asignación, y deben recargar la página para que
+1. **Bloque 4**: los trabajos cerrados que guardaron uno de esos clientes pasan la etiqueta a su Observaciones/Comentario
+   y se les quita el cliente (transacción con comprobación previa y análisis antes del `COMMIT`).
+2. Borrar los dos clientes en la pestaña Clientes («Borrar» aparece al no tener referencias).
+3. Avisar a los técnicos: las devoluciones van en el Comentario de la asignación, y deben recargar la página para que
    los dos clientes desaparezcan de sus listas.
 
 ## 4. Verificación
 
 - **En preproducción primero**, con la 0.9.8 y su relleno ya hechos sobre la copia de producción: comprobación,
   cambio con su análisis, revisión en la web (comentario con `·` y acentos bien, sin urgente, Historial con la
-  etiqueta en los cerrados, línea del registro buscable por IMEI) y desactivación de los clientes.
+  etiqueta en los cerrados, línea del registro buscable por IMEI) bloque 4 y borrado de los clientes.
 - **En producción**: copia de seguridad antes. Al terminar, 0 teléfonos con esos clientes, las asignaciones con el
-  comentario esperado y sin urgente, los cerrados con su etiqueta en el Historial, y los dos clientes desactivados.
+  comentario esperado y sin urgente, los cerrados con su etiqueta en el Historial, los trabajos cerrados que tenían esos clientes con la etiqueta en su Observaciones/Comentario, y los dos clientes borrados.
 - Al día siguiente: el urgente automático de las 00:00 ya no marca esos teléfonos.
 
 ## 5. Fuera de alcance
