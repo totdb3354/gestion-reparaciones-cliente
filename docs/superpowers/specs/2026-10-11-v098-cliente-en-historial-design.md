@@ -33,14 +33,14 @@ el registro de los despliegues viven fuera de git, en `Apuntes/`.
 
 ### 3.1 Trabajos cerrados de un IMEI (para el modal)
 
-`GET /api/reparaciones/imei/{imei}/cerrados` (supertécnico): todos los trabajos **cerrados** del IMEI, de cualquier
+`GET /api/reparaciones/imei/{imei}/cerrados` (supertécnico y administrador): todos los trabajos **cerrados** del IMEI, de cualquier
 tipo (`R`, `G`, `P` y asignaciones cerradas `A`/`AG`/`AP`), del más reciente al más antiguo:
 `idRep`, `fechaFin`, `descripcion` (tipo de pieza en `R`/`G`; «Pulido» en `P`; «Asignación» en las `A…`), `idCli`
 (guardado) y `cliente` (su nombre). El modal filtra por el `idCli` del trabajo elegido.
 
 ### 3.2 Corregir
 
-`PATCH /api/reparaciones/cliente` (supertécnico), cuerpo `{ imei, idReps: [..], idCli: number | null }`:
+`PATCH /api/reparaciones/cliente` (supertécnico y administrador), cuerpo `{ imei, idReps: [..], idCli: number | null }`:
 
 - En una transacción: `UPDATE Reparacion SET ID_CLI = ?, UPDATED_AT = UPDATED_AT WHERE IMEI = ? AND FECHA_FIN IS NOT
   NULL AND ID_REP IN (…)`.
@@ -56,7 +56,9 @@ tipo (`R`, `G`, `P` y asignaciones cerradas `A`/`AG`/`AP`), del más reciente al
 - **Filtro** «Cliente» en el Historial (reparación y glass), en el estado de filtros de cada pestaña; «Limpiar» lo
   vacía. Las opciones salen del `cliente` de lo cargado (la vista IMEIs sigue con `clienteTelefono`).
 - **CSV**: columna Cliente en el del Historial y en el del detalle de un IMEI.
-- **Menú contextual** (`MenuHistorial`): «Corregir cliente» solo en filas cerradas y con permiso de edición.
+- **Menú contextual** (`MenuHistorial`): «Corregir cliente» solo en filas cerradas, para supertécnico y administrador (el
+  resto del menú de edición sigue siendo solo del supertécnico). No hay jerarquía de roles: el servidor usa
+  `hasAnyRole('SUPERTECNICO','ADMIN')`.
 - **Modal «Corregir cliente»**: carga §3.1, muestra el IMEI y el cliente guardado del elegido; selector de cliente
   (activos + «— Sin cliente —»); lista con casillas (tipo, id, fecha de fin, descripción) de los cerrados con el mismo
   `idCli`, marcados el elegido y los del mismo día (Madrid); «Corregir N» deshabilitado sin cliente elegido, si el
@@ -67,7 +69,7 @@ tipo (`R`, `G`, `P` y asignaciones cerradas `A`/`AG`/`AP`), del más reciente al
 
 - **Servidor:** la consulta de §3.1 (todos los tipos, solo cerrados, del IMEI); el `PATCH` con éxito (UPDATE con
   `UPDATED_AT` conservado y una línea de registro por trabajo con anterior → nuevo), el 409 (cuenta distinta), el 400
-  (cliente inexistente y lista vacía) y el 403 a un técnico; el contrato publica las dos rutas.
+  (cliente inexistente y lista vacía) y que solo lo permiten supertécnico y administrador; el contrato publica las dos rutas.
 - **Web:** la columna, el filtro (con «(Sin cliente)») y el CSV; el menú solo en cerradas y con permiso; el modal
   (preselección del mismo día, botón deshabilitado en los tres casos, llamada con los marcados, recarga y error).
 - **Preproducción:** corregir un trabajo de prueba y ver la columna y el registro; deshacerlo.
