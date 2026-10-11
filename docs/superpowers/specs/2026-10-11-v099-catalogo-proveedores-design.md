@@ -95,7 +95,7 @@ unas 100 parejas de 67 piezas.
 
 `Componente.proveedores` (`List<Integer>`, nulable): ids de los proveedores con la pieza (su master) en la lista.
 Solo SUPERTECNICO y ADMIN; `null` para TECNICO. Se carga con una consulta aparte
-(`SELECT ID_PROV, ID_COM FROM Proveedor_componente`) y se reparte por master en el servicio (sin `GROUP_CONCAT`).
+(`SELECT ID_PROV, ID_COM FROM Proveedor_componente`) y se reparte por master en `ComponenteController` (sin `GROUP_CONCAT`).
 
 ### 4.3 Endpoint nuevo
 
@@ -106,7 +106,7 @@ Solo SUPERTECNICO y ADMIN; `null` para TECNICO. Se carga con una consulta aparte
 - Proveedor inexistente → **404**. Proveedor de tipo distinto de `COMPONENTES` → **422** «Solo los proveedores de
   componentes tienen piezas.». Algún `idCom` inexistente → **422** «Alguna pieza ya no existe.» (sin guardar nada).
 - Responde **204**.
-- Registro de actividad: acción **`EDITAR_PIEZAS_PROVEEDOR`**, detalle `ID_PROV: <id>, PIEZAS: +<añadidas> −<quitadas>`.
+- Registro de actividad: acción **`EDITAR_PIEZAS_PROVEEDOR`**, detalle `ID_PROV: <id>, PIEZAS: +<añadidas> -<quitadas>` (guion ASCII).
 - Sin control de versión: si dos personas editan la lista del mismo proveedor a la vez, gana la última.
 - Contrato OpenAPI: el esquema de la petición (record anidado `ProveedorPiezasRequest`), `pendiente` y `proveedores`
   nulables en `Componente`. `docs/autorizacion_endpoints.md` y `docs/api_contract.md` al día.
@@ -151,7 +151,7 @@ Solo SUPERTECNICO y ADMIN; `null` para TECNICO. Se carga con una consulta aparte
 
 - Si el texto (sin espacios a los lados) son **solo cifras**, enseña las líneas del bloque con **ese número exacto**,
   en la vista agrupada y en la plana. Si no, busca la pieza como hoy.
-- El texto de ayuda de la caja pasa a «Buscar pieza o nº de bloque».
+- El texto de ayuda de la caja pasa a «Buscar componente o nº de bloque…» (mantiene la palabra de hoy).
 - La pestaña «Otros» no cambia. La llegada desde Stock (`?buscar=<tipo>`) nunca son solo cifras.
 
 ### 5.5 Stock
