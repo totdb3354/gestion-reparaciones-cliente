@@ -29,7 +29,7 @@ solo se juntan pedidos en borrador, y lo recibido no se toca.
 | Proveedor de «Nuevo pedido» | **Uno**, arriba, **obligatorio**; vale para todas las líneas | Un bloque = un proveedor; como Odoo |
 | Combo por línea y «Aplicar a todas» | **Fuera** | Ya no hay nada que repartir |
 | Campana («Pedir todas las piezas», solicitudes) | Las piezas entran sin proveedor; **al elegirlo, van todas a él**; las que no, se quitan y van en otro pedido | Sencillo; repartir solo queda para otra versión |
-| Qué líneas se mueven | Solo **pendientes, en camino o parciales** | Lo recibido y lo cancelado es historial |
+| Qué líneas se mueven | Solo **pendientes, en camino o parciales**, también al **separar** (las recibidas y canceladas salen sin casilla) | Lo recibido y lo cancelado es historial; «Juntar» lleva el bloque entero |
 | Bloque terminado (todo recibido o cancelado) | **Cerrado**: no entra ni sale ninguna línea (mover, juntar, separar, añadir líneas o previsión) | Igual que un pedido hecho en Odoo; listas cortas |
 | Destinos de «Mover», «Juntar» y del «Bloque» de «Editar» | Bloques **vivos** (abiertos o en curso) **del mismo proveedor**, sin tope, y «Bloque nuevo» donde ya estaba | Son pocos; un bloque nunca mezcla proveedores |
 | Cambiar el proveedor de una línea | Sigue en «Editar»: la lleva a un bloque del proveedor nuevo | Es la corrección de un error, no un movimiento |
@@ -103,6 +103,7 @@ Sin cambios de esquema ni de contrato. Solo hay dos textos 422 nuevos.
 - **`BloqueCompraService.mover`:** si la línea está `recibido` o `cancelado` → **422 «Una línea recibida o cancelada no
   se puede mover.»**, antes de mirar el destino.
 - **`juntar` y `separar`:** si el bloque de **origen** está terminado → 422 «El bloque {n} ya está terminado.».
+- **`separar`:** una línea marcada `recibido` o `cancelado` → 422 «Una línea recibida o cancelada no se puede mover.» (decisión del usuario en la revisión final).
 - **Sin cambios:**
   - `editarCambiandoProveedor` sin destino, es decir, la regla por defecto: pendiente → abierto más reciente o nuevo;
     ya pedida → nuevo;
