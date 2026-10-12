@@ -62,7 +62,7 @@ Estas reglas se cumplen siempre. Las comprueba el servidor; la web las usa para 
    cancelado (solo los estados con alguna línea).
 5. **Total** = suma de `totalFila` (la columna EUR de hoy) de las líneas **no canceladas**.
 6. **⚠** en la cabecera si alguna línea cumple `llevaAviso` (urgente y en camino o parcial).
-7. **Orden**: bloques por `FECHA` descendente y, a igualdad, por número descendente; dentro, líneas por
+7. **Orden**: bloques de mayor a menor número (2026-10-12: la reconstrucción numera por fecha, así que número y fecha van juntos); dentro, líneas por
    `FECHA_PEDIDO` ascendente y, a igualdad, por `ID_COMPRA` ascendente.
 8. **Fecha del bloque** = cuando se creó. Las líneas conservan su propia `FECHA_PEDIDO`.
 
