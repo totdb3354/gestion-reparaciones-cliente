@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Prototipo · Piezas que vende (por tipo)</title>
+<style>
+  :root { --noche:#001232; --medio:#2C3B54; --gris:#586376; --sub:#8A94A6; --sep:#C2C8D0; --vista:#DDE1E7; --pill:#F0F2F5; --crema:#F6F6F6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: rgba(0,18,50,.45); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; color: var(--medio); }
+  .aviso-proto { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); background: #FFF3D6; color: #B26A00; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 12px; }
+  .dialogo { width: 640px; max-width: 100%; background: var(--vista); border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  h1 { margin: 0; font-size: 24px; color: var(--medio); }
+  .sub { margin: 0; font-size: 12px; color: var(--gris); }
+  .cuenta { font-size: 12px; color: var(--gris); }
+  .lista { background: #fff; border: 1px solid var(--sep); border-radius: 6px; }
+  .fila { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--sep); min-height: 48px; }
+  .fila:last-child { border-bottom: 0; }
+  .fila label.tipo { display: flex; align-items: center; gap: 8px; width: 150px; font-size: 13px; cursor: pointer; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--noche); cursor: pointer; }
+  .resumen { flex: 1; font-size: 11.5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .desplegable { position: relative; }
+  .boton-modelos { height: 32px; min-width: 170px; border-radius: 16px; border: 0; background: var(--noche); color: #FAFAFA; font-size: 12px; font-weight: 700; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
+  .boton-modelos:disabled { background: var(--pill); color: var(--sub); cursor: default; }
+  .menu { position: absolute; right: 0; top: 36px; width: 220px; max-height: 288px; overflow: auto; background: #fff; border: 1px solid var(--sep); border-radius: 8px; padding: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.15); z-index: 5; display: none; }
+  .menu.abierto { display: block; }
+  .menu label { display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .menu label:hover { background: var(--pill); }
+  .menu .todos { font-weight: 700; }
+  .menu hr { border: 0; border-top: 1px solid var(--sep); margin: 4px 0; }
+  .pie { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+  .sec { height: 36px; border-radius: 18px; border: 1px solid var(--noche); background: var(--crema); color: var(--noche); font-weight: 700; font-size: 12px; padding: 0 16px; cursor: pointer; }
+  .pri { height: 36px; border-radius: 18px; border: 0; background: var(--noche); color: #FAFAFA; font-weight: 700; font-size: 12px; padding: 0 18px; cursor: pointer; }
+  .guardado { font-size: 12px; background: #fff; border: 1px dashed var(--sep); border-radius: 6px; padding: 8px 10px; color: var(--gris); display: none; }
+  .guardado b { color: var(--medio); }
+</style>
+</head>
+<body>
+<div class="aviso-proto">PROTOTIPO · datos inventados</div>
+<div class="dialogo" role="dialog" aria-labelledby="titulo">
+  <h1 id="titulo">Piezas que vende · Proveedor A</h1>
+  <p class="sub">Marca los tipos de pieza que vende. De entrada, de todos los modelos (también los que salgan más adelante); si alguno no lo vende, desmárcalo en el desplegable.</p>
+  <div class="cuenta" id="cuenta"></div>
+  <div class="lista" id="lista"></div>
+  <div class="guardado" id="guardado"></div>
+  <div class="pie">
+    <button class="sec" type="button" id="cancelar">Cancelar</button>
+    <button class="pri" type="button" id="guardar">Guardar</button>
+  </div>
+</div>
+<script>
+const SERIE = ['12','12mini','12pro','12promax','13','13mini','13pro','13promax','14','14plus','14pro','14promax','15','15plus','15pro','15promax','16','16e','16plus','16pro','16promax','17','air','17pro','17promax']
+const TAPA = ['14','14plus','15','15plus','15pro','15promax','16','16e','16plus','16pro','16promax','17','air','17pro','17promax']
+const TIPOS = [
+  { tipo: 'bat', nombre: 'Batería', modelos: SERIE },
+  { tipo: 'cha', nombre: 'Chasis', modelos: SERIE },
+  { tipo: 'tapa', nombre: 'Tapa trasera', modelos: TAPA },
+  { tipo: 'g', nombre: 'Glass', modelos: SERIE },
+  { tipo: 'mc', nombre: 'Marco', modelos: SERIE },
+  { tipo: 'lcd', nombre: 'Pantalla', modelos: SERIE },
+  { tipo: 'cam', nombre: 'Cámara', modelos: SERIE },
+]
+const ESPECIALES = { air: 'iPhone Air' }
+const SUF = { plus: ' Plus', mini: ' Mini', pro: ' Pro', promax: ' Pro Max', e: 'e' }
+const nombreModelo = (c) => ESPECIALES[c] ?? `iPhone ${c.replace(/[^0-9]/g, '')}${SUF[c.replace(/[0-9]/g, '')] ?? ''}`
+// Lo que el servidor devolvería para «Proveedor A»: Batería de todos los modelos y Glass menos el 12 Mini y el 13 Mini.
+// estado[tipo] = modelos EXCLUIDOS (vacío = todos).
+const estado = { bat: new Set(), g: new Set(['12mini', '13mini']) }
+let abierto = null
+
+function pintar() {
+  const lista = document.getElementById('lista')
+  lista.innerHTML = ''
+  for (const t of TIPOS) {
+    const vende = t.tipo in estado
+    const sel = estado[t.tipo] ?? new Set()
+    const excluidos = t.modelos.filter((m) => sel.has(m))
+    const texto = !vende ? 'No lo vende' : excluidos.length === 0 ? 'Todos los modelos' : `Seleccionados ${t.modelos.length - excluidos.length} de ${t.modelos.length}`
+    const resumen = vende && excluidos.length > 0 ? 'Sin ' + excluidos.map(nombreModelo).join(' · ') : ''
+    const fila = document.createElement('div')
+    fila.className = 'fila'
+    fila.innerHTML = `
+      <label class="tipo"><input type="checkbox" ${vende ? 'checked' : ''} aria-label="Vende ${t.nombre}"> ${t.nombre}</label>
+      <span class="resumen">${resumen}</span>
+      <div class="desplegable">
+        <button type="button" class="boton-modelos" ${vende ? '' : 'disabled'} aria-label="Modelos de ${t.nombre}">${texto} <span aria-hidden="true">▾</span></button>
+        <div class="menu ${abierto === t.tipo ? 'abierto' : ''}">
+          <label class="todos"><input type="checkbox" data-todos ${excluidos.length === 0 ? 'checked' : ''}> Todos los modelos</label><hr>
+          ${t.modelos.map((m) => `<label><input type="checkbox" data-modelo="${m}" ${sel.has(m) ? '' : 'checked'}> ${nombreModelo(m)}</label>`).join('')}
+        </div>
+      </div>`
+    fila.querySelector('label.tipo input').addEventListener('change', (e) => {
+      if (e.target.checked) estado[t.tipo] = new Set(); else { delete estado[t.tipo]; if (abierto === t.tipo) abierto = null }
+      pintar()
+    })
+    fila.querySelector('.boton-modelos').addEventListener('click', (e) => { e.stopPropagation(); abierto = abierto === t.tipo ? null : t.tipo; pintar() })
+    fila.querySelector('.menu').addEventListener('click', (e) => e.stopPropagation())
+    fila.querySelector('[data-todos]').addEventListener('change', () => { estado[t.tipo] = new Set(); pintar() })
+    for (const cb of fila.querySelectorAll('[data-modelo]')) cb.addEventListener('change', (e) => {
+      const s = estado[t.tipo]; if (e.target.checked) s.delete(e.target.dataset.modelo); else s.add(e.target.dataset.modelo)
+      // Sin ningún modelo, el tipo entero deja de venderse.
+      if (s.size === t.modelos.length) { delete estado[t.tipo]; abierto = null }
+      pintar()
+    })
+    lista.appendChild(fila)
+  }
+  const n = Object.keys(estado).length
+  document.getElementById('cuenta').textContent = `Vende ${n} de ${TIPOS.length} tipos`
+}
+document.addEventListener('click', () => { if (abierto) { abierto = null; pintar() } })
+document.getElementById('guardar').addEventListener('click', () => {
+  const partes = TIPOS.filter((t) => t.tipo in estado).map((t) => {
+    const excluidos = t.modelos.filter((m) => estado[t.tipo].has(m))
+    return `${t.tipo} (${excluidos.length === 0 ? 'todos' : 'sin ' + excluidos.join(', ')})`
+  })
+  const g = document.getElementById('guardado')
+  g.style.display = 'block'
+  g.innerHTML = `Se guardaría y quedaría en el registro: <b>PIEZAS: ${partes.join(', ') || 'ninguna'}</b>`
+})
+document.getElementById('cancelar').addEventListener('click', () => { document.getElementById('guardado').style.display = 'none' })
+pintar()
+</script>
+</body>
+</html>

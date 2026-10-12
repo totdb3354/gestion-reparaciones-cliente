@@ -1,6 +1,9 @@
 # 0.9.9 (ampliación) — Piezas que vende cada proveedor y previsión por proveedor
 
 Fecha: 2026-10-11. Estado: diseño aprobado en el brainstorming, pendiente del plan.
+
+> **2026-10-12:** la lista por referencias (§2 «Qué vende cada proveedor», §3, §4.2, §4.3 y §5.1) queda sustituida por
+> tipos de pieza con modelos excluidos: ver `2026-10-12-v099-piezas-por-tipo-design.md`. El resto sigue vigente.
 Va **dentro de la 0.9.9** (pedidos por bloques), que está en `main` y validada en preproducción pero sin desplegar en
 producción ni etiquetar. Spec de los bloques: `2026-10-09-v099-bloques-pedidos-design.md`.
 
