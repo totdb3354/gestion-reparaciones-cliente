@@ -173,7 +173,7 @@ class CatalogoPiezasTest {
         assertFalse(CatalogoPiezas.vende(tipos, "gi13mininegra"));     // excluido
         assertTrue(CatalogoPiezas.vende(Map.of("g", Set.of("13")), "gi13mininegra"));   // 13 no excluye 13mini
         assertFalse(CatalogoPiezas.vende(tipos, "lcdi14negraic"));     // tipo que no vende
-        assertTrue(CatalogoPiezas.vende(Map.of("bat", Set.of("13")), "batuniversal"));   // sin modelo: las excepciones no le afectan
+        assertTrue(CatalogoPiezas.vende(Map.of("bat", Set.of("13")), "batiuniversal"));   // sin modelo: las excepciones no le afectan
     }
 }
 ```

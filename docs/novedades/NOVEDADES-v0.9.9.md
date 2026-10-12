@@ -26,9 +26,10 @@ Los pedidos anteriores a esta versión se han agrupado solos por proveedor y dí
 
 ## 🧾 Qué le pides a cada proveedor
 
-- En **Proveedores**, clic derecho → **«Piezas que vende…»**: marcas las piezas de ese proveedor (con el buscador y
-  «Marcar las que se ven» se ponen de golpe, por ejemplo todas las baterías). Ya viene rellenada con lo que le has pedido
-  hasta hoy.
+- En **Proveedores**, clic derecho → **«Piezas que vende…»**: marcas los **tipos de pieza** que vende ese proveedor
+  (Batería, Pantalla, Glass…). Un tipo marcado vale para **todos los modelos**, también los que salgan más adelante; si
+  de algún modelo no lo vende, lo desmarcas en su desplegable. Ya viene rellenada con los tipos que le has pedido hasta
+  hoy.
 - En **«Nuevo pedido»**, eliges el proveedor arriba y **«Añadir previsión de X»** te mete lo que hay que pedirle (las
   piezas en Auto que vende). También desde el menú del bloque: **«Añadir previsión…»**.
 - La previsión ya **no vuelve a proponer lo que está apuntado en otro bloque**: Stock enseña cuánto hay **«Pendiente»**.

@@ -164,7 +164,7 @@ piezas que no son `otro`, activas o no. Es la misma definición que usa el `PUT`
   - 422 «Un tipo de pieza está repetido.».
   - 422 «Algún modelo no existe.» si un código no está en `MODELOS_ORDENADOS`.
   - 422 «Si no vende ningún modelo de un tipo, desmarca el tipo.» si los excluidos **no están vacíos** y cubren todos
-    los modelos con pieza activa de ese tipo.
+    los modelos con pieza activa de ese tipo, y el tipo **tiene** alguna pieza activa (§6).
 - Responde **204**.
 - Registro de actividad: acción **`EDITAR_PIEZAS_PROVEEDOR`**, con detalle
   `ID_PROV: <id>, PIEZAS: bat (todos), g (sin 12mini, 13mini)`. Los tipos van en `ORDEN_TIPOS` y los modelos en el de
