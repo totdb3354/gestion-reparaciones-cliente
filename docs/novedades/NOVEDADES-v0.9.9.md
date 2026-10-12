@@ -6,9 +6,10 @@ Los pedidos se agrupan en **bloques**: lo que le pides de una vez a un proveedor
 
 ## 📦 Qué es un bloque
 
-Un bloque reúne las piezas que se piden **juntas a un mismo proveedor** (normalmente, el pedido del día). Al guardar
-«Nuevo pedido», las líneas de cada proveedor se **suman a su bloque abierto** (el que aún no has confirmado) o van a uno
-**nuevo**. Al pie del formulario, el recuadro **«Bloques»** te dice a dónde va cada proveedor y te deja elegir.
+Un bloque reúne las piezas que se piden **juntas a un mismo proveedor** (normalmente, el pedido del día). Cada **«Nuevo
+pedido» es para un solo proveedor**: lo eliges arriba y lo llevan todas las líneas. Al guardar, se **suma a su bloque
+abierto** (el que aún no has confirmado) o va a uno **nuevo**; el recuadro **«Bloques»** del pie te lo dice y te deja
+elegir. Para pedir a otro proveedor, haz otro pedido.
 
 Los pedidos anteriores a esta versión se han agrupado solos por proveedor y día (llevan la etiqueta «antiguo»).
 
@@ -43,4 +44,8 @@ Con **⋮** o con clic derecho en su cabecera: **Confirmar bloque**, **Recibir t
 líneas…**, **Juntar con…**, **Nota** (nº de pedido, seguimiento…), **Cancelar bloque** y **Borrar bloque**. Antes de
 aplicar, te enseña qué líneas cambian y cuáles no, y por qué.
 
-Para pasar una línea a otro bloque: clic derecho → **«Mover a bloque»**. Si ya se había pedido, te lo pregunta.
+Para pasar una línea a otro bloque del mismo proveedor: clic derecho → **«Mover a bloque»**. Solo sale en las líneas
+pendientes, en camino o parciales; si ya se había pedido, te lo pregunta.
+
+Un bloque **terminado** (todo recibido o cancelado) queda **cerrado**: no se le añaden líneas ni se separa ni se junta,
+y no sale como destino. Lo recibido y lo cancelado ya no cambia de bloque.
