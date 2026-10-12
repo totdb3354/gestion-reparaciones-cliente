@@ -20,6 +20,7 @@ Los pedidos anteriores a esta versión se han agrupado solos por proveedor y dí
 - Los bloques con algo pendiente salen **desplegados**; los terminados, **plegados**.
 - Al filtrar o buscar, solo ves las líneas que cumplen («mostrando 2 de 4»).
 - **«Agrupar por bloque»** te devuelve a la lista de siempre cuando quieras.
+- **«En camino» ahora es azul**, para no confundirlo con el gris de «cancelado». El urgente sigue en naranja con ⚠.
 
 ---
 
