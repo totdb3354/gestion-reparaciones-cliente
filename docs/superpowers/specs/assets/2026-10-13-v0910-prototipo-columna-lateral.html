@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Columna lateral plegable</title>
+<style>
+:root{
+  --azul-noche:#001232;--azul-noche-hover:#0A2040;--azul-medio:#2C3B54;--azul-gris:#586376;--crema:#F6F6F6;--sup:#FFFFFF;
+  --amarillo:#F1E356;--fondo-vista:#DDE1E7;--nav-switch:#E8EAF0;--pill-bg:#F0F2F5;--pill-borde:#C8CDD5;--nav-activo:#FAFAFA;
+  --neutro:#E8EAF0;--sep:#C2C8D0;--maestro:#EEF0F5;--borde-input:#D4D8DE;--texto-suave:#A0A8B4;--sel-suave:#EAF1FF;
+  --accion:#4A6FA5;--verde:#4CAF50;--inc-brd:#B83746;--inc-bg:#E8C8CE;--rep-brd:#C5E1C5;--sol-bg:#FDEBC8;--sol-brd:#C07800;
+  --rec-bg:#C8E6C9;--rec-brd:#3A7D44;--urg-brd:#C62828;--urg-bg:#FDDEDE;--can-bg:#E0E0E0;--can-tx:#9E9E9E;
+  --t-rep-bg:#E3F2FD;--t-rep:#1565C0;--t-gla-bg:#E0F2F1;--t-gla:#00796B;--t-pul-bg:#EDE7F6;--t-pul:#5E35B1;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#F4F5F8;color:var(--azul-medio);font-family:system-ui,'Segoe UI',sans-serif;font-size:13px}
+button{font:inherit}
+/* ---------- Panel del prototipo ---------- */
+.proto{padding:16px}
+.ctl{background:#fff;border:1px solid #DDE1E7;border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.ctl h1{font-size:18px;color:var(--azul-noche);margin:0 0 2px}
+.ctl p.sub{margin:0 0 10px;color:var(--azul-gris);font-size:12.5px}
+.ctl-filas{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.grupo{display:flex;align-items:center;gap:8px}
+.lbl{font-size:11px;font-weight:700;color:var(--azul-gris);text-transform:uppercase;letter-spacing:.04em}
+.seg{display:inline-flex}
+.seg button{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-gris);padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:-1px;white-space:nowrap}
+.seg button:first-child{border-radius:999px 0 0 999px;margin-left:0}
+.seg button:last-child{border-radius:0 999px 999px 0}
+.seg button:hover{background:#E4E7EC}
+.seg button.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.seg button .fut{font-weight:400;opacity:.8}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;user-select:none}
+.oculto{display:none!important}
+/* ---------- Escenario (la app, a escala) ---------- */
+.escenario{position:relative;overflow:hidden;margin-bottom:14px}
+.marco{position:absolute;top:0;left:0;transform-origin:top left;background:var(--fondo-vista);display:flex;flex-direction:column;overflow:hidden;border-radius:6px;box-shadow:0 2px 14px rgba(0,18,50,.18);font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio)}
+.etq-pant{position:absolute;right:0;top:-2px;font-size:11px;color:var(--azul-gris)}
+/* Barra navy */
+.tb{height:64px;flex-shrink:0;display:flex;align-items:center;gap:10px;background:var(--azul-noche);padding:0 20px;position:relative;z-index:40}
+.hamb{position:relative;width:38px;height:38px;border:0;border-radius:8px;background:transparent;color:var(--crema);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:-4px}
+.hamb:hover{background:rgba(255,255,255,.08)}
+.hamb .bdg{position:absolute;top:1px;right:-3px;min-width:16px;border-radius:8px;padding:1px 4px;font-size:9px;font-weight:700;background:var(--amarillo);color:var(--azul-noche);text-align:center}
+.logo{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--crema);color:var(--azul-noche);font-weight:800;font-size:15px;margin:0 6px}
+.tb .t1{font-size:13px;font-weight:700;color:var(--crema)}
+.tb .t2{font-size:13px;color:var(--crema);white-space:nowrap}
+.nsw{margin-left:8px;display:flex;align-items:center;gap:2px;border-radius:24px;background:var(--nav-switch);padding:3px}
+.nsw button{border:0;background:transparent;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:var(--azul-medio);cursor:pointer}
+.nsw button:hover{background:rgba(44,59,84,.08)}
+.nsw button.act{background:var(--azul-noche);color:var(--nav-activo)}
+.esp{flex:1}
+.campana{color:var(--crema);display:flex;padding:3px;border-radius:8px}
+.usu{position:relative}
+.usu>button{display:flex;align-items:center;gap:10px;border:0;background:transparent;border-radius:8px;padding:4px 8px;cursor:pointer;color:var(--crema);font-size:12px;font-weight:700}
+.usu>button:hover{background:rgba(255,255,255,.08)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--crema);color:var(--azul-noche);display:flex;align-items:center;justify-content:center;font-size:12px}
+.menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:4px;min-width:190px;z-index:60}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;border-radius:5px;font-size:12.5px;color:var(--azul-medio);cursor:pointer}
+.menu button:hover{background:var(--sel-suave)}
+.menu hr{border:0;border-top:1px solid #E6E9EE;margin:4px 0}
+/* Pestañas arriba (variante E) */
+.subtabs{height:48px;flex-shrink:0;display:flex;align-items:center;gap:4px;background:var(--sup);padding:0 20px;border-bottom:1px solid #CFD3DA}
+.subtabs .lk{width:auto}
+/* Cuerpo */
+.cuerpo{flex:1;display:flex;min-height:0;position:relative}
+nav.sn{width:200px;flex-shrink:0;background:var(--sup);position:relative;display:flex;flex-direction:column}
+.anim nav.sn{transition:width .18s ease}
+.sn-in{flex:1;display:flex;flex-direction:column;padding:8px;overflow:hidden;min-width:0}
+.sn-in.con-borde{padding-right:18px}
+.lk{display:flex;align-items:center;width:100%;border:0;background:transparent;border-radius:24px;padding:10px 16px;font-size:13px;font-weight:700;color:var(--azul-medio);text-align:left;cursor:pointer;white-space:nowrap;position:relative}
+.lk:hover{background:rgba(44,59,84,.08)}
+.lk.act{background:var(--azul-noche);color:var(--nav-activo)}
+.bl{margin-left:8px;display:inline-block;min-width:14px;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:700;text-align:center;background:var(--azul-noche);color:var(--sup)}
+.lk.act .bl{background:var(--sup);color:var(--azul-noche)}
+.lk .ico{width:18px;height:18px;flex-shrink:0;margin-right:10px}
+.lk.abr{justify-content:center;padding:10px 0;font-size:12px}
+.lk.solo-ico{justify-content:center;padding:10px 0}
+.lk.solo-ico .ico{margin-right:0}
+/* Iconos + botón del borde: franja de iconos con el nombre al pasar el ratón */
+.sn-in.rail{padding:8px 14px 8px 6px;overflow:visible}
+.lk[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:var(--azul-noche);color:#fff;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;z-index:50;box-shadow:0 2px 8px rgba(0,18,50,.25);pointer-events:none}
+.lk.abr .bl,.lk.solo-ico .bl{position:absolute;top:1px;right:3px;margin-left:0;padding:0 4px;min-width:13px;font-size:8.5px}
+.btn-pie{margin-top:auto;border:0;background:transparent;border-radius:24px;padding:9px 16px;font-size:12px;font-weight:700;color:var(--azul-gris);text-align:left;cursor:pointer;white-space:nowrap}
+.btn-pie:hover{background:rgba(44,59,84,.08);color:var(--azul-medio)}
+.btn-pie.centro{text-align:center;padding:9px 0;font-size:14px}
+.btn-borde{position:absolute;top:14px;right:-12px;width:24px;height:24px;border-radius:50%;background:var(--sup);border:1px solid var(--pill-borde);box-shadow:0 1px 4px rgba(0,18,50,.18);color:var(--azul-medio);font-size:15px;line-height:1;cursor:pointer;z-index:25;display:flex;align-items:center;justify-content:center;padding:0 0 2px}
+.btn-borde:hover{background:var(--sel-suave)}
+.tirador{width:100%;height:100%;border:0;border-right:1px solid #CFD3DA;background:var(--sup);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 0 0;color:var(--azul-medio);font-size:15px;font-weight:700}
+.tirador:hover{background:var(--sel-suave)}
+.tirador .bl{margin:0;padding:1px 3px;min-width:16px;font-size:9px}
+.sn-flot{position:absolute;left:0;top:0;bottom:0;width:200px;background:var(--sup);box-shadow:4px 0 18px rgba(0,18,50,.22);z-index:30;display:flex;flex-direction:column}
+.vacia-nota{font-size:11px;color:var(--texto-suave);padding:10px 12px;white-space:normal}
+main.mn{flex:1;min-width:0;overflow:auto}
+.pag{padding:40px}
+/* Contenido de las vistas */
+.tgl{display:inline-flex;margin-bottom:8px}
+.tgl button{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-gris);padding:5px 14px;font-size:12px;font-weight:700;margin-left:-1px;cursor:pointer}
+.tgl button:first-child{border-radius:24px 0 0 24px;margin-left:0}
+.tgl button:last-child{border-radius:0 24px 24px 0}
+.tgl button.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.cab{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:8px}
+.cab h2{font-size:24px;font-weight:700;color:var(--azul-medio);margin:0}
+.cont{display:inline-block;border-radius:12px;background:var(--neutro);padding:3px 10px;font-size:12px;font-weight:700;color:var(--azul-gris)}
+.barra{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:8px}
+.f-imei{height:40px;width:160px;border:1px solid var(--borde-input);border-radius:4px;padding:0 10px;font-size:12px;color:var(--azul-gris);display:flex;align-items:center;background:#fff}
+.f-buscar{height:40px;width:200px;border:1px solid var(--borde-input);border-radius:4px;padding:0 10px;font-size:12px;color:var(--texto-suave);display:flex;align-items:center;background:#fff}
+.f-multi{height:40px;min-width:130px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-radius:24px;background:var(--azul-noche);padding:0 16px;font-size:12px;font-weight:700;color:var(--nav-activo);white-space:nowrap}
+.f-fechas{height:40px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--azul-gris)}
+.f-fechas span.c{height:40px;width:120px;border:1px solid var(--borde-input);border-radius:4px;background:#fff;display:flex;align-items:center;padding:0 10px;color:var(--texto-suave)}
+.b-sec{border:1px solid var(--azul-noche);background:var(--crema);color:var(--azul-noche);border-radius:24px;padding:8px 16px;font-size:12px;font-weight:700;white-space:nowrap}
+.b-pri{border:1px solid var(--azul-noche);background:var(--azul-noche);color:var(--nav-activo);border-radius:24px;padding:8px 16px;font-size:12px;font-weight:700;white-space:nowrap}
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--azul-medio);white-space:nowrap}
+.sw i{width:34px;height:18px;border-radius:999px;background:var(--verde);position:relative;display:inline-block}
+.sw i::after{content:'';position:absolute;top:2px;left:18px;width:14px;height:14px;border-radius:50%;background:#fff}
+.ml-auto{margin-left:auto}
+.tw{overflow:auto;background:var(--sup);border-radius:6px;max-height:var(--alto-tabla,420px)}
+table.dt{border-collapse:separate;border-spacing:0;table-layout:fixed}
+.dt th{position:sticky;top:0;z-index:2;background:var(--crema);font-size:12px;font-weight:700;color:var(--azul-medio);text-align:left;padding:0 8px;height:40px;border-bottom:1px solid var(--sep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dt th:first-child{border-left:8px solid var(--crema)}
+.dt td{font-size:12px;padding:0 8px;height:40px;border-bottom:1px solid #E3E6EB;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff}
+.dt.alto44 td{height:44px}
+.dt td:first-child{border-left:8px solid transparent}
+.dt tr.f-inc td:first-child{border-left-color:var(--inc-brd)}
+.dt tr.f-ok td:first-child{border-left-color:var(--rep-brd)}
+.dt tr.f-sol td:first-child{border-left-color:var(--sol-brd)}
+.dt tr.f-urg td:first-child{border-left-color:var(--urg-brd)}
+.dt tr.f-rec td:first-child{border-left-color:var(--rec-brd)}
+.dt tbody tr:hover td{background:#F5F7FA}
+.dt tr.sel td{background:var(--azul-noche)!important;color:var(--crema)}
+.dt tr.sel td *{color:var(--crema)!important}
+.dt tr.gcab td{background:var(--maestro);height:38px;border-bottom:1px solid var(--sep);font-weight:400}
+.dt tr.gcab td b{color:var(--azul-noche)}
+.dt .r{text-align:right}
+.dt .sub{color:#8A94A6}
+.fch{display:flex;flex-direction:column;line-height:1.25}
+.fch span:last-child{color:#9AA0AA;font-size:11px}
+.bdg{display:inline-block;border-radius:12px;padding:2px 7px;font-size:10.5px;font-weight:700}
+.b-rep{background:var(--t-rep-bg);color:var(--t-rep)}.b-gla{background:var(--t-gla-bg);color:var(--t-gla)}.b-pul{background:var(--t-pul-bg);color:var(--t-pul)}
+.b-ok{background:var(--rec-bg);color:var(--rec-brd)}.b-inc{background:var(--inc-bg);color:var(--inc-brd)}.b-sol{background:var(--sol-bg);color:var(--sol-brd)}
+.b-urg{background:var(--urg-bg);color:var(--urg-brd)}.b-neu{background:var(--neutro);color:var(--azul-gris)}.b-can{background:var(--can-bg);color:var(--can-tx)}
+.b-bajo{background:#FFF3E0;color:#E65100}
+.papelera{color:#A84040;font-size:14px}
+.b-rep-btn{border:1px solid var(--azul-noche);background:var(--azul-noche);color:#fff;border-radius:24px;padding:4px 12px;font-size:11px;font-weight:700}
+.act-etq{font-size:11px;color:var(--azul-gris);margin-top:6px}
+.act-etq a{color:var(--accion);cursor:pointer}
+.pend-migrar{padding:80px 40px;text-align:center;color:var(--azul-gris);font-size:15px}
+.pend-migrar b{display:block;font-size:22px;color:var(--azul-medio);margin-bottom:8px}
+.toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--azul-noche);color:#fff;padding:8px 16px;border-radius:24px;font-size:12px;z-index:80}
+/* ---------- Tarjetas de información ---------- */
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px;align-items:start}
+.tarjeta{background:#fff;border:1px solid #DDE1E7;border-radius:10px;padding:12px 16px}
+.tarjeta h3{margin:0 0 6px;font-size:14px;color:var(--azul-noche)}
+.tarjeta p{margin:4px 0 8px;line-height:1.45}
+.tarjeta ul,.tarjeta ol{margin:4px 0 8px;padding-left:20px;line-height:1.5}
+.tarjeta .pros li::marker{content:'+  ';color:var(--rec-brd);font-weight:700}
+.tarjeta .contras li::marker{content:'−  ';color:var(--inc-brd);font-weight:700}
+.coste{display:inline-block;background:var(--sel-suave);color:var(--azul-noche);border-radius:8px;padding:4px 10px;font-weight:700;font-size:12.5px}
+.elegir{margin-top:8px;border:1px solid var(--azul-noche);background:var(--azul-noche);color:#fff;border-radius:24px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer}
+.elegir.hecho{background:var(--rec-bg);border-color:var(--rec-brd);color:var(--rec-brd)}
+table.cmp{border-collapse:collapse;width:100%;font-size:12.5px;margin:4px 0 6px}
+.cmp th,.cmp td{text-align:left;padding:4px 6px;border-bottom:1px solid #EEF0F3;white-space:nowrap}
+.cmp th{color:var(--azul-gris);font-size:11.5px;font-weight:700}
+.cmp td.n{text-align:right;font-variant-numeric:tabular-nums}
+.mas{color:var(--rec-brd);font-weight:700}
+.menos{color:var(--azul-gris)}
+.aviso{color:var(--sol-brd);font-weight:700}
+.mini{font-size:12px;color:var(--azul-gris)}
+details summary{cursor:pointer;font-weight:700;font-size:12.5px;margin:6px 0}
+.vistas td,.vistas th{white-space:normal;vertical-align:top}
+.vistas td:first-child{font-weight:700}
+</style>
+</head>
+<body>
+<div class="proto">
+  <header class="ctl">
+    <h1>Columna lateral plegable · prototipo</h1>
+    <p class="sub">Datos inventados. Los anchos de columna de las tablas y su forma de repartir el espacio son los de la web de verdad, así que lo que ves al plegar es lo que pasaría.</p>
+    <div class="ctl-filas">
+      <div class="grupo"><span class="lbl">Variante</span><div class="seg" id="segVar">
+        <button data-v="ahora" data-choice="var-ahora">Ahora</button>
+        <button data-v="oculta" data-choice="var-oculta">A · Se oculta</button>
+        <button data-v="abrev" data-choice="var-abrev">B · Abreviaturas</button>
+        <button data-v="flot" data-choice="var-flot">C · Flotante</button>
+        <button data-v="pestanas" data-choice="var-pestanas">D · Pestañas arriba</button>
+        <button data-v="iconos" data-choice="var-iconos">E · Iconos</button>
+        <button data-v="mixta" data-choice="var-mixta">A + E · Iconos con el botón del borde</button>
+      </div></div>
+      <div class="grupo" id="grpBoton"><span class="lbl">Botón</span><div class="seg" id="segBoton">
+        <button data-b="borde" data-choice="boton-borde">En el borde</button>
+        <button data-b="barra" data-choice="boton-barra">En la barra navy</button>
+        <button data-b="pie" data-choice="boton-pie">Al pie</button>
+      </div></div>
+    </div>
+    <div class="ctl-filas" style="margin-top:8px">
+      <div class="grupo"><span class="lbl">Rol</span><div class="seg" id="segRol">
+        <button data-r="tecnico">Técnico</button><button data-r="super">Supertécnico</button><button data-r="admin">Admin</button>
+      </div></div>
+      <div class="grupo"><span class="lbl">Pantalla</span><div class="seg" id="segPant">
+        <button data-p="auto">Tu ventana</button><button data-p="1366">1366 × 768</button><button data-p="1600">1600 × 900</button><button data-p="1920">1920 × 1080</button>
+      </div></div>
+      <label class="chk"><input type="checkbox" id="chkVacia"> Quitar la columna donde no hay enlaces</label>
+      <label class="chk"><input type="checkbox" id="chkAnim"> Animación</label>
+      <label class="chk"><input type="checkbox" id="chkRecordar"> Recordar plegada al recargar</label>
+    </div>
+  </header>
+
+  <div class="escenario" id="escenario"><div class="marco" id="marco"></div></div>
+
+  <section class="info">
+    <div class="tarjeta" id="infoVariante"></div>
+    <div class="tarjeta" id="infoEfecto"></div>
+    <div class="tarjeta">
+      <h3>Cómo afecta al resto de la web</h3>
+      <p>Ninguna vista tiene anchos atados a la columna: todas las tablas miden su hueco y se recolocan solas al cambiar. Lo que gana cada una depende de cómo reparte el espacio:</p>
+      <table class="cmp vistas">
+        <tr><th>Tablas</th><th>Al plegar</th></tr>
+        <tr><td>Asignaciones, Historial, Detalle de IMEI, Logs</td><td>Crecen <b>todas</b> las columnas en proporción<br><span class="mini">(si no caben, quitan o acortan el scroll horizontal)</span></td></tr>
+        <tr><td>Pendientes, Pulidos, IMEIs, Stock, Pedidos, Proveedores, Clientes</td><td>Crecen solo las de <b>texto</b> (componente, cliente, comentario…)<br><span class="mini">números, fechas y estados se quedan igual</span></td></tr>
+        <tr><td>Técnicos</td><td>Crece solo la última columna</td></tr>
+        <tr><td>Barras de filtros</td><td>Bajan a la segunda línea más tarde</td></tr>
+      </table>
+      <p><b>No cambian:</b> la barra navy, la campana y el menú de usuario; el formulario de reparación (ya ocupa toda la pantalla); los diálogos (van centrados encima de todo); la capa de carga y el aviso de versión nueva.</p>
+      <p><b>Lo único que hay que resolver:</b> plegada, el número de <b>Pendientes</b> y <b>Asignaciones</b> deja de verse donde estaba. Cada variante lo lleva a un sitio distinto (míralo con el rol Supertécnico).</p>
+    </div>
+    <div class="tarjeta">
+      <h3>Qué probar</h3>
+      <ol>
+        <li>Elige una variante y pliega y despliega la columna en <b>Historial</b> y en <b>Asignaciones</b>: mira cómo cambian las columnas y el panel «Qué cambia en esta vista».</li>
+        <li>Pon la <b>pantalla</b> del tamaño de los PCs del taller (1366 si son portátiles o pantallas pequeñas).</li>
+        <li>Con el rol <b>Supertécnico</b> y la columna plegada, busca dónde se ven los números de Pendientes y Asignaciones.</li>
+        <li>Ve a <b>Estadísticas</b>, o a <b>Gestionar técnicos</b> con el rol Admin (menú de usuario): hoy la columna está vacía. Marca y desmarca «Quitar la columna donde no hay enlaces».</li>
+        <li>Pliega, recarga la página (F5) y mira si sigue plegada; prueba con y sin «Recordar».</li>
+        <li>En <b>C · Flotante</b>, acerca el ratón al borde izquierdo y luego ve a la primera columna de una tabla: ¿se abre sin querer?</li>
+      </ol>
+      <p class="mini">Botón «Me quedo con esta» en la tarjeta de la variante: me llega tu elección.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+'use strict'
+const ICONOS = {"clipboard-list":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\"/><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"/><path d=\"M12 11h4\"/><path d=\"M12 16h4\"/><path d=\"M8 11h.01\"/><path d=\"M8 16h.01\"/>","wrench":"<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z\"/>","rotate-ccw-clock":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\"/><path d=\"M3 3v5h5\"/><path d=\"M12 7v5l4 2\"/>","smartphone":"<rect width=\"14\" height=\"20\" x=\"5\" y=\"2\" rx=\"2\" ry=\"2\"/><path d=\"M12 18h.01\"/>","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\"/><path d=\"M12 22V12\"/><polyline points=\"3.29 7 12 12 20.71 7\"/><path d=\"m7.5 4.27 9 5.15\"/>","shopping-cart":"<path d=\"m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18\"/><path d=\"M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25\"/><circle cx=\"18\" cy=\"20\" r=\"2\"/><circle cx=\"8\" cy=\"20\" r=\"2\"/>","building-complex":"<path d=\"M10 12h4\"/><path d=\"M10 8h4\"/><path d=\"M14 21v-3a2 2 0 0 0-4 0v3\"/><path d=\"M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2\"/><path d=\"M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16\"/>","users":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><path d=\"M16 3.128a4 4 0 0 1 0 7.744\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/>","user-cog":"<path d=\"M10 15H6a4 4 0 0 0-4 4v2\"/><path d=\"m14.305 16.53.923-.382\"/><path d=\"m15.228 13.852-.923-.383\"/><path d=\"m16.852 12.228-.383-.923\"/><path d=\"m16.852 17.772-.383.924\"/><path d=\"m19.148 12.228.383-.923\"/><path d=\"m19.53 18.696-.382-.924\"/><path d=\"m20.772 13.852.924-.383\"/><path d=\"m20.772 16.148.924.383\"/><circle cx=\"18\" cy=\"15\" r=\"3\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/>","scroll-text":"<path d=\"M15 12h-5\"/><path d=\"M15 8h-5\"/><path d=\"M19 17V5a2 2 0 0 0-2-2H4\"/><path d=\"M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3\"/>","bell":"<path d=\"M10.268 21a2 2 0 0 0 3.464 0\"/><path d=\"M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326\"/>"}
+const svg = (n) => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONOS[n] + '</svg>'
+
+/* ---------------- Estado ---------------- */
+const CLAVE = 'proto.columnaLateral.v2'
+const S = { variante: 'mixta', boton: 'borde', rol: 'super', pantalla: 'auto', vacia: true, anim: true, recordar: true, plegada: false,
+  ruta: 'asignaciones', sub: { historial: 0, pendientes: 0, pedidos: 0 }, ultimaStock: 'stock', menuUsu: false, dAbierta: false, sel: null }
+try {
+  const g = JSON.parse(localStorage.getItem(CLAVE) || 'null')
+  if (g) {
+    for (const k of ['variante', 'boton', 'rol', 'pantalla', 'vacia', 'anim', 'recordar', 'ruta']) if (k in g) S[k] = g[k]
+    if (S.recordar && 'plegada' in g) S.plegada = g.plegada
+  }
+} catch (e) { /* sin almacenamiento: valores por defecto */ }
+function guardar() {
+  try {
+    const g = {}; for (const k of ['variante', 'boton', 'rol', 'pantalla', 'vacia', 'anim', 'recordar', 'ruta']) g[k] = S[k]
+    if (S.recordar) g.plegada = S.plegada
+    localStorage.setItem(CLAVE, JSON.stringify(g))
+  } catch (e) { /* nada */ }
+}
+
+/* ---------------- Datos inventados ---------------- */
+let semilla = 7
+const azar = () => { semilla = (semilla * 1103515245 + 12345) % 2147483648; return semilla / 2147483648 }
+const de = (a) => a[Math.floor(azar() * a.length)]
+const imei = () => '35' + Array.from({ length: 13 }, () => Math.floor(azar() * 10)).join('')
+const TEC = ['Ana', 'Bruno', 'Carla', 'David', 'Elena', 'Fran']
+const CLI = ['Cliente Norte', 'Móviles Centro', 'Particular', 'Distribuidora Sur', 'Cliente Este', 'Tienda Online Ejemplo']
+const MOD = ['iPhone 12', 'iPhone 12 Pro', 'iPhone 13', 'iPhone 13 Pro', 'iPhone 14', 'iPhone 14 Pro Max', 'iPhone 15', 'iPhone 15 Pro', 'iPhone 16']
+const PIE = ['Pantalla', 'Batería', 'Tapa trasera azul', 'Cámara trasera', 'Chasis', 'Conector de carga', 'Altavoz superior']
+const COM = ['El cliente pide revisar también el Face ID', 'Urgente, lo recogen el viernes', '', 'Entra con la pantalla rota y la tapa rayada', 'Revisar la batería antes de cerrar', '', 'Segunda vez que entra por lo mismo', '']
+const INC = ['Face ID no funciona tras el cambio', 'Píxel muerto en la esquina superior', 'La batería no carga del todo', 'Tornillería suelta en el marco']
+const PROV = ['Proveedor A', 'Proveedor B', 'Proveedor C', 'Recambios Ejemplo SL']
+const fecha = (d, h) => String(d).padStart(2, '0') + '/10/2026' + (h ? ' ' + h : '')
+const hora = () => String(8 + Math.floor(azar() * 10)).padStart(2, '0') + ':' + String(Math.floor(azar() * 60)).padStart(2, '0')
+const tipoBadge = (t) => t === 'g' ? '<span class="bdg b-gla">Glass</span>' : t === 'p' ? '<span class="bdg b-pul">Pulido</span>' : '<span class="bdg b-rep">Reparación</span>'
+
+const D = {}
+semilla = 11
+D.asig = Array.from({ length: 16 }, (_, i) => {
+  const est = i % 7 === 2 ? 'urg' : i % 5 === 3 ? 'sol' : 'pen'
+  return { id: 4120 + i, tipo: i % 4 === 1 ? 'g' : 'r', tec: de(TEC), imei: imei(), mod: de(MOD), f: fecha(13 - (i % 6), hora()), com: de(COM), cli: de(CLI), por: de(['Bruno', 'Elena']), est }
+})
+semilla = 23
+D.hist = Array.from({ length: 18 }, (_, i) => {
+  const inc = i % 6 === 1 ? 'abierta' : i % 6 === 4 ? 'cerrada' : ''
+  const d = 12 - Math.floor(i / 3)
+  return { id: 'R' + (9810 - i), imei: imei(), mod: de(MOD), cli: de(CLI), rep: de(TEC), por: de(['Bruno', 'Elena']), f1: fecha(d, hora()), f2: fecha(d, hora()), pie: de(PIE) + ' ' + de(MOD), obs: de(COM), inc, incT: inc ? de(INC) : '', ant: i % 5 === 2 ? 'R' + (8000 + i * 13) : '' }
+})
+semilla = 31
+D.pend = Array.from({ length: 5 }, (_, i) => ({ id: 4130 + i, imei: imei(), mod: de(MOD), pie: de(PIE) + ' ' + de(MOD), cli: de(CLI), f: fecha(13 - i, hora()), com: de(COM), por: de(['Bruno', 'Elena']), est: i === 0 ? 'urg' : i === 3 ? 'sol' : 'pen' }))
+semilla = 41
+D.imeis = Array.from({ length: 16 }, () => ({ imei: imei(), mod: de(MOD), cli: de(CLI), n: 1 + Math.floor(azar() * 4), f1: fecha(1 + Math.floor(azar() * 9)), f2: fecha(10 + Math.floor(azar() * 3)), tec: de(TEC), est: de(['ok', 'ok', 'ok', 'inc']) }))
+semilla = 53
+const COMPS = ['Pantalla iPhone 13 · OLED', 'Pantalla iPhone 12 / 12 Pro · OLED', 'Batería iPhone 14', 'Batería iPhone 13 Pro', 'Tapa trasera iPhone 14 · azul', 'Tapa trasera iPhone 15 Pro · titanio natural', 'Cámara trasera iPhone 13', 'Chasis iPhone 13 Pro · grafito', 'Conector de carga iPhone 12', 'Altavoz superior iPhone 14 Pro', 'Pantalla iPhone 15 · OLED', 'Batería iPhone 16', 'Tapa trasera iPhone 13 · medianoche', 'Pantalla iPhone 14 Pro Max · OLED', 'Cámara frontal iPhone 15', 'Flex de botones iPhone 12']
+D.stock = COMPS.map((c, i) => { const s = Math.floor(azar() * 30); const min = 5 + Math.floor(azar() * 10); return { c, s, cam: Math.floor(azar() * 12), pen: Math.floor(azar() * 4), min, cons: (azar() * 2).toFixed(2).replace('.', ','), pedir: s < min ? Math.floor(azar() * 40) + 5 : 0, modo: i % 3 === 0 ? 'Manual' : 'Auto', ult: fecha(1 + Math.floor(azar() * 12)), est: s === 0 ? 'sin' : s < min ? 'bajo' : 'ok' } })
+semilla = 61
+D.bloques = [41, 40, 39, 38].map((b, bi) => ({ b, prov: PROV[bi % 4], f: fecha(10 - bi * 2), lineas: Array.from({ length: 3 + (bi % 2) }, (_, i) => ({ id: 812 - bi * 6 - i, comp: de(COMPS), cant: 5 + Math.floor(azar() * 20), pu: (8 + azar() * 60).toFixed(2).replace('.', ','), est: bi === 0 ? 'pen' : bi === 1 ? (i === 0 ? 'rec' : 'cam') : 'rec' })) }))
+D.otros = Array.from({ length: 8 }, (_, i) => ({ id: 120 - i, f: fecha(12 - i), con: de(['Destornilladores de precisión', 'Pegamento B-7000 (caja)', 'Bolsas antiestáticas', 'Alcohol isopropílico 1 L', 'Tapete de silicona', 'Pinzas de punta fina']), prov: de(PROV), cant: 1 + Math.floor(azar() * 10), pu: (3 + azar() * 30).toFixed(2).replace('.', ','), est: de(['pen', 'cam', 'rec', 'rec']) }))
+D.prov = PROV.concat(['Proveedor D', 'Proveedor E']).map((p, i) => ({ p, contacto: de(['Laura', 'Marcos', 'Nuria', 'Óscar']), tel: '600 ' + (100 + i * 37) + ' ' + (200 + i * 11), mail: 'pedidos@proveedor' + (i + 1) + '.example', div: i === 2 ? 'USD' : 'EUR', n: 3 + i * 7, ult: fecha(2 + i) }))
+D.cli = CLI.map((c, i) => ({ c, n: 12 + i * 31, cur: i % 3, ult: fecha(13 - i), obs: de(['Paga a 30 días', '', 'Prefiere aviso por teléfono', 'Recoge los martes', '']) }))
+D.tecs = TEC.map((t, i) => ({ t, u: t.toLowerCase(), rol: i === 1 || i === 4 ? 'Supertécnico' : 'Técnico', act: i === 5 ? 'No' : 'Sí', glass: i % 2 ? 'Sí' : 'No', acc: fecha(13 - (i % 3), hora()) }))
+D.logs = Array.from({ length: 16 }, (_, i) => ({ f: fecha(13 - Math.floor(i / 5), hora()), u: de(TEC).toLowerCase(), a: de(['Reparación terminada', 'Asignación creada', 'Pedido recibido', 'Stock editado', 'Inicio de sesión']), d: de(['Pantalla iPhone 13 · OLED en R9811 (IMEI terminado en 4410)', 'Bloque 41: 4 líneas a Proveedor A', 'Batería iPhone 14: 12 → 11', 'Asignada a Carla desde la cola de pendientes', 'Desde el navegador del puesto 3']) }))
+
+/* ---------------- Vistas (columnas con los anchos reales) ---------------- */
+const SECCION = { asignaciones: 'reparaciones', pendientes: 'reparaciones', historial: 'reparaciones', imeis: 'reparaciones', stock: 'stock', pedidos: 'stock', proveedores: 'stock', estadisticas: 'estadisticas', clientes: 'clientes', tecnicos: 'gestion', logs: 'gestion' }
+const NUM_ASIG = 37, NUM_PEND = 5
+
+function enlaces() {
+  const sec = SECCION[S.ruta]
+  if (sec === 'reparaciones') {
+    const L = []
+    if (S.rol === 'super') L.push({ r: 'asignaciones', t: 'Asignaciones', a: 'Asig.', i: 'clipboard-list', b: NUM_ASIG })
+    else if (S.rol === 'admin') L.push({ r: 'asignaciones', t: 'Asignaciones', a: 'Asig.', i: 'clipboard-list' })
+    if (S.rol !== 'admin') L.push({ r: 'pendientes', t: 'Pendientes', a: 'Pend.', i: 'wrench', b: NUM_PEND })
+    L.push({ r: 'historial', t: 'Historial', a: 'Hist.', i: 'rotate-ccw-clock' }, { r: 'imeis', t: 'IMEIs', a: 'IMEIs', i: 'smartphone' })
+    return L
+  }
+  if (sec === 'stock') return [{ r: 'stock', t: 'Stock actual', a: 'Stock', i: 'package' }, { r: 'pedidos', t: 'Pedidos', a: 'Ped.', i: 'shopping-cart' }, { r: 'proveedores', t: 'Proveedores', a: 'Prov.', i: 'building-complex' }]
+  if (sec === 'clientes') return [{ r: 'clientes', t: 'Clientes', a: 'Clien.', i: 'users' }]
+  return []
+}
+function inicioReparaciones() { return S.rol === 'super' ? 'asignaciones' : S.rol === 'tecnico' ? 'pendientes' : 'historial' }
+function rutaPermitida(r) {
+  if (r === 'asignaciones') return S.rol !== 'tecnico'
+  if (r === 'pendientes') return S.rol !== 'admin'
+  if (SECCION[r] === 'gestion') return S.rol === 'admin'
+  return r in SECCION
+}
+
+const multi = (t) => '<span class="f-multi">' + t + ' <span>▾</span></span>'
+const fechas = '<span class="f-fechas">Desde <span class="c">dd/mm/aaaa</span> Hasta <span class="c">dd/mm/aaaa</span></span>'
+const tgl = (clave, ops) => '<div class="tgl">' + ops.map((o, i) => '<button data-sub="' + clave + ':' + i + '" class="' + (S.sub[clave] === i ? 'act' : '') + '">' + o + '</button>').join('') + '</div>'
+const estPend = (e) => e === 'urg' ? '<span class="bdg b-urg">Urgente</span>' : e === 'sol' ? '<span class="bdg b-sol">Solicitud pieza</span>' : '<span class="bdg b-neu">Pendiente</span>'
+const estPed = (e) => e === 'pen' ? '<span class="bdg b-neu">Pendiente</span>' : e === 'cam' ? '<span class="bdg b-rep">En camino</span>' : '<span class="bdg b-ok">Recibido</span>'
+const actualizado = '<div class="act-etq">Actualizado a las 10:42 · <a>Recargar</a></div>'
+
+function vista() {
+  const r = S.ruta, sup = S.rol !== 'tecnico', glob = S.rol !== 'tecnico'
+  if (r === 'asignaciones') {
+    const cols = [['Id Asignación', 120], ['Tipo', 90], ['Técnico', 110], ['IMEI', 130], ['Modelo', 120], ['Fecha asignación', 130], ['Comentario', 200], ['Cliente', 140], ['Asignado por', 120], ['Estado', 100]]
+    const solo = S.rol === 'admin'
+    if (!solo) cols.push(['', 45, 45])
+    return {
+      html: '<div class="cab"><h2>Asignaciones pendientes</h2><span class="cont">' + NUM_ASIG + ' asignaciones</span><span class="b-sec ml-auto">Técnicos de glass</span><span class="b-sec">Carga técnicos</span></div>' +
+        '<div class="barra"><span class="f-imei">Buscar IMEI…</span>' + multi('Técnico') + multi('Tipo') + multi('Cliente') + multi('Estado') + '<span class="b-sec">Limpiar filtros</span></div>' +
+        (solo ? '' : '<div class="barra"><span class="b-pri">Asignar</span></div>'),
+      tabla: { ajuste: 'estirar', cols, filas: D.asig.map((a) => ({ c: 'f-' + (a.est === 'urg' ? 'urg' : a.est === 'sol' ? 'sol' : ''), v: [a.id, tipoBadge(a.tipo), a.tec, a.imei, a.mod, a.f, a.com, a.cli, a.por, estPend(a.est)].concat(solo ? [] : ['<span class="papelera">🗑</span>']) })) },
+    }
+  }
+  if (r === 'pendientes') {
+    const n = [D.pend.length, 1, 1][S.sub.pendientes]
+    return {
+      html: tgl('pendientes', ['Reparaciones', 'Glass', 'Pulidos']) + '<div class="cab"><h2>Mis pendientes</h2><span class="cont">' + n + (n === 1 ? ' trabajo' : ' trabajos') + '</span></div><div class="barra"><span class="f-imei">Buscar IMEI…</span>' + multi('Cliente') + '</div>',
+      tabla: { ajuste: 'fluido', cols: [['Id Asignación', 120, 120], ['IMEI', 130, 130], ['Modelo', 110, 140], ['Componente', 150], ['Cliente', 130], ['Fecha asignación', 130, 130], ['Comentario', 200], ['Asignado por', 110, 110], ['Estado', 120, 120], ['', 90, 90]],
+        filas: D.pend.slice(0, n).map((p) => ({ c: p.est === 'urg' ? 'f-urg' : p.est === 'sol' ? 'f-sol' : '', v: [p.id, p.imei, p.mod, p.pie, p.cli, p.f, p.com, p.por, estPend(p.est), '<span class="b-rep-btn">Reparar</span>'] })) },
+    }
+  }
+  if (r === 'historial') {
+    const n = [1284, 312, 147][S.sub.historial]
+    return {
+      html: tgl('historial', ['Reparaciones', 'Glass', 'Pulidos']) + '<div class="cab"><h2>' + (glob ? 'Historial de reparaciones' : 'Mis reparaciones') + '</h2><span class="cont">' + n.toLocaleString('es-ES') + ' reparaciones</span></div>' +
+        '<div class="barra"><span class="f-imei">Buscar IMEI…</span>' + (glob ? multi('Técnico') : '') + multi('Pieza') + multi('Cliente') + fechas + multi('Incidencias') + '<span class="b-sec">Limpiar filtros</span></div>',
+      tabla: { ajuste: 'estirar', alto44: true, cols: [['Id Rep.', 110], ['IMEI teléfono', 130], ['Modelo', 100], ['Cliente', 110], ['Reparador', 100], ['Asignado por', 100], ['Fechas', 110], ['Componente', 150], ['Observaciones', 200, 320], ['Estado', 120, 150], ['Incidencia', 200, 360], ['Id Rep. Anterior', 150]],
+        filas: D.hist.map((h) => ({ c: h.inc === 'abierta' ? 'f-inc' : h.inc === 'cerrada' ? 'f-ok' : '', v: [h.id, h.imei, h.mod, h.cli, h.rep, h.por, '<div class="fch"><span>' + h.f1 + '</span><span>' + h.f2 + '</span></div>', h.pie, h.obs, h.inc === 'abierta' ? '<span class="bdg b-inc">Incidencia</span>' : '<span class="bdg b-ok">Reparado</span>', h.incT, h.ant] })) },
+    }
+  }
+  if (r === 'imeis') {
+    return {
+      html: '<div class="cab"><h2>IMEIs</h2><span class="cont">2.917 IMEIs</span></div><div class="barra"><span class="f-imei">Buscar IMEI…</span>' + multi('Modelo') + multi('Cliente') + '</div>',
+      tabla: { ajuste: 'fluido', cols: [['IMEI', 150, 150], ['Modelo', 120], ['Cliente', 140], ['Reparaciones', 110, 110], ['Primera entrada', 130, 130], ['Última reparación', 130, 130], ['Último técnico', 120], ['Estado', 120, 120]],
+        filas: D.imeis.map((m) => ({ c: m.est === 'inc' ? 'f-inc' : '', v: [m.imei, m.mod, m.cli, '<span class="r">' + m.n + '</span>', m.f1, m.f2, m.tec, m.est === 'inc' ? '<span class="bdg b-inc">Incidencia</span>' : '<span class="bdg b-ok">Reparado</span>'] })) },
+    }
+  }
+  if (r === 'stock') {
+    const cols = [['Componente', 230], ['En Stock', 80, 80], ['En Camino', 90, 90], ['Pendiente', 90, 90], ['Stock Mínimo', 100, 100]]
+    if (sup) cols.push(['Consumo/día', 95, 95], ['Pedir 60 d', 90, 90], ['Modo', 80, 80])
+    cols.push(['Último pedido', 120, 120], ['Estado', 100, 100])
+    return {
+      html: '<div class="cab"><h2>Stock actual</h2><span class="cont">212 componentes</span>' + (sup ? '<span class="b-sec ml-auto">Parámetros de previsión</span><span class="b-pri">Nuevo pedido</span>' : '') + '</div>' +
+        '<div class="barra"><span class="f-buscar">Buscar componente…</span>' + multi('Modelo') + multi('Tipo de pieza') + multi('Estado') + (sup ? multi('Modo') : '') + '<span class="b-sec">Limpiar filtros</span></div>',
+      tabla: { ajuste: 'fluido', cols, filas: D.stock.map((s) => ({ c: s.est === 'sin' ? 'f-inc' : s.est === 'bajo' ? 'f-sol' : '', v: [s.c, s.s, s.cam, s.pen, s.min].concat(sup ? [s.cons, s.pedir ? '<b>' + s.pedir + '</b>' : '<span class="sub">0</span>', s.modo] : []).concat([s.ult, s.est === 'sin' ? '<span class="bdg b-inc">Sin stock</span>' : s.est === 'bajo' ? '<span class="bdg b-bajo">Bajo</span>' : '<span class="bdg b-ok">OK</span>']) })) },
+    }
+  }
+  if (r === 'pedidos') {
+    const otros = S.sub.pedidos === 1
+    const cab = tgl('pedidos', ['Componentes', 'Otros']) + '<div class="cab"><h2>Pedidos</h2><span class="cont">' + (otros ? '58 pedidos' : '431 pedidos') + '</span><span class="b-pri ml-auto">Nuevo pedido</span></div>' +
+      '<div class="barra"><span class="f-buscar">' + (otros ? 'Buscar concepto…' : 'Buscar componente o nº de bloque…') + '</span>' + multi('Proveedor') + multi('Estado') + fechas + (otros ? '' : '<span class="sw"><i></i>Agrupar por bloque</span>') + '</div>'
+    if (otros) return { html: cab, tabla: { ajuste: 'fluido', cols: [['ID', 55, 55], ['Pedido', 115, 115], ['Concepto', 220], ['Proveedor', 130], ['Cant.', 60, 60], ['P.Unit.', 80, 80], ['EUR', 80, 80], ['Estado', 110, 110]], filas: D.otros.map((o) => ({ c: o.est === 'rec' ? 'f-rec' : '', v: [o.id, o.f, o.con, o.prov, o.cant, o.pu + ' €', o.pu + ' €', estPed(o.est)] })) } }
+    const filas = []
+    for (const b of D.bloques) {
+      filas.push({ grupo: '▼ <b>Bloque ' + b.b + '</b> · ' + b.prov + ' · ' + b.f + ' · ' + b.lineas.length + ' líneas' })
+      for (const l of b.lineas) filas.push({ c: l.est === 'rec' ? 'f-rec' : '', v: [l.id, b.b, b.f, l.comp, b.prov, l.cant, l.pu + ' €', l.pu + ' €', estPed(l.est)] })
+    }
+    return { html: cab, tabla: { ajuste: 'fluido', cols: [['ID', 55, 55], ['Bloque', 64, 64], ['Pedido', 115, 115], ['Componente', 190], ['Proveedor', 130], ['Cant.', 50, 50], ['P.Unit.', 68, 68], ['EUR', 68, 68], ['Estado', 110, 110]], filas } }
+  }
+  if (r === 'proveedores') return {
+    html: '<div class="cab"><h2>Proveedores</h2><span class="cont">' + D.prov.length + ' proveedores</span><span class="b-pri ml-auto">Nuevo proveedor</span></div><div class="barra"><span class="f-buscar">Buscar proveedor…</span></div>',
+    tabla: { ajuste: 'fluido', cols: [['Nombre', 200], ['Contacto', 150], ['Teléfono', 120, 120], ['Email', 200], ['Divisa', 80, 80], ['Pedidos', 90, 90], ['Último pedido', 120, 120]], filas: D.prov.map((p) => ({ v: [p.p, p.contacto, p.tel, p.mail, p.div, p.n, p.ult] })) },
+  }
+  if (r === 'clientes') return {
+    html: '<div class="cab"><h2>Clientes</h2><span class="cont">' + D.cli.length + ' clientes</span><span class="b-pri ml-auto">Nuevo cliente</span></div><div class="barra"><span class="f-buscar">Buscar cliente…</span></div>',
+    tabla: { ajuste: 'fluido', cols: [['Nombre', 220], ['Trabajos', 90, 90], ['En curso', 90, 90], ['Último trabajo', 120, 120], ['Observaciones', 260]], filas: D.cli.map((c) => ({ v: [c.c, c.n, c.cur, c.ult, c.obs] })) },
+  }
+  if (r === 'tecnicos') return {
+    html: '<div class="cab"><h2>Gestionar técnicos</h2><span class="cont">' + D.tecs.length + ' técnicos</span><span class="b-sec ml-auto">← Volver</span><span class="b-pri">Nuevo técnico</span></div>',
+    tabla: { ajuste: 'ultima', cols: [['Nombre', 160], ['Usuario', 140], ['Rol', 130], ['Activo', 90], ['Glass', 90], ['Último acceso', 160]], filas: D.tecs.map((t) => ({ v: [t.t, t.u, t.rol, t.act, t.glass, t.acc] })) },
+  }
+  if (r === 'logs') return {
+    html: '<div class="cab"><h2>Logs de actividad</h2><span class="b-sec ml-auto">← Volver</span></div><div class="barra">' + multi('Usuario') + multi('Acción') + fechas + '</div>',
+    tabla: { ajuste: 'estirar', cols: [['Fecha', 140], ['Usuario', 110], ['Acción', 170], ['Detalle', 420]], filas: D.logs.map((l) => ({ v: [l.f, l.u, l.a, l.d] })) },
+  }
+  return { html: '<div class="pend-migrar"><b>Estadísticas</b>Pendiente de migrar a la web.</div>', tabla: null }
+}
+
+/* ---------------- Reparto de anchos (calco de DataTable) ---------------- */
+function anchos(cols, disp, ajuste) {
+  const min = cols.map((c) => c[1]), max = cols.map((c) => c[2] ?? Infinity)
+  const suma = min.reduce((a, b) => a + b, 0)
+  if (disp <= suma) return { w: min.slice(), suma, scroll: suma > disp }
+  if (ajuste === 'ultima') { const w = min.slice(); w[w.length - 1] += disp - suma; return { w, suma, scroll: false } }
+  if (ajuste === 'estirar') { const u = disp / suma; return { w: min.map((m, i) => Math.min(max[i], m * u)), suma, scroll: false } }
+  // fluido: cada una al menos su mínimo; las topadas ceden y lo que sobra se reparte entre las demás en proporción
+  const w = min.slice(), libre = min.map((m, i) => max[i] > m)
+  let resto = disp - suma
+  for (let vuelta = 0; vuelta < 10 && resto > 0.5; vuelta++) {
+    const peso = min.reduce((a, m, i) => a + (libre[i] ? m : 0), 0)
+    if (!peso) break
+    let cedido = 0
+    w.forEach((x, i) => { if (!libre[i]) return; const nuevo = x + resto * min[i] / peso; if (nuevo >= max[i]) { cedido += nuevo - max[i]; w[i] = max[i]; libre[i] = false } else w[i] = nuevo })
+    resto = cedido
+  }
+  return { w, suma, scroll: false }
+}
+
+/* ---------------- Montaje ---------------- */
+const marco = document.getElementById('marco')
+const escenario = document.getElementById('escenario')
+marco.innerHTML =
+  '<header class="tb"><button class="hamb oculto" data-acc="alternar" title="Mostrar u ocultar el menú lateral">☰<span class="bdg oculto"></span></button>' +
+  '<span class="logo">F</span><span class="t1">FSGR:</span><span class="t2">Gestión de Stock y Reparaciones V.0.9.9</span>' +
+  '<div class="nsw">' + [['reparaciones', 'Reparaciones'], ['stock', 'Stock'], ['estadisticas', 'Estadísticas'], ['clientes', 'Clientes']].map(([s, t]) => '<button data-sec="' + s + '">' + t + '</button>').join('') + '</div>' +
+  '<span class="esp"></span><span class="campana">' + svg('bell').replace('class="ico"', 'width="26" height="26"') + '</span>' +
+  '<div class="usu"><button data-acc="menuUsu"><span class="avatar">●</span><span class="hola"></span></button><div class="menu oculto"></div></div></header>' +
+  '<div class="subtabs oculto"></div>' +
+  '<div class="cuerpo"><nav class="sn" aria-label="Sub-navegación"></nav><main class="mn"><div class="pag"></div></main><div class="sn-flot oculto"></div></div>'
+const $ = (s) => marco.querySelector(s)
+const nav = $('nav.sn'), main = $('main.mn'), pag = $('.pag'), flot = $('.sn-flot')
+let tablaActual = null
+
+function anchoPlegada() {
+  switch (S.variante) {
+    case 'oculta': return S.boton === 'barra' ? 0 : 22
+    case 'abrev': return 72
+    case 'iconos': return 56
+    case 'mixta': return 56
+    case 'flot': return 22
+    default: return 0
+  }
+}
+const seccionSinEnlaces = () => enlaces().length === 0
+function hayColumna() { return S.variante !== 'pestanas' && !(seccionSinEnlaces() && S.vacia) }
+function plegadaEfectiva() { return S.plegada && S.variante !== 'ahora' && S.variante !== 'pestanas' }
+function anchoNav() { return !hayColumna() ? 0 : plegadaEfectiva() ? anchoPlegada() : 200 }
+const totalBadges = (L) => L.reduce((a, l) => a + (l.b || 0), 0)
+
+const lk = (l, modo) => {
+  const act = l.r === S.ruta ? ' act' : ''
+  const b = l.b ? '<span class="bl">' + l.b + '</span>' : ''
+  if (modo === 'abr') return '<button class="lk abr' + act + '" data-ruta="' + l.r + '" title="' + l.t + '">' + l.a + b + '</button>'
+  if (modo === 'ico') return '<button class="lk solo-ico' + act + '" data-ruta="' + l.r + '" title="' + l.t + '">' + svg(l.i) + b + '</button>'
+  if (modo === 'ico-tip') return '<button class="lk solo-ico' + act + '" data-ruta="' + l.r + '" data-tip="' + l.t + '" aria-label="' + l.t + '">' + svg(l.i) + b + '</button>'
+  if (modo === 'ico+') return '<button class="lk' + act + '" data-ruta="' + l.r + '">' + svg(l.i) + l.t + b + '</button>'
+  return '<button class="lk' + act + '" data-ruta="' + l.r + '">' + l.t + b + '</button>'
+}
+const vaciaNota = (L) => L.length ? '' : '<div class="vacia-nota">(Esta sección no tiene enlaces)</div>'
+const tirador = (L, acc, titulo) => { const t = totalBadges(L); return '<button class="tirador" data-acc="' + acc + '" title="' + titulo + '">›' + (t ? '<span class="bl">' + t + '</span>' : '') + '</button>' }
+
+function pintarNav() {
+  const L = enlaces(), pl = plegadaEfectiva()
+  let h = ''
+  if (hayColumna()) {
+    if (S.variante === 'ahora') h = '<div class="sn-in">' + L.map((l) => lk(l)).join('') + vaciaNota(L) + '</div>'
+    else if (S.variante === 'oculta') {
+      if (!pl) h = '<div class="sn-in' + (S.boton === 'borde' ? ' con-borde' : '') + '">' + L.map((l) => lk(l)).join('') + vaciaNota(L) + (S.boton === 'pie' ? '<button class="btn-pie" data-acc="alternar">« Ocultar menú</button>' : '') + '</div>' +
+        (S.boton === 'borde' ? '<button class="btn-borde" data-acc="alternar" title="Ocultar menú">‹</button>' : '')
+      else if (S.boton !== 'barra') h = tirador(L, 'alternar', 'Mostrar menú')
+    } else if (S.variante === 'abrev') h = '<div class="sn-in">' + L.map((l) => lk(l, pl ? 'abr' : '')).join('') + (pl ? '' : vaciaNota(L)) + '<button class="btn-pie' + (pl ? ' centro' : '') + '" data-acc="alternar" title="' + (pl ? 'Desplegar' : 'Plegar') + '">' + (pl ? '»' : '« Plegar') + '</button></div>'
+    else if (S.variante === 'mixta') h = '<div class="sn-in ' + (pl ? 'rail' : 'con-borde') + '">' + L.map((l) => lk(l, pl ? 'ico-tip' : 'ico+')).join('') + (pl ? '' : vaciaNota(L)) + '</div>' +
+      '<button class="btn-borde" data-acc="alternar" title="' + (pl ? 'Mostrar menú' : 'Ocultar menú') + '" aria-expanded="' + !pl + '">' + (pl ? '›' : '‹') + '</button>'
+    else if (S.variante === 'iconos') h = '<div class="sn-in">' + L.map((l) => lk(l, pl ? 'ico' : 'ico+')).join('') + (pl ? '' : vaciaNota(L)) + '<button class="btn-pie' + (pl ? ' centro' : '') + '" data-acc="alternar" title="' + (pl ? 'Desplegar' : 'Plegar') + '">' + (pl ? '»' : '« Plegar') + '</button></div>'
+    else if (S.variante === 'flot') {
+      if (!pl) h = '<div class="sn-in">' + L.map((l) => lk(l)).join('') + vaciaNota(L) + '<button class="btn-pie" data-acc="alternar">« Soltar (que flote)</button></div>'
+      else h = tirador(L, 'abrirFlot', 'Pasa el ratón para abrir')
+    }
+  }
+  nav.innerHTML = h
+  nav.style.width = anchoNav() + 'px'
+  nav.style.overflow = (S.variante === 'oculta' && !pl && S.boton === 'borde') || S.variante === 'mixta' ? 'visible' : 'hidden'
+  // Flotante (C)
+  const verFlot = S.variante === 'flot' && pl && hayColumna() && S.dAbierta
+  flot.classList.toggle('oculto', !verFlot)
+  flot.innerHTML = verFlot ? '<div class="sn-in">' + L.map((l) => lk(l)).join('') + vaciaNota(L) + '<button class="btn-pie" data-acc="alternar">📌 Dejarla fija</button></div>' : ''
+  // Pestañas arriba (D)
+  const sub = $('.subtabs')
+  const verSub = S.variante === 'pestanas' && L.length > 0
+  sub.classList.toggle('oculto', !verSub)
+  sub.innerHTML = verSub ? L.map((l) => lk(l)).join('') : ''
+  // Botón de la barra navy (A · barra)
+  const hamb = $('.hamb'), verHamb = S.variante === 'oculta' && S.boton === 'barra' && hayColumna()
+  hamb.classList.toggle('oculto', !verHamb)
+  const t = totalBadges(L), bdg = hamb.querySelector('.bdg')
+  bdg.textContent = t
+  bdg.classList.toggle('oculto', !(pl && t))
+  hamb.title = pl ? 'Mostrar menú' : 'Ocultar menú'
+}
+
+function pintarBarra() {
+  marco.querySelectorAll('.nsw button').forEach((b) => b.classList.toggle('act', b.dataset.sec === SECCION[S.ruta]))
+  $('.hola').textContent = 'Hola, ' + ({ tecnico: 'carla', super: 'bruno', admin: 'admin' })[S.rol]
+  const menu = $('.menu')
+  menu.classList.toggle('oculto', !S.menuUsu)
+  menu.innerHTML = (S.rol === 'admin' ? '<button data-ruta="tecnicos">Gestionar técnicos</button><button data-ruta="logs">Ver logs</button><hr>' : '') + '<button data-acc="nada">Descargar CSV</button><button data-acc="nada">Cambiar contraseña</button><hr><button data-acc="nada">Cerrar Sesión</button>'
+}
+
+function pintarVista() {
+  const v = vista()
+  tablaActual = v.tabla
+  let h = v.html
+  if (v.tabla) {
+    const t = v.tabla
+    h += '<div class="tw"><table class="dt' + (t.alto44 ? ' alto44' : '') + '"><colgroup>' + t.cols.map(() => '<col>').join('') + '</colgroup><thead><tr>' + t.cols.map((c) => '<th title="' + c[0] + '">' + c[0] + '</th>').join('') + '</tr></thead><tbody>' +
+      t.filas.map((f, i) => f.grupo ? '<tr class="gcab"><td colspan="' + t.cols.length + '">' + f.grupo + '</td></tr>' : '<tr data-fila="' + i + '" class="' + (f.c || '') + '">' + f.v.map((x) => '<td>' + x + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>' + actualizado
+  }
+  pag.innerHTML = h
+  main.scrollTop = 0
+  observarTabla()
+  recolocar()
+}
+
+/* Las columnas se recalculan cada vez que cambia el hueco (como el ResizeObserver de DataTable), también durante la animación. */
+let ro = null
+function observarTabla() {
+  if (ro) ro.disconnect()
+  const tw = pag.querySelector('.tw')
+  if (!tw) return
+  ro = new ResizeObserver(() => recolocar())
+  ro.observe(tw)
+}
+function recolocar() {
+  const tw = pag.querySelector('.tw')
+  if (tw && tablaActual) {
+    const disp = tw.clientWidth - 8
+    const { w } = anchos(tablaActual.cols, disp, tablaActual.ajuste)
+    tw.querySelectorAll('col').forEach((c, i) => { c.style.width = w[i] + 'px' })
+    tw.querySelector('table').style.width = (w.reduce((a, b) => a + b, 0) + 8) + 'px'
+  }
+  pedirInfo()
+}
+
+/* ---------------- Escala de la pantalla simulada ---------------- */
+const PANT = { auto: null, 1366: [1366, 657], 1600: [1600, 789], 1920: [1920, 969] }
+function escalar() {
+  const disponible = escenario.clientWidth
+  let W, H, s
+  if (S.pantalla === 'auto') { W = disponible; H = 760; s = 1 } else { [W, H] = PANT[S.pantalla]; s = Math.min(1, disponible / W) }
+  marco.style.width = W + 'px'
+  marco.style.height = H + 'px'
+  marco.style.transform = 'scale(' + s + ')'
+  marco.style.setProperty('--alto-tabla', Math.max(220, H - 64 - 330) + 'px')
+  escenario.style.height = Math.ceil(H * s) + 'px'
+}
+
+/* ---------------- Información de la variante ---------------- */
+const VAR = {
+  ahora: { t: 'Ahora: columna fija de 200 px', d: 'Lo que hay hoy. La columna ocupa siempre 200 px, también en Estadísticas y en Gestión, donde está vacía.',
+    pros: ['Nada que aprender.'], contras: ['200 px menos para las tablas, siempre.', 'En Estadísticas y en Gestionar técnicos o Ver logs la columna sale en blanco.'],
+    coste: 'Quitarla donde no hay enlaces: ~15 min (casilla de arriba)' },
+  oculta: { t: 'A · Se oculta del todo', d: 'Un botón la esconde por completo y la tabla se queda con los 200 px. Plegada, las pestañas se cambian abriéndola de nuevo. Prueba los tres sitios del botón.',
+    pros: ['Es la que más espacio da (200 px, o 178 px si queda la franja).', 'Sin iconos: los enlaces se ven igual que hoy.', 'Lo más sencillo de hacer y de entender.'],
+    contras: ['Plegada, cambiar de pestaña cuesta un clic más (abrirla primero).', 'El número de Pendientes y Asignaciones pasa a la franja o al botón ☰: es una suma, no se ve cuál es cuál.'],
+    coste: '2–3 h con tests (botón, número en el botón y recordar)' },
+  abrev: { t: 'B · Plegada queda una franja con abreviaturas', d: 'Al plegar queda una franja de 72 px con el nombre corto de cada pestaña (Asig., Pend., Hist.…). Sin iconos.',
+    pros: ['Las pestañas siguen a un clic, también plegada.', 'Cada número sigue en su pestaña.'],
+    contras: ['Gana 128 px en vez de 200.', 'Las abreviaturas se leen peor («Ped.» y «Prov.», «Clien.»).'],
+    coste: '3–4 h con tests' },
+  flot: { t: 'C · Flotante: se abre al pasar el ratón', d: 'Plegada queda una franja estrecha. Al acercar el ratón se abre ENCIMA del contenido, sin empujarlo; al salir se cierra. Con «Dejarla fija» se comporta como hoy.',
+    pros: ['El contenido no se mueve nunca al abrirla.', 'Cambiar de pestaña es un gesto: acercar el ratón y pulsar.'],
+    contras: ['Se abre sin querer al ir al borde izquierdo (primera columna, scroll…).', 'En pantallas táctiles no hay «pasar por encima».', 'Es la más delicada de hacer bien (retrasos, teclado, foco).'],
+    coste: '~1 día con tests' },
+  pestanas: { t: 'D · Sin columna: pestañas arriba', d: 'Se quita la columna y sus enlaces pasan a una fila de pestañas bajo la barra navy. No hay nada que plegar.',
+    pros: ['Siempre todo el ancho, sin botón.', 'Las pestañas y sus números siempre a la vista.'],
+    contras: ['Cambia dónde están las pestañas (costumbre del taller desde el JavaFX).', 'En Historial y Pendientes quedan dos filas de pastillas seguidas (pestañas + Reparaciones/Glass/Pulidos).', 'Quita 48 px de alto a las tablas.'],
+    coste: '3–4 h con tests' },
+  mixta: { t: 'A + E · Iconos con el botón del borde', d: 'Abierta: icono + nombre, como hoy pero con icono. El botón redondo del borde (el de la A) la pliega a una franja de 56 px con solo los iconos; al pasar el ratón por un icono sale su nombre.<br><b>Iconos propuestos:</b> ' +
+      [['clipboard-list', 'Asignaciones'], ['wrench', 'Pendientes'], ['rotate-ccw-clock', 'Historial'], ['smartphone', 'IMEIs'], ['package', 'Stock actual'], ['shopping-cart', 'Pedidos'], ['building-complex', 'Proveedores'], ['users', 'Clientes']]
+        .map(([i, n]) => '<span style="white-space:nowrap">' + svg(i).replace('class="ico"', 'width="15" height="15" style="vertical-align:-3px;margin-right:3px"') + n + '</span>').join(' · ') + '.',
+    pros: ['Las pestañas siguen a un clic, también plegada.', 'Cada número se queda en su icono (Pendientes y Asignaciones por separado).', 'Los iconos ayudan a encontrar la pestaña de un vistazo, abierta o plegada.', 'El mismo botón, en el mismo sitio, para plegar y desplegar.'],
+    contras: ['Gana 144 px en vez de 200 (la franja de iconos se queda).', 'Hay que acostumbrarse a los 8 iconos (el nombre sale al pasar el ratón).'],
+    coste: '~1 día (5–7 h) con tests' },
+  iconos: { t: 'E · Plegada queda una franja con iconos', d: 'Como la B pero con iconos en vez de abreviaturas: lo más habitual en otros programas. Se pliega con el botón del pie.',
+    pros: ['Patrón conocido; cada número se queda en su icono.', 'Las pestañas siguen a un clic, también plegada.'],
+    contras: ['Hay que elegir y aprender 8 iconos.', 'Gana 144 px en vez de 200.'],
+    coste: 'Medio día – 1 día con tests' },
+}
+const elegidas = new Set()
+function pintarInfoVariante() {
+  const v = VAR[S.variante]
+  document.getElementById('infoVariante').innerHTML = '<h3>' + v.t + '</h3><p>' + v.d + '</p><ul class="pros">' + v.pros.map((p) => '<li>' + p + '</li>').join('') + '</ul><ul class="contras">' + v.contras.map((p) => '<li>' + p + '</li>').join('') + '</ul>' +
+    '<span class="coste">Coste: ' + v.coste + '</span><br><button class="elegir' + (elegidas.has(S.variante) ? ' hecho' : '') + '" id="btnElegir">' + (elegidas.has(S.variante) ? '✓ Anotado' : 'Me quedo con esta') + '</button>'
+}
+
+/* ---------------- Qué cambia en esta vista (medido) ---------------- */
+let infoPendiente = false
+function pedirInfo() { if (infoPendiente) return; infoPendiente = true; requestAnimationFrame(() => { infoPendiente = false; pintarInfoEfecto() }) }
+const px = (n) => Math.round(n).toLocaleString('es-ES') + ' px'
+function lineasBarra(barra, ancho) {
+  const c = barra.cloneNode(true)
+  c.style.cssText = 'position:absolute;visibility:hidden;left:-99999px;top:0;width:' + ancho + 'px'
+  marco.appendChild(c)
+  // Los controles de una misma línea tienen alturas distintas (centrados): una línea nueva es un salto de más de 20 px
+  const tops = [...c.children].map((h) => h.offsetTop).sort((a, b) => a - b)
+  c.remove()
+  let lineas = tops.length ? 1 : 0
+  for (let i = 1; i < tops.length; i++) if (tops[i] - tops[i - 1] > 20) lineas++
+  return lineas
+}
+function pintarInfoEfecto() {
+  const el = document.getElementById('infoEfecto')
+  const nombre = { asignaciones: 'Asignaciones', pendientes: 'Pendientes', historial: 'Historial', imeis: 'IMEIs', stock: 'Stock actual', pedidos: 'Pedidos', proveedores: 'Proveedores', clientes: 'Clientes', estadisticas: 'Estadísticas', tecnicos: 'Gestionar técnicos', logs: 'Ver logs' }[S.ruta]
+  const tw = pag.querySelector('.tw')
+  const sinEnlaces = seccionSinEnlaces()
+  // Anchos de la columna a comparar: abierta (200, o 0 si la sección no tiene enlaces y se quita) frente a plegada en esta variante
+  let wAb, wPl, etAb, etPl
+  if (sinEnlaces) { wAb = 200; wPl = 0; etAb = 'Hoy (columna vacía)'; etPl = 'Sin columna' }
+  else if (S.variante === 'ahora') { wAb = 200; wPl = 0; etAb = 'Hoy (200 px)'; etPl = 'Si se ocultara del todo' }
+  else if (S.variante === 'pestanas') { wAb = 200; wPl = 0; etAb = 'Hoy (columna)'; etPl = 'Pestañas arriba' }
+  else { wAb = 200; wPl = anchoPlegada(); etAb = 'Abierta (200 px)'; etPl = 'Plegada (' + wPl + ' px)' }
+  let h = '<h3>Qué cambia en esta vista · ' + nombre + '</h3>'
+  if (!tw || !tablaActual) {
+    h += sinEnlaces ? '<p>Esta sección no tiene enlaces: hoy la columna sale <b>vacía</b>. ' + (S.vacia ? 'Con la casilla marcada desaparece y el contenido usa todo el ancho.' : 'Marca «Quitar la columna donde no hay enlaces» para ver cómo queda sin ella.') + '</p>' : ''
+    el.innerHTML = h; return
+  }
+  const base = tw.clientWidth + nav.offsetWidth
+  const ab = base - wAb, pl = base - wPl
+  const rAb = anchos(tablaActual.cols, ab - 8, tablaActual.ajuste), rPl = anchos(tablaActual.cols, pl - 8, tablaActual.ajuste)
+  const barra = [...pag.querySelectorAll('.barra')][0]
+  const AJ = { estirar: '«estirar»: crecen todas las columnas en proporción', fluido: '«fluido»: crecen solo las columnas sin tope (las de texto)', ultima: '«última»: crece solo la última columna' }
+  h += '<p class="mini">Reparto de la tabla ' + AJ[tablaActual.ajuste] + '.</p>'
+  const scr = (r, w) => r.scroll ? '<span class="aviso">Sí, faltan ' + px(r.suma - (w - 8)) + '</span>' : 'No'
+  h += '<table class="cmp"><tr><th></th><th>' + etAb + '</th><th>' + etPl + '</th></tr>' +
+    '<tr><td>Ancho para la tabla</td><td class="n">' + px(ab) + '</td><td class="n">' + px(pl) + (pl > ab ? ' <span class="mas">+' + Math.round(pl - ab) + '</span>' : '') + '</td></tr>' +
+    '<tr><td>Scroll horizontal</td><td class="n">' + scr(rAb, ab) + '</td><td class="n">' + scr(rPl, pl) + '</td></tr>' +
+    (barra ? '<tr><td>Filtros</td><td class="n">' + lineasBarra(barra, ab) + ' línea(s)</td><td class="n">' + lineasBarra(barra, pl) + ' línea(s)</td></tr>' : '') + '</table>'
+  h += '<details open><summary>Ancho de cada columna</summary><table class="cmp"><tr><th>Columna</th><th>' + etAb + '</th><th>' + etPl + '</th><th></th></tr>' +
+    tablaActual.cols.map((c, i) => { const d = rPl.w[i] - rAb.w[i]; return '<tr><td>' + (c[0] || '(botón)') + '</td><td class="n">' + Math.round(rAb.w[i]) + '</td><td class="n">' + Math.round(rPl.w[i]) + '</td><td class="n">' + (d >= 1 ? '<span class="mas">+' + Math.round(d) + '</span>' : '<span class="menos">=</span>') + '</td></tr>' }).join('') +
+    '</table></details>'
+  el.innerHTML = h
+}
+
+/* ---------------- Pintado general ---------------- */
+function pintarControles() {
+  const marcar = (id, attr, val) => document.querySelectorAll('#' + id + ' button').forEach((b) => b.classList.toggle('act', b.dataset[attr] === String(val)))
+  marcar('segVar', 'v', S.variante); marcar('segBoton', 'b', S.boton); marcar('segRol', 'r', S.rol); marcar('segPant', 'p', S.pantalla)
+  document.getElementById('grpBoton').classList.toggle('oculto', S.variante !== 'oculta')
+  document.getElementById('chkVacia').checked = S.vacia
+  document.getElementById('chkAnim').checked = S.anim
+  document.getElementById('chkRecordar').checked = S.recordar
+  marco.classList.toggle('anim', S.anim)
+}
+function todo() {
+  if (!rutaPermitida(S.ruta)) S.ruta = inicioReparaciones()
+  pintarControles(); escalar(); pintarBarra(); pintarNav(); pintarVista(); pintarInfoVariante(); guardar()
+}
+function soloNav() { pintarNav(); pintarBarra(); pedirInfo(); guardar() }
+function navegar(r) {
+  if (!rutaPermitida(r)) return
+  if (SECCION[r] === 'stock') S.ultimaStock = r
+  S.ruta = r; S.menuUsu = false; S.dAbierta = false; S.sel = null
+  pintarBarra(); pintarNav(); pintarVista(); guardar()
+}
+
+/* ---------------- Eventos ---------------- */
+document.getElementById('segVar').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.variante = b.dataset.v; S.dAbierta = false; todo() })
+document.getElementById('segBoton').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.boton = b.dataset.b; todo() })
+document.getElementById('segRol').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.rol = b.dataset.r; todo() })
+document.getElementById('segPant').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.pantalla = b.dataset.p; todo() })
+document.getElementById('chkVacia').addEventListener('change', (e) => { S.vacia = e.target.checked; soloNav() })
+document.getElementById('chkAnim').addEventListener('change', (e) => { S.anim = e.target.checked; pintarControles(); guardar() })
+document.getElementById('chkRecordar').addEventListener('change', (e) => { S.recordar = e.target.checked; guardar() })
+document.getElementById('infoVariante').addEventListener('click', (e) => {
+  if (e.target.id !== 'btnElegir') return
+  elegidas.add(S.variante)
+  const extra = S.variante === 'oculta' ? { boton: S.boton } : {}
+  try { window.brainstorm && window.brainstorm.choice('variante-' + S.variante, Object.assign({ etiqueta: VAR[S.variante].t, vacia: S.vacia, recordar: S.recordar, pantalla: S.pantalla }, extra)) } catch (err) { /* sin servidor */ }
+  pintarInfoVariante()
+})
+let toastT = 0
+function toast(t) { let el = marco.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; marco.appendChild(el) } el.textContent = t; clearTimeout(toastT); toastT = setTimeout(() => el.remove(), 1600) }
+marco.addEventListener('click', (e) => {
+  const sec = e.target.closest('[data-sec]')
+  if (sec) { const s = sec.dataset.sec; navegar(s === 'reparaciones' ? inicioReparaciones() : s === 'stock' ? S.ultimaStock : s); return }
+  const ruta = e.target.closest('[data-ruta]')
+  if (ruta) { navegar(ruta.dataset.ruta); return }
+  const sub = e.target.closest('[data-sub]')
+  if (sub) { const [k, i] = sub.dataset.sub.split(':'); S.sub[k] = Number(i); pintarVista(); return }
+  const acc = e.target.closest('[data-acc]')
+  if (acc) {
+    const a = acc.dataset.acc
+    if (a === 'alternar') { S.plegada = !S.plegada; S.dAbierta = false; soloNav() }
+    else if (a === 'abrirFlot') { S.dAbierta = true; pintarNav() }
+    else if (a === 'menuUsu') { S.menuUsu = !S.menuUsu; pintarBarra() }
+    else if (a === 'nada') { S.menuUsu = false; pintarBarra(); toast('En el prototipo no hace nada') }
+    return
+  }
+  const fila = e.target.closest('tr[data-fila]')
+  if (fila) { const ya = fila.classList.contains('sel'); pag.querySelectorAll('tr.sel').forEach((t) => t.classList.remove('sel')); if (!ya) fila.classList.add('sel') }
+  if (S.menuUsu && !e.target.closest('.usu')) { S.menuUsu = false; pintarBarra() }
+})
+// Flotante (C): abre al pasar el ratón por la franja, con un pequeño retraso; se cierra al salir del panel
+let tAbrir = 0, tCerrar = 0
+nav.addEventListener('mouseenter', () => { if (S.variante !== 'flot' || !plegadaEfectiva()) return; clearTimeout(tCerrar); tAbrir = setTimeout(() => { S.dAbierta = true; pintarNav() }, 150) })
+nav.addEventListener('mouseleave', () => { clearTimeout(tAbrir) })
+flot.addEventListener('mouseenter', () => clearTimeout(tCerrar))
+flot.addEventListener('mouseleave', () => { tCerrar = setTimeout(() => { S.dAbierta = false; pintarNav() }, 300) })
+window.addEventListener('resize', () => { escalar(); pedirInfo() })
+
+todo()
+</script>
+</body>
+</html>
