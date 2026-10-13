@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abrir automático y atajo Cerrar</title>
+<style>
+:root{
+  --azul-noche:#001232;--azul-medio:#2C3B54;--azul-gris:#586376;--crema:#F6F6F6;--sup:#FFFFFF;
+  --amarillo:#F1E356;--fondo-vista:#DDE1E7;--nav-switch:#E8EAF0;--pill-bg:#F0F2F5;--pill-borde:#C8CDD5;--nav-activo:#FAFAFA;
+  --neutro:#E8EAF0;--sep:#C2C8D0;--borde-input:#D4D8DE;--texto-suave:#A0A8B4;--sel-suave:#EAF1FF;--verde:#4CAF50;
+  --t-rep-bg:#E3F2FD;--t-rep:#1565C0;--t-gla-bg:#E0F2F1;--t-gla:#00796B;
+  --entrega-bg:#E8EAF6;--entrega-tx:#3949AB;--recibido-tx:#2E7D32;--pc-bg:#FFF3E0;--pc-tx:#B26A00;
+  --form-barra:#C8CDD6;--form-fila-brd:#E0E0E0;--form-otros:#F6F7F9;--form-zona:#ECEEF1;--form-zona-brd:#CFD3DA;--form-guardada:#F1F8F1;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#F4F5F8;color:var(--azul-medio);font-family:system-ui,'Segoe UI',sans-serif;font-size:13px}
+button{font:inherit}
+.oculto{display:none!important}
+/* ---------- Panel del prototipo ---------- */
+.proto{padding:16px;max-width:1640px;margin:0 auto}
+.ctl{background:#fff;border:1px solid #DDE1E7;border-radius:10px;padding:12px 16px;margin-bottom:12px}
+.ctl h1{font-size:18px;color:var(--azul-noche);margin:0 0 2px}
+.ctl p.sub{margin:0 0 10px;color:var(--azul-gris);font-size:12.5px}
+.ctl-filas{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.grupo{display:flex;align-items:center;gap:8px}
+.lbl{font-size:11px;font-weight:700;color:var(--azul-gris);text-transform:uppercase;letter-spacing:.04em}
+.seg{display:inline-flex}
+.seg button{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-gris);padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:-1px;white-space:nowrap}
+.seg button:first-child{border-radius:999px 0 0 999px;margin-left:0}
+.seg button:last-child{border-radius:0 999px 999px 0}
+.seg button.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.b-reset{border:1px solid var(--pill-borde);background:#fff;color:var(--azul-gris);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.b-reset:hover{background:#F0F2F5}
+.disposicion{display:flex;gap:14px;align-items:flex-start}
+.app-wrap{flex:1;min-width:0}
+aside.lat{width:330px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
+.caja{background:#fff;border:1px solid #DDE1E7;border-radius:10px;padding:12px 14px}
+.caja h3{margin:0 0 8px;font-size:13px;color:var(--azul-noche)}
+.caja ol{margin:0;padding-left:18px;font-size:12.5px;line-height:1.5}
+.caja ol li{margin-bottom:6px}
+.caja ol li b{color:var(--azul-noche)}
+.log{max-height:300px;overflow:auto;font-size:11.5px;font-family:ui-monospace,Consolas,monospace}
+.log div{padding:5px 0;border-bottom:1px solid #EEF0F3;line-height:1.35}
+.log .acc{font-weight:700;color:var(--azul-noche)}
+.log .hora{color:var(--texto-suave)}
+.log .vacio{color:var(--texto-suave);font-family:system-ui,sans-serif}
+@media (max-width:1100px){.disposicion{flex-direction:column}aside.lat{width:100%}}
+/* ---------- La app ---------- */
+.app{position:relative;background:var(--fondo-vista);border-radius:8px;box-shadow:0 2px 14px rgba(0,18,50,.18);overflow:hidden;min-height:640px;display:flex;flex-direction:column}
+.tb{height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;background:var(--azul-noche);padding:0 18px}
+.logo{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--crema);color:var(--azul-noche);font-weight:800;font-size:14px}
+.tb .t1{font-size:13px;font-weight:700;color:var(--crema)}
+.nsw{margin-left:8px;display:flex;gap:2px;border-radius:24px;background:var(--nav-switch);padding:3px}
+.nsw span{border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--azul-medio)}
+.nsw span.act{background:var(--azul-noche);color:var(--nav-activo)}
+.esp{flex:1}
+.usu{display:flex;align-items:center;gap:8px;color:var(--crema);font-size:12px;font-weight:700}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--crema);color:var(--azul-noche);display:flex;align-items:center;justify-content:center;font-size:12px}
+.cuerpo{flex:1;display:flex;min-height:0;position:relative}
+nav.sn{width:180px;flex-shrink:0;background:var(--sup);padding:8px;display:flex;flex-direction:column;gap:2px}
+.lk{display:flex;align-items:center;width:100%;border:0;background:transparent;border-radius:24px;padding:9px 14px;font-size:13px;font-weight:700;color:var(--azul-medio);text-align:left;cursor:pointer;white-space:nowrap}
+.lk:hover{background:rgba(44,59,84,.08)}
+.lk.act{background:var(--azul-noche);color:var(--nav-activo)}
+.lk.off{color:var(--texto-suave);cursor:default}
+.lk.off:hover{background:transparent}
+.bl{margin-left:8px;display:inline-block;min-width:14px;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:700;text-align:center;background:var(--azul-noche);color:var(--sup)}
+.lk.act .bl{background:var(--sup);color:var(--azul-noche)}
+main.mn{flex:1;min-width:0;overflow:auto;position:relative}
+.pag{padding:26px 28px}
+.tgl{display:inline-flex;margin-bottom:10px}
+.tgl button{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-gris);padding:5px 14px;font-size:12px;font-weight:700;margin-left:-1px;cursor:pointer}
+.tgl button:first-child{border-radius:24px 0 0 24px;margin-left:0}
+.tgl button:last-child{border-radius:0 24px 24px 0}
+.tgl button.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.cab{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.cab h2{font-size:22px;font-weight:700;color:var(--azul-medio);margin:0}
+.cont{display:inline-block;border-radius:12px;background:var(--neutro);padding:3px 10px;font-size:12px;font-weight:700;color:var(--azul-gris)}
+.pista{font-size:11.5px;color:var(--azul-gris);margin:0 0 8px}
+.tw{overflow:auto;background:var(--sup);border-radius:6px}
+table.dt{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed}
+.dt th{position:sticky;top:0;background:var(--crema);font-size:12px;font-weight:700;color:var(--azul-medio);text-align:left;padding:0 8px;height:38px;border-bottom:1px solid var(--sep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dt td{font-size:12px;padding:6px 8px;height:48px;border-bottom:1px solid #E3E6EB;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#fff;vertical-align:middle}
+.dt tbody tr:hover td{background:#F5F7FA}
+.dt tbody tr.menu-abierto td{background:var(--sel-suave)}
+.dt tr.vacia td{color:var(--texto-suave);text-align:center;height:70px}
+.dt tr.nueva td{animation:destello 1.6s ease-out}
+@keyframes destello{from{background:#FFF9C4}to{background:#fff}}
+.bdg{display:inline-block;border-radius:12px;padding:2px 8px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.b-rep{background:var(--t-rep-bg);color:var(--t-rep)}.b-gla{background:var(--t-gla-bg);color:var(--t-gla)}
+.b-ent{background:var(--entrega-bg);color:var(--entrega-tx)}
+.b-pc{background:var(--pc-bg);color:var(--pc-tx)}
+.imei{display:flex;flex-direction:column;gap:3px;line-height:1.15}
+.pild{align-self:flex-start;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700}
+.p-gla{background:var(--t-gla-bg);color:var(--t-gla)}
+.p-rep{background:var(--t-rep-bg);color:var(--t-rep)}
+.estado{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.b-pri{border:1px solid var(--azul-noche);background:var(--azul-noche);color:var(--nav-activo);border-radius:24px;padding:7px 14px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.b-pri:hover{background:#0A2040}
+.b-pri:disabled{opacity:.5;cursor:default}
+.dt .sub{color:#8A94A6}
+.obs-abr{font-weight:700;color:var(--azul-noche)}
+/* Menú contextual */
+.cm{position:fixed;z-index:80;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:4px;min-width:200px}
+.cm button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;border-radius:5px;font-size:12.5px;color:var(--azul-medio);cursor:pointer}
+.cm button:hover{background:var(--sel-suave)}
+.cm button.gris{color:var(--texto-suave)}
+.cm hr{border:0;border-top:1px solid #E6E9EE;margin:4px 0}
+/* Formulario (diálogo sobre la lista) */
+.velo{position:absolute;inset:0;background:rgba(0,18,50,.35);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;z-index:50;overflow:auto}
+.form{width:740px;max-width:100%;background:#fff;border-radius:8px;box-shadow:0 10px 30px rgba(0,18,50,.3);overflow:hidden}
+.f-barra{display:flex;align-items:center;gap:14px;background:var(--form-barra);padding:10px 16px}
+.f-barra .t{font-size:13px;font-weight:700;color:var(--azul-medio)}
+.f-barra .x{border:0;background:transparent;font-size:16px;font-weight:700;color:var(--azul-gris);cursor:pointer;margin-left:auto}
+.f-fila{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--form-fila-brd);font-size:12px}
+.f-fila .nom{width:90px;font-weight:700}
+.f-fila .sku{flex:1;border:1px solid var(--borde-input);border-radius:4px;padding:5px 8px;color:var(--azul-gris);background:#fff}
+.f-fila .cnt{display:flex;align-items:center;gap:6px;color:var(--azul-gris)}
+.f-fila .cnt span{display:inline-flex;width:24px;height:24px;border:1px solid var(--borde-input);border-radius:4px;align-items:center;justify-content:center;background:#fff}
+.otras{border-left:4px solid var(--azul-medio);background:var(--form-otros)}
+.otras .cab-o{display:flex;align-items:center;gap:8px;padding:8px 14px 2px}
+.otras .tit{font-size:11.5px;font-weight:700;color:var(--azul-medio)}
+.otras .num{border-radius:10px;background:var(--azul-medio);padding:1px 8px;font-size:10px;font-weight:700;color:#fff}
+.otras .cuerpo-o{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:2px 14px 12px}
+.lineas{display:flex;flex-direction:column;gap:5px;width:100%;max-height:150px;min-height:36px;overflow-y:auto;border:1px solid var(--sep);border-radius:6px;background:#fff;padding:5px}
+.linea{display:flex;align-items:center;gap:5px}
+.linea input{flex:1;min-width:0;border:1px solid var(--sep);border-radius:4px;padding:4px 8px;font-size:12px;color:var(--azul-medio)}
+.linea input:disabled{opacity:.6;background:#fff}
+.linea .ok{flex-shrink:0;padding:0 4px;font-size:11px;font-weight:700;color:var(--recibido-tx)}
+.b-guardar{flex-shrink:0;border:0;border-radius:4px;background:var(--azul-noche);color:#fff;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.b-guardar:disabled{opacity:.5;cursor:default}
+.b-quitar{flex-shrink:0;border:0;background:transparent;cursor:pointer;color:#A84040;font-size:15px;line-height:1;padding:2px 5px}
+.botones-o{display:flex;gap:8px;align-items:center}
+.b-anadir{border:0;border-radius:6px;background:var(--azul-medio);color:#fff;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer}
+.b-anadir:disabled{opacity:.5;cursor:default}
+.b-cerrar{border:1px solid var(--azul-medio);border-radius:6px;background:#fff;color:var(--azul-medio);padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer}
+.b-cerrar:hover{background:var(--sel-suave)}
+.nota-proto{margin:0 14px 12px;border:1px dashed #B0B7C3;border-radius:6px;padding:6px 10px;font-size:11.5px;color:var(--azul-gris);background:#FBFBFC}
+.nota-proto b{color:var(--azul-noche)}
+.sin-otro{padding:10px 16px;font-size:12px;color:var(--azul-gris);background:var(--form-otros);border-left:4px solid var(--sep)}
+.zona{display:flex;justify-content:flex-end;border-top:1px solid var(--form-zona-brd);background:var(--form-zona);padding:12px 16px}
+/* ---------- Aviso breve (lo nuevo) ---------- */
+.aviso{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:10px;min-width:320px;max-width:min(560px,92vw);background:var(--azul-noche);color:var(--crema);border-radius:10px;padding:12px 18px 15px 14px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,18,50,.35);overflow:hidden;cursor:pointer;animation:entra .18s ease-out}
+@keyframes entra{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.aviso .ic{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.aviso .ic.ok{background:var(--verde);color:#fff}
+.aviso .ic.info{background:#8FA3C2;color:var(--azul-noche)}
+.aviso .ic.warn{background:#F5B942;color:var(--azul-noche)}
+.aviso .barra{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.12)}
+.aviso .barra i{display:block;height:100%;background:var(--amarillo);transform-origin:left center;animation:encoge 4s linear forwards}
+@keyframes encoge{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+</style>
+</head>
+<body>
+<div class="proto">
+  <div class="ctl">
+    <h1>Prototipo · «Abrir» automático al entregar a glass y atajo «+ Cerrar»</h1>
+    <p class="sub">Datos inventados. Clic derecho en una fila para «Entregar», «Marcar que llegó» o deshacer. Lo nuevo: el <b>aviso abajo con la barra que encoge</b>, el <b>«Abrir» que aparece solo en el Historial</b> y el botón <b>«+ Cerrar»</b> del formulario.</p>
+    <div class="ctl-filas">
+      <div class="grupo"><span class="lbl">Sesión como</span>
+        <div class="seg" id="seg-sesion">
+          <button data-tec="1" class="act">Luis · reparación</button>
+          <button data-tec="2">Ana · glass</button>
+        </div>
+      </div>
+      <button class="b-reset" id="b-reset">↺ Reiniciar datos</button>
+    </div>
+  </div>
+
+  <div class="disposicion">
+    <div class="app-wrap">
+      <div class="app" id="app">
+        <div class="tb">
+          <div class="logo">F</div>
+          <span class="t1">Reparaciones</span>
+          <div class="nsw"><span class="act">Taller</span><span>Almacén</span></div>
+          <div class="esp"></div>
+          <div class="usu"><span id="usu-nombre">Luis</span><div class="avatar" id="usu-ini">L</div></div>
+        </div>
+        <div class="cuerpo">
+          <nav class="sn">
+            <button class="lk act" data-vista="pendientes">Mis pendientes <span class="bl" id="bl-pend">0</span></button>
+            <button class="lk" data-vista="historial">Historial</button>
+            <button class="lk off">Asignaciones</button>
+            <button class="lk off">IMEIs</button>
+          </nav>
+          <main class="mn" id="mn"></main>
+        </div>
+      </div>
+    </div>
+
+    <aside class="lat">
+      <div class="caja">
+        <h3>Qué probar</h3>
+        <ol>
+          <li><b>Luis</b>, clic derecho en <b>A…_1</b> (iPhone 13 Pro) → «Entregar a Ana». Sale el aviso con la barra y, en <b>Historial</b>, un «Abrir» a nombre de Luis.</li>
+          <li>Otra vez clic derecho → «Deshacer entrega»: el «Abrir» se borra del Historial.</li>
+          <li><b>A…_2</b> (iPhone 12): Luis ya había apuntado «abrir telefono» a mano → «ya estaba abierto», no duplica.</li>
+          <li><b>A…_3</b> (iPhone 7, sin pieza «otro»): la entrega se hace, sin «Abrir» y con aviso ámbar.</li>
+          <li>Cambia a <b>Ana</b> → pestaña Glass → <b>AG…_4</b> (iPhone 14, Luis no pulsó «Entregar»): no tiene «Añadir glass»; clic derecho «Marcar que llegó» → el «Abrir» va a <b>Luis</b>.</li>
+          <li>Como <b>Luis</b>, con A…_1 entregada, pulsa «Añadir reparación»: sale <b>«+ Cerrar»</b>. Púlsalo y guarda la línea («✓ Guardar» y «✓ Confirmar»): el atajo desaparece.</li>
+          <li><b>A…_5</b> (iPhone 11) ya tuvo «Abrir» y «Cerrar» en junio: sin entregar no sale el atajo; tras entregar sí (2 aperturas, 1 cierre).</li>
+          <li><b>A…_6</b> (iPhone 15, sin glass): el atajo no sale nunca.</li>
+          <li>Haz dos entregas seguidas: el segundo aviso sustituye al primero y la barra vuelve a empezar. Un clic en el aviso lo cierra.</li>
+        </ol>
+      </div>
+      <div class="caja">
+        <h3>Registro de actividad (simulado)</h3>
+        <div class="log" id="log"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const TEC = { 1: 'Luis', 2: 'Ana' }
+const MODELOS = {
+  '356700000000011': { nombre: 'iPhone 13 Pro', sku: '13pro', otro: true },
+  '356700000000029': { nombre: 'iPhone 12', sku: '12', otro: true },
+  '356700000000037': { nombre: 'iPhone 7', sku: '7', otro: false },
+  '356700000000045': { nombre: 'iPhone 14', sku: '14', otro: true },
+  '356700000000052': { nombre: 'iPhone 11', sku: '11', otro: true },
+  '356700000000060': { nombre: 'iPhone 15', sku: '15', otro: true },
+}
+const D = (dia, mes, h, m) => new Date(2026, mes - 1, dia, h, m)
+
+function datosIniciales() {
+  return {
+    asig: [
+      { id: 'A20261013_1', imei: '356700000000011', tec: 1, fecha: D(13,10,8,40), com: 'Pantalla y tapa', porCerrar: false, abierta: true },
+      { id: 'AG20261013_1', imei: '356700000000011', tec: 2, fecha: D(13,10,8,41), com: 'Cristal trasero', abierta: true, entAt: null, entPor: null, abrir: null },
+      { id: 'A20261013_2', imei: '356700000000029', tec: 1, fecha: D(13,10,8,55), com: 'Caso: ya apuntó «abrir» a mano', porCerrar: false, abierta: true },
+      { id: 'AG20261013_2', imei: '356700000000029', tec: 2, fecha: D(13,10,8,56), com: 'Cristal trasero', abierta: true, entAt: null, entPor: null, abrir: null },
+      { id: 'A20261013_3', imei: '356700000000037', tec: 1, fecha: D(13,10,9,5), com: 'Caso: modelo sin pieza «otro»', porCerrar: false, abierta: true },
+      { id: 'AG20261013_3', imei: '356700000000037', tec: 2, fecha: D(13,10,9,6), com: 'Cristal trasero', abierta: true, entAt: null, entPor: null, abrir: null },
+      { id: 'A20261013_4', imei: '356700000000045', tec: 1, fecha: D(13,10,9,20), com: 'Caso: se le olvida «Entregar»', porCerrar: false, abierta: true },
+      { id: 'AG20261013_4', imei: '356700000000045', tec: 2, fecha: D(13,10,9,21), com: 'El teléfono ya está abajo', abierta: true, entAt: null, entPor: null, abrir: null },
+      { id: 'A20261013_5', imei: '356700000000052', tec: 1, fecha: D(13,10,9,40), com: 'Caso: vuelve tras junio', porCerrar: false, abierta: true },
+      { id: 'AG20261013_5', imei: '356700000000052', tec: 2, fecha: D(13,10,9,41), com: 'Marco', abierta: true, entAt: null, entPor: null, abrir: null },
+      { id: 'A20261013_6', imei: '356700000000060', tec: 1, fecha: D(13,10,10,2), com: 'Caso: sin glass', porCerrar: false, abierta: true },
+    ],
+    hechos: [
+      { id: 'R20260602_011', imei: '356700000000052', tec: 1, comp: 'otroi11', obs: 'Abrir', fecha: D(2,6,10,0) },
+      { id: 'G20260603_002', imei: '356700000000052', tec: 2, comp: 'gi11', obs: '', fecha: D(3,6,11,15) },
+      { id: 'R20260603_004', imei: '356700000000052', tec: 1, comp: 'otroi11', obs: 'Cerrar', fecha: D(3,6,12,30) },
+      { id: 'R20261012_031', imei: '356700000000060', tec: 1, comp: 'lcdi15', obs: '', fecha: D(12,10,17,5) },
+      { id: 'R20261013_050', imei: '356700000000029', tec: 1, comp: 'otroi12', obs: 'abrir telefono', fecha: D(13,10,9,10) },
+    ],
+    log: [],
+    sigR: 101, sigG: 101,
+  }
+}
+
+let S = datosIniciales()
+let sesion = 1
+let vista = 'pendientes'
+let pestana = 'R'
+let pestanaHist = 'R'
+let form = null           // { asigId, lineas: [...] }
+let sigLinea = 1
+let nuevos = new Set()    // ids recién creados (destello en el Historial)
+
+const $ = (s) => document.querySelector(s)
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const dos = (n) => String(n).padStart(2, '0')
+const hhmm = (d) => `${dos(d.getHours())}:${dos(d.getMinutes())}`
+const ddmm = (d) => `${dos(d.getDate())}/${dos(d.getMonth() + 1)}`
+const esGlass = (a) => a.id.startsWith('AG')
+const hoyEs = (d) => { const h = new Date(); return d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() && d.getDate() === h.getDate() }
+const ahora = () => new Date()
+const idHoy = () => { const h = ahora(); return `${h.getFullYear()}${dos(h.getMonth() + 1)}${dos(h.getDate())}` }
+
+// ---------- Derivados (como los da el servidor) ----------
+const glassAbiertas = (imei) => S.asig.filter((a) => a.imei === imei && esGlass(a) && a.abierta).sort((x, y) => x.fecha - y.fecha)
+const normalesAbiertas = (imei) => S.asig.filter((a) => a.imei === imei && !esGlass(a) && a.abierta).sort((x, y) => x.fecha - y.fecha)
+const empiezaAbrir = (t) => /^(abr|abi)/.test(t.trim().toLowerCase())
+const empiezaCerrar = (t) => /^cerr/.test(t.trim().toLowerCase())
+
+// ---------- Aviso breve ----------
+function avisar(texto, tipo) {
+  document.querySelectorAll('.aviso').forEach((n) => n.remove())
+  const n = document.createElement('div')
+  n.className = 'aviso'
+  n.setAttribute('role', 'status')
+  n.setAttribute('aria-live', 'polite')
+  const ic = tipo === 'warn' ? '!' : tipo === 'info' ? 'i' : '✓'
+  n.innerHTML = `<span class="ic ${tipo}">${ic}</span><span>${esc(texto)}</span><div class="barra"><i></i></div>`
+  n.addEventListener('click', () => n.remove())
+  n.querySelector('.barra i').addEventListener('animationend', () => n.remove())
+  document.body.appendChild(n)
+}
+
+function anotar(accion, detalle) {
+  S.log.unshift({ hora: hhmm(ahora()), accion, detalle, quien: TEC[sesion] })
+}
+
+// ---------- Crear / borrar el «Abrir» (servidor) ----------
+function crearAbrir(normal) {
+  const tel = MODELOS[normal.imei]
+  const yaHay = S.hechos.some((h) => h.id.startsWith('R') && h.imei === normal.imei && h.tec === normal.tec
+    && h.comp.startsWith('otro') && h.fecha >= normal.fecha && empiezaAbrir(h.obs))
+  if (yaHay) return { abrir: 'YA_EXISTIA' }
+  if (!tel.otro) return { abrir: 'SIN_PIEZA_OTRO' }
+  const id = `R${idHoy()}_${S.sigR++}`
+  S.hechos.push({ id, imei: normal.imei, tec: normal.tec, comp: 'otroi' + tel.sku, obs: 'Abrir', fecha: ahora() })
+  nuevos.add(id)
+  return { abrir: 'CREADO', id, tecnico: TEC[normal.tec] }
+}
+
+function sellar(imei, porTec) {
+  const t = ahora()
+  glassAbiertas(imei).forEach((g) => { g.entAt = t; g.entPor = porTec })
+}
+
+function deshacer(imei) {
+  let borrado = null
+  glassAbiertas(imei).forEach((g) => {
+    if (g.abrir && S.hechos.some((h) => h.id === g.abrir)) {
+      S.hechos = S.hechos.filter((h) => h.id !== g.abrir)
+      borrado = g.abrir
+    }
+    g.abrir = null; g.entAt = null; g.entPor = null
+  })
+  return borrado
+}
+
+function entregar(a) {
+  const glass = glassAbiertas(a.imei)
+  sellar(a.imei, sesion)
+  const r = crearAbrir(a)
+  if (r.abrir === 'CREADO') glass.forEach((g) => { g.abrir = r.id })
+  const quien = TEC[glass[0].tec]
+  const extra = r.abrir === 'CREADO' ? `ABRIR: ${r.id}` : `ABRIR: ${r.abrir}`
+  anotar('ENTREGAR_GLASS', `ID_REP: ${a.id}, IMEI: ${a.imei}, GLASS: ${glass.map((g) => g.id).join(',')}, TECNICO_GLASS: ${quien}, ${extra}`)
+  if (r.abrir === 'CREADO') avisar(`Entregado a ${quien} · Abierto`, 'ok')
+  else if (r.abrir === 'YA_EXISTIA') avisar(`Entregado a ${quien} · ya estaba abierto`, 'info')
+  else avisar(`Entregado a ${quien} · sin «Abrir» (el modelo no tiene pieza otro)`, 'warn')
+}
+
+function deshacerEntrega(a) {
+  const quien = TEC[glassAbiertas(a.imei)[0].tec]
+  const b = deshacer(a.imei)
+  anotar('DESHACER_ENTREGA_GLASS', `ID_REP: ${a.id}, IMEI: ${a.imei}, TECNICO_GLASS: ${quien}` + (b ? `, ABRIR BORRADO: ${b}` : ''))
+  avisar(b ? 'Entrega deshecha · «Abrir» borrado' : 'Entrega deshecha', b ? 'ok' : 'info')
+}
+
+function marcarLlegada(g) {
+  sellar(g.imei, sesion)
+  const normal = normalesAbiertas(g.imei)[0]
+  let r = { abrir: 'SIN_NORMAL' }
+  if (normal) r = crearAbrir(normal)
+  if (r.abrir === 'CREADO') glassAbiertas(g.imei).forEach((x) => { x.abrir = r.id })
+  anotar('ENTREGAR_GLASS', `ID_REP: ${g.id}, IMEI: ${g.imei}, LLEGADA registrada por el tecnico de glass, ` + (r.abrir === 'CREADO' ? `ABRIR: ${r.id} (${r.tecnico})` : `ABRIR: ${r.abrir}`))
+  if (r.abrir === 'CREADO') avisar(`Llegada registrada · Abierto (${r.tecnico})`, 'ok')
+  else if (r.abrir === 'YA_EXISTIA') avisar('Llegada registrada · ya estaba abierto', 'info')
+  else if (r.abrir === 'SIN_PIEZA_OTRO') avisar('Llegada registrada · sin «Abrir» (el modelo no tiene pieza otro)', 'warn')
+  else avisar('Llegada registrada', 'info')
+}
+
+function deshacerLlegada(g) {
+  const b = deshacer(g.imei)
+  anotar('DESHACER_ENTREGA_GLASS', `ID_REP: ${g.id}, IMEI: ${g.imei}, LLEGADA deshecha por el tecnico de glass` + (b ? `, ABRIR BORRADO: ${b}` : ''))
+  avisar(b ? 'Llegada deshecha · «Abrir» borrado' : 'Llegada deshecha', b ? 'ok' : 'info')
+}
+
+// ---------- Mis pendientes ----------
+function filaPendiente(a) {
+  const tel = MODELOS[a.imei]
+  let pild = ''
+  let estado = ''
+  let accion = ''
+  if (!esGlass(a)) {
+    const g = glassAbiertas(a.imei)[0]
+    if (g && !g.entAt) pild = `<span class="pild p-gla">Glass: ${TEC[g.tec]}</span>`
+    if (a.porCerrar) estado += `<span class="bdg b-pc">Por cerrar</span>`
+    if (g && g.entAt) estado += `<span class="bdg b-ent" title="Entregado a ${TEC[g.tec]} por ${TEC[g.entPor]}, ${ddmm(g.entAt)} ${hhmm(g.entAt)}">→ ${TEC[g.tec]}</span>`
+    accion = `<button class="b-pri" data-abrir-form="${a.id}">Añadir reparación</button>`
+  } else {
+    const n = normalesAbiertas(a.imei)[0]
+    if (n) pild = `<span class="pild p-rep">Rep: ${TEC[n.tec]}</span>`
+    if (a.entAt) estado += `<span class="bdg b-ent" title="Bajado por ${TEC[a.entPor]}, ${ddmm(a.entAt)} ${hhmm(a.entAt)}">Llegó ${hoyEs(a.entAt) ? hhmm(a.entAt) : ddmm(a.entAt)}</span>`
+    const bloqueada = n && !a.entAt
+    accion = bloqueada ? '' : `<button class="b-pri" data-abrir-form="${a.id}">Añadir glass</button>`
+  }
+  const tipo = esGlass(a) ? '<span class="bdg b-gla">Glass</span>' : '<span class="bdg b-rep">Reparación</span>'
+  return `<tr data-asig="${a.id}">
+    <td>${a.id}</td><td>${tipo}</td>
+    <td><div class="imei"><span>${a.imei}</span>${pild}</div></td>
+    <td>${tel.nombre}</td><td>${ddmm(a.fecha)} ${hhmm(a.fecha)}</td>
+    <td title="${esc(a.com)}">${esc(a.com)}</td>
+    <td><div class="estado">${estado}</div></td>
+    <td>${accion}</td></tr>`
+}
+
+function pintarPendientes() {
+  const mias = S.asig.filter((a) => a.abierta && a.tec === sesion)
+  const nR = mias.filter((a) => !esGlass(a)).length
+  const nG = mias.filter((a) => esGlass(a)).length
+  const lista = mias.filter((a) => (pestana === 'G') === esGlass(a))
+  const filas = lista.length ? lista.map(filaPendiente).join('') : `<tr class="vacia"><td colspan="8">No tienes asignaciones ${pestana === 'G' ? 'de glass' : 'de reparación'} pendientes</td></tr>`
+  $('#mn').innerHTML = `<div class="pag">
+    <div class="tgl"><button data-pest="R" class="${pestana === 'R' ? 'act' : ''}">Reparación (${nR})</button><button data-pest="G" class="${pestana === 'G' ? 'act' : ''}">Glass (${nG})</button></div>
+    <div class="cab"><h2>Mis pendientes</h2><span class="cont">${lista.length}</span></div>
+    <p class="pista">Clic derecho en una fila para el menú.</p>
+    <div class="tw"><table class="dt"><colgroup><col style="width:120px"><col style="width:96px"><col style="width:150px"><col style="width:110px"><col style="width:100px"><col><col style="width:110px"><col style="width:160px"></colgroup>
+    <thead><tr><th>Id Asignación</th><th>Tipo</th><th>IMEI</th><th>Modelo</th><th>Fecha asig.</th><th>Comentario</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${filas}</tbody></table></div></div>`
+  $('#bl-pend').textContent = mias.length
+}
+
+// ---------- Historial ----------
+function pintarHistorial() {
+  const lista = S.hechos.filter((h) => h.id.startsWith(pestanaHist)).sort((x, y) => y.fecha - x.fecha)
+  const filas = lista.length ? lista.map((h) => `<tr class="${nuevos.has(h.id) ? 'nueva' : ''}">
+      <td>${h.id}</td><td>${h.id.startsWith('G') ? '<span class="bdg b-gla">Glass</span>' : '<span class="bdg b-rep">Reparación</span>'}</td>
+      <td>${h.imei}</td><td>${MODELOS[h.imei].nombre}</td><td>${h.comp}</td>
+      <td class="${empiezaAbrir(h.obs) || empiezaCerrar(h.obs) ? 'obs-abr' : ''}">${esc(h.obs) || '<span class="sub">—</span>'}</td>
+      <td>${TEC[h.tec]}</td><td>${ddmm(h.fecha)}/${h.fecha.getFullYear()} ${hhmm(h.fecha)}</td></tr>`).join('')
+    : '<tr class="vacia"><td colspan="8">Sin trabajos</td></tr>'
+  $('#mn').innerHTML = `<div class="pag">
+    <div class="tgl"><button data-hist="R" class="${pestanaHist === 'R' ? 'act' : ''}">Reparaciones</button><button data-hist="G" class="${pestanaHist === 'G' ? 'act' : ''}">Glass</button></div>
+    <div class="cab"><h2>Historial</h2><span class="cont">${lista.length}</span></div>
+    <p class="pista">Las filas nuevas destellan en amarillo un momento (solo en el prototipo).</p>
+    <div class="tw"><table class="dt"><colgroup><col style="width:130px"><col style="width:96px"><col style="width:140px"><col style="width:110px"><col style="width:100px"><col><col style="width:80px"><col style="width:130px"></colgroup>
+    <thead><tr><th>Id Rep.</th><th>Tipo</th><th>IMEI</th><th>Modelo</th><th>Componente</th><th>Observaciones</th><th>Reparador</th><th>Fecha</th></tr></thead>
+    <tbody>${filas}</tbody></table></div></div>`
+  nuevos.clear()
+}
+
+// ---------- Formulario ----------
+function cuentaImei(imei) {
+  const otros = S.hechos.filter((h) => h.imei === imei && h.comp.startsWith('otro'))
+  let ab = otros.filter((h) => empiezaAbrir(h.obs)).length
+  let ce = otros.filter((h) => empiezaCerrar(h.obs)).length
+  // líneas del formulario aún sin guardar (las guardadas ya están en hechos)
+  const pend = form.lineas.filter((l) => !l.guardada)
+  ce += pend.filter((l) => empiezaCerrar(l.texto)).length
+  return { ab, ce }
+}
+
+function pintarForm() {
+  const velo = document.querySelector('.velo')
+  if (!form) { if (velo) velo.remove(); return }
+  const a = S.asig.find((x) => x.id === form.asigId)
+  const tel = MODELOS[a.imei]
+  const glass = esGlass(a)
+  const filasComp = (glass ? ['Glass', 'Marco'] : ['Batería', 'Pantalla', 'Cámara']).map((n) =>
+    `<div class="f-fila"><span class="nom">${n}</span><span class="sku">Elige SKU…</span><span class="cnt"><span>−</span>0<span>+</span></span></div>`).join('')
+  let otras
+  if (!tel.otro) {
+    otras = `<div class="sin-otro">Este modelo no tiene pieza «otro»: no hay sección Otras acciones.</div>`
+  } else {
+    const { ab, ce } = cuentaImei(a.imei)
+    const atajo = ab > ce
+    const vacias = form.lineas.some((l) => !l.guardada && l.texto.trim() === '')
+    const lineas = form.lineas.map((l, i) => {
+      const bloq = !!l.guardada
+      return `<div class="linea" data-linea="${l.id}">
+        <input aria-label="Descripción de la acción ${i + 1}" value="${esc(l.texto)}" placeholder="Describe la acción" ${bloq ? 'disabled' : ''} data-input="${l.id}">
+        ${bloq ? `<span class="ok">✓ Guardada ${l.guardada}</span>` : `<button class="b-guardar" data-guardar="${l.id}" ${l.texto.trim() === '' ? 'disabled' : ''}>${l.confirmando ? '✓ Confirmar' : '✓ Guardar'}</button><button class="b-quitar" title="Quitar acción" data-quitar="${l.id}">✕</button>`}
+      </div>`
+    }).join('')
+    const num = form.lineas.filter((l) => l.guardada || l.texto.trim() !== '').length
+    otras = `<section class="otras">
+      <div class="cab-o"><span class="tit">OTRAS ACCIONES</span><span class="num">${num}</span></div>
+      <div class="cuerpo-o">
+        <div class="lineas">${lineas}</div>
+        <div class="botones-o">
+          <button class="b-anadir" id="b-anadir" ${vacias ? 'disabled' : ''}>+ Añadir acción</button>
+          ${atajo ? '<button class="b-cerrar" id="b-cerrar">+ Cerrar</button>' : ''}
+        </div>
+      </div>
+      <div class="nota-proto">Solo prototipo: este IMEI tiene <b>${ab}</b> ${ab === 1 ? 'apertura' : 'aperturas'} y <b>${ce}</b> ${ce === 1 ? 'cierre' : 'cierres'} (reparación + glass + líneas sin guardar) → el atajo «+ Cerrar» <b>${atajo ? 'sale' : 'no sale'}</b>.</div>
+    </section>`
+  }
+  const html = `<div class="form" role="dialog" aria-label="Formulario">
+      <div class="f-barra"><span class="t">${glass ? 'Glass' : 'Reparación'} · IMEI ${a.imei} · ${tel.nombre}</span><button class="x" id="f-x" aria-label="Cerrar formulario">✕</button></div>
+      ${filasComp}${otras}
+      <div class="zona"><button class="b-pri" id="b-terminar">${form.terminando ? '✓ Confirmar terminar' : 'Terminar asignación'}</button></div>
+    </div>`
+  const v = velo || Object.assign(document.createElement('div'), { className: 'velo' })
+  v.innerHTML = html
+  if (!velo) $('#mn').appendChild(v)
+  if (form.enfocar) {
+    const inp = v.querySelector(`[data-input="${form.enfocar}"]`)
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length) }
+    form.enfocar = null
+  }
+}
+
+function abrirForm(id) {
+  form = { asigId: id, lineas: [], terminando: false, enfocar: null }
+  pintarForm()
+}
+
+function guardarLinea(l) {
+  const a = S.asig.find((x) => x.id === form.asigId)
+  const tel = MODELOS[a.imei]
+  const pref = esGlass(a) ? 'G' : 'R'
+  const id = `${pref}${idHoy()}_${pref === 'G' ? S.sigG++ : S.sigR++}`
+  S.hechos.push({ id, imei: a.imei, tec: a.tec, comp: 'otroi' + tel.sku, obs: l.texto.trim(), fecha: ahora() })
+  nuevos.add(id)
+  l.guardada = `${ddmm(ahora())} ${hhmm(ahora())}`
+  l.confirmando = false
+  anotar('GUARDAR_FILA', `ID_REP: ${id}, IMEI: ${a.imei}, OTRO: ${l.texto.trim()}`)
+}
+
+function terminar() {
+  const a = S.asig.find((x) => x.id === form.asigId)
+  form.lineas.filter((l) => !l.guardada && l.texto.trim() !== '').forEach(guardarLinea)
+  a.abierta = false
+  anotar(esGlass(a) ? 'COMPLETAR_GLASS' : 'COMPLETAR_REPARACION', `ID_REP: ${a.id}, IMEI: ${a.imei}, TECNICO: ${TEC[a.tec]}`)
+  form = null
+}
+
+// ---------- Menú contextual ----------
+function opcionesMenu(a) {
+  const ops = [{ t: 'Copiar celda', gris: true }]
+  if (!esGlass(a)) {
+    ops.push({ sep: true })
+    ops.push({ t: a.porCerrar ? 'Quitar por cerrar' : 'Marcar por cerrar', f: () => { a.porCerrar = !a.porCerrar } })
+    const g = glassAbiertas(a.imei)[0]
+    if (g && !g.entAt) ops.push({ t: `Entregar a ${TEC[g.tec]}`, f: () => entregar(a) })
+    else if (g && g.entPor === sesion) ops.push({ t: 'Deshacer entrega', f: () => deshacerEntrega(a) })
+  } else {
+    const n = normalesAbiertas(a.imei)[0]
+    if (n && !a.entAt) { ops.push({ sep: true }); ops.push({ t: 'Marcar que llegó', f: () => marcarLlegada(a) }) }
+    else if (a.entAt && a.entPor === sesion) { ops.push({ sep: true }); ops.push({ t: 'Deshacer llegada', f: () => deshacerLlegada(a) }) }
+  }
+  return ops
+}
+
+function cerrarMenu() {
+  document.querySelectorAll('.cm').forEach((n) => n.remove())
+  document.querySelectorAll('tr.menu-abierto').forEach((n) => n.classList.remove('menu-abierto'))
+}
+
+function abrirMenu(e, tr) {
+  cerrarMenu()
+  const a = S.asig.find((x) => x.id === tr.dataset.asig)
+  const ops = opcionesMenu(a)
+  const m = document.createElement('div')
+  m.className = 'cm'
+  ops.forEach((o) => {
+    if (o.sep) { m.appendChild(document.createElement('hr')); return }
+    const b = document.createElement('button')
+    b.textContent = o.t
+    if (o.gris) b.className = 'gris'
+    b.addEventListener('click', () => { cerrarMenu(); if (o.f) { o.f(); pintar() } })
+    m.appendChild(b)
+  })
+  document.body.appendChild(m)
+  const w = m.offsetWidth, h = m.offsetHeight
+  m.style.left = Math.min(e.clientX, innerWidth - w - 8) + 'px'
+  m.style.top = Math.min(e.clientY, innerHeight - h - 8) + 'px'
+  tr.classList.add('menu-abierto')
+}
+
+// ---------- Registro ----------
+function pintarLog() {
+  $('#log').innerHTML = S.log.length
+    ? S.log.map((l) => `<div><span class="hora">${l.hora}</span> <span class="acc">${l.accion}</span> · ${esc(l.quien)}<br>${esc(l.detalle)}</div>`).join('')
+    : '<div class="vacio">Aún no hay actividad.</div>'
+}
+
+// ---------- Pintado general ----------
+function pintar() {
+  document.querySelectorAll('.lk[data-vista]').forEach((b) => b.classList.toggle('act', b.dataset.vista === vista))
+  $('#usu-nombre').textContent = TEC[sesion]
+  $('#usu-ini').textContent = TEC[sesion][0]
+  const velo = document.querySelector('.velo')
+  if (velo) velo.remove()
+  if (vista === 'pendientes') pintarPendientes(); else pintarHistorial()
+  if (form) pintarForm()
+  pintarLog()
+}
+
+// ---------- Eventos ----------
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.cm')) cerrarMenu()
+  const t = e.target
+  const sesBtn = t.closest('#seg-sesion button')
+  if (sesBtn) {
+    sesion = Number(sesBtn.dataset.tec)
+    document.querySelectorAll('#seg-sesion button').forEach((b) => b.classList.toggle('act', b === sesBtn))
+    pestana = sesion === 2 ? 'G' : 'R'
+    form = null; vista = 'pendientes'; pintar(); return
+  }
+  if (t.closest('#b-reset')) { S = datosIniciales(); form = null; nuevos.clear(); document.querySelectorAll('.aviso').forEach((n) => n.remove()); pintar(); return }
+  const lk = t.closest('.lk[data-vista]')
+  if (lk) { vista = lk.dataset.vista; form = null; pintar(); return }
+  const pest = t.closest('[data-pest]')
+  if (pest) { pestana = pest.dataset.pest; pintar(); return }
+  const hist = t.closest('[data-hist]')
+  if (hist) { pestanaHist = hist.dataset.hist; pintar(); return }
+  const af = t.closest('[data-abrir-form]')
+  if (af) { abrirForm(af.dataset.abrirForm); return }
+  if (!form) return
+  if (t.closest('#f-x')) { form = null; pintarForm(); return }
+  if (t.closest('#b-anadir')) { const l = { id: sigLinea++, texto: '', guardada: null, confirmando: false }; form.lineas.push(l); form.enfocar = l.id; form.terminando = false; pintarForm(); return }
+  if (t.closest('#b-cerrar')) { const l = { id: sigLinea++, texto: 'Cerrar', guardada: null, confirmando: false }; form.lineas.push(l); form.enfocar = l.id; form.terminando = false; pintarForm(); return }
+  const q = t.closest('[data-quitar]')
+  if (q) { form.lineas = form.lineas.filter((l) => l.id !== Number(q.dataset.quitar)); pintarForm(); return }
+  const g = t.closest('[data-guardar]')
+  if (g) {
+    const l = form.lineas.find((x) => x.id === Number(g.dataset.guardar))
+    if (!l.confirmando) l.confirmando = true; else guardarLinea(l)
+    pintarForm(); pintarLog(); return
+  }
+  if (t.closest('#b-terminar')) {
+    if (!form.terminando) { form.terminando = true; pintarForm() } else { terminar(); pintar() }
+  }
+})
+
+document.addEventListener('input', (e) => {
+  const id = e.target.dataset && e.target.dataset.input
+  if (!id || !form) return
+  const l = form.lineas.find((x) => x.id === Number(id))
+  l.texto = e.target.value
+  l.confirmando = false
+  const pos = e.target.selectionStart
+  form.enfocar = null
+  pintarForm()
+  const inp = document.querySelector(`[data-input="${id}"]`)
+  if (inp) { inp.focus(); inp.setSelectionRange(pos, pos) }
+})
+
+document.addEventListener('contextmenu', (e) => {
+  const tr = e.target.closest('tr[data-asig]')
+  if (!tr || form) return
+  e.preventDefault()
+  abrirMenu(e, tr)
+})
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu() })
+window.addEventListener('scroll', cerrarMenu, true)
+
+pintar()
+</script>
+</body>
+</html>

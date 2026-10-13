@@ -1,7 +1,7 @@
 # «Abrir» automático al entregar a glass y atajo «Cerrar»
 
 Fecha: 2026-10-13
-Estado: **PENDIENTE DE REVISIÓN por el usuario** (brainstorm en sesión 2026-10-13).
+Estado: **APROBADA por el usuario (2026-10-13, brainstorm en sesión)**, con prototipo interactivo aprobado: `assets/2026-10-13-prototipo-abrir-automatico.html` (datos inventados).
 Repos: servidor (`gestion-reparaciones-servidor`) y web (`gestion-reparaciones-web`). El JavaFX está retirado: no se toca.
 Versión: la siguiente tras la 0.9.10 (se fija al planificar).
 
@@ -74,6 +74,14 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 ### 2.7 Aviso breve (componente nuevo en la web)
 
 Hoy la web no avisa de los éxitos (las marcas de urgente, por cerrar o entrega recargan en silencio) y los errores usan el diálogo de `AlertaProvider`. Para los mensajes de §2.1–2.4 se añade un **aviso breve** en `shared/ui`: no es un modal (no oscurece la pantalla, no roba el foco, no hay que pulsar nada y se puede seguir trabajando), aparece abajo al centro con una **barra que va encogiendo** durante 4 s para indicar que se va, y al vaciarse desaparece solo. Un clic lo cierra antes. Si llega otro, sustituye al anterior y la barra vuelve a empezar. Los errores siguen yendo por `AlertaProvider` como hoy.
+
+Aspecto (el del prototipo): fondo azul noche, texto crema, barra amarilla de 4 px en el borde inferior, y un icono redondo a la izquierda según el resultado:
+
+| Icono | Cuándo |
+|---|---|
+| ✓ verde | «Abrir» creado o borrado |
+| «i» gris azulado | ya estaba abierto, llegada sin normal abierta, o deshacer sin «Abrir» que borrar |
+| «!» ámbar | sin pieza «otro» (caso de seguridad: la entrega se hace igual) |
 
 ### 2.8 Puntos (estadísticas)
 
