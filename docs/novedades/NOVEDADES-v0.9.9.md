@@ -6,10 +6,14 @@ Los pedidos se agrupan en **bloques**: lo que le pides de una vez a un proveedor
 
 ## 📦 Qué es un bloque
 
-Un bloque reúne las piezas que se piden **juntas a un mismo proveedor** (normalmente, el pedido del día). Cada **«Nuevo
-pedido» es para un solo proveedor**: lo eliges arriba y lo llevan todas las líneas. Al guardar, se **suma a su bloque
-abierto** (el que aún no has confirmado) o va a uno **nuevo**; el recuadro **«Bloques»** del pie te lo dice y te deja
-elegir. Para pedir a otro proveedor, haz otro pedido.
+Un bloque reúne las piezas que se piden **juntas a un mismo proveedor** (normalmente, el pedido del día).
+
+En **«Nuevo pedido»** puedes pedir a **varios proveedores a la vez**:
+- Eliges el primero en «¿A qué proveedor pides?» y, si hace falta, otros con **«+ Otro proveedor»**.
+- Cada proveedor sale en **su recuadro**, que es su bloque. En su cabecera ves si va a **su bloque abierto** (el que aún
+  no has confirmado) o a uno **nuevo**, y lo puedes cambiar.
+- Con **▼** pliegas un recuadro y con **×** lo quitas.
+- **«Confirmar pedido (n bloques)»** lo guarda todo de una vez.
 
 Los pedidos anteriores a esta versión se han agrupado solos por proveedor y día (llevan la etiqueta «antiguo»).
 
@@ -34,13 +38,17 @@ Los pedidos anteriores a esta versión se han agrupado solos por proveedor y dí
   (Batería, Pantalla, Glass…). Un tipo marcado vale para **todos los modelos**, también los que salgan más adelante; si
   de algún modelo no lo vende, lo desmarcas en su desplegable. Ya viene rellenada con los tipos que le has pedido hasta
   hoy.
-- En **«Nuevo pedido»**, eliges el proveedor arriba y **«Añadir previsión de X»** te mete lo que hay que pedirle (las
-  piezas en Auto que vende). También desde el menú del bloque: **«Añadir previsión…»**.
-- Al elegir la pieza de una línea, la **cantidad sale sola**: su **«Pedir 60 d»** (o 1 si no hay que pedir). Si la
-  cambias a mano, se queda la tuya. «Pedir» desde Stock y «Pedir todas las piezas» desde la campana también entran ya
-  con esa cantidad.
-- Una pieza **no se repite** en un pedido: si eliges una que ya está, se queda la línea que la tenía, marcada, y te
-  avisa «… ya está en el pedido (línea n).».
+- En **«Nuevo pedido»**, cada recuadro de proveedor tiene su **«Añadir previsión (n)»**, que te mete lo que hay que
+  pedirle (las piezas en Auto que vende). También desde el menú del bloque: **«Añadir previsión…»**.
+- Lo que llega de la campana («Pedir todas las piezas»), de Stock («Pedir») o de las solicitudes **va solo al
+  proveedor que vende cada pieza**. Si la venden varios, o ninguno, se queda arriba en **«⚠ Por repartir»** y la
+  mandas tú con **«Pasar a…»**.
+- Al elegir la pieza de una línea, la **cantidad sale sola**: **lo que falta**, es decir, su «Pedir 60 d» menos lo que
+  ya pides a otros proveedores en ese mismo pedido (o 1 si no falta nada). Si la cambias a mano, se queda la tuya.
+  Ejemplo: si faltan 7 y pones 3 a un proveedor, en el otro sale 4.
+- Una pieza **no se repite** dentro de un mismo proveedor: si eliges una que ya está, se queda la línea que la tenía,
+  marcada, y te avisa «… ya está en el pedido a X (línea n).». A **dos proveedores** sí puedes pedirla, y cada recuadro
+  te avisa: «… también va a X (n).».
 - La previsión ya **no vuelve a proponer lo que está apuntado en otro bloque**: Stock enseña cuánto hay **«Pendiente»**.
 - En Pedidos, escribe el **número de un bloque** en el buscador para ir directo a él.
 
