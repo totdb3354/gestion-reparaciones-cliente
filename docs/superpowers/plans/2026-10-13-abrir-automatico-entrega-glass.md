@@ -2195,7 +2195,7 @@ Preparar para el usuario, siguiendo `Apuntes/despliegue_preprod.md`, los comando
 1. Copiar `sql/migracion-abrir-glass.sql` a la VM de preproducción y ejecutarlo por partes: vista previa (0 y 0) → migración → comprobación (1 y las dos claves).
 2. Desplegar el servidor de `feature/abrir-automatico-glass` y la web de su rama (avisar de que `docker compose up --build` tarda ~1 min sin salida).
 
-Claude **no** hace SSH. Antes de dar los comandos, pedir OK para usar las ramas sin mergear en preproducción (o mergear primero, también con OK).
+Claude **no** hace SSH. Antes de dar los comandos, pedir OK para usar las ramas sin mergear en preproducción (o mergear primero, también con OK) y **preguntar si preproducción está libre**: hay otros desarrollos en paralelo (0.9.10 columna lateral, 0.9.9 varios proveedores) y solo hay una preproducción; desplegar esta rama sustituye lo que otra sesión tenga desplegado. La migración (solo añade) no molesta a las otras versiones.
 
 - [ ] **Step 6: E2E contra preproducción**
 
