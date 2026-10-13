@@ -1184,7 +1184,7 @@ git commit -m "feat: las acciones abrir y cerrar puntuan con su propia clave"
 ### Task 5: Web — aviso breve no modal con barra que encoge
 
 **Files:**
-- Create: `src/shared/ui/avisoBreve.ts`
+- Create: `src/shared/ui/avisos.ts` (la lógica del aviso; no se llama `avisoBreve.ts` porque en Windows chocaría con `AvisoBreve.tsx`: mismo patrón que `alertas.ts` + `AlertaProvider.tsx`)
 - Create: `src/shared/ui/AvisoBreve.tsx`
 - Create: `src/shared/ui/AvisoBreve.test.tsx`
 - Modify: `src/shared/styles/tokens.css` (dos tokens al final del bloque `@theme`)
@@ -1192,7 +1192,7 @@ git commit -m "feat: las acciones abrir y cerrar puntuan con su propia clave"
 - Modify: `src/main.tsx` (montar el host)
 
 **Interfaces:**
-- Produces: `type TipoAviso = 'ok' | 'info' | 'warn'`, `type AvisoBreve = { texto: string; tipo: TipoAviso }`, `avisar(aviso: AvisoBreve): void`, `onAviso(oyente): () => void` (en `@/shared/ui/avisoBreve`); `AvisoBreveHost` y `DURACION_AVISO_MS = 4000` (en `@/shared/ui/AvisoBreve`).
+- Produces: `type TipoAviso = 'ok' | 'info' | 'warn'`, `type AvisoBreve = { texto: string; tipo: TipoAviso }`, `avisar(aviso: AvisoBreve): void`, `onAviso(oyente): () => void` (en `@/shared/ui/avisos`); `AvisoBreveHost` y `DURACION_AVISO_MS = 4000` (en `@/shared/ui/AvisoBreve`).
 
 - [ ] **Step 1: Crear el worktree de la web**
 
@@ -1211,7 +1211,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AvisoBreveHost, DURACION_AVISO_MS } from './AvisoBreve'
-import { avisar } from './avisoBreve'
+import { avisar } from './avisos'
 
 describe('AvisoBreve (spec 2026-10-13 §2.7)', () => {
   afterEach(() => vi.useRealTimers())
@@ -1279,7 +1279,7 @@ Expected: FAIL (no existe `./AvisoBreve`).
 
 - [ ] **Step 4: Implementar**
 
-`src/shared/ui/avisoBreve.ts`:
+`src/shared/ui/avisos.ts`:
 
 ```ts
 export type TipoAviso = 'ok' | 'info' | 'warn'
@@ -1304,7 +1304,7 @@ export function onAviso(oyente: (aviso: AvisoBreve) => void): () => void {
 
 ```tsx
 import { useEffect, useState } from 'react'
-import { onAviso, type AvisoBreve, type TipoAviso } from './avisoBreve'
+import { onAviso, type AvisoBreve, type TipoAviso } from './avisos'
 
 /** Lo que dura el aviso: la barra encoge en este tiempo (clase .aviso-barra, globals.css) y al acabar se cierra. */
 export const DURACION_AVISO_MS = 4000
@@ -1396,7 +1396,7 @@ Expected: PASS, sin errores de tipos ni de lint.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/shared/ui/avisoBreve.ts src/shared/ui/AvisoBreve.tsx src/shared/ui/AvisoBreve.test.tsx src/shared/styles/tokens.css src/shared/styles/globals.css src/main.tsx
+git add src/shared/ui/avisos.ts src/shared/ui/AvisoBreve.tsx src/shared/ui/AvisoBreve.test.tsx src/shared/styles/tokens.css src/shared/styles/globals.css src/main.tsx
 git commit -m "feat: aviso breve no modal con barra que encoge"
 ```
 
@@ -1498,7 +1498,7 @@ Expected: FAIL (`avisoEntrega` no existe; los hooks devuelven el objeto de opena
 
 - [ ] **Step 4: Implementar textos y hooks**
 
-En `src/modules/taller/lib/entregaGlass.ts`: cambiar el import de tipos a `import type { ReparacionResumen, ResultadoEntregaGlass } from '@/shared/api/client'`, añadir `import type { AvisoBreve } from '@/shared/ui/avisoBreve'` y, al final del fichero:
+En `src/modules/taller/lib/entregaGlass.ts`: cambiar el import de tipos a `import type { ReparacionResumen, ResultadoEntregaGlass } from '@/shared/api/client'`, añadir `import type { AvisoBreve } from '@/shared/ui/avisos'` y, al final del fichero:
 
 ```ts
 const SIN_PIEZA_OTRO = 'sin «Abrir» (el modelo no tiene pieza otro)'
@@ -1608,7 +1608,7 @@ Expected: FAIL (la página aún no avisa).
 
 - [ ] **Step 7: Avisar desde Mis pendientes**
 
-En `PendientesPage.tsx`: importar `import { avisar } from '@/shared/ui/avisoBreve'` y añadir `avisoDeshacer, avisoEntrega, avisoLlegada` al import de `../lib/entregaGlass`. Sustituir en `acciones` las entradas `entrega`, `llegada` y `deshacerLlegada` por:
+En `PendientesPage.tsx`: importar `import { avisar } from '@/shared/ui/avisos'` y añadir `avisoDeshacer, avisoEntrega, avisoLlegada` al import de `../lib/entregaGlass`. Sustituir en `acciones` las entradas `entrega`, `llegada` y `deshacerLlegada` por:
 
 ```tsx
     // Sin entrega → entregar; con entrega → deshacer. `!` y no `=== null`: una clave ausente (undefined) también es "sin entrega".
