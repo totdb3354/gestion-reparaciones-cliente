@@ -119,7 +119,9 @@ Se ejecuta con las demás, de una en una.
 
 - **Versión de la web: 0.9.10.** Se cambia en `package.json`, y se añaden la entrada `[0.9.10]` del CHANGELOG y `docs/novedades/NOVEDADES-v0.9.10.md` en la raíz.
 - La ficha `docs/paridad/shell.md` se actualiza: la columna es una adaptación web.
-- Se hace después de que la 0.9.9 llegue a producción, en una rama nueva desde `main` de la web.
+- **Desarrollo en paralelo con la 0.9.9.** Se hace en la rama `feature/columna-lateral-plegable`, en un worktree propio (`wt/web-0910`), para no tocar el de la 0.9.9 (`wt/web-099`). No comparten ficheros de código: la 0.9.9 solo toca `modules/almacen/pedidos/`.
+- **Al mergear,** el único choque esperable es la cabecera del CHANGELOG, y se resuelve a mano. Antes de mergear se trae `main` a la rama y se repasan los tests.
+- **Orden:** preprod y producción después de la 0.9.9, porque preprod es un único entorno.
 - **Preproducción:** con las E2E. **Producción:** en horario, porque el corte es despreciable: solo la web y sin migración.
 
 ## 7. Fuera de alcance
