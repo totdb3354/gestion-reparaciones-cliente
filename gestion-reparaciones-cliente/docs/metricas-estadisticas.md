@@ -19,6 +19,8 @@ Los ejemplos usan los valores seed de la tabla; el admin puede cambiarlos en ⚙
 | `pantalla` | 1,00 | pieza SKU `lcd…` |
 | `glass` | 0,50 | pieza SKU `g…` |
 | `otro` | 0,50 | pieza sin SKU reconocible, acción "otro", reparación sin piezas |
+| `abrir` | 0,25 | acción "otro" cuyo texto empieza por «abr»/«abi» (el «Abrir» automático al entregar a glass, 2026-10-13) |
+| `cerrar` | 0,17 | acción "otro" cuyo texto empieza por «cerr» (5 min con 1 punto = 30 min) |
 | `pulido` | 0,25 | cada pulido completado |
 
 - Editable por el **admin** en ⚙ Valores; cada cambio deja entrada `EDITAR_PUNTOS` en el Log (`clave: antes → después`, solo lo que cambia).
@@ -42,6 +44,7 @@ Qué cuenta como "fila de pieza" (mismo criterio que el descuento de stock del c
 - **Piezas normales**: sí, una vez cada fila.
 - **Reutilizadas** (`ES_REUTILIZADO`): sí, igual que una nueva — montar una pieza reutilizada es el mismo trabajo. (Da igual que su fila tenga cantidad 1 o 0.)
 - **Acciones "otro"** del formulario: sí — se guardan como fila real con `CANTIDAD = 0` (neutras en stock) y puntúan `otro` cada una. *(Hasta 2026-09-03 puntuaban 0 por la multiplicación por cantidad — bug cazado en smoke.)*
+- **«Abrir» y «Cerrar»** (2026-10-13): una acción "otro" (SKU `otro…`) puntúa `abrir` si su texto (recortado, sin distinguir mayúsculas) empieza por «abr» o «abi», y `cerrar` si empieza por «cerr»; el resto, `otro`. Si falta la clave `abrir` o `cerrar` en la tabla, puntúa como `otro` (nunca 0). Como siempre, aplica también al pasado: los «cerrar» antiguos pasan de 0,25 a 0,17.
 - **Incidencias** (piezas puestas al resolver un reclamo): sí — es trabajo real hecho, aunque implica puntuar el retrabajo si el reclamo era culpa propia (no distinguible con los datos actuales; asumido).
 - **Solicitudes puras** (pedir pieza sin ponerla): **no**.
 
