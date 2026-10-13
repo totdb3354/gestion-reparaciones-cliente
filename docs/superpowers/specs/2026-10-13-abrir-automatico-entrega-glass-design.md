@@ -35,7 +35,7 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 
 | Caso | Regla | Aviso breve |
 |---|---|---|
-| Ya apuntado a mano | El técnico al que se apuntaría ya tiene, en ese IMEI, una acción «otro» de reparación (`R…`) guardada en o después de la `FECHA_ASIG` de su `A…` cuyo texto (sin espacios a los lados, sin distinguir mayúsculas) empieza por `abr` o `abi` | «Entregado a Ana · ya estaba abierto» |
+| Ya apuntado a mano | El técnico al que se apuntaría ya tiene, en ese IMEI, una acción «otro» de reparación (`R…`) guardada en o después de la `FECHA_ASIG` de su `A…` cuyo texto (sin espacios a los lados, sin distinguir mayúsculas) empieza por `abr` o `abi`, **sin contar los «Abrir» automáticos de entregas anteriores** (los que apunta alguna `AG` en `ID_REP_ABRIR`): así cada bajada a glass dentro de la misma reparación tiene su «Abrir» (decisión 2026-10-13, tras la revisión final) | «Entregado a Ana · ya estaba abierto» |
 | Sin pieza «otro» | El teléfono no tiene modelo, o el modelo no tiene componente `otroi<modelo>` | «Entregado a Ana · sin «Abrir» (el modelo no tiene pieza otro)» |
 | Llegada sin normal abierta | §2.2 | «Llegada registrada» |
 
@@ -47,6 +47,7 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 - Si ese «Abrir» ya no existe (un supertécnico lo borró desde el Historial), no pasa nada.
 - Aviso breve: «Entrega deshecha · «Abrir» borrado» / «Llegada deshecha · «Abrir» borrado», o sin la segunda parte si no había nada que borrar.
 - Volver a entregar tras deshacer crea un «Abrir» nuevo (el anterior se borró).
+- Volver a entregar **sin** deshacer (desde una lista sin refrescar) se rechaza con 422 «La entrega ya está registrada», como la llegada: si no, se crearía un segundo «Abrir» que deshacer no borraría.
 
 ### 2.5 El «Abrir» es una acción más
 
@@ -57,16 +58,17 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 
 ### 2.6 Atajo «Cerrar» en Otras acciones
 
-- Botón **«+ Cerrar»** junto a «+ Añadir acción», en los formularios de **reparación y de glass**, solo al completar (no en modo editar).
+- Botón **«+ Cerrar»** junto a «+ Añadir acción», solo en el formulario de **reparación** al completar (no en glass ni en modo editar). Decisión 2026-10-13 tras la revisión final: el teléfono vuelve a quien lo entregó para cerrarlo y, si lo cierra otro, se le reasigna la reparación; en glass el atajo saldría casi siempre y empujaría a apuntar el «Cerrar» antes de tiempo.
 - Añade una línea con el texto `Cerrar` ya escrito y enfocada, lista para «✓ Guardar» (se puede editar o quitar como cualquier línea nueva).
-- **Solo aparece si el IMEI tiene más aperturas que cierres**: se cuentan todas las acciones «otro» guardadas del IMEI, en reparación y glass juntas; apertura = texto que empieza por `abr` o `abi`, cierre = texto que empieza por `cerr` (mismo criterio de §2.3). Las líneas del propio formulario cuyo texto empieza por `cerr` (guardadas en esta apertura o no) también cuentan como cierre: el atajo desaparece al pulsarlo.
+- **Solo aparece si hay más aperturas que cierres desde que se asignó esa reparación**: se cuentan las acciones «otro» del IMEI, en reparación y glass juntas, guardadas desde la `FECHA_ASIG` de la asignación (decisión 2026-10-13: así los «abrir»/«cerrar» desparejados apuntados a mano antes del cambio no molestan, y un teléfono que vuelve empieza de cero); apertura = texto que empieza por `abr` o `abi`, cierre = texto que empieza por `cerr` (mismo criterio de §2.3). Las líneas del propio formulario cuyo texto empieza por `cerr` (guardadas en esta apertura o no) también cuentan como cierre: el atajo desaparece al pulsarlo.
 
 | Situación | Aperturas | Cierres | ¿Atajo? |
 |---|---|---|---|
 | Cambio de pantalla sin glass | 0 | 0 | No |
 | Entregado a glass | 1 | 0 | Sí |
 | Vuelve y se guarda «Cerrar» | 1 | 1 | No |
-| Meses después, otra vez a glass | 2 | 1 | Sí |
+| Meses después, nueva reparación y otra vez a glass (solo cuenta lo de esta asignación) | 1 | 0 | Sí |
+| Segunda bajada a glass en la misma reparación | 2 | 1 | Sí |
 
 - Es un empujón, no un bloqueo: escribir «Cerrar» a mano sigue siendo posible.
 - Si la consulta de acciones falla, el atajo no sale (silencioso).
@@ -140,7 +142,7 @@ Los cuatro endpoints existentes (`PATCH …/{idRep}/entrega-glass`, `PATCH` y `D
 
 - `api.ts`: `useEntregaGlass`, `useMarcarLlegada`, `useDeshacerLlegada` leen la respuesta y muestran el aviso breve (§2.7) con el texto de §2.1–2.4. Esquema OpenAPI regenerado.
 - Textos en una función pura en `lib/entregaGlass.ts` (con test), junto al resto de textos de la entrega.
-- Formulario (modos completar de reparación y glass): la carga pide además las acciones «otro» del IMEI con el endpoint existente `GET /api/reparaciones/imei/{imei}/acciones` (dos llamadas en paralelo, `categoria=R` y `categoria=G`, sin `excluir`; si fallan → lista vacía). Selector puro `atajoCerrarVisible(estado)` (§2.6) y acción `ANADIR_CERRAR` en el reductor; botón «+ Cerrar» en `OtrasAcciones`.
+- Formulario (modo completar de reparación; en glass no se piden): la carga pide además las acciones «otro» del IMEI con el endpoint `GET /api/reparaciones/imei/{imei}/acciones` (dos llamadas en paralelo, `categoria=R` y `categoria=G`, sin `excluir` y con el parámetro nuevo opcional `desde` = `fechaAsig` de la asignación, tal cual llega del servidor; si fallan → lista vacía). En el servidor, `desde` añade `AND r.FECHA_FIN >= ?`; sin él la consulta queda como antes. Selector puro `atajoCerrarVisible(estado)` (§2.6) y acción `ANADIR_CERRAR` en el reductor; botón «+ Cerrar» en `OtrasAcciones`.
 - Nada más cambia: badges, píldoras, «Por cerrar», carga de técnicos y CSV siguen igual.
 
 ## 6. Decisiones (con su porqué)
