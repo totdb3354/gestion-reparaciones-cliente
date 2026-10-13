@@ -22,13 +22,15 @@ La regla «un proveedor = un bloque» no cambia, y sigue el estándar de Odoo: u
 
 ## 2. El diálogo
 
-**Al abrir vacío:**
-- un recuadro con «¿A qué proveedor pides?» y el desplegable de proveedores activos;
-- debajo, «Luego puedes pedir a otros con «+ Otro proveedor»: cada uno va en su bloque.»;
-- al elegir uno, sale su recuadro.
+**Al abrir vacío** (ajuste del 2026-10-13, opción A, que sustituye a la pantalla «¿A qué proveedor pides?»):
+- un primer recuadro, `aria-label` «Pedido sin proveedor», con el desplegable «Proveedor» («Elige el proveedor…») en su cabecera;
+- la tabla vacía con «Elige el proveedor para añadir líneas.» y «Añadir previsión» deshabilitado;
+- al elegir uno, ese recuadro pasa a ser el del proveedor;
+- sin texto de ayuda: el botón se entiende solo.
 
 **Recuadros:**
-- uno por proveedor, apilados y **ordenados por el nombre del proveedor**;
+- uno por proveedor, apilados **en el orden en que se añaden**, con el nuevo al final (ajuste del 2026-10-13; antes iban por nombre);
+- los de la precarga entran en el orden de sus líneas;
 - el cuerpo del diálogo se desplaza y el pie con los botones queda fijo.
 
 **Cabecera de cada recuadro:**
@@ -43,10 +45,11 @@ La regla «un proveedor = un bloque» no cambia, y sigue el estándar de Odoo: u
 - Debajo, «+ Añadir línea».
 - Si alguna pieza va también a otro proveedor, un aviso «{pieza} también va a {Proveedor} ({cant}).» (§5).
 
-**Pie de la lista:**
-- «**+ Otro proveedor**»: lista de los proveedores activos que aún no tienen recuadro;
-- cada uno con el detalle «Bloque {N} abierto» o «sin bloque abierto»;
-- al elegir uno, sale su recuadro desplegado y a la vista.
+**«+ Otro proveedor», en el pie del diálogo** (ajuste del 2026-10-13):
+- va a la izquierda de «Cancelar» y «Confirmar pedido», siempre visible y con su mismo aspecto, el de botón secundario;
+- deshabilitado mientras no hay ningún proveedor elegido, o si ya están todos;
+- lista los proveedores activos que aún no tienen recuadro, cada uno con el detalle «Bloque {N} abierto» o «sin bloque abierto»;
+- al elegir uno, su recuadro sale al final, desplegado, y la caja baja hasta él.
 
 **Botón de confirmar:**
 - «Confirmar pedido» con un recuadro con líneas;

@@ -9,7 +9,8 @@ Los pedidos se agrupan en **bloques**: lo que le pides de una vez a un proveedor
 Un bloque reúne las piezas que se piden **juntas a un mismo proveedor** (normalmente, el pedido del día).
 
 En **«Nuevo pedido»** puedes pedir a **varios proveedores a la vez**:
-- Eliges el primero en «¿A qué proveedor pides?» y, si hace falta, otros con **«+ Otro proveedor»**.
+- Al abrirlo, eliges el proveedor en el primer recuadro y, si hace falta, añades otros con **«+ Otro proveedor»**, que
+  está abajo, junto a «Confirmar pedido». El nuevo sale al final.
 - Cada proveedor sale en **su recuadro**, que es su bloque. En su cabecera ves si va a **su bloque abierto** (el que aún
   no has confirmado) o a uno **nuevo**, y lo puedes cambiar.
 - Con **▼** pliegas un recuadro y con **×** lo quitas.
