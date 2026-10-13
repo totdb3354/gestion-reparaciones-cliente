@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuevo pedido por proveedores</title>
+<style>
+:root{
+  --azul-noche:#001232; --azul-noche-hover:#0A2040; --azul-medio:#2C3B54; --azul-gris:#586376; --crema:#F6F6F6;
+  --fondo-vista:#DDE1E7; --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --texto-accion:#4A6FA5; --texto-sub:#8A94A6;
+  --sep:#C2C8D0; --maestro:#EEF0F5; --sel-suave:#EAF1FF; --nav-switch:#E8EAF0; --borde-input:#D4D8DE;
+  --pend-brd:#C8961E; --pend-bg:#FFF3D6; --pend-tx:#B26A00;
+  --camino-bg:#BBDEFB; --camino-tx:#1565C0; --error:#B03040; --rojo:#A84040;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio);background:var(--fondo-vista);font-size:13px}
+button,input,select{font:inherit}
+.top{height:56px;background:var(--azul-noche);color:var(--crema);display:flex;align-items:center;gap:28px;padding:0 20px}
+.top .marca{font-weight:800;letter-spacing:.12em;font-size:15px}
+.top nav{display:flex;gap:4px}
+.top nav span{color:#AEB6C4;font-weight:600;padding:7px 12px;border-radius:999px}
+.top nav span.act{background:var(--azul-noche-hover);color:#FAFAFA}
+.proto{background:#F6C453;color:#5A4500;padding:8px 20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.proto b{letter-spacing:.04em;margin-right:6px}
+.proto .opt{border:1px solid #B8922E;background:transparent;color:#5A4500;border-radius:999px;padding:3px 10px;cursor:pointer;font-weight:600}
+.proto .opt:hover{background:#F9D77F}
+.guia{background:#FFF8E1;border-bottom:1px solid #E8C870;padding:10px 24px 12px;color:#5A4500;font-size:12.5px}
+.guia ol{margin:4px 0 0;padding-left:20px;columns:2;column-gap:44px}
+.guia li{margin:3px 0;break-inside:avoid}
+.pagina{padding:18px 20px 30px}
+.cab-pag{display:flex;align-items:center;gap:16px}
+h1{font-size:24px;margin:0}
+.btn{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-medio);border-radius:999px;padding:5px 13px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:#E4E7EC}
+.btn.prim{background:var(--azul-noche);border-color:var(--azul-noche);color:var(--crema);padding:6px 14px}
+.btn.prim:hover:not(:disabled){background:var(--azul-noche-hover)}
+.btn:disabled{opacity:.45;cursor:default}
+.tabla{background:#fff;border-radius:8px;border:1px solid #CFD3DA;margin-top:12px;overflow:hidden}
+.tabla table{border-collapse:collapse;width:100%}
+.tabla th{background:#E8EAF0;color:var(--azul-gris);font-size:12px;text-align:left;padding:8px}
+.tabla td{padding:7px 8px;border-top:1px solid #EEF0F3}
+.badge{display:inline-block;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700}
+.b-abierto{background:var(--pend-bg);color:var(--pend-tx)}
+.b-camino{background:var(--camino-bg);color:var(--camino-tx)}
+.nuevo-b td{animation:flash 2.2s ease-out}
+@keyframes flash{from{background:#FFF3B0}to{background:transparent}}
+/* Diálogo */
+.overlay{position:fixed;inset:0;background:rgba(0,18,50,.35);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.dlg{background:var(--fondo-vista);border-radius:12px;box-shadow:0 20px 50px rgba(0,18,50,.35);width:min(860px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.dlg h2{margin:0;padding:22px 28px 12px;font-size:24px;font-weight:700;color:var(--azul-medio)}
+.cuerpo{padding:0 28px;overflow:auto;flex:1;min-height:0}
+.grupo{background:#fff;border:1px solid #C4CAD4;border-radius:10px;margin-bottom:10px;overflow:hidden}
+.grupo.err{border-color:var(--error);box-shadow:0 0 0 1px var(--error)}
+.gcab{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 6px;background:var(--maestro);flex-wrap:wrap}
+.grupo:not(.plegado) .gcab{border-bottom:1px solid #D5DAE2}
+.chev{border:0;background:transparent;cursor:pointer;width:22px;font-size:11px;color:var(--azul-medio)}
+.gnom{font-weight:700;font-size:13.5px}
+.gn{color:var(--azul-gris);font-size:12px}
+.fl{color:var(--texto-sub)}
+.gcab select{border:1px solid var(--borde-input);border-radius:999px;padding:4px 10px;background:var(--azul-noche);color:var(--crema);font-size:12px}
+.gcab .nuevo{font-size:12px}
+.flex1{flex:1}
+.x{border:0;background:transparent;color:var(--texto-sub);cursor:pointer;font-size:16px;line-height:1;width:26px;height:26px;border-radius:50%}
+.x:hover{color:var(--rojo);background:#E4E7EC}
+.grupo.rep{border-color:var(--pend-brd)}
+.grupo.rep .gcab{background:var(--pend-bg);color:var(--pend-tx)}
+.gcuerpo{padding:6px 10px 10px}
+.grupo.plegado .gcuerpo{display:none}
+.lineas{width:100%;border-collapse:collapse}
+.lineas th{font-size:11.5px;color:var(--azul-gris);text-align:left;padding:5px 6px;background:#F3F4F7}
+.lineas td{padding:4px 6px;border-bottom:1px solid #F0F2F5}
+.lineas td.n{color:var(--texto-sub);width:26px}
+.lineas tr.sel td{background:var(--sel-suave)}
+.lineas input[type=text]{width:100%;border:1px solid var(--borde-input);border-radius:999px;padding:5px 11px;background:var(--azul-noche);color:var(--crema)}
+.lineas input[type=text]::placeholder{color:#9AA4B4}
+.lineas input.num{width:70px;border:1px solid var(--borde-input);border-radius:6px;padding:5px 7px;text-align:right}
+.lineas select{border:1px solid var(--borde-input);border-radius:999px;padding:5px 10px;background:var(--azul-noche);color:var(--crema);min-width:210px}
+.quitar{border:0;background:transparent;color:var(--rojo);cursor:pointer;font-size:15px}
+.vacio{color:var(--texto-sub);padding:10px 4px}
+.info{color:var(--azul-gris);font-size:12px}
+.gpie{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.caja{border-radius:8px;padding:8px 10px;margin:0 0 10px;font-size:12.5px;background:#EAF1FF}
+.elegir{display:flex;flex-direction:column;align-items:center;gap:10px;padding:34px 0;background:#fff;border-radius:10px;border:1px solid #C4CAD4}
+.elegir select{border:1px solid var(--borde-input);border-radius:999px;padding:7px 14px;background:var(--azul-noche);color:var(--crema);min-width:240px}
+.mas-wrap{position:relative;display:inline-block;margin:2px 0 6px}
+.mas{border:1px dashed #9AA4B4;background:transparent;color:var(--texto-accion);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}
+.mas:hover{background:#E8ECF2}
+.pop{position:absolute;bottom:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:5px;z-index:30;min-width:240px}
+.pop button{display:flex;justify-content:space-between;gap:16px;width:100%;border:0;background:transparent;text-align:left;padding:6px 9px;border-radius:5px;cursor:pointer;color:var(--azul-medio)}
+.pop button:hover{background:var(--sel-suave)}
+.pop .det{color:var(--texto-sub);font-size:11.5px}
+.pie{padding:12px 28px 20px;display:flex;justify-content:flex-end;align-items:center;gap:10px;border-top:1px solid #C9CFD8;margin-top:6px}
+.pie .err{margin-right:auto;color:var(--error);font-size:12px;font-weight:600}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--azul-noche);color:var(--crema);padding:10px 18px;border-radius:14px;box-shadow:0 8px 24px rgba(0,18,50,.3);z-index:60;font-weight:600;max-width:calc(100vw - 40px)}
+.top{overflow:hidden}
+.top nav{overflow-x:auto;min-width:0}
+.gcuerpo{overflow-x:auto}
+@media (max-width:640px){.guia ol{columns:1}.cuerpo{padding:0 12px}.pie{padding-left:12px;padding-right:12px}}
+</style>
+</head>
+<body>
+<div class="top"><span class="marca">FSGR</span><nav><span>Asignaciones</span><span>Pendientes</span><span>Stock actual</span><span class="act">Pedidos</span><span>Proveedores</span></nav></div>
+<div class="proto">
+  <b>PROTOTIPO · datos inventados</b>
+  <button class="opt" data-esc="vacio">Nuevo pedido (vacío)</button>
+  <button class="opt" data-esc="campana">Campana: «Pedir todas las piezas» (6)</button>
+  <button class="opt" data-esc="stock-lcd">Stock: «Pedir» lcd-13-negro</button>
+  <button class="opt" data-esc="stock-bat">Stock: «Pedir» bat-13</button>
+</div>
+<div class="guia">
+  <b>Prueba esto:</b>
+  <ol>
+    <li><b>Vacío:</b> elige Proveedor A, «Añadir previsión», luego «+ Otro proveedor» → Proveedor C y añade una línea a mano.</li>
+    <li>Cada recuadro es <b>un bloque</b>: en su cabecera ves a qué bloque va (o «Bloque nuevo»).</li>
+    <li><b>Campana:</b> las piezas que solo vende un proveedor ya están en su recuadro; las demás, arriba en <b>«Por repartir»</b> con «Pasar a…».</li>
+    <li>El <b>▼</b> pliega un recuadro si hay muchos; la <b>×</b> lo quita con sus líneas (pregunta si tiene alguna).</li>
+    <li>«Confirmar» con algo por repartir, o con una línea sin componente, te lleva a ese recuadro y lo marca en rojo.</li>
+    <li>Una pieza no se repite <b>dentro</b> de un proveedor; si también va a otro, solo avisa.</li>
+    <li><b>Misma pieza a dos proveedores:</b> lcd-13-negro (pedir 6) en A, cámbiala a 3; en C, al elegirla sale <b>lo que falta: 3</b>. «Añadir previsión» también descuenta lo que ya va a otro.</li>
+  </ol>
+</div>
+<div class="pagina">
+  <div class="cab-pag"><h1>Pedidos</h1><button class="btn prim" data-esc="vacio">Nuevo pedido</button></div>
+  <div class="tabla"><table><thead><tr><th>Bloque</th><th>Proveedor</th><th>Estado</th><th>Líneas</th></tr></thead><tbody id="bloques"></tbody></table></div>
+</div>
+<div id="dlg"></div>
+<div id="toast"></div>
+
+<script>
+// ---------- Datos inventados ----------
+const PROV = [
+  { id: 1, n: 'Proveedor A', div: 'EUR' }, { id: 2, n: 'Proveedor B', div: 'EUR' },
+  { id: 3, n: 'Proveedor C', div: 'USD' }, { id: 4, n: 'Proveedor D', div: 'EUR' },
+]
+// p = «Pedir 60 d»; v = proveedores que la venden («Piezas que vende»).
+const PIEZAS = [
+  { id: 1, t: 'lcd-13-negro', p: 6, v: [1, 3] }, { id: 2, t: 'lcd-14-negro', p: 4, v: [1, 3] },
+  { id: 3, t: 'bat-13', p: 8, v: [2] }, { id: 4, t: 'bat-14', p: 5, v: [2] },
+  { id: 5, t: 'g-15pro', p: 10, v: [4] }, { id: 6, t: 'cam-13', p: 2, v: [] },
+  { id: 7, t: 'cha-12-azul', p: 0, v: [1] }, { id: 8, t: 'tapa-14-blanco', p: 3, v: [1] },
+  { id: 9, t: 'mc-13', p: 0, v: [2, 4] },
+]
+let BLOQUES = [
+  { id: 47, prov: 3, estado: 'abierto', lineas: 1 }, { id: 45, prov: 2, estado: 'en camino', lineas: 3 },
+  { id: 44, prov: 1, estado: 'abierto', lineas: 2 },
+]
+let siguienteBloque = 48
+const nom = (id) => PROV.find((p) => p.id === id).n
+const pieza = (id) => PIEZAS.find((p) => p.id === id)
+const abierto = (prov) => BLOQUES.find((b) => b.prov === prov && b.estado === 'abierto')
+const txtLineas = (n) => n === 1 ? '1 línea' : `${n} líneas`
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+// ---------- Estado del diálogo ----------
+let D = null
+let sigId = 1
+const linea = (idCom = null, cant = 1) => ({ id: sigId++, idCom, cant: String(cant), precio: '0,00', urg: false })
+function nuevoDialogo() { return { grupos: [], rep: [], aviso: null, error: null, errGrupo: null, pop: false, sel: null, plegados: new Set(), foco: null } }
+function grupoDe(prov) { return D.grupos.find((g) => g.prov === prov) }
+// Recuadros por nombre del proveedor: el orden no depende de cómo se fueron añadiendo.
+function ordenados() { return D.grupos.slice().sort((a, b) => nom(a.prov).localeCompare(nom(b.prov), 'es')) }
+function asegurarGrupo(prov) {
+  let g = grupoDe(prov)
+  if (!g) { g = { prov, lineas: [], destino: abierto(prov)?.id ?? null }; D.grupos.push(g) }
+  return g
+}
+// Mete una pieza en el recuadro de un proveedor: sin repetir dentro del recuadro (se queda la que había).
+function meter(prov, idCom, cant) {
+  const g = asegurarGrupo(prov)
+  const ya = g.lineas.find((l) => l.idCom === idCom)
+  if (ya) return { repetida: ya }
+  const l = linea(idCom, cant); g.lineas.push(l); return { nueva: l }
+}
+// Reparto automático de una lista: al recuadro del único proveedor que la vende; si no, «Por repartir».
+function repartir(ids) {
+  for (const id of ids) {
+    const p = pieza(id)
+    const cant = p.p > 0 ? p.p : 1
+    if (p.v.length === 1) meter(p.v[0], id, cant)
+    else D.rep.push(linea(id, cant))
+  }
+}
+function abrir(escenario) {
+  D = nuevoDialogo()
+  if (escenario === 'campana') repartir([1, 3, 4, 5, 6, 8])
+  else if (escenario === 'stock-lcd') repartir([1])
+  else if (escenario === 'stock-bat') repartir([3])
+  pintar()
+}
+
+// ---------- Acciones ----------
+function limpiar() { D.aviso = null; D.error = null; D.errGrupo = null }
+function anadirProveedor(prov) { asegurarGrupo(prov); D.pop = false; D.plegados.delete(prov); D.foco = prov; limpiar(); pintar() }
+function quitarGrupo(prov) {
+  const g = grupoDe(prov)
+  if (g.lineas.length > 0 && !confirm(`¿Quitar ${nom(prov)} y sus ${txtLineas(g.lineas.length)}?`)) return
+  D.grupos = D.grupos.filter((x) => x.prov !== prov)
+  limpiar(); pintar()
+}
+function plegar(clave) { D.plegados.has(clave) ? D.plegados.delete(clave) : D.plegados.add(clave); pintar() }
+// Lo que va a otros proveedores en este mismo pedido.
+function enOtrosRecuadros(idCom, prov) {
+  return D.grupos.filter((g) => g.prov !== prov).flatMap((g) => g.lineas).filter((l) => l.idCom === idCom).reduce((s, l) => s + (Number(l.cant) || 0), 0)
+}
+// «Pedir 60 d» menos lo que ya va a otros proveedores en este pedido (nunca negativo).
+function restante(idCom, prov) { return Math.max(pieza(idCom).p - enOtrosRecuadros(idCom, prov), 0) }
+function nPrevision(prov) { return PIEZAS.filter((p) => p.v.includes(prov) && restante(p.id, prov) > 0).length }
+function anadirPrevision(prov) {
+  const g = asegurarGrupo(prov)
+  for (const p of PIEZAS.filter((x) => x.v.includes(prov))) {
+    const r = restante(p.id, prov)
+    if (r <= 0) continue
+    const ya = g.lineas.find((l) => l.idCom === p.id)
+    if (ya) ya.cant = String(Math.max(Number(ya.cant) || 0, r)); else g.lineas.push(linea(p.id, r))
+  }
+  limpiar(); pintar()
+}
+function anadirLinea(prov) {
+  const l = linea(); grupoDe(prov).lineas.push(l); D.sel = l.id; limpiar(); pintar()
+  document.querySelector(`[data-comp="${l.id}"]`)?.focus()
+}
+function quitarLinea(prov, id) { const g = grupoDe(prov); g.lineas = g.lineas.filter((l) => l.id !== id); limpiar(); pintar() }
+// Elegir pieza: cantidad prevista si seguía la automática; si ya está en el recuadro, se junta.
+function elegirPieza(prov, id, texto) {
+  const p = PIEZAS.find((x) => x.t === texto.trim())
+  if (!p) return
+  const g = grupoDe(prov)
+  const l = g.lineas.find((x) => x.id === id)
+  if (l.idCom === p.id) return
+  const otra = g.lineas.find((x) => x.id !== id && x.idCom === p.id)
+  if (otra) {
+    g.lineas = g.lineas.filter((x) => x.id !== id)
+    D.sel = otra.id
+    D.aviso = `${p.t} ya está en el pedido a ${nom(prov)} (línea ${g.lineas.indexOf(otra) + 1}).`
+    pintar(); return
+  }
+  const previa = l.idCom === null ? null : restante(l.idCom, prov)
+  const automatica = l.cant === '1' || (previa !== null && previa > 0 && l.cant === String(previa))
+  l.idCom = p.id
+  // Lo que falta: «Pedir 60 d» menos lo que ya va a otros proveedores en este pedido; si no falta nada, 1.
+  if (automatica) { const r = restante(p.id, prov); l.cant = String(r > 0 ? r : 1) }
+  limpiar(); pintar()
+}
+function pasarA(idLinea, prov) {
+  const l = D.rep.find((x) => x.id === idLinea)
+  D.rep = D.rep.filter((x) => x.id !== idLinea)
+  const r = meter(prov, l.idCom, l.cant)
+  limpiar()
+  D.aviso = r.repetida ? `${pieza(l.idCom).t} ya estaba en ${nom(prov)}: se queda la línea que había.` : null
+  D.plegados.delete(prov)
+  pintar()
+}
+function fallo(clave, texto) { D.error = texto; D.errGrupo = clave; D.plegados.delete(clave); D.foco = clave; pintar() }
+function confirmar() {
+  limpiar()
+  if (D.rep.length > 0) return fallo('rep', `Quedan ${txtLineas(D.rep.length)} por repartir: elige a quién se las pides.`)
+  const conLineas = ordenados().filter((g) => g.lineas.length > 0)
+  if (conLineas.length === 0) { D.error = 'Añade alguna línea.'; return pintar() }
+  for (const g of conLineas) {
+    const i = g.lineas.findIndex((l) => l.idCom === null)
+    if (i >= 0) return fallo(g.prov, `${nom(g.prov)}: la línea ${i + 1} no tiene componente.`)
+    const j = g.lineas.findIndex((l) => !(Number(l.cant) > 0))
+    if (j >= 0) return fallo(g.prov, `${nom(g.prov)}: la cantidad de la línea ${j + 1} no es válida.`)
+  }
+  const hechos = []
+  for (const g of conLineas) {
+    let b = g.destino === null ? null : BLOQUES.find((x) => x.id === g.destino)
+    if (!b) { b = { id: siguienteBloque++, prov: g.prov, estado: 'abierto', lineas: 0, nuevo: true }; BLOQUES.unshift(b) }
+    b.lineas += g.lineas.length; b.tocado = true
+    hechos.push(`Bloque ${b.id} · ${nom(g.prov)} (+${txtLineas(g.lineas.length)})`)
+  }
+  D = null; pintar(); pintarBloques()
+  toast('Guardado: ' + hechos.join(' · '))
+}
+function cancelar() {
+  const n = D.rep.length + D.grupos.reduce((s, g) => s + g.lineas.length, 0)
+  if (n > 0 && !confirm(`¿Descartar el pedido? Se pierden ${txtLineas(n)}.`)) return
+  D = null; pintar()
+}
+
+// ---------- Pintado ----------
+function chev(clave, nombre) {
+  const pl = D.plegados.has(clave)
+  return `<button class="chev" aria-expanded="${!pl}" aria-label="${pl ? 'Desplegar' : 'Plegar'} ${esc(nombre)}" data-plegar="${clave}">${pl ? '▶' : '▼'}</button>`
+}
+function pintarRep() {
+  const filas = D.rep.map((l, i) => {
+    const p = pieza(l.idCom)
+    const vende = PROV.filter((x) => p.v.includes(x.id)), otros = PROV.filter((x) => !p.v.includes(x.id))
+    const grupo = (et, lista) => lista.length ? `<optgroup label="${et}">${lista.map((x) => `<option value="${x.id}">${esc(x.n)}</option>`).join('')}</optgroup>` : ''
+    return `<tr><td class="n">${i + 1}</td><td>${esc(p.t)} <span class="info">${p.v.length === 0 ? '(no está en la lista de nadie)' : '(la venden ' + p.v.length + ')'}</span></td><td>${l.cant}</td>
+      <td><select aria-label="Pasar a línea ${i + 1}" data-pasar="${l.id}"><option value="">Pasar a…</option>${grupo('Lo vende', vende)}${grupo('Otros proveedores', otros)}</select></td></tr>`
+  }).join('')
+  return `<section class="grupo rep ${D.plegados.has('rep') ? 'plegado' : ''} ${D.errGrupo === 'rep' ? 'err' : ''}" aria-label="Por repartir" data-grupo="rep">
+    <div class="gcab">${chev('rep', 'Por repartir')}<span class="gnom">⚠ Por repartir</span><span class="gn">· ${txtLineas(D.rep.length)} · las venden varios proveedores o ninguno: elige a quién se las pides</span></div>
+    <div class="gcuerpo"><table class="lineas"><thead><tr><th></th><th>Componente</th><th>Cant.</th><th>Proveedor</th></tr></thead><tbody>${filas}</tbody></table></div></section>`
+}
+function pintarGrupo(g) {
+  const prov = PROV.find((p) => p.id === g.prov)
+  const b = abierto(g.prov)
+  const destino = b
+    ? `<select aria-label="Bloque de ${esc(prov.n)}" data-destino="${g.prov}"><option value="${b.id}" ${g.destino === b.id ? 'selected' : ''}>Añadir a Bloque ${b.id} (${txtLineas(b.lineas)})</option><option value="" ${g.destino === null ? 'selected' : ''}>Bloque nuevo</option></select>`
+    : '<span class="nuevo"><b>Bloque nuevo</b> <span class="info">(no tiene ninguno abierto)</span></span>'
+  const n = nPrevision(g.prov)
+  const filas = g.lineas.map((l, i) => {
+    const p = l.idCom === null ? null : pieza(l.idCom)
+    return `<tr class="${D.sel === l.id ? 'sel' : ''}"><td class="n">${i + 1}</td>
+      <td><input type="text" list="piezas" placeholder="Escribe componente..." aria-label="Componente línea ${i + 1}" data-comp="${l.id}" data-prov="${g.prov}" value="${p ? esc(p.t) : ''}"></td>
+      <td><input class="num" aria-label="Cantidad línea ${i + 1}" data-cant="${l.id}" data-prov="${g.prov}" value="${esc(l.cant)}"></td>
+      <td><input class="num" aria-label="Precio línea ${i + 1}" data-precio="${l.id}" data-prov="${g.prov}" value="${esc(l.precio)}"> <span class="info">${prov.div}</span></td>
+      <td><input type="checkbox" aria-label="Urgente línea ${i + 1}" data-urg="${l.id}" data-prov="${g.prov}" ${l.urg ? 'checked' : ''}></td>
+      <td><button class="quitar" title="Quitar línea" aria-label="Quitar línea ${i + 1}" data-quitar="${l.id}" data-prov="${g.prov}">✕</button></td></tr>`
+  }).join('')
+  const enOtros = g.lineas.filter((l) => l.idCom !== null).flatMap((l) => D.grupos.filter((o) => o.prov !== g.prov && o.lineas.some((x) => x.idCom === l.idCom)).map((o) => `${pieza(l.idCom).t} también va a ${nom(o.prov)} (${o.lineas.find((x) => x.idCom === l.idCom).cant}).`))
+  return `<section class="grupo ${D.plegados.has(g.prov) ? 'plegado' : ''} ${D.errGrupo === g.prov ? 'err' : ''}" aria-label="Pedido a ${esc(prov.n)}" data-grupo="${g.prov}">
+    <div class="gcab">${chev(g.prov, prov.n)}<span class="gnom">${esc(prov.n)}</span><span class="gn">· ${txtLineas(g.lineas.length)} · ${prov.div}</span><span class="fl">→</span>${destino}
+      <span class="flex1"></span><button class="btn" data-prevision="${g.prov}" ${n === 0 ? 'disabled' : ''}>Añadir previsión (${n})</button>
+      <button class="x" title="Quitar ${esc(prov.n)}" aria-label="Quitar ${esc(prov.n)}" data-quitar-grupo="${g.prov}">×</button></div>
+    <div class="gcuerpo">
+      ${g.lineas.length === 0 ? `<div class="vacio">Añade líneas o «Añadir previsión».</div>` :
+        `<table class="lineas"><thead><tr><th></th><th>Componente</th><th>Cant.</th><th>P. unidad</th><th>Urg.</th><th></th></tr></thead><tbody>${filas}</tbody></table>`}
+      <div class="gpie"><button class="btn" data-linea="${g.prov}">+ Añadir línea</button>${enOtros.length ? `<span class="info">ℹ ${enOtros.join(' ')}</span>` : ''}</div>
+    </div></section>`
+}
+function pintarBloques() {
+  document.getElementById('bloques').innerHTML = BLOQUES.slice().sort((a, b) => b.id - a.id).map((b) =>
+    `<tr class="${b.nuevo || b.tocado ? 'nuevo-b' : ''}"><td><b>Bloque ${b.id}</b></td><td>${esc(nom(b.prov))}</td><td><span class="badge ${b.estado === 'abierto' ? 'b-abierto' : 'b-camino'}">${b.estado}</span></td><td>${txtLineas(b.lineas)}</td></tr>`).join('')
+  BLOQUES.forEach((b) => { delete b.nuevo; delete b.tocado })
+}
+function pintar() {
+  const cont = document.getElementById('dlg')
+  if (!D) { cont.innerHTML = ''; return }
+  const nBloques = D.grupos.filter((g) => g.lineas.length > 0).length
+  const libres = PROV.filter((p) => !grupoDe(p.id))
+  const pop = D.pop ? `<div class="pop" role="listbox" aria-label="Otro proveedor">${libres.map((p) => `<button role="option" data-anadir-prov="${p.id}">${esc(p.n)} <span class="det">${abierto(p.id) ? 'Bloque ' + abierto(p.id).id + ' abierto' : 'sin bloque abierto'}</span></button>`).join('')}</div>` : ''
+  let cuerpo
+  if (D.grupos.length === 0 && D.rep.length === 0) {
+    cuerpo = `<div class="elegir"><b>¿A qué proveedor pides?</b>
+      <select aria-label="Proveedor" data-primero><option value="">Elige el proveedor…</option>${PROV.map((p) => `<option value="${p.id}">${esc(p.n)}</option>`).join('')}</select>
+      <span class="info">Luego puedes pedir a otros con «+ Otro proveedor»: cada uno va en su bloque.</span></div>`
+  } else {
+    cuerpo = (D.rep.length ? pintarRep() : '') + ordenados().map(pintarGrupo).join('') +
+      (libres.length ? `<div class="mas-wrap">${pop}<button class="mas" data-mas>+ Otro proveedor</button></div>` : '')
+  }
+  const scroll = cont.querySelector('.cuerpo')?.scrollTop ?? 0
+  cont.innerHTML = `<div class="overlay"><div class="dlg" role="dialog" aria-label="Nuevo pedido">
+    <h2>Nuevo pedido</h2>
+    <div class="cuerpo">${D.aviso ? `<div class="caja" role="status">${esc(D.aviso)}</div>` : ''}${cuerpo}</div>
+    <div class="pie"><span class="err" role="alert">${D.error ? esc(D.error) : ''}</span>
+      <button class="btn" data-cancelar>Cancelar</button>
+      <button class="btn prim" data-confirmar>Confirmar pedido${nBloques > 1 ? ` (${nBloques} bloques)` : ''}</button></div>
+    <datalist id="piezas">${PIEZAS.map((p) => `<option value="${p.t}">`).join('')}</datalist>
+  </div></div>`
+  const c = cont.querySelector('.cuerpo'); if (c) c.scrollTop = scroll
+  if (D.foco !== null) { cont.querySelector(`[data-grupo="${D.foco}"]`)?.scrollIntoView({ block: 'nearest' }); D.foco = null }
+}
+function toast(t) {
+  const el = document.getElementById('toast')
+  el.innerHTML = `<div class="toast" role="status">${esc(t)}</div>`
+  clearTimeout(toast.h); toast.h = setTimeout(() => { el.innerHTML = '' }, 6000)
+}
+
+// ---------- Eventos ----------
+document.addEventListener('click', (e) => {
+  const q = (s) => e.target.closest(s)
+  let el
+  if ((el = q('[data-esc]'))) return abrir(el.dataset.esc)
+  if (!D) return
+  if ((el = q('[data-plegar]'))) return plegar(el.dataset.plegar === 'rep' ? 'rep' : Number(el.dataset.plegar))
+  if ((el = q('[data-quitar-grupo]'))) return quitarGrupo(Number(el.dataset.quitarGrupo))
+  if ((el = q('[data-anadir-prov]'))) return anadirProveedor(Number(el.dataset.anadirProv))
+  if (q('[data-mas]')) { D.pop = !D.pop; return pintar() }
+  if ((el = q('[data-prevision]'))) return anadirPrevision(Number(el.dataset.prevision))
+  if ((el = q('[data-linea]'))) return anadirLinea(Number(el.dataset.linea))
+  if ((el = q('[data-quitar]'))) return quitarLinea(Number(el.dataset.prov), Number(el.dataset.quitar))
+  if (q('[data-confirmar]')) return confirmar()
+  if (q('[data-cancelar]')) return cancelar()
+  if (D.pop && !q('.mas-wrap')) { D.pop = false; pintar() }
+})
+document.addEventListener('change', (e) => {
+  if (!D) return
+  const t = e.target
+  if (t.matches('[data-primero]') && t.value) return anadirProveedor(Number(t.value))
+  if (t.matches('[data-pasar]') && t.value) return pasarA(Number(t.dataset.pasar), Number(t.value))
+  if (t.matches('[data-destino]')) { grupoDe(Number(t.dataset.destino)).destino = t.value === '' ? null : Number(t.value); return pintar() }
+  if (t.matches('[data-comp]')) return elegirPieza(Number(t.dataset.prov), Number(t.dataset.comp), t.value)
+  const g = t.dataset.prov ? grupoDe(Number(t.dataset.prov)) : null
+  const l = g?.lineas.find((x) => x.id === Number(t.dataset.cant ?? t.dataset.precio ?? t.dataset.urg))
+  if (!l) return
+  if (t.matches('[data-cant]')) { l.cant = t.value.trim(); D.error = null; return pintar() }
+  if (t.matches('[data-precio]')) l.precio = t.value.trim()
+  if (t.matches('[data-urg]')) l.urg = t.checked
+  D.error = null
+})
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && D) { if (D.pop) { D.pop = false; pintar() } else cancelar() } })
+pintarBloques()
+</script>
+</body>
+</html>
