@@ -36,7 +36,7 @@ La regla «un proveedor = un bloque» no cambia, y sigue el estándar de Odoo: u
 - el **nombre del proveedor**, «· {n líneas} · {divisa}»;
 - «→» y el **destino**: un desplegable «Añadir a Bloque {N} ({m líneas})» / «Bloque nuevo» si tiene uno abierto. Si no, «**Bloque nuevo** (no tiene ninguno abierto)». Son las opciones y la regla de hoy (`opcionesDestino`, `destinoElegido`);
 - **«Añadir previsión ({n})»**, que es la «Añadir previsión de X» de hoy para ese proveedor, con la cantidad del §4;
-- **×** «Quitar {Proveedor}». Si el recuadro tiene líneas, pregunta antes «¿Quitar {Proveedor} y sus {n líneas}?».
+- **×** «Quitar {Proveedor}». Si el recuadro tiene líneas, pregunta antes «¿Quitar {Proveedor} y sus {n} líneas?», o «¿Quitar {Proveedor} y su línea?» con una.
 
 **Cuerpo de cada recuadro:**
 - **Tabla:** la de hoy, con Componente, Cant., P. unidad en la divisa del proveedor, Urg. y quitar. La numeración de líneas es **por recuadro**.
@@ -67,8 +67,8 @@ Afecta a «Pedir todas las piezas» de la campana, a «Pedir» de Stock (precarg
 **Recuadro «⚠ Por repartir»:**
 - va el primero, en ámbar, con los colores `pend-*`;
 - texto: «⚠ Por repartir · {n líneas} · las venden varios proveedores o ninguno: elige a quién se las pides»;
-- en cada fila, la pieza con «(la venden {k})» o «(no está en la lista de nadie)», y la cantidad;
-- y el desplegable «**Pasar a…**» con dos grupos: «Lo vende» y «Otros proveedores».
+- las filas son **las de siempre** y se pueden editar: componente, cantidad, precio, urgente y papelera. Ajuste del plan: así no hace falta otro tipo de fila, y una pieza sin la lista «Piezas que vende» también se puede tocar;
+- en la columna Proveedor, el desplegable «**Pasar a…**» con dos grupos: «Lo vende» (los que tienen la pieza en su lista) y «Otros proveedores».
 - **Al pasar una línea:**
   - va al recuadro de ese proveedor, que se crea si no existe;
   - si ese recuadro ya tenía la pieza, se queda la línea que había y sale «{pieza} ya estaba en {Proveedor}: se queda la línea que había.»;
@@ -105,7 +105,7 @@ Las comprobaciones van en este orden. Si una falla:
 - el error sale en el pie;
 - el recuadro que falla se **marca en rojo**, se **despliega** si estaba plegado y se pone **a la vista**.
 
-1. **Algo por repartir:** «Quedan {n líneas} por repartir: elige a quién se las pides.».
+1. **Algo por repartir:** «Quedan {n} líneas por repartir: elige a quién se las pides.». Con una: «Queda 1 línea por repartir: elige a quién se la pides.».
 2. **Ninguna línea en ningún recuadro:** `MSG_SIN_LINEAS`, «Añade al menos una línea.».
 3. **En cada recuadro, por orden de nombre:** las validaciones de línea de hoy (`validarLineasCompra`), con el proveedor delante: «{Proveedor} · Línea {n}: selecciona un componente.».
 
@@ -116,7 +116,7 @@ Las comprobaciones van en este orden. Si una falla:
 - Lleva las líneas de todos los recuadros, cada una con su proveedor, y los destinos por proveedor (`destinosDelCuerpo`).
 - Los errores se tratan como hoy, por ejemplo el 409 de un destino que ya no existe: recarga los pedidos y el diálogo sigue abierto.
 
-**Cancelar** con líneas pregunta como hoy (`textoDescartar`), contando las de todos los recuadros y las de «Por repartir».
+**Cancelar** cierra sin preguntar, como hoy. **Atrás** del navegador con líneas pide «Descartar» (`textoDescartar`), contando las de todos los recuadros y las de «Por repartir». Esto también es como hoy; el prototipo preguntaba al cancelar y era un error.
 
 ## 7. Lo que no cambia
 
