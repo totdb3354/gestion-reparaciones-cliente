@@ -22,6 +22,9 @@ Los pedidos anteriores a esta versión se han agrupado solos por proveedor y dí
 - Al filtrar o buscar, solo ves las líneas que cumplen («mostrando 2 de 4»).
 - **«Agrupar por bloque»** te devuelve a la lista de siempre cuando quieras.
 - **«En camino» ahora es azul**, para no confundirlo con el gris de «cancelado». El urgente sigue en naranja con ⚠.
+- Si un bloque tiene líneas **recibidas sin precio** (las del «!» de su fila), su cabecera lo avisa con **«! N sin
+  precio»**: el precio se pone con «Editar».
+- La nota del bloque lleva un **icono de bocadillo** en vez del 📝.
 
 ---
 
@@ -33,6 +36,11 @@ Los pedidos anteriores a esta versión se han agrupado solos por proveedor y dí
   hoy.
 - En **«Nuevo pedido»**, eliges el proveedor arriba y **«Añadir previsión de X»** te mete lo que hay que pedirle (las
   piezas en Auto que vende). También desde el menú del bloque: **«Añadir previsión…»**.
+- Al elegir la pieza de una línea, la **cantidad sale sola**: su **«Pedir 60 d»** (o 1 si no hay que pedir). Si la
+  cambias a mano, se queda la tuya. «Pedir» desde Stock y «Pedir todas las piezas» desde la campana también entran ya
+  con esa cantidad.
+- Una pieza **no se repite** en un pedido: si eliges una que ya está, se queda la línea que la tenía, marcada, y te
+  avisa «… ya está en el pedido (línea n).».
 - La previsión ya **no vuelve a proponer lo que está apuntado en otro bloque**: Stock enseña cuánto hay **«Pendiente»**.
 - En Pedidos, escribe el **número de un bloque** en el buscador para ir directo a él.
 
