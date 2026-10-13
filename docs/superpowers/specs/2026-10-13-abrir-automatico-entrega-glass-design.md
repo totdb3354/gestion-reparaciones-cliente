@@ -73,7 +73,7 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 
 ### 2.7 Aviso breve (componente nuevo en la web)
 
-Hoy la web no avisa de los éxitos (las marcas de urgente, por cerrar o entrega recargan en silencio) y los errores usan el diálogo de `AlertaProvider`. Para los mensajes de §2.1–2.4 se añade un **aviso breve** no bloqueante en `shared/ui`: abajo al centro, se cierra solo a los 4 s o con clic, sin botón que pulsar, y si llega otro sustituye al anterior. Los errores siguen yendo por `AlertaProvider` como hoy.
+Hoy la web no avisa de los éxitos (las marcas de urgente, por cerrar o entrega recargan en silencio) y los errores usan el diálogo de `AlertaProvider`. Para los mensajes de §2.1–2.4 se añade un **aviso breve** en `shared/ui`: no es un modal (no oscurece la pantalla, no roba el foco, no hay que pulsar nada y se puede seguir trabajando), aparece abajo al centro con una **barra que va encogiendo** durante 4 s para indicar que se va, y al vaciarse desaparece solo. Un clic lo cierra antes. Si llega otro, sustituye al anterior y la barra vuelve a empezar. Los errores siguen yendo por `AlertaProvider` como hoy.
 
 ### 2.8 Puntos (estadísticas)
 
