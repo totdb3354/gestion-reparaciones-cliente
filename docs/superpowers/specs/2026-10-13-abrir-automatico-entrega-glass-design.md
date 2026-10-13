@@ -36,7 +36,7 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 | Caso | Regla | Aviso breve |
 |---|---|---|
 | Ya apuntado a mano | El técnico al que se apuntaría ya tiene, en ese IMEI, una acción «otro» de reparación (`R…`) guardada en o después de la `FECHA_ASIG` de su `A…` cuyo texto (sin espacios a los lados, sin distinguir mayúsculas) empieza por `abr` o `abi` | «Entregado a Ana · ya estaba abierto» |
-| Sin pieza «otro» | El teléfono no tiene modelo, o el modelo no tiene componente `otroi<modelo>` | «Entregado a Ana · sin "Abrir" (el modelo no tiene pieza otro)» |
+| Sin pieza «otro» | El teléfono no tiene modelo, o el modelo no tiene componente `otroi<modelo>` | «Entregado a Ana · sin «Abrir» (el modelo no tiene pieza otro)» |
 | Llegada sin normal abierta | §2.2 | «Llegada registrada» |
 
 (En la llegada los textos empiezan por «Llegada registrada · …» en lugar de «Entregado a Ana · …».)
@@ -45,7 +45,7 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 
 - Se borra **el «Abrir» que creó esa entrega, y solo ese** (el que guarda la `AG…`, §3). Si la entrega no creó ninguno (ya existía uno a mano, sin pieza, sin normal) no se borra nada.
 - Si ese «Abrir» ya no existe (un supertécnico lo borró desde el Historial), no pasa nada.
-- Aviso breve: «Entrega deshecha · "Abrir" borrado» / «Llegada deshecha · "Abrir" borrado», o sin la segunda parte si no había nada que borrar.
+- Aviso breve: «Entrega deshecha · «Abrir» borrado» / «Llegada deshecha · «Abrir» borrado», o sin la segunda parte si no había nada que borrar.
 - Volver a entregar tras deshacer crea un «Abrir» nuevo (el anterior se borró).
 
 ### 2.5 El «Abrir» es una acción más
@@ -125,9 +125,9 @@ Los cuatro endpoints existentes (`PATCH …/{idRep}/entrega-glass`, `PATCH` y `D
 - **Una transacción** por petición: sellar/limpiar la entrega + crear/borrar el «Abrir» + `ID_REP_ABRIR` (lógica en un servicio transaccional nuevo; el controlador solo valida, llama y registra el log).
 - **Crear el «Abrir»**: resolver el técnico y la `A…` (§2.1/§2.2) → comprobar duplicado (§2.3) → resolver el componente `otro` del modelo del teléfono con `CatalogoPiezas.modelo` (mismo criterio que la web) → insertar con la misma lógica que `guardarFilaIndividual` (fila `R…` + `Reparacion_componente` con `CANTIDAD = 0`, `OBSERVACIONES = 'Abrir'`) → `UPDATE … SET ID_REP_ABRIR = ?, UPDATED_AT = UPDATED_AT` en las `AG` abiertas del IMEI.
 - **Deshacer**: leer los `ID_REP_ABRIR` no nulos de las `AG` abiertas del IMEI, borrar ese `R…` con el borrado existente (`ReparacionDAO.eliminar`, stock neutro) si existe, y poner la columna a `NULL`.
-- **Respuesta**: pasa de 204 a **200** con cuerpo (la web actual no lo lee):
-  - entregar / llegada: `{ "abrir": "CREADO" | "YA_EXISTIA" | "SIN_PIEZA_OTRO" | "SIN_NORMAL", "tecnicoAbrir": "Luis" | null }`
-  - deshacer: `{ "abrirBorrado": true | false }`
+- **Respuesta**: pasa de 204 a **200** con cuerpo (la web actual no lo lee). Un solo tipo para los cuatro, `ResultadoEntregaGlass` (el `PATCH …/entrega-glass` sirve a la vez para entregar y deshacer): `{ "abrir": "CREADO" | "YA_EXISTIA" | "SIN_PIEZA_OTRO" | "SIN_NORMAL" | null, "idRepAbrir": "R…" | null, "tecnicoAbrir": "Luis" | null, "idRepBorrado": "R…" | null }`.
+  - Entregar / llegada: `abrir` con el resultado, `idRepAbrir` solo con `CREADO`, `tecnicoAbrir` nulo solo con `SIN_NORMAL`, `idRepBorrado` nulo.
+  - Deshacer: `abrir`, `idRepAbrir` y `tecnicoAbrir` nulos; `idRepBorrado` = el «Abrir» borrado, o nulo si no había.
 - **Log**: `ENTREGAR_GLASS` / `DESHACER_ENTREGA_GLASS` añaden al detalle `, ABRIR: R…` o `, ABRIR: YA_EXISTIA|SIN_PIEZA_OTRO|SIN_NORMAL` (y `, ABRIR BORRADO: R…` al deshacer). Sin acciones de log nuevas.
 
 ### 4.2 Estadísticas por puntos
