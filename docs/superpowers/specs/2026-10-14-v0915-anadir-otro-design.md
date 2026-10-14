@@ -169,6 +169,9 @@ El contrato OpenAPI se actualiza (`OpenApiContractTest`).
   - Los filtros Estado, Proveedor, Desde/Hasta y el buscador valen para las dos. El buscador busca también en el concepto.
 - **Cabecera del bloque:** «{n líneas} ({m} otro/otros)» cuando hay otros. El total y el resumen de estados cuentan los dos; «! N sin precio» también cuenta los otros recibidos a 0.
 - **Vista plana** («Agrupar por bloque» desactivado): piezas y otros juntos, con la columna «Bloque» y la columna «Proveedor».
+- **Orden de los bloques** (cambia la regla 7 de la 0.9.9): primero por **fecha del bloque**, de más reciente a más antigua, y a igual fecha por número descendente. «Sin bloque» sigue al final.
+  - Motivo: la reconstrucción (§3.3) crea bloques antiguos con números más altos que los actuales, pero con fechas de junio a septiembre. Ordenando solo por número saldrían arriba del todo.
+  - En los bloques actuales la fecha y el número van en el mismo orden, así que no cambia nada de lo que se ve hoy.
 - **Menú de una fila de otro:**
   - las transiciones que tenía en la página Otros: confirmar, recibido, parcial, resto, cerrar sin resto, cancelar, borrar, revertir y editar, con sus endpoints de `compras-otros` y sus diálogos de hoy;
   - más **«Mover a bloque»**, con las reglas de las piezas.
@@ -304,6 +307,10 @@ Afecta al general («Descargar CSV») y a «Exportar bloque en CSV».
 - la vuelta atrás es solo de código, y la columna se queda.
 
 La guía dirá si se hace en horario según el recuento.
+
+**Ventana del despliegue:**
+- Entre la reconstrucción y el arranque del servidor nuevo, el servidor 0.9.14 no puede vaciar un bloque antiguo que ya tiene otros: juntar, borrar el bloque entero o mover su última pieza fallan por la clave ajena, sin cambiar nada. Por eso el servidor nuevo arranca justo después de la reconstrucción, en el mismo bloque del guion.
+- Hasta que el taller recarga la página, la web 0.9.14 no conoce los otros de un bloque mixto. Borrar o juntar ese bloque desde ella da 409 («modificado por otro usuario») y no cambia nada.
 
 **Documentación:**
 - CHANGELOG `[0.9.15]` de servidor y web;
