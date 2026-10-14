@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Casillas en las acciones de bloque</title>
+<style>
+  body{font-family:"Segoe UI",system-ui,sans-serif;background:#F4F5F8;color:#2C3B54;padding:24px;margin:0;font-size:13px}
+  h1{font-size:20px;color:#001232;margin:0 0 4px}
+  p.sub{margin:0 0 14px;color:#586376}
+  .rol{display:flex;gap:6px;align-items:center;margin-bottom:14px}
+  .rol button{border:1px solid #001232;background:#fff;color:#001232;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+  .rol button.on{background:#001232;color:#fff}
+  .tabla{background:#fff;border:1px solid #DDE1E7;border-radius:10px;max-width:1100px}
+  .cab{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-bottom:1px solid #DDE1E7;white-space:nowrap;position:relative}
+  .cab i{color:#8A94A6;font-style:normal}
+  .chip{border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+  .pend{background:#FDEBC8;color:#C07800}.azul{background:#BBDEFB;color:#1565C0}.parc{background:#E1D5F5;color:#6A3FB5}.verde{background:#C8E6C9;color:#3A7D44}.gris{background:#E0E0E0;color:#9E9E9E}
+  .puntos{margin-left:auto;width:30px;height:30px;border-radius:50%;border:0;background:none;font-size:18px;cursor:pointer;color:#2C3B54}
+  .puntos:hover{background:#EEF0F4}
+  .menu{position:absolute;right:12px;top:40px;background:#fff;border:1px solid #DDE1E7;border-radius:8px;box-shadow:0 6px 20px rgba(0,18,50,.15);min-width:250px;padding:4px;z-index:5;display:none}
+  .menu.abierto{display:block}
+  .menu div.e{display:flex;gap:8px;padding:6px 10px;border-radius:5px;cursor:pointer}
+  .menu div.e:hover{background:#EEF0F4}
+  .menu div.e.off{color:#A9B0BC;cursor:default}.menu div.e.off:hover{background:none}
+  .menu div.e.peligro{color:#C62828}
+  .menu div.e.nuevo{font-weight:700}
+  .menu div.e small{margin-left:auto;color:#8A94A6;font-size:11px}
+  .menu hr{border:0;border-top:1px solid #DDE1E7;margin:4px 0}
+  .nueva{background:#FFF3C4;color:#8A6D00;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700}
+  .fila{display:flex;gap:10px;padding:6px 12px 6px 36px;border-bottom:1px solid #F1EEE6;font-size:12px}
+  .fila:last-child{border-bottom:0}
+  .fila .id{color:#7A8699;width:34px}
+  .fila .est{margin-left:auto}
+  .velo{position:fixed;inset:0;background:rgba(0,18,50,.35);display:none;align-items:center;justify-content:center;z-index:10}
+  .velo.abierto{display:flex}
+  .dlg{background:#fff;border-radius:12px;width:520px;max-width:calc(100vw - 32px);box-shadow:0 12px 40px rgba(0,18,50,.3)}
+  .dlg header{padding:14px 18px 8px}
+  .dlg header h2{margin:0;font-size:16px;color:#001232}
+  .dlg header p{margin:2px 0 0;color:#586376;font-size:12px}
+  .cuerpo{padding:4px 18px 10px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  section.lista{border:1px solid #DDE1E7;border-radius:8px}
+  section.lista h4{margin:0;background:#FBF7EF;border-bottom:1px solid #DDE1E7;border-radius:8px 8px 0 0;padding:6px 10px;font-size:12px;color:#2C3B54;display:flex;align-items:center;gap:8px}
+  section.lista.apagada h4{color:#586376}
+  section.lista ul{list-style:none;margin:0;padding:0}
+  section.lista li{border-bottom:1px solid #F1EEE6}
+  section.lista li:last-child{border-bottom:0}
+  section.lista label,section.lista .li{display:flex;align-items:center;gap:10px;padding:6px 10px;font-size:12px;cursor:pointer}
+  section.lista .li{cursor:default}
+  section.lista li.fuera label{opacity:.55}
+  section.lista li.fuera b{text-decoration:line-through}
+  .motivo{margin-left:auto;font-size:11px;color:#586376}
+  .queda{margin-left:auto;font-size:11px;color:#586376;font-style:italic}
+  input[type=checkbox]{width:15px;height:15px;accent-color:#001232;cursor:pointer;margin:0}
+  .resumen{font-size:12px;color:#586376;margin:0}
+  .dlg footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #DDE1E7}
+  .btn{border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;border:1px solid #001232}
+  .sec{background:#FBF7EF;color:#001232}
+  .pri{background:#001232;color:#fff}
+  .pri.peligro{background:#C62828;border-color:#C62828}
+  .pri:disabled{opacity:.5;cursor:default}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#001232;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:20;max-width:90vw}
+  .csv{margin-top:16px;max-width:1100px;display:none}
+  .csv h3{font-size:13px;margin:0 0 6px;color:#001232}
+  .csv pre{background:#fff;border:1px solid #DDE1E7;border-radius:8px;padding:10px;font-size:11px;overflow-x:auto;margin:0}
+</style>
+</head>
+<body>
+<h1>0.9.13 · Casillas en las acciones de bloque y «Exportar bloque en CSV»</h1>
+<p class="sub">Datos inventados. Abre el ⋮ del bloque y prueba «Recibir todo», «Confirmar bloque», «Cancelar bloque» o «Exportar bloque en CSV».</p>
+
+<div class="rol">Ver como:
+  <button id="rolSuper" class="on" onclick="ponerRol(true)">Supertécnico</button>
+  <button id="rolOtro" onclick="ponerRol(false)">Admin o técnico</button>
+</div>
+
+<div class="tabla">
+  <div class="cab" id="cabecera">
+    <span>▼</span><b>Bloque 52</b><i>·</i>Proveedor A<i>·</i>14/10/2026<i>·</i><span id="nLineas"></span><i>·</i><b>1.842,50 €</b>
+    <span id="chips"></span>
+    <button class="puntos" aria-label="Acciones del bloque 52" onclick="alternarMenu(event)">⋮</button>
+    <div class="menu" id="menu" role="menu"></div>
+  </div>
+  <div id="filas"></div>
+</div>
+
+<div class="csv" id="csv">
+  <h3 id="csvNombre"></h3>
+  <pre id="csvTexto"></pre>
+</div>
+
+<div class="velo" id="velo">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitulo">
+    <header><h2 id="dlgTitulo"></h2><p>Proveedor A · 14/10/2026</p></header>
+    <div class="cuerpo" id="dlgCuerpo"></div>
+    <footer>
+      <button class="btn sec" onclick="cerrar()">Cancelar</button>
+      <button class="btn pri" id="dlgAccion" onclick="aplicar()"></button>
+    </footer>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const PIEZAS = ['Pantalla iPhone 13', 'Batería iPhone 12', 'Pantalla iPhone 14 Pro', 'Tapa iPhone 13 azul', 'Batería iPhone 13 Pro',
+  'Cámara trasera iPhone 12', 'Pantalla iPhone 15', 'Chasis iPhone 14 negro', 'Batería iPhone 14', 'Flex carga iPhone 13']
+const lineas = []
+let id = 1201
+for (let i = 0; i < 39; i++) lineas.push({ id: id++, pieza: PIEZAS[i % PIEZAS.length], cant: 1 + (i * 7) % 5, estado: 'en_camino' })
+lineas.push({ id: id++, pieza: 'Pantalla iPhone 16', cant: 2, estado: 'pendiente' })
+lineas.push({ id: id++, pieza: 'Batería iPhone 15', cant: 3, estado: 'pendiente' })
+lineas.push({ id: id++, pieza: 'Pantalla iPhone 12', cant: 4, estado: 'parcial', recibida: 1 })
+
+const CHIP = { pendiente: ['pend', 'pendiente'], en_camino: ['azul', 'en camino'], parcial: ['parc', 'parcial'], recibido: ['verde', 'recibido'], cancelado: ['gris', 'cancelado'] }
+const ESTADO_DE = { confirmar: 'pendiente', recibir: 'en_camino', cancelar: 'en_camino' }
+const TEXTOS = {
+  confirmar: { titulo: 'Confirmar bloque', cambian: 'Pasan a en camino', boton: (n) => `Confirmar (${n})`, peligro: false, queda: 'se queda pendiente', quedanN: (n) => `${n === 1 ? 'Se queda pendiente' : 'Se quedan pendientes'}` },
+  recibir: { titulo: 'Recibir todo', cambian: 'Se reciben (suman al stock)', boton: (n) => `Recibir (${n})`, peligro: false, queda: 'se queda en camino', quedanN: (n) => `${n === 1 ? 'Se queda en camino' : 'Se quedan en camino'}` },
+  cancelar: { titulo: 'Cancelar bloque', cambian: 'Se cancelan (no se pueden reactivar)', boton: (n) => `Cancelar líneas (${n})`, peligro: true, queda: 'se queda en camino', quedanN: (n) => `${n === 1 ? 'Se queda en camino' : 'Se quedan en camino'}` },
+}
+let esSuper = true
+let accion = null
+let marcadas = new Set()
+
+function chip(e) { const [c, t] = CHIP[e]; return `<span class="chip ${c}">${t}</span>` }
+function lin(n) { return `${n} ${n === 1 ? 'línea' : 'líneas'}` }
+
+function pintarTabla() {
+  document.getElementById('nLineas').textContent = lin(lineas.length)
+  const cuenta = {}
+  lineas.forEach((l) => cuenta[l.estado] = (cuenta[l.estado] || 0) + 1)
+  document.getElementById('chips').innerHTML = Object.keys(CHIP).filter((e) => cuenta[e]).map((e) => {
+    const [c, t] = CHIP[e]; return `<span class="chip ${c}">${cuenta[e]} ${t}</span>`
+  }).join(' ')
+  document.getElementById('filas').innerHTML = lineas.slice(0, 8).map((l) =>
+    `<div class="fila"><span class="id">${l.id}</span><b>${l.pieza}</b><span>× ${l.cant}</span><span class="est">${chip(l.estado)}</span></div>`).join('')
+    + `<div class="fila" style="color:#8A94A6">… y ${lineas.length - 8} líneas más</div>`
+}
+
+function deEstado(e) { return lineas.filter((l) => l.estado === e) }
+function pintarMenu() {
+  const p = deEstado('pendiente').length, c = deEstado('en_camino').length
+  const e = (acc, txt, off, motivo, clase = '') =>
+    `<div class="e ${off ? 'off' : ''} ${clase}" role="menuitem" aria-disabled="${off}" ${off ? '' : `onclick="elegir('${acc}')"`}>${txt}${off && motivo ? `<small>${motivo}</small>` : ''}</div>`
+  const exportar = e('exportar', 'Exportar bloque en CSV <span class="nueva">nuevo</span>', false, null, 'nuevo')
+  document.getElementById('menu').innerHTML = esSuper ? [
+    e('confirmar', `Confirmar bloque (${p})`, p === 0, 'nada pendiente'),
+    e('recibir', `Recibir todo (${c})`, c === 0, 'nada en camino'),
+    '<hr>',
+    e('x', 'Añadir líneas…'), e('x', 'Añadir previsión…'), e('x', 'Separar líneas…'), e('x', 'Juntar con…', true, 'no hay otro bloque vivo de este proveedor'), e('x', 'Añadir nota…'),
+    exportar,
+    '<hr>',
+    e('cancelar', `Cancelar bloque (${c})`, c === 0, 'nada en camino', 'peligro'),
+    e('borrar', 'Borrar bloque', true, 'hay líneas ya pedidas', 'peligro'),
+  ].join('') : exportar
+}
+
+function alternarMenu(ev) { ev.stopPropagation(); pintarMenu(); document.getElementById('menu').classList.toggle('abierto') }
+document.addEventListener('click', () => document.getElementById('menu').classList.remove('abierto'))
+function ponerRol(s) {
+  esSuper = s
+  document.getElementById('rolSuper').classList.toggle('on', s)
+  document.getElementById('rolOtro').classList.toggle('on', !s)
+  document.getElementById('menu').classList.remove('abierto')
+}
+
+function elegir(acc) {
+  document.getElementById('menu').classList.remove('abierto')
+  if (acc === 'exportar') return exportar()
+  if (!TEXTOS[acc]) return aviso('En el prototipo solo funcionan Confirmar, Recibir todo, Cancelar y Exportar.')
+  accion = acc
+  marcadas = new Set(deEstado(ESTADO_DE[acc]).map((l) => l.id))
+  pintarDialogo()
+  document.getElementById('velo').classList.add('abierto')
+}
+
+function motivo(l) {
+  const e = l.estado
+  if (accion === 'confirmar') return e === 'cancelado' ? 'cancelado' : `ya ${CHIP[e][1]}`
+  if (e === 'pendiente') return accion === 'recibir' ? 'pendiente: aún no se ha pedido' : 'pendiente: se borra, no se cancela'
+  if (e === 'parcial') return accion === 'recibir' ? `parcial (${l.recibida}/${l.cant}): usa «Recibir resto» en su fila` : 'parcial: usa «Cerrar sin resto» en su fila'
+  return e === 'recibido' ? 'ya recibido' : 'ya cancelado'
+}
+
+function pintarDialogo() {
+  const t = TEXTOS[accion]
+  const cambian = deEstado(ESTADO_DE[accion])
+  const quedan = lineas.filter((l) => l.estado !== ESTADO_DE[accion])
+  const n = marcadas.size, total = cambian.length, fuera = total - n
+  document.getElementById('dlgTitulo').textContent = `${t.titulo} · Bloque 52`
+  const todas = n === total, ninguna = n === 0
+  let html = `<section class="lista" aria-label="${t.cambian}"><h4>
+      <input type="checkbox" id="todas" aria-label="Marcar todas" ${todas ? 'checked' : ''} onchange="alternarTodas(this.checked)">
+      <label for="todas" style="cursor:pointer">${t.cambian} (${n === total ? total : `${n} de ${total}`})</label></h4><ul>`
+  html += cambian.map((l) => {
+    const m = marcadas.has(l.id)
+    return `<li class="${m ? '' : 'fuera'}"><label><input type="checkbox" ${m ? 'checked' : ''} aria-label="${l.pieza} (ID ${l.id})" onchange="alternar(${l.id}, this.checked)">
+      <span class="id" style="color:#7A8699">${l.id}</span><b>${l.pieza}</b><span>× ${l.cant}</span>
+      ${m ? `<span style="margin-left:auto">${chip(l.estado)}</span>` : `<span class="queda">${t.queda}</span>`}</label></li>`
+  }).join('')
+  html += '</ul></section>'
+  if (fuera > 0) html += `<p class="resumen" role="status">${t.quedanN(fuera)} ${lin(fuera)}: ${fuera === 1 ? 'la desmarcada no cambia' : 'las desmarcadas no cambian'}.</p>`
+  if (quedan.length > 0) {
+    html += `<section class="lista apagada" aria-label="No cambian"><h4>No cambian (${quedan.length})</h4><ul>`
+    html += quedan.map((l) => `<li><div class="li"><span style="color:#7A8699">${l.id}</span><b>${l.pieza}</b><span>× ${l.cant}</span><span class="motivo">${motivo(l)}</span></div></li>`).join('')
+    html += '</ul></section>'
+  }
+  const cuerpo = document.getElementById('dlgCuerpo')
+  const scroll = cuerpo.scrollTop
+  cuerpo.innerHTML = html
+  cuerpo.scrollTop = scroll
+  const todasEl = document.getElementById('todas')
+  todasEl.indeterminate = !todas && !ninguna
+  const b = document.getElementById('dlgAccion')
+  b.textContent = t.boton(n)
+  b.disabled = ninguna
+  b.classList.toggle('peligro', t.peligro)
+}
+
+function alternar(idL, v) { if (v) marcadas.add(idL); else marcadas.delete(idL); pintarDialogo() }
+function alternarTodas(v) { marcadas = v ? new Set(deEstado(ESTADO_DE[accion]).map((l) => l.id)) : new Set(); pintarDialogo() }
+function cerrar() { document.getElementById('velo').classList.remove('abierto'); accion = null }
+
+function aplicar() {
+  const nuevo = { confirmar: 'en_camino', recibir: 'recibido', cancelar: 'cancelado' }[accion]
+  const t = TEXTOS[accion]
+  const total = deEstado(ESTADO_DE[accion]).length
+  const n = marcadas.size
+  lineas.forEach((l) => { if (marcadas.has(l.id)) l.estado = nuevo })
+  cerrar()
+  pintarTabla()
+  aviso(`${t.titulo}: ${lin(n)} aplicadas${total - n > 0 ? `; ${total - n} sin tocar` : ''}.`)
+}
+
+function aviso(txt) {
+  const el = document.getElementById('toast')
+  el.textContent = txt
+  el.style.display = 'block'
+  clearTimeout(aviso.t)
+  aviso.t = setTimeout(() => el.style.display = 'none', 3200)
+}
+
+function exportar() {
+  const ahora = '2026-10-14_17-05'
+  document.getElementById('csvNombre').textContent = `Se descarga: pedidos_bloque_52_${ahora}.csv (todas las líneas del bloque, sin filtros)`
+  const cab = 'ID;Bloque;Nota del bloque;Fecha pedido;Componente;Cantidad;Urgente;Proveedor;Precio unidad;Divisa;Total EUR;Estado'
+  const filas = lineas.slice(0, 6).map((l) => `${l.id};52;;14/10/2026 09:${String(10 + l.id % 40).padStart(2, '0')};${l.pieza};${l.cant};No;Proveedor A;42,50;EUR;${(42.5 * l.cant).toFixed(2).replace('.', ',')};${l.estado}`)
+  document.getElementById('csvTexto').textContent = [cab, ...filas, `… (${lineas.length} filas en total)`].join('\n')
+  document.getElementById('csv').style.display = 'block'
+}
+
+pintarTabla()
+</script>
+</body>
+</html>
