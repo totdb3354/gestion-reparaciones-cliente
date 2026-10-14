@@ -1,5 +1,7 @@
 # 0.9.12 — Navegación por grupos: plan de implementación
 
+> **Sale como 0.9.14** (2026-10-14): la 0.9.13 (casillas en las acciones de bloque y «Exportar bloque en CSV») entró antes en `main`. Los nombres de fichero conservan `v0912`; en el código, la web y los documentos, la versión es 0.9.14.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Objetivo:** toda la navegación de la web pasa a la columna lateral. Cada sección es un grupo con una cabecera plegable. La barra navy pierde los botones de sección, y Gestión sale del menú de usuario.

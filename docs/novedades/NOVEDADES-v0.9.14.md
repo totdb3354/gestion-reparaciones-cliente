@@ -1,4 +1,4 @@
-# 🎉 Novedades — Versión 0.9.12 (web)
+# 🎉 Novedades — Versión 0.9.14 (web)
 
 **Toda la navegación** pasa a la columna de la izquierda.
 

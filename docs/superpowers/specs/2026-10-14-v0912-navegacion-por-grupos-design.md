@@ -1,5 +1,7 @@
 # 0.9.12 — Navegación por grupos: todo en la columna lateral
 
+> **Sale como 0.9.14** (2026-10-14): la 0.9.13 (casillas en las acciones de bloque y «Exportar bloque en CSV») entró antes en `main`. Los nombres de fichero conservan `v0912`; en el código, la web y los documentos, la versión es 0.9.14.
+
 Fecha: 2026-10-14. Estado: diseño aprobado en el brainstorming, pendiente del plan.
 
 - **Versión:** la siguiente de la web tras la 0.9.11 («abrir» automático al entregar a Glass). Si la 0.9.11 sale después, se renumera; el contenido no cambia.
