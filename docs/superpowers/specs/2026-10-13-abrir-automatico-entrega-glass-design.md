@@ -61,11 +61,13 @@ En los ejemplos, «Luis» es el técnico de la reparación normal y «Ana» la d
 - Botón **«+ Cerrar»** junto a «+ Añadir acción», solo en el formulario de **reparación** al completar (no en glass ni en modo editar). Decisión 2026-10-13 tras la revisión final: el teléfono vuelve a quien lo entregó para cerrarlo y, si lo cierra otro, se le reasigna la reparación; en glass el atajo saldría casi siempre y empujaría a apuntar el «Cerrar» antes de tiempo.
 - Añade una línea con el texto `Cerrar` ya escrito y enfocada, lista para «✓ Guardar» (se puede editar o quitar como cualquier línea nueva).
 - **Solo aparece si hay más aperturas que cierres desde que se asignó esa reparación**: se cuentan las acciones «otro» del IMEI, en reparación y glass juntas, guardadas desde la `FECHA_ASIG` de la asignación (decisión 2026-10-13: así los «abrir»/«cerrar» desparejados apuntados a mano antes del cambio no molestan, y un teléfono que vuelve empieza de cero); apertura = texto que empieza por `abr` o `abi`, cierre = texto que empieza por `cerr` (mismo criterio de §2.3). Las líneas del propio formulario cuyo texto empieza por `cerr` (guardadas en esta apertura o no) también cuentan como cierre: el atajo desaparece al pulsarlo.
+- **Cambio del 2026-10-14 (tras probarla en preproducción, decisión del usuario): solo cuando el teléfono ha vuelto de glass.** Con una asignación de glass (AG) abierta en el IMEI, de quien sea, el atajo no sale aunque haya más aperturas que cierres: el teléfono sigue en glass y aún no toca cerrarlo. Sale cuando la glass se completa o se elimina (eliminarla no borra el «Abrir»; solo «Deshacer entrega/llegada» lo hace). Solo web: la carga del formulario deriva `glassAbiertaEnImei` de las asignaciones activas del IMEI (web `9e13346`, en la 0.9.11).
 
 | Situación | Aperturas | Cierres | ¿Atajo? |
 |---|---|---|---|
 | Cambio de pantalla sin glass | 0 | 0 | No |
-| Entregado a glass | 1 | 0 | Sí |
+| Entregado a glass, la glass sigue abierta | 1 | 0 | No (cambio 2026-10-14) |
+| La glass se completa o se elimina | 1 | 0 | Sí |
 | Vuelve y se guarda «Cerrar» | 1 | 1 | No |
 | Meses después, nueva reparación y otra vez a glass (solo cuenta lo de esta asignación) | 1 | 0 | Sí |
 | Segunda bajada a glass en la misma reparación | 2 | 1 | Sí |
