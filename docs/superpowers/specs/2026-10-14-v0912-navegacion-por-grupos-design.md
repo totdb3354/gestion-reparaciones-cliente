@@ -66,7 +66,7 @@ En este orden. Las pestañas de Reparaciones dependen del rol, como hoy.
   - la cabecera enseña la suma de los números de sus pestañas (con el mismo `BadgeLateral`, tope 99+), si es mayor que 0;
   - si la página actual está dentro del grupo, la cabecera va en `text-azul-noche` para que se sepa dónde se está.
 - **Al empezar** todos los grupos están desplegados.
-- **Si no cabe:** la lista hace scroll dentro de la columna (`overflow-y-auto`). El botón de plegar del borde sigue fijo.
+- **Si no cabe:** la columna crece con la página y se usa el scroll de la página, como hoy. La columna no tiene scroll propio.
   - El peor caso, el admin a 1366 × 768, ocupa unos 538 px de 593 y cabe.
 
 **Columna plegada (56 px):**
@@ -80,7 +80,7 @@ En este orden. Las pestañas de Reparaciones dependen del rol, como hoy.
 **Preferencias del navegador:**
 - `columnaLateral.plegada` sigue como en la 0.9.10.
 - Nueva clave `columnaLateral.gruposPlegados`: un JSON con la lista de los grupos plegados (por ejemplo `["stock"]`).
-  - Si no se puede leer o no es una lista válida de grupos conocidos, todos salen desplegados.
+  - Si no se puede leer, o el valor no es una lista, todos salen desplegados. Los ids que no son de un grupo conocido se ignoran.
   - Si no se puede guardar, dura lo que la página. Mismo patrón `try/catch` que `preferencias.ts`.
 - Es del navegador, no del usuario, y `reiniciarStores` no la toca.
 
@@ -117,7 +117,9 @@ En este orden. Las pestañas de Reparaciones dependen del rol, como hoy.
 
 ## 7. Código
 
-- **`shared/lib/enlaces.ts`:** nuevo tipo `GrupoNav = { id: 'reparaciones' | 'stock' | 'estadisticas' | 'clientes' | 'gestion'; titulo: string; enlaces: Enlace[] }`. `Enlace` gana un `state` opcional para el `volverA` de Gestión.
+- **`shared/lib/enlaces.ts`:** nuevos tipos `IdGrupoNav = 'reparaciones' | 'stock' | 'estadisticas' | 'clientes' | 'gestion'` y `GrupoNav = { id: IdGrupoNav; titulo: string; enlaces: Enlace[] }`. `Enlace` gana un `state` opcional para el `volverA` de Gestión.
+- **`modules/taller/componentes/BadgeSumaLateral.tsx` (nuevo):** la suma de la cabecera de un grupo plegado (Pendientes, Asignaciones o los dos), con los mismos hooks que los badges de cada pestaña.
+- **`test/server.ts`:** respuesta por defecto (a cero) de los contadores de Pendientes, porque su badge se monta ahora en todas las vistas.
 - **`app/shell/navegacion.ts` (nuevo):** `gruposNav(sesion, pathname)` devuelve los grupos del rol en el orden de §2.
   - Usa `enlacesReparaciones` y `enlacesStock`, que ya existen, y añade Estadísticas, Clientes y Gestión.
   - Es una función pura, con sus tests.
