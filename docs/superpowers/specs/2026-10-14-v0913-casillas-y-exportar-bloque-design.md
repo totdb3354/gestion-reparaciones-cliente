@@ -96,7 +96,9 @@ Afecta a `AccionBloqueDialog`, con las acciones `confirmar`, `recibir` y `cancel
 - «Exportar bloque en CSV» llama a `descargarCsv` con `pedidos_bloque_{id}` y todas las líneas del bloque aunque haya un filtro que oculte alguna;
 - el admin ve el ⋮ solo con esa entrada.
 
-**E2E (`bloques.spec`):** un paso nuevo, «Recibir todo» con una línea desmarcada: esa línea sigue en camino y las demás pasan a recibidas. Usa datos sintéticos y la limpieza de siempre. La descarga del CSV no se prueba en E2E.
+**E2E (`bloques.spec`)**, con datos sintéticos y la limpieza de siempre:
+- «Recibir todo» con una línea desmarcada: esa línea sigue en camino y las demás pasan a recibidas;
+- «Exportar bloque en CSV» descarga `pedidos_bloque_{n}_…csv` solo con las líneas de ese bloque, por descarga directa como la prueba del CSV general.
 
 ## 5. Despliegue y documentación
 
