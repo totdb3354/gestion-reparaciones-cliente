@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Añadir otro en Pedidos</title>
+<style>
+:root{
+  --azul-noche:#001232; --azul-noche-hover:#0A2040; --azul-medio:#2C3B54; --azul-gris:#586376; --crema:#F6F6F6;
+  --fondo-vista:#DDE1E7; --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --texto-accion:#4A6FA5; --texto-sub:#8A94A6;
+  --maestro:#EEF0F5; --borde-input:#D4D8DE; --pend-bg:#FFF3D6; --pend-tx:#B26A00; --camino-bg:#BBDEFB; --camino-tx:#1565C0;
+  --rec-bg:#C8E6C9; --rec-tx:#3A7D44; --can-bg:#E0E0E0; --can-tx:#9E9E9E; --error:#B03040; --rojo:#A84040;
+  --otro-bg:#EDE3F7; --otro-tx:#6A3FA0;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio);background:var(--fondo-vista);font-size:13px}
+button,input,select{font:inherit}
+.top{height:52px;background:var(--azul-noche);color:var(--crema);display:flex;align-items:center;gap:16px;padding:0 20px}
+.top b{letter-spacing:.1em}
+.top span{color:#AEB6C4}
+.proto{background:#F6C453;color:#5A4500;padding:8px 20px;font-size:12.5px}
+.proto ol{margin:4px 0 0;padding-left:20px;columns:2;column-gap:40px}
+.proto li{margin:2px 0;break-inside:avoid}
+.pagina{padding:16px 20px 30px;max-width:1200px}
+.cab-pag{display:flex;align-items:center;gap:14px}
+h1{font-size:24px;margin:0}
+.btn{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-medio);border-radius:999px;padding:5px 13px;font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#E4E7EC}
+.btn.prim{background:var(--azul-noche);border-color:var(--azul-noche);color:var(--crema)}
+.filtros{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.pill{background:var(--azul-noche);color:var(--crema);border-radius:999px;padding:7px 14px;font-weight:600;font-size:12.5px}
+.pill.off{opacity:.55}
+.tipo{display:inline-flex;border:1px solid var(--azul-noche);border-radius:999px;overflow:hidden;background:#fff}
+.tipo button{border:0;background:transparent;padding:6px 13px;font-weight:600;font-size:12.5px;color:var(--azul-noche);cursor:pointer}
+.tipo button.on{background:var(--azul-noche);color:var(--crema)}
+.tipo .lbl{padding:6px 4px 6px 12px;font-size:12px;color:var(--azul-gris)}
+.sw{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:12.5px}
+.sw i{width:30px;height:16px;border-radius:9px;background:#9AA4B4;position:relative;display:inline-block}
+.sw i::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on i{background:#3A9D5D}.sw.on i::after{left:16px}
+.mostrando{color:var(--texto-sub);font-size:12px}
+.tabla{background:#fff;border-radius:8px;border:1px solid #CFD3DA;margin-top:10px}
+.tabla table{border-collapse:collapse;width:100%}
+.tabla th{background:#E8EAF0;color:var(--azul-gris);font-size:12px;text-align:left;padding:8px}
+.tabla td{padding:7px 8px;border-top:1px solid #EEF0F3}
+tr.cab td{background:#F6F7F9;font-size:12px;position:relative}
+.cabflex{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.cabflex i{color:#8A94A6;font-style:normal}
+.ant{border:1px dashed #8A94A6;color:#8A94A6;border-radius:8px;padding:0 6px;font-size:10.5px}
+.chip{border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+.e-pendiente{background:var(--pend-bg);color:var(--pend-tx)}.e-en_camino{background:var(--camino-bg);color:var(--camino-tx)}
+.e-recibido{background:var(--rec-bg);color:var(--rec-tx)}.e-cancelado{background:var(--can-bg);color:var(--can-tx)}
+.otro,.pieza{display:inline-block;width:44px;text-align:center;border-radius:6px;padding:1px 0;font-size:10.5px;font-weight:700;margin-right:8px}
+.otro{background:var(--otro-bg);color:var(--otro-tx)}
+.pieza{background:#E3ECF7;color:#2F5A8A}
+.comp{color:var(--texto-accion);text-decoration:underline;cursor:pointer}
+.concepto{color:var(--azul-medio)}
+.idotro{color:var(--otro-tx)}
+.puntos{margin-left:auto;width:28px;height:28px;border-radius:50%;border:0;background:none;font-size:17px;cursor:pointer}
+.puntos:hover{background:#E4E7EC}
+.menu{position:absolute;right:10px;top:36px;background:#fff;border:1px solid #CFD3DA;border-radius:8px;box-shadow:0 6px 20px rgba(0,18,50,.15);min-width:240px;padding:4px;z-index:20}
+.menu div{padding:6px 10px;border-radius:5px;cursor:pointer;display:flex;gap:8px}
+.menu div:hover{background:#EEF0F4}
+.menu div.off{color:#A9B0BC;cursor:default}.menu div.off:hover{background:none}
+.menu div.peligro{color:var(--rojo)}
+.menu div.nuevo{font-weight:700}
+.menu hr{border:0;border-top:1px solid #DDE1E7;margin:4px 0}
+.nueva{background:#FFF3C4;color:#8A6D00;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700}
+/* Diálogo */
+.overlay{position:fixed;inset:0;background:rgba(0,18,50,.35);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px}
+.dlg{background:var(--fondo-vista);border-radius:12px;box-shadow:0 20px 50px rgba(0,18,50,.35);width:min(860px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.dlg h2{margin:0;padding:20px 26px 12px;font-size:22px}
+.cuerpo{padding:0 26px;overflow:auto;flex:1;min-height:0}
+.grupo{background:#fff;border:1px solid #C4CAD4;border-radius:10px;margin-bottom:10px;overflow:hidden}
+.grupo.err{border-color:var(--error);box-shadow:0 0 0 1px var(--error)}
+.gcab{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--maestro);border-bottom:1px solid #D5DAE2;flex-wrap:wrap}
+.gnom{font-weight:700;font-size:13.5px}
+.gn{color:var(--azul-gris);font-size:12px}
+.gcab select{border:1px solid var(--borde-input);border-radius:999px;padding:4px 10px;background:var(--azul-noche);color:var(--crema);font-size:12px}
+.flex1{flex:1}
+.gcuerpo{padding:6px 10px 10px}
+.lineas{width:100%;border-collapse:collapse}
+.lineas th{font-size:11.5px;color:var(--azul-gris);text-align:left;padding:5px 6px;background:#F3F4F7}
+.lineas td{padding:4px 6px;border-bottom:1px solid #F0F2F5}
+.lineas td.n{color:var(--texto-sub);width:26px}
+.lineas input.txt{width:100%;border:1px solid var(--borde-input);border-radius:999px;padding:5px 11px;background:var(--azul-noche);color:var(--crema)}
+.lineas input.txt::placeholder{color:#9AA4B4}
+.lineas input.concep{background:#fff;color:var(--azul-medio);border-color:#B9A3D6}
+.lineas input.concep::placeholder{color:#9AA4B4}
+.lineas input.num{width:70px;border:1px solid var(--borde-input);border-radius:6px;padding:5px 7px;text-align:right}
+.lineas select{border:1px solid var(--borde-input);border-radius:999px;padding:5px 10px;background:var(--azul-noche);color:var(--crema);min-width:220px}
+.celda{display:flex;align-items:center;gap:6px}
+.quitar{border:0;background:transparent;color:var(--rojo);cursor:pointer;font-size:15px}
+.gpie{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.mas{border:1px dashed #9AA4B4;background:transparent;color:var(--texto-accion);border-radius:999px;padding:6px 14px;font-weight:600;cursor:pointer}
+.mas.motro{border-color:#B9A3D6;color:var(--otro-tx)}
+.pie{display:flex;align-items:center;gap:10px;padding:14px 26px 18px}
+.error{color:var(--error);font-size:12.5px;padding:0 26px 6px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--azul-noche);color:#fff;padding:9px 16px;border-radius:8px;z-index:60}
+</style>
+</head>
+<body>
+<div class="top"><b>FSGR</b><span>Stock › Pedidos</span></div>
+<div class="proto"><b>PROTOTIPO 0.9.15 · datos inventados.</b> Prueba:
+  <ol>
+    <li>En Pedidos ya no hay «Componentes | Otros»: el Bloque 52 lleva piezas y un otro (píldora «pieza» / «otro» delante del nombre).</li>
+    <li>Filtro <b>Tipo</b>: Todos, Piezas u Otros.</li>
+    <li>⋮ del Bloque 52 → <b>«Añadir otro…»</b>: abre el pedido del bloque con una línea de otro lista para escribir.</li>
+    <li><b>«Nuevo pedido»</b>: elige proveedor y usa <b>«+ Añadir otro»</b> junto a «+ Añadir línea».</li>
+    <li>Confirma con un concepto vacío: sale el error de esa línea.</li>
+    <li>Quita «Agrupar por bloque»: vista plana con columna Bloque, piezas y otros juntos.</li>
+  </ol>
+</div>
+
+<div class="pagina">
+  <div class="cab-pag">
+    <h1>Pedidos</h1>
+    <button class="btn prim" id="btnNuevo" onclick="abrirNuevo()">Nuevo pedido</button>
+  </div>
+  <div class="filtros">
+    <span class="pill">Estado ▾</span><span class="pill">Proveedor ▾</span>
+    <span class="tipo" role="group" aria-label="Tipo"><span class="lbl">Tipo</span>
+      <button data-tipo="todos" class="on" onclick="ponerTipo('todos')">Todos</button>
+      <button data-tipo="p" onclick="ponerTipo('p')">Piezas</button>
+      <button data-tipo="o" onclick="ponerTipo('o')">Otros</button>
+    </span>
+    <span class="sw on" id="sw" role="switch" aria-checked="true" onclick="alternarAgrupar()"><i></i>Agrupar por bloque</span>
+    <span class="mostrando" id="mostrando"></span>
+  </div>
+  <div class="tabla"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+</div>
+
+<div id="dlgHost"></div>
+<div id="toastHost"></div>
+
+<script>
+const PIEZAS = ['Pantalla iPhone 13', 'Batería iPhone 12', 'Pantalla iPhone 14 Pro', 'Tapa iPhone 13 azul', 'Batería iPhone 15', 'Cámara trasera iPhone 12']
+const PROVS = { 'Proveedor A': { bloque: 52 }, 'Amazon': { bloque: 51 }, 'Proveedor B': { bloque: null } }
+let sigP = 1305, sigO = 89
+const bloques = [
+  { id: 52, prov: 'Proveedor A', fecha: '14/10/2026', antiguo: false, lineas: [
+    { t: 'p', id: 1301, nombre: 'Pantalla iPhone 13', cant: 3, precio: 42.5, estado: 'pendiente' },
+    { t: 'p', id: 1302, nombre: 'Batería iPhone 12', cant: 5, precio: 12, estado: 'pendiente' },
+    { t: 'o', id: 88, nombre: 'Botonera iPhone 15 volumen', cant: 10, precio: 0.9, estado: 'pendiente' },
+  ] },
+  { id: 51, prov: 'Amazon', fecha: '13/10/2026', antiguo: false, lineas: [
+    { t: 'o', id: 87, nombre: 'Alcohol isopropílico 1 L', cant: 2, precio: 8.5, estado: 'en_camino' },
+    { t: 'o', id: 86, nombre: 'Cajas de envío 30×20', cant: 50, precio: 0.4, estado: 'en_camino' },
+  ] },
+  { id: 43, prov: 'Proveedor B', fecha: '05/10/2026', antiguo: true, lineas: [
+    { t: 'p', id: 1203, nombre: 'Tapa iPhone 13 azul', cant: 4, precio: 9, estado: 'recibido' },
+    { t: 'o', id: 61, nombre: 'Tipex', cant: 3, precio: 1.2, estado: 'recibido' },
+    { t: 'o', id: 60, nombre: 'Separadores cajas', cant: 10, precio: 0.5, estado: 'recibido' },
+  ] },
+]
+const ESTADO = { pendiente: 'pendiente', en_camino: 'en camino', recibido: 'recibido', cancelado: 'cancelado' }
+let tipo = 'todos', agrupar = true, menuAbierto = null
+let dlg = null // { modo: 'nuevo'|'bloque', idBloque, cajas: [{prov, lineas:[{k, t, nombre, cant, precio, urg}]}], error, foco }
+let sigK = 1
+
+const eur = (n) => n.toFixed(2).replace('.', ',') + ' €'
+const lin = (n) => `${n} ${n === 1 ? 'línea' : 'líneas'}`
+const pasaTipo = (l) => tipo === 'todos' || l.t === tipo
+const idTxt = (l) => l.t === 'o' ? `<span class="idotro">O-${l.id}</span>` : String(l.id)
+const nombreTxt = (l) => l.t === 'o' ? `<span class="otro">otro</span><span class="concepto">${l.nombre}</span>` : `<span class="pieza">pieza</span><span class="comp">${l.nombre}</span>`
+
+function pintar() {
+  document.querySelectorAll('.tipo button').forEach((b) => b.classList.toggle('on', b.dataset.tipo === tipo))
+  document.getElementById('sw').classList.toggle('on', agrupar)
+  document.getElementById('sw').setAttribute('aria-checked', String(agrupar))
+  document.getElementById('thead').innerHTML = `<tr><th>ID</th>${agrupar ? '' : '<th>Bloque</th>'}<th>Pedido</th><th>Componente / concepto</th>${agrupar ? '' : '<th>Proveedor</th>'}<th>Cant.</th><th>P.Unit.</th><th>EUR</th><th>Estado</th></tr>`
+  const fila = (l, b) => `<tr data-linea="${l.t}-${l.id}"><td>${idTxt(l)}</td>${agrupar ? '' : `<td>${b.id}</td>`}<td>${b.fecha}</td><td>${nombreTxt(l)}</td>${agrupar ? '' : `<td>${b.prov}</td>`}<td>${l.cant}</td><td>${l.precio.toFixed(2).replace('.', ',')}</td><td>${eur(l.cant * l.precio)}</td><td><span class="chip e-${l.estado}">${ESTADO[l.estado]}</span></td></tr>`
+  let html = '', total = 0, vistas = 0
+  for (const b of bloques) {
+    const ls = b.lineas.filter(pasaTipo)
+    total += b.lineas.length; vistas += ls.length
+    if (ls.length === 0) continue
+    if (agrupar) {
+      const cuenta = {}
+      b.lineas.forEach((l) => cuenta[l.estado] = (cuenta[l.estado] || 0) + 1)
+      const nOtros = b.lineas.filter((l) => l.t === 'o').length
+      const totalB = b.lineas.filter((l) => l.estado !== 'cancelado').reduce((s, l) => s + l.cant * l.precio, 0)
+      html += `<tr class="cab" data-bloque="${b.id}"><td colspan="7"><div class="cabflex">▼ <b>Bloque ${b.id}</b><i>·</i>${b.prov}<i>·</i>${b.fecha}<i>·</i>${lin(b.lineas.length)}${nOtros ? ` (${nOtros} ${nOtros === 1 ? 'otro' : 'otros'})` : ''}<i>·</i><b>${eur(totalB)}</b>${b.antiguo ? '<span class="ant">antiguo</span>' : ''}${Object.keys(cuenta).map((e) => `<span class="chip e-${e}">${cuenta[e]} ${ESTADO[e]}</span>`).join('')}${ls.length < b.lineas.length ? `<span class="mostrando">mostrando ${ls.length} de ${b.lineas.length}</span>` : ''}
+        <button class="puntos" aria-label="Acciones del bloque ${b.id}" onclick="abrirMenu(event, ${b.id})">⋮</button></div>${menuAbierto === b.id ? menuHtml(b) : ''}</td></tr>`
+    }
+    html += ls.map((l) => fila(l, b)).join('')
+  }
+  document.getElementById('tbody').innerHTML = html
+  document.getElementById('mostrando').textContent = tipo === 'todos' ? '' : `mostrando ${vistas} de ${total} líneas`
+}
+
+function menuHtml(b) {
+  const vivo = b.lineas.some((l) => ['pendiente', 'en_camino', 'parcial'].includes(l.estado))
+  const p = b.lineas.filter((l) => l.estado === 'pendiente').length, c = b.lineas.filter((l) => l.estado === 'en_camino').length
+  const e = (txt, acc, off, cls = '') => `<div class="${off ? 'off' : ''} ${cls}" role="menuitem" ${off ? '' : `onclick="elegir(event, '${acc}', ${b.id})"`}>${txt}</div>`
+  return `<div class="menu" role="menu">${e(`Confirmar bloque (${p})`, 'x', p === 0)}${e(`Recibir todo (${c})`, 'x', c === 0)}<hr>
+    ${e('Añadir líneas…', 'lineas', !vivo)}${e('Añadir otro… <span class="nueva">nuevo</span>', 'otro', !vivo, 'nuevo')}${e('Añadir previsión…', 'x', !vivo)}${e('Separar líneas…', 'x', !vivo)}${e('Juntar con…', 'x', true)}${e('Añadir nota…', 'x', false)}${e('Exportar bloque en CSV', 'x', false)}<hr>
+    ${e(`Cancelar bloque (${c})`, 'x', c === 0, 'peligro')}${e('Borrar bloque', 'x', p !== b.lineas.length, 'peligro')}</div>`
+}
+
+function abrirMenu(ev, id) { ev.stopPropagation(); menuAbierto = menuAbierto === id ? null : id; pintar() }
+document.addEventListener('click', () => { if (menuAbierto !== null) { menuAbierto = null; pintar() } })
+function ponerTipo(t) { tipo = t; pintar() }
+function alternarAgrupar() { agrupar = !agrupar; menuAbierto = null; pintar() }
+
+function elegir(ev, acc, id) {
+  ev.stopPropagation(); menuAbierto = null; pintar()
+  const b = bloques.find((x) => x.id === id)
+  if (acc === 'otro') return abrirBloque(b, 'o')
+  if (acc === 'lineas') return abrirBloque(b, 'p')
+  aviso('En el prototipo solo funcionan «Añadir líneas…» y «Añadir otro…».')
+}
+
+const lineaVacia = (t) => ({ k: sigK++, t, nombre: '', cant: 1, precio: 0, urg: false })
+function abrirNuevo() { dlg = { modo: 'nuevo', cajas: [{ prov: null, lineas: [] }], error: null, foco: null }; pintarDlg() }
+function abrirBloque(b, t) {
+  const l = lineaVacia(t)
+  dlg = { modo: 'bloque', idBloque: b.id, cajas: [{ prov: b.prov, lineas: [l] }], error: null, foco: l.k }
+  pintarDlg()
+}
+function cerrarDlg() { dlg = null; pintarDlg() }
+
+function pintarDlg() {
+  const host = document.getElementById('dlgHost')
+  if (!dlg) { host.innerHTML = ''; return }
+  const titulo = dlg.modo === 'bloque' ? `Añadir líneas · Bloque ${dlg.idBloque}` : 'Nuevo pedido'
+  const nTot = dlg.cajas.reduce((s, c) => s + c.lineas.length, 0)
+  let html = `<div class="overlay"><div class="dlg" role="dialog" aria-label="${titulo}"><h2>${titulo}</h2><div class="cuerpo">`
+  dlg.cajas.forEach((c, ci) => {
+    const destino = dlg.modo === 'bloque' ? `→ <b>Bloque ${dlg.idBloque}</b>` : c.prov ? `→ <select aria-label="Destino ${c.prov}">${PROVS[c.prov].bloque ? `<option>Añadir a Bloque ${PROVS[c.prov].bloque}</option>` : ''}<option>Bloque nuevo</option></select>` : ''
+    const provSel = c.prov ? `<span class="gnom">${c.prov}</span>` : `<select aria-label="Proveedor" onchange="elegirProv(${ci}, this.value)"><option value="">Elige el proveedor…</option>${Object.keys(PROVS).map((p) => `<option>${p}</option>`).join('')}</select>`
+    html += `<div class="grupo ${dlg.error && dlg.error.caja === ci ? 'err' : ''}" aria-label="${c.prov ? `Pedido a ${c.prov}` : 'Pedido sin proveedor'}"><div class="gcab">${provSel}<span class="gn">· ${lin(c.lineas.length)} · EUR</span>${destino}<span class="flex1"></span>${c.prov ? '<button class="btn">Añadir previsión (2)</button>' : ''}</div><div class="gcuerpo">`
+    if (!c.prov) html += '<div style="color:var(--texto-sub);padding:10px 4px">Elige el proveedor para añadir líneas.</div>'
+    else {
+      html += `<table class="lineas"><thead><tr><th></th><th>Componente / concepto</th><th>Cant.</th><th>P. unidad</th><th>Urg.</th><th></th></tr></thead><tbody>`
+      c.lineas.forEach((l, li) => {
+        const n = li + 1
+        const celda = l.t === 'o'
+          ? `<div class="celda"><span class="otro">otro</span><input class="txt concep" data-k="${l.k}" aria-label="Concepto línea ${n}" placeholder="Escribe el concepto (texto libre)…" value="${l.nombre}" oninput="cambiar(${ci}, ${l.k}, 'nombre', this.value)"></div>`
+          : `<div class="celda"><span class="pieza">pieza</span><select aria-label="Componente línea ${n}" onchange="cambiar(${ci}, ${l.k}, 'nombre', this.value)"><option value="">Escribe componente…</option>${PIEZAS.map((p) => `<option ${p === l.nombre ? 'selected' : ''}>${p}</option>`).join('')}</select></div>`
+        html += `<tr><td class="n">${n}</td><td>${celda}</td><td><input class="num" aria-label="Cantidad línea ${n}" value="${l.cant}" oninput="cambiar(${ci}, ${l.k}, 'cant', this.value)"></td><td><input class="num" aria-label="Precio línea ${n}" value="${l.precio}" oninput="cambiar(${ci}, ${l.k}, 'precio', this.value)"></td><td><input type="checkbox" aria-label="Urgente línea ${n}"></td><td><button class="quitar" aria-label="Quitar línea ${n}" onclick="quitar(${ci}, ${l.k})">🗑</button></td></tr>`
+      })
+      html += `</tbody></table><div class="gpie"><button class="mas" onclick="anadir(${ci}, 'p')">+ Añadir línea</button><button class="mas motro" onclick="anadir(${ci}, 'o')">+ Añadir otro</button></div>`
+    }
+    html += '</div></div>'
+  })
+  html += `</div>${dlg.error ? `<div class="error" role="alert">${dlg.error.texto}</div>` : ''}<div class="pie">${dlg.modo === 'nuevo' ? '<button class="btn" disabled style="opacity:.5">+ Otro proveedor</button>' : ''}<span class="flex1"></span><button class="btn" onclick="cerrarDlg()">Cancelar</button><button class="btn prim" onclick="confirmar()">Confirmar pedido</button></div></div></div>`
+  host.innerHTML = html
+  if (dlg.foco !== null) {
+    const el = host.querySelector(`input[data-k="${dlg.foco}"]`)
+    if (el) el.focus()
+    dlg.foco = null
+  }
+}
+
+function elegirProv(ci, p) { if (!p) return; dlg.cajas[ci].prov = p; pintarDlg() }
+function anadir(ci, t) { const l = lineaVacia(t); dlg.cajas[ci].lineas.push(l); dlg.foco = t === 'o' ? l.k : null; dlg.error = null; pintarDlg() }
+function quitar(ci, k) { dlg.cajas[ci].lineas = dlg.cajas[ci].lineas.filter((l) => l.k !== k); dlg.error = null; pintarDlg() }
+function cambiar(ci, k, campo, v) {
+  const l = dlg.cajas[ci].lineas.find((x) => x.k === k)
+  l[campo] = campo === 'nombre' ? v : Number(String(v).replace(',', '.')) || 0
+  if (dlg.error) { dlg.error = null; const e = document.querySelector('.error'); if (e) e.remove(); document.querySelectorAll('.grupo.err').forEach((g) => g.classList.remove('err')) }
+}
+
+function confirmar() {
+  for (let ci = 0; ci < dlg.cajas.length; ci++) {
+    const c = dlg.cajas[ci]
+    if (!c.prov) { dlg.error = { caja: ci, texto: 'Elige el proveedor.' }; return pintarDlg() }
+    if (c.lineas.length === 0) { dlg.error = { caja: ci, texto: 'Añade al menos una línea.' }; return pintarDlg() }
+    for (let i = 0; i < c.lineas.length; i++) {
+      const l = c.lineas[i]
+      if (!l.nombre.trim()) {
+        dlg.error = { caja: ci, texto: `${c.prov} · Línea ${i + 1}: ${l.t === 'o' ? 'escribe el concepto.' : 'selecciona un componente.'}` }
+        dlg.foco = l.t === 'o' ? l.k : null
+        return pintarDlg()
+      }
+    }
+  }
+  let n = 0
+  for (const c of dlg.cajas) {
+    let b = dlg.modo === 'bloque' ? bloques.find((x) => x.id === dlg.idBloque) : bloques.find((x) => x.id === PROVS[c.prov].bloque)
+    if (!b) { b = { id: 53, prov: c.prov, fecha: '14/10/2026', antiguo: false, lineas: [] }; bloques.unshift(b); PROVS[c.prov].bloque = 53 }
+    for (const l of c.lineas) { b.lineas.push({ t: l.t, id: l.t === 'o' ? sigO++ : sigP++, nombre: l.nombre.trim(), cant: l.cant, precio: l.precio, estado: 'pendiente' }); n++ }
+  }
+  dlg = null; pintarDlg(); pintar()
+  aviso(`Guardado: ${lin(n)}.`)
+}
+
+function aviso(t) {
+  const h = document.getElementById('toastHost')
+  h.innerHTML = `<div class="toast" role="status">${t}</div>`
+  clearTimeout(aviso.t); aviso.t = setTimeout(() => h.innerHTML = '', 3000)
+}
+
+pintar()
+</script>
+</body>
+</html>

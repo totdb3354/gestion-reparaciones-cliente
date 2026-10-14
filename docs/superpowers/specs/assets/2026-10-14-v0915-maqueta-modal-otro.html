@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Nuevo pedido con otro</title>
+<style>
+:root{--azul-noche:#001232;--azul-medio:#2C3B54;--azul-gris:#586376;--texto-sub:#8A94A6;--otro-bg:#EDE3F7;--otro-tx:#6A3FA0;--pieza-bg:#E3ECF7;--pieza-tx:#2F5A8A}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio);background:#9AA3B2;font-size:14px;padding:24px;display:flex;justify-content:center}
+.dlg{background:#DDE1E7;border-radius:14px;width:1060px;padding:26px 30px 24px;position:relative;box-shadow:0 20px 50px rgba(0,18,50,.35)}
+.cerrar{position:absolute;right:20px;top:14px;color:#586376;font-size:20px}
+h2{margin:0 0 18px;font-size:30px;font-weight:700;color:#2C3B54}
+.caja{background:#fff;border:1px solid #C4CAD4;border-radius:12px;overflow:hidden}
+.cab{display:flex;align-items:center;gap:10px;padding:14px 18px;background:#EEF0F5;border-bottom:1px solid #D5DAE2}
+.cab b{font-size:14.5px}
+.cab .gn{color:#586376;font-size:13px}
+.cab .flex{flex:1}
+.prev{border:1px solid #9AA4B4;border-radius:999px;padding:9px 20px;color:#8A94A6;font-weight:600;background:#fff}
+.x{color:#8A94A6;font-size:18px;margin-left:8px}
+.cuerpo{padding:12px 12px 14px}
+table{border-collapse:collapse;width:100%}
+th{background:#F3F4F7;text-align:left;font-size:13px;padding:10px 6px;color:#2C3B54}
+td{padding:6px 6px;vertical-align:middle}
+tr.sel td{background:#2C3B54;color:#F6F6F6}
+.pil{display:inline-block;width:46px;text-align:center;border-radius:6px;padding:2px 0;font-size:11px;font-weight:700}
+.pil.o{background:var(--otro-bg);color:var(--otro-tx)}
+.pil.pz{background:var(--pieza-bg);color:var(--pieza-tx)}
+.celda{display:flex;align-items:center;gap:8px}
+.comp{flex:1;border:1px solid #586376;border-radius:999px;padding:8px 14px;background:var(--azul-noche);color:#F6F6F6}
+.comp.ph{color:#8A94A6}
+.concep{flex:1;border:1px solid #B9A3D6;border-radius:999px;padding:8px 14px;background:#fff;color:#2C3B54}
+.concep.ph{color:#8A94A6}
+.num{display:inline-block;width:104px;border:1px solid #C4CAD4;border-radius:4px;padding:7px 10px;background:#fff;color:#2C3B54}
+.chk{width:18px;height:18px;border:1px solid #C4CAD4;border-radius:4px;background:#fff;display:inline-block}
+.basura{color:#C0392B;font-size:18px}
+.botones{display:flex;gap:10px;margin-top:12px}
+.b{border:1px solid #2C3B54;border-radius:999px;padding:11px 20px;background:#F6F6F6;font-weight:700;color:#001232}
+.b.otro{border-color:#8E6CBF;color:#6A3FA0}
+.pie{display:flex;align-items:center;gap:12px;margin-top:40px}
+.pie .flex{flex:1}
+.prim{background:#001232;color:#fff;border-color:#001232}
+.nota{font-size:12px;color:#586376;margin:10px 0 0}
+</style>
+</head>
+<body>
+<div class="dlg">
+  <span class="cerrar">✕</span>
+  <h2>Nuevo pedido</h2>
+  <div class="caja">
+    <div class="cab"><span>⌄</span><b>CHAO / FIXTECH</b><span class="gn">· 3 líneas · EUR</span>→ <b>Bloque nuevo</b><span class="gn">(no tiene ninguno abierto)</span><span class="flex"></span><span class="prev">Añadir previsión (0)</span><span class="x">✕</span></div>
+    <div class="cuerpo">
+      <table>
+        <thead><tr><th style="width:52%">Componente / concepto</th><th>Cant.</th><th>P.Unit.</th><th></th><th>Urg.</th><th>Total EUR</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><div class="celda"><span class="pil pz">pieza</span><span class="comp">bati13</span></div></td><td><span class="num">4</span></td><td><span class="num">12,50</span></td><td>€</td><td><span class="chk"></span></td><td>50,00 €</td><td><span class="basura">🗑</span></td></tr>
+          <tr><td><div class="celda"><span class="pil o">otro</span><span class="concep">Botonera iPhone 15 volumen</span></div></td><td><span class="num">10</span></td><td><span class="num">0,90</span></td><td>€</td><td><span class="chk"></span></td><td>9,00 €</td><td><span class="basura">🗑</span></td></tr>
+          <tr class="sel"><td><div class="celda"><span class="pil o">otro</span><span class="concep ph">Escribe el concepto…</span></div></td><td><span class="num">1</span></td><td><span class="num">0,00</span></td><td>€</td><td><span class="chk"></span></td><td>0,00 €</td><td><span class="basura">🗑</span></td></tr>
+        </tbody>
+      </table>
+      <div class="botones"><span class="b">+ Añadir línea</span><span class="b otro">+ Añadir otro</span></div>
+      <p class="nota">La fila seleccionada (la última, recién añadida con «+ Añadir otro») va en azul oscuro como hoy; las píldoras se leen igual sobre blanco y sobre azul.</p>
+    </div>
+  </div>
+  <div class="pie"><span class="b">+ Otro proveedor ⌄</span><span class="flex"></span><span class="b">Cancelar</span><span class="b prim">Confirmar pedido</span></div>
+</div>
+</body>
+</html>

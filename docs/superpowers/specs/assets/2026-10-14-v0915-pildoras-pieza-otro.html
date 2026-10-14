@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Píldora de pieza y otro</title>
+<style>
+:root{--azul-noche:#001232;--azul-medio:#2C3B54;--azul-gris:#586376;--texto-accion:#4A6FA5;--texto-sub:#8A94A6;--otro-bg:#EDE3F7;--otro-tx:#6A3FA0;--pieza-bg:#E3ECF7;--pieza-tx:#2F5A8A;--pend-bg:#FFF3D6;--pend-tx:#B26A00;--camino-bg:#BBDEFB;--camino-tx:#1565C0}
+body{margin:0;font-family:system-ui,'Segoe UI',sans-serif;color:var(--azul-medio);background:#DDE1E7;font-size:13px;padding:18px 22px}
+h2{margin:0 0 4px;font-size:19px}
+p.sub{margin:0 0 14px;color:var(--azul-gris)}
+.op{background:#fff;border:2px solid #CFD3DA;border-radius:10px;padding:10px 14px 12px;margin-bottom:12px;cursor:pointer;max-width:1000px}
+.op.selected{border-color:var(--azul-noche);box-shadow:0 0 0 2px #00123222}
+.op h3{margin:0 0 6px;font-size:13.5px}
+.op h3 small{font-weight:400;color:var(--azul-gris)}
+table{border-collapse:collapse;width:100%}
+th{background:#E8EAF0;color:var(--azul-gris);font-size:12px;text-align:left;padding:6px 8px}
+td{padding:6px 8px;border-top:1px solid #EEF0F3}
+.comp{color:var(--texto-accion);text-decoration:underline}
+.chip{border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+.p{background:var(--pend-bg);color:var(--pend-tx)}.c{background:var(--camino-bg);color:var(--camino-tx)}
+.pil{display:inline-block;width:44px;text-align:center;border-radius:6px;padding:1px 0;font-size:10.5px;font-weight:700;margin-right:8px}
+.pil.o{background:var(--otro-bg);color:var(--otro-tx)}
+.pil.pz{background:var(--pieza-bg);color:var(--pieza-tx)}
+.idotro{color:var(--otro-tx)}
+.tipo{width:60px}
+.dlg{margin-top:8px;padding:8px 10px;background:#F3F4F7;border-radius:8px}
+.dlg .fila{display:flex;align-items:center;gap:8px;margin:3px 0}
+.n{color:var(--texto-sub);width:14px}
+.sel{border-radius:999px;padding:5px 11px;background:var(--azul-noche);color:#F6F6F6;width:280px}
+.inp{border-radius:999px;padding:5px 11px;background:#fff;border:1px solid #B9A3D6;width:280px;color:var(--azul-medio)}
+.lbl{font-size:11px;color:var(--azul-gris);margin-bottom:2px}
+</style>
+</head>
+<body>
+<h2>Píldora en las dos: «pieza» y «otro»</h2>
+<p class="sub">Las dos píldoras tienen el mismo ancho, así que los nombres empiezan alineados. Abajo de cada opción, cómo quedan las líneas en «Nuevo pedido». Pulsa la que prefieras.</p>
+
+<div class="op" data-choice="c1" onclick="toggleSelect(this)">
+  <h3>C1 · Columna «Tipo» con la píldora <small>(una columna más, con su cabecera, como el filtro «Tipo»)</small></h3>
+  <table><thead><tr><th class="tipo">Tipo</th><th>ID</th><th>Componente / concepto</th><th>Cant.</th><th>Estado</th></tr></thead><tbody>
+    <tr><td class="tipo"><span class="pil pz">pieza</span></td><td>1301</td><td><span class="comp">Pantalla iPhone 13</span></td><td>3</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td class="tipo"><span class="pil pz">pieza</span></td><td>1302</td><td><span class="comp">Batería iPhone 12</span></td><td>5</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td class="tipo"><span class="pil o">otro</span></td><td class="idotro">O-88</td><td>Botonera iPhone 15 volumen</td><td>10</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td class="tipo"><span class="pil o">otro</span></td><td class="idotro">O-87</td><td>Alcohol isopropílico 1 L</td><td>2</td><td><span class="chip c">en camino</span></td></tr>
+  </tbody></table>
+  <div class="dlg"><div class="lbl">Nuevo pedido:</div>
+    <div class="fila"><span class="n">1</span><span class="pil pz">pieza</span><span class="sel">Pantalla iPhone 13 ▾</span></div>
+    <div class="fila"><span class="n">2</span><span class="pil o">otro</span><span class="inp">Botonera iPhone 15 volumen</span></div>
+  </div>
+</div>
+
+<div class="op" data-choice="c2" onclick="toggleSelect(this)">
+  <h3>C2 · Píldora delante del nombre, en la misma columna <small>(sin columna nueva; mismo efecto)</small></h3>
+  <table><thead><tr><th>ID</th><th>Componente / concepto</th><th>Cant.</th><th>Estado</th></tr></thead><tbody>
+    <tr><td>1301</td><td><span class="pil pz">pieza</span><span class="comp">Pantalla iPhone 13</span></td><td>3</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td>1302</td><td><span class="pil pz">pieza</span><span class="comp">Batería iPhone 12</span></td><td>5</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td class="idotro">O-88</td><td><span class="pil o">otro</span>Botonera iPhone 15 volumen</td><td>10</td><td><span class="chip p">pendiente</span></td></tr>
+    <tr><td class="idotro">O-87</td><td><span class="pil o">otro</span>Alcohol isopropílico 1 L</td><td>2</td><td><span class="chip c">en camino</span></td></tr>
+  </tbody></table>
+  <div class="dlg"><div class="lbl">Nuevo pedido:</div>
+    <div class="fila"><span class="n">1</span><span class="pil pz">pieza</span><span class="sel">Pantalla iPhone 13 ▾</span></div>
+    <div class="fila"><span class="n">2</span><span class="pil o">otro</span><span class="inp">Botonera iPhone 15 volumen</span></div>
+  </div>
+</div>
+</body>
+</html>
