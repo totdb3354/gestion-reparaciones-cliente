@@ -19,4 +19,5 @@
 ## 🔝 Barra de arriba
 
 Ya no tiene los botones de sección: queda el logo, la versión, la campana y tu usuario. **Gestionar técnicos** y **Ver
-logs** ya no están en el menú de usuario: están en el grupo Gestión de la columna.
+logs** ya no están en el menú de usuario: están en el grupo Gestión de la columna, como **Técnicos** y **Logs**. Ya no
+tienen el botón «Cerrar»: son pestañas como las demás (para volver, otra pestaña o el botón Atrás del navegador).

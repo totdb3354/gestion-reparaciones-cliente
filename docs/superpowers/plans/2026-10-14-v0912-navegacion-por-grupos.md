@@ -1466,3 +1466,15 @@ git -C "C:/Users/dev/Documents/ProgramaReparaciones" commit -m "docs: novedades 
    - revisión visual a 1366 y 1920 con los tres roles: columna abierta y plegada, algún grupo plegado, y comprobar que el admin cabe a 1366.
 4. **Producción** en horario (solo web), con el guion `Apuntes/prod-v0912.md`. Avisar al taller del cambio de navegación (texto en el spec §9). Registro, fecha del CHANGELOG, y tag `v0.9.12` cuando lo diga el usuario.
 5. Quitar el worktree `wt/web-0912` y la rama, con OK.
+
+## Ajuste tras la revisión final (2026-10-14)
+
+La revisión final encontró que pulsar la pestaña activa de Gestión (Técnicos o Logs) dejaba `volverA` apuntando a la propia página, y «Cerrar» no hacía nada. El usuario decidió **quitar «Cerrar»** de Técnicos y de Logs, porque ahora son pestañas como las demás. Con él se van `volverA`, `rutaVolverA` y el `state` de los enlaces; `gruposNav` pasa a ser `gruposNav(sesion)`.
+
+En la misma tanda se hicieron los menores de la revisión:
+- comentarios huérfanos en Stock y Proveedores;
+- comentarios viejos de Gestión;
+- títulos de las E2E;
+- notas de paridad (`shell.md`, `stock.md`, `logs.md` y `tecnicos.md`).
+
+Instrucciones: `.superpowers/sdd/v0912/fix-final-brief.md`. El spec (§2, §7 y §8) y las novedades están actualizados.

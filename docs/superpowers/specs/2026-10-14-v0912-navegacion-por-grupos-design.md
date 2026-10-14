@@ -49,7 +49,8 @@ En este orden. Las pestañas de Reparaciones dependen del rol, como hoy.
 - Las pestañas activas se marcan igual que hoy:
   - Historial también en `/reparaciones/historial/glass` y `/pulidos`; IMEIs también en el detalle de un IMEI;
   - Pendientes también en `/glass` y `/pulidos`; Pedidos también en `/stock/pedidos/otros`.
-- Los enlaces de Gestión pasan `state: { volverA: <ruta actual> }`, igual que hoy el menú de usuario. Así el botón «Cerrar» de Técnicos y de Logs vuelve a la página de la que se venía.
+- **Técnicos y Logs pierden el botón «Cerrar»** (decisión del usuario del 2026-10-14, tras la revisión final). «Cerrar» imitaba las ventanas aparte del JavaFX y volvía a la página de origen (`volverA`). Ahora son pestañas como las demás: para ir a otro sitio se pulsa otra pestaña, y para volver, el botón Atrás del navegador. Desaparecen `volverA`, `rutaVolverA` (`modules/gestion/navegacion.ts`) y el `state` de los enlaces.
+  - Motivo: con la pestaña siempre a la vista, pulsar la activa dejaba `volverA` apuntando a la propia página, y «Cerrar» no hacía nada.
 - La página de Estadísticas sigue siendo «pendiente de migrar». Solo cambia el nombre de su pestaña.
 
 ## 3. Comportamiento
@@ -117,7 +118,7 @@ En este orden. Las pestañas de Reparaciones dependen del rol, como hoy.
 
 ## 7. Código
 
-- **`shared/lib/enlaces.ts`:** nuevos tipos `IdGrupoNav = 'reparaciones' | 'stock' | 'estadisticas' | 'clientes' | 'gestion'` y `GrupoNav = { id: IdGrupoNav; titulo: string; enlaces: Enlace[] }`. `Enlace` gana un `state` opcional para el `volverA` de Gestión.
+- **`shared/lib/enlaces.ts`:** nuevos tipos `IdGrupoNav = 'reparaciones' | 'stock' | 'estadisticas' | 'clientes' | 'gestion'` y `GrupoNav = { id: IdGrupoNav; titulo: string; enlaces: Enlace[] }`. (El `state` opcional de `Enlace` para `volverA` se quitó tras la revisión final, con «Cerrar»: ver §2.)
 - **`modules/taller/componentes/BadgeSumaLateral.tsx` (nuevo):** la suma de la cabecera de un grupo plegado (Pendientes, Asignaciones o los dos), con los mismos hooks que los badges de cada pestaña.
 - **`test/server.ts`:** respuesta por defecto (a cero) de los contadores de Pendientes, porque su badge se monta ahora en todas las vistas.
 - **`app/shell/navegacion.ts` (nuevo):** `gruposNav(sesion, pathname)` devuelve los grupos del rol en el orden de §2.
@@ -143,7 +144,7 @@ Es una adaptación web, sin calco en el JavaFX.
 - **`navegacion.test.ts`:**
   - grupos y pestañas por rol (técnico, supertécnico y admin), en el orden de §2;
   - Gestión solo para el admin;
-  - los enlaces de Gestión llevan `volverA`.
+  - Técnicos y Logs sin «Cerrar» (ver §2).
 - **`preferencias.test.ts`:** leer y guardar los grupos plegados; con JSON roto, con grupos desconocidos y sin almacenamiento.
 - **`SubNav.test.tsx`** (se reescriben los tests que dependían de «una columna por sección»):
   - en cualquier ruta, incluidas `/estadisticas` y `/gestion/logs`, salen todos los grupos del rol;
