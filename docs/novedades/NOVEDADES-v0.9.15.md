@@ -10,7 +10,7 @@ ahora van **dentro del bloque** de su proveedor, junto a las piezas.
 - Ya no hay «Componentes | Otros»: cada bloque lleva sus **piezas** y sus **otros**.
 - Delante de cada línea, una píldora: **«pieza»** o **«otro»**. El número de un otro empieza por **«O-»** (por ejemplo
   O-88), para no confundirlo con el de una pieza.
-- El filtro **«Tipo»** enseña todo, solo las piezas o solo los otros.
+- Para encontrar un otro, escribe su concepto en el **buscador**.
 - Confirmar, recibir, cancelar, separar o juntar un bloque incluye sus otros. Recibir un otro **no cambia el stock**.
 
 ---

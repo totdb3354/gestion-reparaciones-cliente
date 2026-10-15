@@ -27,7 +27,7 @@ Es decir: lo que se le pide a un proveedor de una vez lleva piezas y otros junto
 
 **Decisiones del usuario:**
 - Un otro **forma parte del bloque de su proveedor**, igual que una pieza.
-- **Una sola lista** en Pedidos: desaparecen el toggle «Otros», su página y «Nuevo otro pedido». Hay un filtro «Tipo».
+- **Una sola lista** en Pedidos: desaparecen el toggle «Otros», su página y «Nuevo otro pedido». Sin filtro «Tipo»: el buscador encuentra los otros por su concepto (decisión del usuario 2026-10-15, en preprod; el prototipo aún lo enseña).
 - En «Nuevo pedido», **«+ Añadir otro»** junto a «+ Añadir línea». En el ⋮ del bloque, **«Añadir otro…»**.
 - Las líneas de otro van **aisladas de la previsión**.
 - Los **otros que ya existen** entran en bloques antiguos (§3.3).
@@ -157,7 +157,7 @@ El contrato OpenAPI se actualiza (`OpenApiContractTest`).
 - **Lo que desaparece:**
   - el toggle «Componentes | Otros», la ruta propia de Otros y el botón «Nuevo otro pedido»;
   - `NuevoOtroPedidoDialog`, `abrirNuevoOtroPedido` y su caso en `FormulariosPedido`.
-- **La dirección antigua** `/stock/pedidos/otros` redirige a `/stock/pedidos` con el filtro «Tipo: Otros».
+- **La dirección antigua** `/stock/pedidos/otros` redirige a `/stock/pedidos`.
 - **Datos:** la página junta `GET /api/compras` y `GET /api/compras-otros` en una lista de líneas, cada una con su tipo.
   - La clave de fila y de selección es `p-{id}` u `o-{id}`.
   - `agruparEnBloques`, `ordenarPorBloques`, `situacion`, `resumenEstados`, `totalBloque`, `lineasQueCambian` y el resto de las reglas de bloque trabajan con las dos.
@@ -165,11 +165,8 @@ El contrato OpenAPI se actualiza (`OpenApiContractTest`).
   - Delante del nombre, una píldora de ancho fijo: **«pieza»** (azul suave) u **«otro»** (lila). Así los nombres quedan alineados.
   - La pieza mantiene su enlace a Stock; el otro no lleva enlace.
 - **Columna ID:** «O-{id}» para un otro.
-- **Filtro «Tipo»**, en la barra de filtros: segmentado «Todos | Piezas | Otros», que por defecto está en «Todos».
-  - Cuenta como filtro: con un tipo elegido, los bloques salen desplegados y con «mostrando k de n».
-  - «Limpiar filtros» lo devuelve a «Todos».
-  - Se recuerda igual que los demás filtros de Pedidos.
-  - Los filtros Estado, Proveedor, Desde/Hasta y el buscador valen para las dos. El buscador busca también en el concepto.
+- **Filtros:** Estado, Proveedor, Desde/Hasta y el buscador valen para las dos. El buscador busca también en el concepto.
+  - No hay filtro «Tipo»: se implementó («Todos | Piezas | Otros») y el usuario lo quitó el 2026-10-15 tras verlo en preprod; con el buscador basta.
 - **Cabecera del bloque:** «{n líneas} ({m} otro/otros)» cuando hay otros. El total y el resumen de estados cuentan los dos; «! N sin precio» también cuenta los otros recibidos a 0.
 - **Vista plana** («Agrupar por bloque» desactivado): piezas y otros juntos, con la columna «Bloque» y la columna «Proveedor».
 - **Orden de los bloques** (cambia la regla 7 de la 0.9.9): primero por **fecha del bloque**, de más reciente a más antigua, y a igual fecha por número descendente. «Sin bloque» sigue al final.
@@ -258,11 +255,10 @@ Afecta al general («Descargar CSV») y a «Exportar bloque en CSV».
   - agrupar líneas mixtas;
   - situación, total y resumen;
   - `lineasQueCambian` con otros;
-  - filtro «Tipo»;
   - buscador por concepto.
 - **Pedidos:**
   - lista mezclada con píldoras y «O-{id}»;
-  - filtro «Tipo» y «mostrando k de n»;
+  - buscador por concepto y «mostrando k de n»;
   - menú de fila de un otro, incluido «Mover a bloque»;
   - ⋮ «Añadir otro…»;
   - la ruta antigua `/stock/pedidos/otros`.
