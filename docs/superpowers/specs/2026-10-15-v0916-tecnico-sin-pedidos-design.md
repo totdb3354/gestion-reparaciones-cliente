@@ -85,7 +85,9 @@ Cualquier sesión que no sea SUPERTECNICO ni ADMIN (también sin sesión) se tra
 - Test de roles nuevo, al estilo de `RolesBloquesCompraTest`: TECNICO recibe `403` en `GET /api/compras`, `/api/compras-otros` y `/api/proveedores`; SUPERTECNICO y ADMIN, `200`.
 - Ningún test del servidor pide hoy esas lecturas con el TECNICO (comprobado), así que no hay que cambiar ninguno.
 
-**E2E:** `gestion.spec.ts` no usa Pedidos con el técnico; no cambia. En preprod se comprueba con las tres cuentas de `~/.env.e2e`: el técnico no tiene las pestañas y por URL vuelve a Stock; SUPERTECNICO y ADMIN, como antes.
+**E2E:** `gestion.spec.ts` y `columna-lateral.spec.ts` (esta con el supertécnico) no usan Pedidos con el técnico; no cambian. Una E2E nueva de solo lectura, `roles-stock.spec.ts`, lo comprueba en preprod con las tres cuentas de `~/.env.e2e`:
+- el técnico no tiene las pestañas, por URL vuelve a Stock y la API le da 403;
+- SUPERTECNICO y ADMIN siguen como antes, con 200.
 
 ## 7. Fuera de alcance
 
