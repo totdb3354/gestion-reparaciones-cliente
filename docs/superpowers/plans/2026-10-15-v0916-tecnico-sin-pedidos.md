@@ -890,7 +890,7 @@ git commit -m "docs: version 0.9.16, changelog y paridad del tecnico sin pedidos
 - Create: `Apuntes/preprod/v0916-preprod.md` (guion; fuera de los repos).
 - Modify: `Apuntes/despliegue_preprod.md` (registro).
 
-- [ ] **Step 1: Guion**
+- [x] **Step 1: Guion**
 
 Basado en `preprod/v0915-preprod.md`, **sin ningún paso de base de datos**: no hay migración ni reconstrucción. **Cada bloque empieza con `hostname` y el seguro de `backup-erp.sh`.**
 
@@ -904,7 +904,7 @@ Basado en `preprod/v0915-preprod.md`, **sin ningún paso de base de datos**: no 
   - E2E de una en una, con ≥ 60 s entre ficheros: `roles-stock` (nueva), `stock`, `pedidos` y `columna-lateral`.
 - **Vuelta atrás:** código anterior (servidor `c65ce4f`, web `ead5a0f`) y `up -d --build`.
 
-- [ ] **Step 2: Ejecución con el usuario y registro**
+- [x] **Step 2: Ejecución con el usuario y registro**
 
 1. El usuario pega los bloques y Claude valida cada salida antes de seguir.
 2. Al final, entrada en `despliegue_preprod.md` con los commits y el resultado de las E2E.
@@ -918,7 +918,7 @@ Basado en `preprod/v0915-preprod.md`, **sin ningún paso de base de datos**: no 
 - Create: `Apuntes/prod-v0916.md` (guion).
 - Modify: `Apuntes/despliegue_vdc_produccion.md` (registro).
 
-- [ ] **Step 1: Guion**
+- [x] **Step 1: Guion**
 
 Basado en `prod-v0915.md`, sin los pasos de base de datos. **Cada bloque empieza con `hostname` y la comprobación `PRODUCCIÓN (ok)`.**
 
@@ -933,7 +933,7 @@ Basado en `prod-v0915.md`, sin los pasos de base de datos. **Cada bloque empieza
 - **Aviso al taller:** «Hemos actualizado el programa. Pedidos y Proveedores ya solo los ven los supertécnicos; lo que está en camino se sigue viendo en Stock actual. Recargad la página. Novedades en `NOVEDADES-v0.9.16`.»
 - **Vuelta atrás:** servidor `c65ce4f` y web `ead5a0f` + `up -d --build`, en cualquier orden.
 
-- [ ] **Step 2: Ejecución con el usuario y cierre**
+- [x] **Step 2: Ejecución con el usuario y cierre**
 
 1. Registro en `despliegue_vdc_produccion.md`.
 2. Fecha real en `[0.9.16]` del CHANGELOG de la web: commit, push y gitlink.
