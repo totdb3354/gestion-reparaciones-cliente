@@ -89,6 +89,9 @@ Mismo patrón que `reconstruir-bloques-compra.sql` de la 0.9.9:
 
 Todas las consultas de bloque cuentan las dos tablas:
 - **Bloque abierto más reciente** (`SQL_ABIERTO`): tiene alguna línea y ninguna, ni pieza ni otro, distinta de pendiente.
+  - **Un bloque antiguo (`RECONSTRUIDO`) nunca se prefiere a uno actual** (decisión del usuario, 2026-10-15). Se ordena primero por `RECONSTRUIDO` y luego por número descendente, así que uno antiguo solo se elige si no hay otro abierto.
+  - Motivo: la reconstrucción puede crear un bloque antiguo con solo otros pendientes. Sería «abierto» y tendría el número más alto, y se llevaría lo que se pida por defecto a ese proveedor.
+  - La web hace lo mismo al proponer el destino.
 - **Líneas del bloque** (`lineas`): unión de las dos tablas.
   - Cada `LineaBloque` lleva `tipo` (`PIEZA` u `OTRO`), el id, el nombre (el `TIPO` del componente o el `CONCEPTO`), la cantidad, el estado y el `updatedAt`.
   - Orden: `FECHA_PEDIDO` y luego tipo e id.
@@ -96,7 +99,7 @@ Todas las consultas de bloque cuentan las dos tablas:
 
 ### 4.2 Altas
 
-**`POST /api/compras/lote`** (el que usa «Nuevo pedido») acepta además `otros`: una lista de `{idProv, concepto, cantidad, esUrgente, precioUnidad, divisa}`.
+**`POST /api/compras/lote`** (el que usa «Nuevo pedido») acepta además `otros`: una lista de `{idProv, concepto, cantidad, esUrgente, precioUnidad}`. Es el mismo registro del lote de otros de hoy, sin divisa: la divisa es la del proveedor.
 - **Destino:** las piezas y los otros de un mismo proveedor van al **mismo bloque**: el de `destinos`, o si no viene, el abierto más reciente o uno nuevo. Se resuelve una vez por proveedor (`bloquePorProveedor`), igual que hoy.
 - **Una sola transacción** y la misma clave de idempotencia de hoy.
 - **Validación de los otros:** las reglas del lote de otros de hoy (`ValidacionPedidos`):
@@ -313,7 +316,7 @@ La guía dirá si se hace en horario según el recuento.
 - Hasta que el taller recarga la página, la web 0.9.14 no conoce los otros de un bloque mixto. Borrar o juntar ese bloque desde ella da 409 («modificado por otro usuario») y no cambia nada.
 
 **Documentación:**
-- CHANGELOG `[0.9.15]` de servidor y web;
+- CHANGELOG `[0.9.15]` de la web. El servidor no tiene CHANGELOG: su contrato va en `docs/api_contract.md`;
 - `docs/novedades/NOVEDADES-v0.9.15.md`;
 - la ficha de paridad de Pedidos;
 - las guías `Apuntes/preprod/v0915-preprod.md` y `Apuntes/prod-v0915.md`.
