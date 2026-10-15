@@ -68,7 +68,7 @@
 - Consumes: nada nuevo (parte de `main` `c65ce4f`).
 - Produces: `GET /api/compras`, `GET /api/compras/en-camino`, `GET /api/compras-otros` y `GET /api/proveedores` responden `403` al TECNICO y `200` a SUPERTECNICO y ADMIN. La web (Tasks 2 y 3) deja de pedirlas con el técnico.
 
-- [ ] **Step 1: Worktree**
+- [x] **Step 1: Worktree**
 
 ```bash
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor worktree add /c/Users/dev/Documents/wt/servidor-0916 -b dev_v0916_tecnico_sin_pedidos main
@@ -77,7 +77,7 @@ git -C /c/Users/dev/Documents/wt/servidor-0916 log --oneline -1
 
 Expected: `c65ce4f merge: los otros pedidos dentro del bloque de su proveedor (0.9.15)`. Todos los comandos de esta tarea se lanzan en Git Bash dentro de `/c/Users/dev/Documents/wt/servidor-0916`, después del `export` de **Comandos**.
 
-- [ ] **Step 2: Test que falla**
+- [x] **Step 2: Test que falla**
 
 Crea `src/test/java/com/reparaciones/servidor/controller/RolesLecturasPedidosTest.java`:
 
@@ -155,12 +155,12 @@ class RolesLecturasPedidosTest {
 
 Los DAOs mockeados devuelven listas vacías por defecto (Mockito), así que las lecturas permitidas responden `200` con `[]`.
 
-- [ ] **Step 3: Comprobar que falla**
+- [x] **Step 3: Comprobar que falla**
 
 Run: `mvn -q test -Dtest=RolesLecturasPedidosTest`
 Expected: FAIL en `elTecnicoRecibe403SinLlegarAlDao` (`Status expected:<403> but was:<200>`). `supertecnicoYAdminLasLeen` pasa.
 
-- [ ] **Step 4: Quitar TECNICO de las cuatro lecturas**
+- [x] **Step 4: Quitar TECNICO de las cuatro lecturas**
 
 En `CompraController.java`, las dos primeras anotaciones (líneas 49 y 55):
 
@@ -203,12 +203,12 @@ Comprueba que no queda ninguna lectura de pedidos ni proveedores con TECNICO:
 Run: `grep -n "TECNICO')" src/main/java/com/reparaciones/servidor/controller/CompraController.java src/main/java/com/reparaciones/servidor/controller/CompraOtroController.java src/main/java/com/reparaciones/servidor/controller/ProveedorController.java`
 Expected: sin salida.
 
-- [ ] **Step 5: Comprobar que pasa**
+- [x] **Step 5: Comprobar que pasa**
 
 Run: `mvn -q test -Dtest=RolesLecturasPedidosTest`
 Expected: PASS (2 tests).
 
-- [ ] **Step 6: Documentación de autorización**
+- [x] **Step 6: Documentación de autorización**
 
 En `docs/autorizacion_endpoints.md`, en el punto **Lecturas (GET)** (línea 35), tras `…y el detalle de edición de una reparación (SUPERTECNICO).`, añade:
 
@@ -218,12 +218,12 @@ En `docs/autorizacion_endpoints.md`, en el punto **Lecturas (GET)** (línea 35),
 
 Es una frase más del mismo párrafo: va en la misma línea, separada por un espacio.
 
-- [ ] **Step 7: Suite completa**
+- [x] **Step 7: Suite completa**
 
 Run: `mvn -q test`
 Expected: `BUILD SUCCESS`, sin fallos. Ningún test de hoy pide esas lecturas con el TECNICO (comprobado al escribir la spec).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/test/java/com/reparaciones/servidor/controller/RolesLecturasPedidosTest.java \
@@ -256,7 +256,7 @@ git commit -m "feat: pedidos y proveedores solo para supertecnico y admin (0.9.1
   - `enlacesStock(sesion: Sesion | null): Enlace[]` en `@/modules/almacen/rutas`. Con `esAdminOSuperTecnico(sesion)` devuelve «Stock actual», «Pedidos» y «Proveedores»; si no, solo «Stock actual».
   - `RequiereAccesoPedidos()` en `@/modules/almacen/rutas`: guarda de layout (`<Outlet />`). Sin permiso, `mostrarError(MSG_SIN_PERMISOS)` y `<Navigate to="/stock" replace />`.
 
-- [ ] **Step 1: Worktree de la web**
+- [x] **Step 1: Worktree de la web**
 
 ```bash
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web worktree add /c/Users/dev/Documents/wt/web-0916 -b dev_v0916_tecnico_sin_pedidos main
@@ -265,14 +265,14 @@ cd /c/Users/dev/Documents/wt/web-0916 && git log --oneline -1 && npm ci
 
 Expected: `ead5a0f docs: fecha de la 0.9.15 en el changelog` y `npm ci` sin errores. Todos los comandos de las Tasks 2 a 5 se lanzan dentro de `/c/Users/dev/Documents/wt/web-0916`.
 
-- [ ] **Step 2: Renombrar los dos ficheros**
+- [x] **Step 2: Renombrar los dos ficheros**
 
 ```bash
 git mv src/modules/almacen/rutas.ts src/modules/almacen/rutas.tsx
 git mv src/modules/almacen/rutas.test.ts src/modules/almacen/rutas.test.tsx
 ```
 
-- [ ] **Step 3: Tests que fallan (enlaces y guarda)**
+- [x] **Step 3: Tests que fallan (enlaces y guarda)**
 
 Sustituye `src/modules/almacen/rutas.test.tsx` entero por:
 
@@ -353,12 +353,12 @@ En `src/app/shell/navegacion.test.ts`, sustituye los dos primeros `it` (líneas 
   })
 ```
 
-- [ ] **Step 4: Comprobar que fallan**
+- [x] **Step 4: Comprobar que fallan**
 
 Run: `npx vitest run src/modules/almacen/rutas.test.tsx src/app/shell/navegacion.test.ts`
 Expected: FAIL. `RequiereAccesoPedidos` no existe y el técnico aún tiene «Pedidos» y «Proveedores».
 
-- [ ] **Step 5: `enlacesStock(sesion)` y la guarda**
+- [x] **Step 5: `enlacesStock(sesion)` y la guarda**
 
 Sustituye `src/modules/almacen/rutas.tsx` entero por:
 
@@ -419,12 +419,12 @@ export function gruposNav(sesion: Sesion | null): GrupoNav[] {
 
 El resto de la función no cambia.
 
-- [ ] **Step 6: Comprobar que pasan**
+- [x] **Step 6: Comprobar que pasan**
 
 Run: `npx vitest run src/modules/almacen/rutas.test.tsx src/app/shell/navegacion.test.ts`
 Expected: PASS.
 
-- [ ] **Step 7: La guarda en el router**
+- [x] **Step 7: La guarda en el router**
 
 En `src/app/router.tsx`, añade el import tras el de `ProveedoresPage` (línea 3):
 
@@ -449,7 +449,7 @@ Y sustituye las líneas 77-80 (`/stock/pedidos`, su comentario, `/stock/pedidos/
 
 `{ path: '/stock', element: <StockPage /> }` (línea 76) se queda encima, fuera de la guarda.
 
-- [ ] **Step 8: SubNav con el técnico sin Pedidos**
+- [x] **Step 8: SubNav con el técnico sin Pedidos**
 
 En `src/app/shell/SubNav.test.tsx`:
 
@@ -504,7 +504,7 @@ En `src/app/shell/SubNav.test.tsx`:
 
 Las tres líneas entre grupos (`toHaveLength(3)`) no cambian.
 
-- [ ] **Step 9: TopBar, Pedidos y Proveedores sin el técnico**
+- [x] **Step 9: TopBar, Pedidos y Proveedores sin el técnico**
 
 En `src/app/shell/TopBar.test.tsx`, línea 36: `ruta: '/stock/proveedores'` → `ruta: '/stock'`. El test va de «Cambiar contraseña» y vale cualquier ruta que el técnico vea.
 
@@ -548,7 +548,7 @@ En `src/modules/almacen/pedidos/api.ts`, los dos comentarios:
 - Línea 15: `/** GET /api/compras (los tres roles). …` → `/** GET /api/compras (SUPERTECNICO y ADMIN desde la 0.9.16). …`. El resto del comentario no cambia.
 - Línea 28: `/** GET /api/compras-otros (los tres roles), con las mismas reglas que useCompras. */` → `/** GET /api/compras-otros (SUPERTECNICO y ADMIN desde la 0.9.16), con las mismas reglas que useCompras. */`.
 
-- [ ] **Step 10: Tests de la tarea, tipos y lint**
+- [x] **Step 10: Tests de la tarea, tipos y lint**
 
 Run: `npx vitest run src/modules/almacen/rutas.test.tsx src/app/shell src/modules/almacen/pedidos/PedidosPage.test.tsx src/modules/almacen/proveedores/ProveedoresPage.test.tsx`
 Expected: PASS.
@@ -556,7 +556,7 @@ Expected: PASS.
 Run: `npx tsc -b && npm run lint`
 Expected: sin errores. El aviso de `BadgeEstadoPedido.tsx` ya existía.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add src/modules/almacen/rutas.tsx src/modules/almacen/rutas.test.tsx \
@@ -581,7 +581,7 @@ git commit -m "feat: el tecnico sin pedidos ni proveedores en la columna y por u
 - Consumes: nada de la Task 2 (son ficheros distintos); el técnico ya no tiene Pedidos.
 - Produces: `crearColumnasStock({ onEnCamino?, conPrevision?, onAutoPedido? })`. Sin `onEnCamino`, la celda «En Camino» enseña el número como texto. `StockPage` solo lo pasa con `veEnCamino` (SUPERTECNICO y ADMIN).
 
-- [ ] **Step 1: Tests que fallan**
+- [x] **Step 1: Tests que fallan**
 
 En `src/modules/almacen/stock/columnas.test.tsx`, tras el caso `"En Camino" a 0 es texto "—"; > 0 es un enlace azul que avisa con el componente` (líneas 38-46), añade:
 
@@ -614,12 +614,12 @@ En `src/modules/almacen/stock/StockPage.test.tsx`, sustituye el caso `el TECNICO
   })
 ```
 
-- [ ] **Step 2: Comprobar que fallan**
+- [x] **Step 2: Comprobar que fallan**
 
 Run: `npx vitest run src/modules/almacen/stock/columnas.test.tsx src/modules/almacen/stock/StockPage.test.tsx`
 Expected: FAIL en los tres casos nuevos o cambiados. `crearColumnasStock({})` no compila con `onEnCamino` obligatorio (Vitest no comprueba tipos, así que en ejecución sale el botón y falla la aserción). El gráfico del técnico dice `Pedido 0` y su «En Camino» es un botón.
 
-- [ ] **Step 3: `onEnCamino` opcional**
+- [x] **Step 3: `onEnCamino` opcional**
 
 En `src/modules/almacen/stock/columnas.tsx`, la firma (línea 70):
 
@@ -647,7 +647,7 @@ Y la celda de «En Camino» (líneas 85-95):
     },
 ```
 
-- [ ] **Step 4: StockPage: enlace y gráfico por rol**
+- [x] **Step 4: StockPage: enlace y gráfico por rol**
 
 En `src/modules/almacen/stock/StockPage.tsx`, sustituye las líneas 128-135 (el comentario del gráfico, `filaGrafico`, `graficoSku`, `irAPedidos` y `columnas`) por:
 
@@ -664,7 +664,7 @@ En `src/modules/almacen/stock/StockPage.tsx`, sustituye las líneas 128-135 (el 
     [irAPedidos, veEnCamino, marcarAutoPedido])
 ```
 
-- [ ] **Step 5: Comprobar que pasan**
+- [x] **Step 5: Comprobar que pasan**
 
 Run: `npx vitest run src/modules/almacen/stock`
 Expected: PASS, también `"En Camino" > 0 navega a Pedidos con los tres estados y el buscador` (SUPERTECNICO) y los del gráfico del supertécnico (`Stock 2, Pedido 4`).
@@ -672,7 +672,7 @@ Expected: PASS, también `"En Camino" > 0 navega a Pedidos con los tres estados 
 Run: `npx tsc -b && npm run lint`
 Expected: sin errores.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/almacen/stock/columnas.tsx src/modules/almacen/stock/columnas.test.tsx \
@@ -692,7 +692,7 @@ git commit -m "feat: en camino sin enlace y grafico con lo pedido para el tecnic
 - Consumes: el comportamiento de las Tasks 1-3, desplegado en preprod (Task 6). Usa las variables `TEC_USER`/`TEC_PASS`, `E2E_USER`/`E2E_PASS` y `ADMIN_USER`/`ADMIN_PASS` de `~/.env.e2e`.
 - Produces: `roles-stock.spec.ts`, que la Task 6 lanza contra preprod.
 
-- [ ] **Step 1: La E2E**
+- [x] **Step 1: La E2E**
 
 Crea `tests/e2e/roles-stock.spec.ts`:
 
@@ -754,7 +754,7 @@ for (const [rol, varUsuario, varClave] of [['supertécnico', 'E2E_USER', 'E2E_PA
 }
 ```
 
-- [ ] **Step 2: Línea en `.env.e2e.example`**
+- [x] **Step 2: Línea en `.env.e2e.example`**
 
 Al final de `.env.e2e.example`, con una línea en blanco antes:
 
@@ -763,7 +763,7 @@ Al final de `.env.e2e.example`, con una línea en blanco antes:
 # comprueba que no hay Pedidos ni Proveedores (columna, URL y API 403); con E2E_USER y ADMIN_USER, que si (200).
 ```
 
-- [ ] **Step 3: Que Playwright la encuentre y compile**
+- [x] **Step 3: Que Playwright la encuentre y compile**
 
 Run: `npx playwright test --list tests/e2e/roles-stock.spec.ts`
 Expected: 3 tests listados (`el técnico no tiene…`, `el supertécnico sigue…`, `el admin sigue…`). No se lanza aquí: necesita preprod con la 0.9.16 (Task 6).
@@ -771,7 +771,7 @@ Expected: 3 tests listados (`el técnico no tiene…`, `el supertécnico sigue�
 Run: `npx tsc -b && npm run lint`
 Expected: sin errores.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/e2e/roles-stock.spec.ts .env.e2e.example
@@ -792,12 +792,12 @@ git commit -m "test: e2e de solo lectura de pedidos y proveedores por rol (0.9.1
 - Consumes: todo lo de las Tasks 1 a 4.
 - Produces: las ramas `dev_v0916_tecnico_sin_pedidos` (servidor y web) listas para el merge.
 
-- [ ] **Step 1: Versión de la web**
+- [x] **Step 1: Versión de la web**
 
 Run (en `/c/Users/dev/Documents/wt/web-0916`): `npm version 0.9.16 --no-git-tag-version`
 Expected: `v0.9.16`; `package.json` y las dos entradas de la raíz de `package-lock.json` en `0.9.16`.
 
-- [ ] **Step 2: CHANGELOG de la web**
+- [x] **Step 2: CHANGELOG de la web**
 
 En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su línea en blanco, antes de `## [0.9.15]`:
 
@@ -809,7 +809,7 @@ En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su 
 - Requiere el servidor 0.9.16: las lecturas de pedidos y proveedores (`GET /api/compras`, `/api/compras-otros` y `/api/proveedores`) dan 403 al técnico.
 ```
 
-- [ ] **Step 3: Fichas de paridad**
+- [x] **Step 3: Fichas de paridad**
 
 Al final de `docs/paridad/pedidos.md`, con una línea en blanco antes:
 
@@ -831,7 +831,7 @@ Diferencias deliberadas, decididas en la spec `2026-10-15-v0916-tecnico-sin-pedi
 - La barra «Pedido» del gráfico por SKU del técnico usa el «En Camino» de la fila; en el JavaFX y hasta la 0.9.15 iba a 0 (`StockPage.test.tsx`).
 ```
 
-- [ ] **Step 4: Novedades (raíz, sin commit)**
+- [x] **Step 4: Novedades (raíz, sin commit)**
 
 Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.16.md`:
 
@@ -856,7 +856,7 @@ Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.
 Nada cambia: Pedidos y Proveedores siguen igual (el administrador, en solo lectura).
 ```
 
-- [ ] **Step 5: Suites completas**
+- [x] **Step 5: Suites completas**
 
 Run (servidor): `mvn -q test` en `/c/Users/dev/Documents/wt/servidor-0916`
 Expected: `BUILD SUCCESS`, sin fallos. Anota el total de tests en el informe.
@@ -867,14 +867,14 @@ Expected: lint con 0 errores (el aviso de `BadgeEstadoPedido.tsx` ya existía), 
 Run (web): `npm run build`
 Expected: build sin errores.
 
-- [ ] **Step 6: Commit de la web**
+- [x] **Step 6: Commit de la web**
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md docs/paridad/pedidos.md docs/paridad/stock.md
 git commit -m "docs: version 0.9.16, changelog y paridad del tecnico sin pedidos"
 ```
 
-- [ ] **Step 7: Entrega (controlador, con OK del usuario)**
+- [x] **Step 7: Entrega (controlador, con OK del usuario)**
 
 1. Revisión final de las dos ramas.
 2. Con el OK del usuario:
