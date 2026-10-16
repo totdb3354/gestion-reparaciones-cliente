@@ -1,6 +1,8 @@
 # Pieza 1 del módulo de teléfonos — Stock de teléfonos y rastro (espejo de NSYS)
 
-Fecha: 2026-10-16. Estado: **aprobada** por el usuario el 16/10; pendiente del plan.
+Fecha: 2026-10-16. Estado: **aprobada** por el usuario el 16/10. Versión **0.9.17**; plan:
+`docs/superpowers/plans/2026-10-16-v0917-pieza1-stock-telefonos.md`. Los ajustes que salieron al escribir el plan ya
+están recogidos aquí (§4, §5, §7, §8 y §11).
 
 Toca **base de datos** (cinco tablas nuevas, migración aditiva), **servidor** y **web**. Parte de servidor `main`
 `83be807` y web `main` `4aca632` (0.9.16).
@@ -88,13 +90,16 @@ Una fila por móvil y lote, tal como está en la última exportación.
 | `BATCH` | VARCHAR(40) | Lote. **PK (`IMEI_SN`, `BATCH`)**: el par es único (un IMEI se repite si vuelve a entrar) |
 | `GOODS`, `GRADE`, `STATUS`, `LOCATION`, `SUPPLIER` | VARCHAR | Tal cual NSYS |
 | `RECEIVING_DATE`, `SOLD_DATE` | DATE | Fechas de NSYS (solo el día) |
-| `SKU`, `MODELO`, `CAPACIDAD`, `COLOR`, `GRADO_DETALLE`, `ES_ESIM` | | Traducidos con el maestro (§4.4). `MODELO` es el código del ERP (`13pro`…). `NULL` si no está en el maestro |
-| `UBICACION` | VARCHAR(30) | Ubicación del ERP traducida (§4.5); `NULL` si la caja no se trae |
-| `UBICACION_ULTIMA` | VARCHAR(30) | Última ubicación del ERP antes de pasar a «Pedidos realizados» |
+| `SKU`, `MODELO`, `MODELO_MAESTRO`, `CAPACIDAD`, `COLOR`, `GRADO_DETALLE`, `ES_ESIM` | | Traducidos con el maestro (§4.4). `MODELO` es el código del ERP (`13pro`…): `NULL` si no está en el maestro o si el código no está en el catálogo del ERP (§7). `MODELO_MAESTRO` es el texto del maestro, para enseñar algo en ese caso |
+| `UBICACION` | VARCHAR(40) | Ubicación del ERP traducida (§4.5); `NULL` si la caja no se trae |
+| `UBICACION_ULTIMA` | VARCHAR(40) | Última ubicación del ERP antes de pasar a «Pedidos realizados» |
 | `ESTADO` | ENUM | `STOCK`, `DE_PEDIDO`, `NO_CUENTA`, `VENDIDO`, `BAJA` (§4.6) |
-| `VISTO_PRIMERO`, `VISTO_ULTIMO`, `CAMBIADO` | DATETIME | Horas de exportación |
+| `VISTO_PRIMERO`, `CAMBIADO` | DATETIME | Horas de exportación |
 
-Índices: `IMEI_SN` (búsqueda), `ESTADO`, (`MODELO`, `CAPACIDAD`).
+Índices: `IMEI_SN` (por la PK, búsqueda), `ESTADO`, (`MODELO`, `CAPACIDAD`).
+
+No hay `VISTO_ULTIMO`: la hora de la última importación `OK` ya dice cuándo se vio todo por última vez, y así una
+importación sin cambios no reescribe las 70.000 filas.
 
 ### 4.2 `Nsys_evento` — el historial para el rastro
 
@@ -106,8 +111,8 @@ Solo se añade, nunca se modifica.
 | `IMEI_SN`, `BATCH` | VARCHAR(40) | El móvil |
 | `FECHA` | DATETIME | Hora de la exportación en que se vio el cambio |
 | `SOLO_DIA` | BOOLEAN | `true` en el esqueleto (fechas de NSYS sin hora) |
-| `TIPO` | ENUM | `ENTRADA`, `UBICACION`, `GRADO`, `ESTADO`, `VENTA`, `VENTA_DESHECHA`, `REENTRADA` |
-| `DE`, `A` | VARCHAR(80) | Valor anterior y nuevo (en `UBICACION`, la ubicación del ERP; la caja de NSYS va en `A_NSYS`) |
+| `TIPO` | ENUM | `ENTRADA`, `UBICACION`, `GRADO`, `PRODUCTO`, `ESTADO`, `VENTA`, `VENTA_DESHECHA`, `REENTRADA` |
+| `DE`, `A` | VARCHAR(150) | Valor anterior y nuevo (en `UBICACION`, la ubicación del ERP; la caja de NSYS va en `A_NSYS`; en `PRODUCTO`, el «Goods» de NSYS) |
 | `A_NSYS` | VARCHAR(80) | Caja de NSYS tal cual, para no perder información |
 | `ID_IMPORTACION` | INT | FK a `Nsys_importacion` |
 
@@ -115,19 +120,26 @@ Solo se añade, nunca se modifica.
 
 ### 4.3 `Nsys_importacion` — un registro por fichero
 
-`ID`; `FICHERO` (único); `FECHA_EXPORTACION` (la del nombre del fichero); `ORIGEN` (`ACTUAL` | `HISTORICO`);
-`EMPEZADA`, `TERMINADA`; `FILAS`; `CAMBIOS`; `RESULTADO` (`OK` | `RECHAZADO` | `ERROR`); `MENSAJE`.
-
-Alimenta el aviso de datos antiguos y deja rastro de cada fichero rechazado y por qué.
+- **Columnas:**
+  - `ID`;
+  - `FICHERO`: **no es único**, porque un fichero que da `ERROR` se reintenta y queda otro registro;
+  - `FECHA_EXPORTACION`: la del nombre del fichero; en el maestro, su `modifiedTime` de Drive;
+  - `ORIGEN`: `ACTUAL`, `HISTORICO` o `MAESTRO`;
+  - `EMPEZADA`, `TERMINADA`, `FILAS`, `CAMBIOS`;
+  - `RESULTADO`: `EN_CURSO`, `OK`, `RECHAZADO` o `ERROR`;
+  - `MENSAJE`.
+- Alimenta el aviso de datos antiguos.
+- Deja rastro de cada fichero rechazado y por qué, y de cada carga del maestro.
 
 ### 4.4 `Nsys_producto` — el maestro
 
 - **Columnas:**
   - `CLAVE`: PK, «Product Name Calidad» normalizado (sin espacios y en minúsculas, como el verificador de SKU de las
     automatizaciones).
-  - `MODELO_MAESTRO`, `CAPACIDAD`, `COLOR`, `CALIDAD_DETALLE`, `SKU_WEB`, `SKU_AMAZON`, `SKU_SIN_GRADO`, `ES_ESIM`,
-    `CARGADO`.
-- **Recarga:** se recarga entera cuando cambia el maestro en Drive (§5.6).
+  - `MODELO` (código del ERP, §7), `MODELO_MAESTRO`, `CAPACIDAD`, `COLOR`, `CALIDAD_DETALLE`, `SKU_WEB`, `SKU_AMAZON`,
+    `SKU_SIN_GRADO`, `ES_ESIM`.
+- **Recarga:** se recarga entera cuando cambia el maestro en Drive (§5.6). Cuándo se cargó queda en `Nsys_importacion`
+  (`ORIGEN = MAESTRO`).
 - **Claves repetidas:** si una clave sale repetida con SKU distintos, se queda sin SKU y se avisa en el registro, como
   hace el verificador.
 
@@ -210,12 +222,19 @@ Por cada fila (`IMEI_SN`, `BATCH`):
   guarda `UBICACION_ULTIMA`. Si la caja nueva no se trae (Desguace, por ejemplo), el evento lleva `A = NULL` y la
   caja en `A_NSYS`, y el rastro enseña esa caja: el móvil sale del stock, pero su historia no se pierde.
 - **Cambia el grado** → `GRADO`.
-- **Cambia el Status** → `ESTADO`; si pasa a Released → `VENTA`; si sale de Released → `VENTA_DESHECHA` (pasa en NSYS).
+- **Cambia el «Goods»** → `PRODUCTO` (por ejemplo, el color tras un cambio de chasis).
+- **Cambia el Status:**
+  - si pasa a Released → `VENTA`;
+  - si sale de Released a Available, InProcess o Repair → `VENTA_DESHECHA` (pasa en NSYS);
+  - cualquier otro cambio, también Released → Removed (reentrada) → `ESTADO`.
 - **Desaparece del fichero** (raro) → se deja como estaba y se avisa en el registro.
 
 Además:
-- Con cada cambio se actualizan `CAMBIADO` y `VISTO_ULTIMO`.
-- Los campos traducidos se recalculan al cambiar `GOODS` o `GRADE`.
+- Con cada cambio se actualiza `CAMBIADO`.
+- Los campos traducidos se recalculan en cada comparación, fila a fila: si cambian (por `GOODS`, `GRADE` o un maestro
+  nuevo), la fila se guarda.
+- **Venta repetida:** el esqueleto apunta `VENTA` con `SOLD_DATE` en cualquier fila que la tenga. Si el mismo lote tiene
+  además una `VENTA` con hora (del histórico o de una importación), el rastro no enseña la de solo el día.
 
 ### 5.5 Freno de seguridad
 
@@ -224,16 +243,19 @@ sale en el aviso.
 
 ### 5.6 Maestro
 
-En cada pasada se mira su `modifiedTime` en Drive. Si ha cambiado, se recarga `Nsys_producto` y se recalculan los
-campos traducidos de todos los `Nsys_movil`, en la misma transacción que la importación.
+- En cada pasada se mira su `modifiedTime` en Drive. Si es más reciente que el último cargado o rechazado, se recarga
+  `Nsys_producto` y queda registrado (`ORIGEN = MAESTRO`).
+- Los campos traducidos de `Nsys_movil` se recalculan:
+  - con el siguiente Items pendiente, si lo hay, porque la comparación traduce todas las filas (§5.4);
+  - si no hay Items pendientes, en ese momento y sin eventos.
 
 ### 5.7 Aviso de datos antiguos
 
-Con la `FECHA_EXPORTACION` del último `OK`:
-- más de **1 h** → ámbar;
-- más de **3 h** → rojo, con la banda «No llegan datos nuevos de NSYS desde las HH:MM…».
-
-Entre las 23:00 y las 7:00 no salta, porque el bot no exporta.
+Con la `FECHA_EXPORTACION` del último `OK`, contando solo los minutos **entre las 7:00 y las 23:00** (de noche el bot
+no exporta):
+- más de **60 min** → ámbar (`RETRASO`);
+- más de **180 min** → rojo (`SIN_DATOS`), con la banda «No llegan datos nuevos de NSYS desde las HH:MM…»;
+- sin ninguna importación → `SIN_DATOS`.
 
 ### 5.8 Rendimiento
 
@@ -252,8 +274,9 @@ Entre las 23:00 y las 7:00 no salta, porque el bot no exporta.
 2. **Pasos intermedios** (`TareaHistoricoNsys`, con `nsys.historico.activo`):
    - Recorre en orden las exportaciones de Drive desde la más antigua (dic. 2023) hasta la primera `ACTUAL`, y compara
      cada una con la anterior.
-   - **Solo añade eventos** `UBICACION`, `GRADO` y `ESTADO`, con su fecha. Nunca toca `Nsys_movil` ni repite la entrada
-     y la venta del esqueleto.
+   - **Solo añade eventos de cambio** (`UBICACION`, `GRADO`, `PRODUCTO`, `ESTADO`, `VENTA`, `VENTA_DESHECHA`), con la
+     hora de la exportación. Nunca toca `Nsys_movil` ni da altas: la entrada sale del esqueleto. Una `VENTA` con hora
+     tapa en el rastro a la de solo el día del esqueleto (§5.4).
    - Cada fichero queda en `Nsys_importacion` con `ORIGEN = HISTORICO`, así que si se corta sigue donde lo dejó, y al
      terminar no hace nada.
    - **Solo trabaja de 23:00 a 7:00**, un fichero cada vez. Unas 8 horas en total: una o dos noches.
@@ -269,9 +292,10 @@ se conoce la entrada y la venta».
   - Si no está, responde vacío y el modelo se escribe a mano, como cuando IMEIcheck fallaba.
 - **Traducción al código del ERP:** se toma la columna «Modelo» del maestro en minúsculas, sin espacios y sin «eSIM».
   Por ejemplo, «13 PRO» → `13pro`, «16 e» → `16e`, «SE2020» → `se2020`, «XS Max» → `xsmax`, «Air» → `air`.
-  - Si el resultado no está en la lista de modelos del ERP, se avisa en el registro.
-  - Se añaden a la lista los que falten y se vendan (por ejemplo `17e`), en el servidor y en `taller/lib/modelos.ts` de
-    la web.
+  - Si el resultado no está en la lista de modelos del ERP (`17e`, `SE 2022`, los antiguos), `MODELO` queda `NULL` y se
+    avisa en el registro de la importación. La pantalla enseña entonces el texto del maestro (`MODELO_MAESTRO`).
+  - **No se tocan las listas de modelos** del servidor ni de la web, igual que cuando IMEIcheck no sabía el modelo.
+    Ampliarlas es otra tarea, con sus piezas.
 - **Al importar** se rellena `Telefono.MODELO` cuando está vacío, solo para IMEI de 15 dígitos que ya existan en
   `Telefono` (`COALESCE`, sin pisar nunca un valor).
 - **Se quitan** `ImeiLookupService`, `FrenoLookup` (solo lo usa esa ruta), la propiedad `imeicheck.api-key` y la
@@ -290,7 +314,11 @@ Todas son `GET`, de solo lectura, con `hasAnyRole('SUPERTECNICO', 'ADMIN')`:
 | `GET /api/stock-telefonos/{imeiSn}` | La ficha: fila más reciente, número de entradas y grado anterior si cambió |
 | `GET /api/stock-telefonos/{imeiSn}/rastro` | Los eventos de NSYS y los trabajos del taller de ese IMEI (asignado y terminado, de `Reparacion` R/G/P), de más reciente a más antiguo, con su fuente (`NSYS` / `ERP`) y si la hora es aproximada |
 
-- Los records van anidados en el controller, como el resto (springdoc los prefija).
+- Los records van anidados en el controller, como el resto (springdoc los prefija). El del rastro, `EventoRastro`, va
+  aparte porque lo construye `Rastro`.
+- El rastro llega **estructurado** (fecha, si es solo el día, fuente, tipo, lote, de, a, caja de NSYS, trabajo, técnico
+  y categoría) y la web compone los textos.
+- `buscar` con menos de 4 caracteres devuelve una lista vacía, y la ficha de un IMEI que NSYS no conoce da 404.
 - `OpenApiContractTest` añade las rutas nuevas y sus 401/403.
 - La web regenera `schema.d.ts`.
 
@@ -380,7 +408,8 @@ la pieza 2.
    - comprobar que el modelo por IMEI sale del espejo.
 4. **Producción**, en horario: corte de segundos, migración aditiva y vuelta atrás simple.
    - Mismo compose que en preprod; IMEIcheck se retira en esta misma versión.
-   - El histórico se enciende esa noche (`nsys.historico.activo`) y termina en una o dos noches.
+   - El histórico se enciende esa noche (`nsys.historico.activo`) y termina en una o dos noches. Como la tarea solo
+     trabaja de 23:00 a 7:00, el ajuste va a `true` ya en el despliegue, sin otro reinicio por la noche.
 5. **Vuelta atrás:** apagar `nsys.importacion.activa` y volver a la imagen anterior. Las tablas nuevas no molestan.
    Volver a IMEIcheck exigiría además la clave, así que se retira solo tras comprobarlo en preprod.
 
