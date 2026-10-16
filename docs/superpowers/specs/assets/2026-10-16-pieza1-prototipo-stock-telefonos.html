@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototipo · Pieza 1 · Stock de teléfonos</title>
+<style>
+:root{
+  --azul-noche:#001232;--azul-medio:#2C3B54;--azul-gris:#586376;--crema:#F6F6F6;--sup:#FFFFFF;--amarillo:#F1E356;
+  --fondo-vista:#DDE1E7;--pill-bg:#F0F2F5;--pill-borde:#C8CDD5;--nav-activo:#FAFAFA;--neutro:#E8EAF0;
+  --sep:#C2C8D0;--borde-input:#D4D8DE;--texto-suave:#A0A8B4;--sel-suave:#EAF1FF;--accion:#4A6FA5;--verde:#4CAF50;
+  --urg-brd:#C62828;--urg-bg:#FDDEDE;--rec-bg:#C8E6C9;--rec-brd:#3A7D44;--sol-bg:#FDEBC8;--sol-brd:#C07800;
+  --t-rep-bg:#E3F2FD;--t-rep:#1565C0;--t-gla-bg:#E0F2F1;--t-gla:#00796B;--t-pul-bg:#EDE7F6;--t-pul:#5E35B1;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#F4F5F8;color:var(--azul-medio);font-family:system-ui,'Segoe UI',sans-serif;font-size:13px}
+button,input{font:inherit}
+.proto{padding:16px}
+.ctl{background:#fff;border:1px solid #DDE1E7;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:grid;grid-template-columns:1fr 360px;gap:16px}
+.ctl h1{font-size:18px;color:var(--azul-noche);margin:0 0 4px}
+.ctl p{margin:0 0 8px;color:var(--azul-gris);font-size:12.5px}
+.ctl ol{margin:0;padding-left:18px;font-size:12.5px;line-height:1.55}
+.ctl ol code{background:var(--pill-bg);border-radius:4px;padding:0 4px;font-size:11.5px}
+.lbl{font-size:11px;font-weight:700;color:var(--azul-gris);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px}
+.seg{display:inline-flex}
+.seg button{border:1px solid var(--pill-borde);background:var(--pill-bg);color:var(--azul-gris);padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-left:-1px}
+.seg button:first-child{border-radius:999px 0 0 999px;margin-left:0}
+.seg button:last-child{border-radius:0 999px 999px 0}
+.seg button.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.elegir{border:2px solid var(--verde);background:#fff;color:#2e7d32;border-radius:999px;padding:6px 14px;font-weight:700;font-size:12px;cursor:pointer;margin:8px 6px 0 0}
+.elegir.sel{background:var(--verde);color:#fff}
+.elegir.nar{border-color:#C07800;color:#9a6200}.elegir.nar.sel{background:#C07800;color:#fff}
+/* app */
+.marco{background:var(--fondo-vista);border-radius:6px;box-shadow:0 2px 14px rgba(0,18,50,.18);overflow:hidden;min-width:1240px}
+.tb{height:56px;display:flex;align-items:center;gap:10px;background:var(--azul-noche);padding:0 18px;color:var(--crema)}
+.logo{width:34px;height:34px;border-radius:50%;background:var(--crema);color:var(--azul-noche);font-weight:800;display:flex;align-items:center;justify-content:center}
+.tb .t1{font-weight:700}.esp{flex:1}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--crema);color:var(--azul-noche);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.cuerpo{display:flex;min-height:700px}
+nav{width:200px;flex-shrink:0;background:var(--sup);padding:8px}
+.gc{padding:12px 10px 4px 16px;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--azul-gris)}
+.gc:first-child{padding-top:4px}
+.lk{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:24px;padding:9px 16px;font-size:13px;font-weight:700;color:var(--azul-medio);white-space:nowrap;cursor:pointer}
+.lk:hover{background:rgba(44,59,84,.08)}
+.lk.act{background:var(--azul-noche);color:var(--nav-activo)}
+.lk.off{color:var(--texto-suave);cursor:default}.lk.off:hover{background:transparent}
+.lk .bl{margin-left:6px;display:inline-block;border-radius:8px;padding:1px 5px;font-size:9px;background:var(--azul-noche);color:#fff}
+.lk.act .bl{background:#fff;color:var(--azul-noche)}
+.lk .p2{font-size:9.5px;font-weight:700;color:var(--texto-suave);margin-left:4px}
+main{flex:1;min-width:0;padding:24px 28px;overflow:auto}
+.cab{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px}
+.cab h2{font-size:24px;margin:0;color:var(--azul-medio)}
+.cont{border-radius:12px;background:var(--neutro);padding:3px 10px;font-size:12px;font-weight:700;color:var(--azul-gris)}
+.nsys{margin-left:auto;font-size:11.5px;color:var(--azul-gris);background:#fff;border:1px solid var(--borde-input);border-radius:999px;padding:4px 12px}
+.nsys i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--verde);margin-right:6px}
+.nsys.tarde{border-color:#E0A030;color:#8a5a00;background:#FFF8E6}.nsys.tarde i{background:#E0A030}
+.nsys.sin{border-color:var(--urg-brd);color:var(--urg-brd);background:var(--urg-bg)}.nsys.sin i{background:var(--urg-brd)}
+.aviso{background:var(--urg-bg);border:1px solid var(--urg-brd);color:#7f1d1d;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12.5px}
+.barra{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px;position:relative}
+.inp{height:36px;border:1px solid var(--borde-input);border-radius:4px;padding:0 10px;font-size:12px;background:#fff;color:var(--azul-medio)}
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--azul-medio);cursor:pointer;user-select:none}
+.sw i{width:34px;height:18px;border-radius:999px;background:#C2C8D0;position:relative;display:inline-block;transition:background .15s}
+.sw i::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on i{background:var(--verde)}.sw.on i::after{left:18px}
+.sug{position:absolute;top:40px;left:0;width:430px;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);z-index:20;padding:4px}
+.sug div{padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12px}
+.sug div:hover{background:var(--sel-suave)}
+.sug .vac{color:var(--azul-gris);cursor:default}.sug .vac:hover{background:#fff}
+.dos{display:grid;grid-template-columns:290px 1fr;gap:12px;align-items:start}
+.izq{background:#fff;border-radius:6px;max-height:560px;overflow:auto}
+.ls{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #E3E6EB;cursor:pointer}
+.ls:hover{background:var(--sel-suave)}
+.ls.act{background:var(--azul-noche);color:#fff}
+.ls .n{margin-left:auto;font-weight:800;font-size:15px}
+.ls .sub{font-size:11px;color:var(--azul-gris)}.ls.act .sub{color:#c9d3e6}
+.tots{display:flex;gap:4px;margin-top:3px;align-items:center}
+.mini{display:inline-block;min-width:20px;text-align:center;border-radius:8px;padding:0 5px;font-size:10.5px;font-weight:700}
+.mini.l{background:var(--rec-bg);color:var(--rec-brd)}.mini.t{background:var(--t-rep-bg);color:var(--t-rep)}.mini.r{background:#FFF3E0;color:#9a6200}.mini.p{background:var(--urg-bg);color:var(--urg-brd)}
+.leyenda{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;font-size:10.5px;color:var(--azul-gris);border-bottom:1px solid #E3E6EB}
+.der{background:#fff;border-radius:6px;padding:12px 14px}
+.der h3{margin:0 0 10px;font-size:16px;color:var(--azul-noche);display:flex;align-items:center;gap:10px}
+.fl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.fl .et{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--azul-gris);width:52px}
+.ch{border:1px solid var(--pill-borde);background:var(--pill-bg);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:var(--azul-gris);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:5px}
+.ch .c{font-weight:400;opacity:.8}
+.ch.on{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.ch.cero{opacity:.35;cursor:default}
+.mu{width:11px;height:11px;border-radius:50%;border:1px solid rgba(0,0,0,.2);display:inline-block}
+.pills{display:flex;gap:8px;align-items:center;margin:2px 0 10px;flex-wrap:wrap}
+.pill{position:relative}
+.pill>button{height:32px;border:0;border-radius:24px;background:var(--azul-noche);color:#fff;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer}
+.pill>button.vacio{background:#fff;color:var(--azul-noche);border:1px solid var(--azul-noche)}
+.menu{position:absolute;top:36px;left:0;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:6px;min-width:220px;z-index:30}
+.menu label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;font-size:12.5px}
+.menu label:hover{background:var(--sel-suave)}
+.menu label .c{margin-left:auto;color:var(--azul-gris)}
+.menu label.cero{opacity:.4}
+.limpiar{font-size:12px;color:var(--accion);cursor:pointer;font-weight:700;margin-left:auto}
+.tw{background:#fff;border-radius:6px;overflow:auto;max-height:430px;border:1px solid #E3E6EB}
+table{border-collapse:separate;border-spacing:0;width:100%}
+th{position:sticky;top:0;background:var(--crema);font-size:12px;font-weight:700;text-align:left;padding:0 8px;height:36px;border-bottom:1px solid var(--sep);white-space:nowrap;z-index:1}
+td{font-size:12px;padding:0 8px;height:36px;border-bottom:1px solid #E3E6EB;white-space:nowrap}
+tr.clic td{cursor:pointer}
+tr.clic:hover td{background:var(--sel-suave)}
+td:first-child,th:first-child{border-left:6px solid transparent}
+tr.ped td:first-child{border-left-color:var(--urg-brd)}
+tr.nocuenta td{color:var(--texto-suave)}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:11.5px}
+.num{text-align:right}
+.gr{display:inline-block;border-radius:4px;padding:1px 6px;font-weight:700;font-size:11px;background:var(--neutro)}
+.gr.na{background:#FFF3E0;color:#9a6200}
+.ub{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
+.ub.rev{background:#FFF3E0;color:#9a6200}.ub.gla{background:var(--t-gla-bg);color:var(--t-gla)}.ub.rep{background:var(--t-rep-bg);color:var(--t-rep)}
+.ub.pul{background:var(--t-pul-bg);color:var(--t-pul)}.ub.pan{background:#E8EAF6;color:#3949AB}.ub.lis{background:var(--rec-bg);color:var(--rec-brd)}
+.ub.dev{background:var(--sol-bg);color:var(--sol-brd)}.ub.pie,.ub.nov{background:#ECEFF1;color:#78909C}.ub.ven{background:var(--azul-noche);color:#fff}
+.nc{font-size:10px;font-weight:800;color:#78909C;border:1px solid #B0BEC5;border-radius:4px;padding:0 4px;margin-left:4px}
+.est-ped{color:var(--urg-brd);font-weight:700}.est-lib{color:var(--azul-gris)}
+.vacio-t{padding:22px;text-align:center;color:var(--azul-gris)}
+.pie-t{font-size:11.5px;color:var(--azul-gris);margin-top:8px}
+/* rastro */
+.volver{font-size:12px;font-weight:700;color:var(--accion);margin-bottom:8px;display:inline-block;cursor:pointer;border:0;background:none;padding:0}
+.ficha{background:#fff;border-radius:8px;padding:14px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:6px 26px;align-items:center}
+.ficha .imei{font-family:ui-monospace,Consolas,monospace;font-size:20px;font-weight:800;color:var(--azul-noche)}
+.ficha .datos{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;align-items:center}
+.ficha .datos b{color:var(--azul-noche)}
+.caja{background:#fff;border-radius:8px;padding:16px 18px}
+.tl{position:relative;margin-left:10px;padding-left:26px;border-left:3px solid #E3E6EB}
+.ev{position:relative;margin-bottom:13px}
+.ev::before{content:'';position:absolute;left:-35px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--c,#9aa4b2);border:3px solid #fff;box-shadow:0 0 0 1px #d0d5dc}
+.ev .fe{font-size:11px;color:var(--azul-gris);font-weight:700}
+.ev .t{font-weight:700;color:var(--azul-noche);font-size:13px}
+.ev .d{font-size:12px;color:var(--azul-medio)}
+.ev.corte{margin:16px 0}
+.ev.corte::before{background:#fff;box-shadow:0 0 0 1px #9aa4b2}
+.ev.corte .t{font-weight:600;color:var(--azul-gris);font-style:italic;font-size:12px}
+.src{display:inline-block;font-size:9.5px;font-weight:800;border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.src.nsys{background:#ECEFF1;color:#546E7A}.src.erp{background:#E8F5E9;color:#2E7D32}.src.aprox{background:#fff;color:#9aa4b2;border:1px dashed #b8c0cc}
+.ahora{font-size:9.5px;font-weight:800;background:var(--azul-noche);color:#fff;border-radius:4px;padding:1px 6px;margin-left:8px}
+.ley-tl{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--azul-gris);margin-bottom:12px}
+.ley-tl span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:5px}
+.oculto{display:none!important}
+/* modo tamaño real: la web ocupa la ventana, como en el ERP */
+body.real .proto{padding:0}
+body.real .ctl{display:none}
+body.real .marco{min-width:0;border-radius:0;box-shadow:none;height:100vh;display:flex;flex-direction:column}
+body.real .cuerpo{flex:1;min-height:0}
+body.real main{overflow:auto}
+body.real .izq{max-height:calc(100vh - 260px)}
+body.real .tw{max-height:calc(100vh - 360px)}
+body:not(.real) .volver-panel{display:none}
+.volver-panel{position:fixed;left:12px;bottom:12px;z-index:70;border:0;border-radius:999px;background:var(--amarillo);color:var(--azul-noche);font-weight:800;font-size:12px;padding:8px 14px;box-shadow:0 2px 10px rgba(0,0,0,.25);cursor:pointer}
+.cajon{width:min(500px,42vw);min-width:380px}
+/* pantallas pequeñas (portátiles de 1366 / 1440) */
+@media (max-width:1500px){
+ body.real nav{width:176px}
+ body.real main{padding:18px 18px}
+ body.real .dos{grid-template-columns:230px 1fr}
+ body.real .ls{padding:8px 10px}
+ body.real th,body.real td{padding:0 6px}
+ body.real .cab h2{font-size:21px}
+ body.real .fl .et{width:46px}
+}
+.barra-r{display:flex;align-items:center;gap:10px;margin:-4px 0 10px}
+.btn-r{border:1px solid var(--azul-noche);background:#fff;color:var(--azul-noche);border-radius:24px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn-r:hover{background:var(--sel-suave)}
+.btn-r .c{background:var(--azul-noche);color:#fff;border-radius:8px;padding:0 6px;font-size:10.5px}
+.cajon{position:fixed;top:0;right:0;bottom:0;width:500px;background:#fff;box-shadow:-6px 0 24px rgba(0,18,50,.25);z-index:60;display:flex;flex-direction:column}
+.cajon .cab-c{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #E3E6EB}
+.cajon .cab-c b{font-size:15px;color:var(--azul-noche)}
+.cajon .cab-c .x{margin-left:auto;border:0;background:transparent;font-size:20px;cursor:pointer;color:var(--azul-gris)}
+.cajon .cuerpo-c{flex:1;overflow:auto;padding:4px 4px 10px}
+.cajon .caja{box-shadow:none}
+.desp{background:#fff;border-radius:8px;margin-bottom:12px;overflow:hidden}
+.desp .cab-d{display:flex;align-items:center;gap:8px;padding:10px 16px;cursor:pointer;font-weight:700;color:var(--azul-noche);user-select:none}
+.desp .cab-d:hover{background:var(--sel-suave)}
+.desp .cab-d .fl-d{display:inline-block;transition:transform .15s;color:var(--azul-gris)}
+
+.desp .cab-d .sub{font-weight:400;font-size:12px;color:var(--azul-gris)}
+.desp .cuerpo-d{border-top:1px solid #E3E6EB}
+.tabsd{display:flex;gap:4px;margin:0 0 10px}
+.tabsd span{border-radius:999px;padding:7px 16px;font-weight:700;font-size:12.5px;cursor:pointer;background:#fff;border:1px solid var(--pill-borde);color:var(--azul-gris)}
+.tabsd span.act{background:var(--azul-noche);border-color:var(--azul-noche);color:#fff}
+.tabsd span b{font-weight:800;margin-left:4px;opacity:.85}
+.b-sec{border:1px solid var(--azul-noche);background:var(--crema);color:var(--azul-noche);border-radius:24px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.menuFila{position:fixed;background:#fff;border:1px solid var(--pill-borde);border-radius:8px;box-shadow:0 6px 18px rgba(0,18,50,.18);padding:4px;min-width:200px;z-index:50}
+.menuFila div{padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12.5px}
+.menuFila div:hover{background:var(--sel-suave)}
+.menuFila .nota-m{font-size:11px;color:var(--azul-gris);cursor:default;border-top:1px solid #E6E9EE;margin-top:4px;padding-top:6px}
+.menuFila .nota-m:hover{background:#fff}
+tr.resaltada td{background:#FFF8D6!important}
+.lnk{color:var(--accion);font-weight:700;text-decoration:underline;cursor:pointer}
+.ev.enlace .t{cursor:pointer;text-decoration:underline dotted}
+.ev.enlace .t:hover{color:var(--accion)}
+.borde-inc td:first-child{border-left-color:#B83746!important}
+</style>
+</head>
+<body>
+<div class="proto">
+ <div class="ctl">
+  <div>
+   <h1>Prototipo · Pieza 1 · Stock de teléfonos y rastro · v4</h1>
+   <p>Todo navegable, con datos inventados. Lo que no es de la pieza 1 (Pedidos, Asignaciones…) sale en el menú pero no se abre.
+   <b>Ojo:</b> el nº de pedido («De pedido · AMZ…») y los eventos de pedido y de envío marcados <span class="src erp" style="margin:0">ERP</span> llegan con las piezas 2 y 3. Con la pieza 1 sola, el estado sale «De pedido» a secas y esos eventos vienen de NSYS.</p>
+   <div class="lbl">Qué probar</div>
+   <ol>
+    <li>En «Stock de teléfonos», elige <b>iPhone 13 128GB</b> y filtra <b>Azul</b> + Ubicación <b>Listos</b>.</li>
+    <li>Abre los desplegables <b>Batería</b>, <b>Ubicación</b> y <b>Estado</b> y combina varias opciones.</li>
+    <li>Activa <b>«Ver también lo que no cuenta como stock»</b>: salen en gris y no suman en los totales.</li>
+    <li>Busca arriba el IMEI <code>356781109877120</code> y abre su <b>rastro</b>: entra en un lote, pasa por el taller, se vende, lo devuelven y se vuelve a vender.</li>
+    <li>Pulsa cualquier móvil: su detalle se abre siempre en la <b>vista de trabajos de hoy</b> (prueba el clic derecho en una fila y el enlace «Id Rep. Anterior»). El rastro es un <b>adicional</b>: compara a la derecha las tres formas (A, B, C) con el mismo móvil.</li>
+    <li>En el rastro, pulsa un evento de taller <span class="src erp" style="margin:0">ERP</span>: resalta su fila en los trabajos.</li>
+    <li>Ve a <b>IMEIs</b> y busca <code>353918700112233</code>: un móvil vendido en 2023, sin trabajos del taller (solo se conoce la entrada y la venta).</li>
+    <li>Cambia abajo el estado de NSYS a «Con retraso» o «Sin datos».</li>
+   </ol>
+  </div>
+  <div>
+   <div class="lbl">Estado de los datos de NSYS</div>
+   <div class="seg" id="segNsys"><button data-n="ok" class="act">Al día</button><button data-n="tarde">Con retraso</button><button data-n="sin">Sin datos</button></div>
+   <div class="lbl" style="margin-top:14px">Tamaño</div>
+   <button class="elegir" style="margin-top:0;border-color:var(--azul-noche);color:var(--azul-noche)" onclick="document.body.classList.add('real')">Ver a tamaño real (como la ventana del ERP)</button>
+   <div class="lbl" style="margin-top:14px">El rastro como «adicional»: ¿cómo aparece?</div>
+   <div class="seg" id="segModo"><button data-m="A" class="act">A · Panel lateral</button><button data-m="B">B · Pestaña</button><button data-m="C">C · Desplegable</button></div>
+   <button class="elegir" id="elegirModo" data-choice="rastro-A" onclick="this.classList.add('sel');this.textContent='Elegida: '+this.dataset.choice.slice(-1)">Elijo esta (A)</button>
+   <div class="lbl" style="margin-top:14px">¿Qué te parece el prototipo?</div>
+   <button class="elegir" data-choice="p1v4-me-gusta" onclick="this.classList.add('sel')">Me gusta así</button>
+   <button class="elegir nar" data-choice="p1v4-con-cambios" onclick="this.classList.add('sel')">Con cambios (te los digo)</button>
+  </div>
+ </div>
+
+ <div class="marco">
+  <div class="tb"><div class="logo">F</div><span class="t1">Gestión Reparaciones</span><span class="esp"></span><span style="font-size:12px;font-weight:700">Logística</span><div class="avatar">L</div></div>
+  <div class="cuerpo">
+   <nav>
+    <div class="gc">Reparaciones</div>
+    <button class="lk off">Asignaciones <span class="bl">14</span></button><button class="lk off">Historial</button><button class="lk" data-v="imeis">IMEIs</button>
+    <div class="gc">Stock (piezas)</div>
+    <button class="lk off">Stock actual</button><button class="lk off">Compras</button><button class="lk off">Proveedores</button>
+    <div class="gc">Teléfonos</div>
+    <button class="lk act" data-v="stock">Stock de teléfonos</button><button class="lk off">Pedidos<span class="p2">pieza 2</span></button>
+    <div class="gc">Estadísticas</div><button class="lk off">Rendimiento</button>
+    <div class="gc">Clientes</div><button class="lk off">Listado</button>
+   </nav>
+   <main>
+    <!-- STOCK -->
+    <section id="vStock">
+     <div class="cab"><h2>Stock de teléfonos</h2><span class="cont" id="cont"></span><span class="nsys" id="nsys"></span></div>
+     <div id="avisoNsys" class="aviso oculto"></div>
+     <div class="barra">
+      <input class="inp" id="busImei" style="width:240px" placeholder="Buscar IMEI en todos los móviles…" autocomplete="off">
+      <div class="sug oculto" id="sug"></div>
+      <span class="sw" id="swNo"><i></i>Ver también lo que no cuenta como stock</span>
+     </div>
+     <div class="dos">
+      <div class="izq">
+       <input class="inp" id="busMod" style="margin:8px;width:calc(100% - 16px)" placeholder="Buscar modelo…">
+       <div class="leyenda"><span class="mini l">listos</span><span class="mini t">taller</span><span class="mini r">revisión</span><span class="mini p">de pedido</span></div>
+       <div id="lista"></div>
+      </div>
+      <div class="der">
+       <h3 id="tit"></h3>
+       <div class="fl" id="fColor"></div>
+       <div class="fl" id="fGrado"></div>
+       <div class="pills" id="pills"></div>
+       <div class="tw"><table id="tabla"></table></div>
+       <div class="pie-t">Clic en un móvil para ver su rastro. El borde rojo marca los que están de pedido.</div>
+      </div>
+     </div>
+    </section>
+    <!-- RASTRO -->
+    <section id="vRastro" class="oculto">
+     <button class="volver" id="volver">← Volver</button>
+     <div class="ficha" id="ficha"></div>
+     <div class="barra-r" id="barraR"><button class="btn-r" id="btnRastro">🕘 Ver rastro <span class="c" id="nEv"></span></button><span class="pie-t" style="margin:0">Por dónde ha pasado este móvil y cuándo (NSYS + ERP)</span></div>
+     <div class="desp oculto" id="desp"><div class="cab-d" id="cabDesp"><span class="fl-d">▸</span>Rastro <span class="sub" id="subDesp"></span></div><div class="cuerpo-d oculto" id="cuerpoDesp"></div></div>
+     <div class="tabsd" id="tabsd"><span data-t="trab">Trabajos del taller<b id="nTrab"></b></span><span data-t="ras">Rastro</span></div>
+     <div class="caja oculto" id="cajaTrab">
+      <div class="barra">
+       <div class="pill"><button class="vacio">Técnicos: todos ▾</button></div>
+       <button class="b-sec">Exportar CSV</button>
+       <span class="pie-t" style="margin:0">La vista de trabajos de hoy, sin cambios: filtros, enlace «Id Rep. Anterior», menú de cada fila (clic derecho) y colores de incidencia.</span>
+      </div>
+      <div class="tw"><table id="tTrab"></table></div>
+     </div>
+     <div class="caja" id="cajaRastro">
+      <div class="ley-tl"><span style="--c:#90A4AE">Lote</span><span style="--c:#F0A030">Revisión</span><span style="--c:#1E88E5">Taller</span><span style="--c:#43A047">Listos</span><span style="--c:#C62828">De pedido</span><span style="--c:#001232">Vendido</span><span style="--c:#C07800">Devolución</span><span style="--c:#78909C">No cuenta como stock</span></div>
+      <div class="pie-t" style="margin:0 0 12px">Las horas de <span class="src nsys" style="margin:0">NSYS</span> son las de la exportación en que se vio el cambio (±&nbsp;30&nbsp;min). Las de <span class="src erp" style="margin:0">ERP</span> son exactas.</div>
+      <div class="tl" id="tl"></div>
+     </div>
+    </section>
+    <div class="menuFila oculto" id="menuFila"></div>
+    <button class="volver-panel" id="volverPanel" onclick="document.body.classList.remove('real')">Ver el panel del prototipo</button>
+    <div class="cajon oculto" id="cajon"><div class="cab-c"><b>Rastro</b><span class="pie-t" style="margin:0" id="cajonImei"></span><button class="x" id="cerrarCajon" title="Cerrar">×</button></div><div class="cuerpo-c" id="cuerpoCajon"></div></div>
+    <!-- IMEIS -->
+    <section id="vImeis" class="oculto">
+     <div class="cab"><h2>Agrupado por IMEI</h2><span class="cont" id="contImeis"></span></div>
+     <div class="barra">
+      <input class="inp" id="busImeis" style="width:300px" placeholder="Buscar cualquier IMEI (también sin trabajos)…" autocomplete="off">
+      <span class="pie-t" style="margin:0">La lista es la de hoy (IMEI con trabajos del taller). El buscador encuentra cualquier móvil y abre su rastro.</span>
+     </div>
+     <div id="sinTrabajos"></div>
+     <div class="tw" style="max-height:520px"><table id="tImeis"></table></div>
+    </section>
+   </main>
+  </div>
+ </div>
+</div>
+
+<script>
+const HOY=new Date(2026,9,16,13,43);
+const fmt=d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+(d.getFullYear()!==2026?'/'+d.getFullYear():'');
+const fmtH=d=>fmt(d)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+const menosDias=(n,h=10,m=1)=>{const d=new Date(HOY);d.setDate(d.getDate()-n);d.setHours(h,m,0,0);return d};
+const UB={rev:'En revisión',dev:'Devolución',pul:'Taller · Pulir',gla:'Taller · Glass',rep:'Taller · Reparación',pan:'Taller · Pantalla rota',lis:'Listos',pie:'Esperando pieza',nov:'No vendible'};
+const NOCUENTA=new Set(['pie','nov']);
+const TALLER=new Set(['pul','gla','rep','pan']);
+const MUESTRA={Azul:'#3b6fd1',Medianoche:'#1d2533',Blanco:'#f4f4f4',Rosa:'#f3b6c7',Morado:'#b9a6dc',Verde:'#9cc9a6',Rojo:'#c8323a',Negro:'#222',Lavanda:'#cdbfe8'};
+const CODCOL={Azul:'Azul',Medianoche:'Negro',Blanco:'Blanco',Rosa:'Rosa',Morado:'Morado',Verde:'Verde',Rojo:'Rojo',Negro:'Negro',Lavanda:'Lavanda'};
+const ORDEN_GR=['A+','A','A-','B','C','MsA','ID','n/a'];
+const PEDIDOS=['AMZ 402-7781903','WEB 48213','SIM 2291','AMZ 171-3384920','AMZ 405-1189264','WEB 48240','AMZ 028-5521907','SIM 2298'];
+let seq=0;
+const imeiDe=(mod)=>{seq++;const pre={'iPhone 11':'3539','iPhone 12':'3577','iPhone 13':'3567','iPhone 14':'3588','iPhone 15':'3592','iPhone 16':'3504'}[mod]||'3500';return pre+String(81100000000+seq*104729).slice(-11)};
+function skuDe(m){const base='i'+m.mod.replace('iPhone ','')+m.cap.replace('GB','')+(m.esim?'eSIM':'')+CODCOL[m.col];
+ if(m.gr==='n/a')return base+' (sin grado)';const g=m.gr==='C'?'A':m.gr==='A+'?'A':m.gr==='MsA'?'Ms':m.gr;return base+g+(m.bat&&!['Ms','ID'].includes(g)?'100':'')}
+const M=[];
+function add(mod,cap,col,gr,bat,esim,ubis,{ped=0,dias=null}={}){
+ ubis.forEach((u,k)=>{const m={imei:imeiDe(mod),mod,cap,col,gr,bat,esim,u,p:'',dias:dias??((seq*7)%38+1),lote:'BT-1'+(150+(seq*13)%58)};
+  if(ped>k)m.p=PEDIDOS[(seq+k)%PEDIDOS.length];m.sku=skuDe(m);M.push(m)})}
+add('iPhone 13','128GB','Azul','A',false,false,['lis','lis','rep','lis'],{ped:1});
+add('iPhone 13','128GB','Azul','A-',true,false,['gla','lis'],{ped:1});
+add('iPhone 13','128GB','Azul','C',true,false,['gla','rep']);
+add('iPhone 13','128GB','Azul','n/a',false,false,['rev','rev']);
+add('iPhone 13','128GB','Medianoche','A',false,false,['lis','gla','lis'],{ped:2});
+add('iPhone 13','128GB','Medianoche','B',false,false,['lis','pul']);
+add('iPhone 13','128GB','Rosa','A',true,false,['pan']);
+add('iPhone 13','128GB','Blanco','A-',false,false,['lis','pie']);
+add('iPhone 13','128GB','Medianoche','MsA',false,false,['dev']);
+add('iPhone 13','256GB','Azul','A',false,false,['lis','gla']);
+add('iPhone 13','256GB','Medianoche','A+',true,false,['lis'],{ped:1});
+add('iPhone 14','128GB','Morado','A',true,false,['rep','lis','lis'],{ped:1});
+add('iPhone 14','128GB','Medianoche','A',false,false,['lis','lis','pul']);
+add('iPhone 14','128GB','Medianoche','B',false,false,['nov']);
+add('iPhone 14','128GB','Azul','A-',false,false,['gla','lis']);
+add('iPhone 14','128GB','Azul','n/a',false,false,['rev']);
+add('iPhone 15','128GB','Negro','A',true,false,['lis','rep','lis'],{ped:2});
+add('iPhone 15','128GB','Negro','A',true,true,['lis','gla']);
+add('iPhone 15','128GB','Rosa','A-',false,false,['pul']);
+add('iPhone 15','128GB','Verde','n/a',false,false,['rev']);
+add('iPhone 15','256GB','Negro','A',false,false,['lis','dev']);
+add('iPhone 12','64GB','Blanco','A',false,false,['lis','lis','rep']);
+add('iPhone 12','64GB','Rojo','C',true,false,['gla']);
+add('iPhone 12','64GB','Negro','B',false,false,['lis','pie']);
+add('iPhone 12','64GB','Negro','ID',false,false,['lis']);
+add('iPhone 16','128GB','Negro','A',true,false,['lis','gla'],{ped:1});
+// el móvil de la historia completa
+const ESTRELLA={imei:'356781109877120',mod:'iPhone 13',cap:'128GB',col:'Azul',gr:'ID',bat:true,esim:false,u:'lis',p:'SIM 2291',dias:45,lote:'BT-1184',entradas:2};
+ESTRELLA.sku='i13128AzulID';M.push(ESTRELLA);
+// móviles fuera de stock (vendidos), para el buscador
+const VENDIDOS=[
+ {imei:'353918700112233',mod:'iPhone 11',cap:'64GB',col:'Negro',gr:'A',lote:'BT-0412',entrada:new Date(2023,2,14,11,0),venta:new Date(2023,4,2,17,0),sku:'i1164NegroA',trabajos:0},
+ {imei:'357763300987654',mod:'iPhone 12',cap:'128GB',col:'Azul',gr:'A100',lote:'BT-1102',entrada:new Date(2026,7,20,10,0),venta:new Date(2026,8,3,18,0),sku:'i12128AzulA100',trabajos:1},
+];
+const E_ESTRELLA=[
+ ['02/09 10:14','lote','Entra en el lote BT-1184','Compra al proveedor A','NSYS'],
+ ['02/09 10:14','rev','Sin caja: revisión de funcionalidad y estética','Grado n/a','NSYS'],
+ ['04/09 16:31','rev','Se le pone el grado C100','Pantalla con marcas: necesita glass. Batería nueva','NSYS'],
+ ['04/09 17:01','tal','Pasa a Taller · Glass','Desde: En revisión','NSYS'],
+ ['05/09 09:20','tal','Trabajo de glass asignado a Técnico 3','Asignado por Logística 1','ERP'],
+ ['08/09 12:45','tal','Glass terminado','Técnico 3 · 3 días','ERP'],
+ ['08/09 13:01','lis','Pasa a Listos con grado A100','Desde: Taller · Glass','NSYS'],
+ ['12/09 09:32','ped','De pedido · AMZ 402-7781903','Amazon · IMEI asociado por Logística 1','ERP'],
+ ['12/09 17:40','ven','Revisión final OK y vendido (Released)','Entregado a UPS · etiqueta de ShippyPro','ERP'],
+ ['29/09 11:02','dev','Devolución del cliente: vuelve a stock','Falla Face ID · entra por Devolución (lote BT-1184, 2.ª entrada)','NSYS'],
+ ['30/09 10:31','rev','Revisión: se le pone el grado ID','Face ID no se puede arreglar aquí','NSYS'],
+ ['30/09 11:01','tal','Pasa a Taller · Reparación','Desde: Devolución','NSYS'],
+ ['02/10 13:01','lis','Pasa a Listos','Desde: Taller · Reparación · grado ID: solo se vende a Distribuidores','NSYS'],
+ ['10/10 12:15','ped','De pedido · SIM 2291','Venta directa · Distribuidor B · IMEI asociado por Logística 2','ERP'],
+];
+const COLOR={lote:'#90A4AE',rev:'#F0A030',tal:'#1E88E5',lis:'#43A047',ped:'#C62828',ven:'#001232',dev:'#C07800',nc:'#78909C'};
+function eventosDe(m){
+ if(m===ESTRELLA)return E_ESTRELLA;
+ if(m.venta){const ev=[[fmt(m.entrada),'lote','Entra en el lote '+m.lote,'Grado '+m.gr+' · del fichero de NSYS: solo la fecha','NSYS']];
+  if(m.entrada<new Date(2023,11,29))ev.push(['','corte','Antes de dic. 2023 solo se conoce la entrada y la venta','', '']);
+  ev.push([fmt(m.venta),'ven','Vendido (Released)','SKU '+m.sku+' · del fichero de NSYS: solo la fecha','NSYS']);return ev}
+ const ev=[];const d0=m.dias;let d=d0;
+ ev.push([fmtH(menosDias(d,10,14)),'lote','Entra en el lote '+m.lote,'Compra al proveedor '+'ABCD'[m.lote.charCodeAt(5)%4],'NSYS']);
+ ev.push([fmtH(menosDias(d,10,14)),'rev','Sin caja: revisión de funcionalidad y estética','Grado n/a','NSYS']);
+ if(m.gr==='n/a')return ev;
+ d=Math.max(d-1,0);ev.push([fmtH(menosDias(d,16,31)),'rev','Se le pone el grado '+m.gr+(m.bat?'100':''),m.gr==='C'?'Necesita taller: saldrá como A':(m.bat?'Batería nueva':''),'NSYS']);
+ if(m.u==='dev'){ev.push([fmtH(menosDias(Math.max(d-1,0),11,2)),'dev','Devolución del cliente: vuelve a stock','Entra por Devolución para revisarlo','NSYS']);return ev}
+ if(TALLER.has(m.u)||m.gr==='C'||(m.u==='lis'&&d0%3===0)){const caja=TALLER.has(m.u)?m.u:'gla';
+  ev.push([fmtH(menosDias(d,17,1)),'tal','Pasa a '+UB[caja],'Desde: En revisión','NSYS']);
+  ev.push([fmtH(menosDias(Math.max(d-1,0),9,20)),'tal','Trabajo de '+UB[caja].replace('Taller · ','').toLowerCase()+' asignado a Técnico '+(1+d0%6),'Asignado por Logística 1','ERP']);
+  if(m.u==='lis'){d=Math.max(d-3,0);ev.push([fmtH(menosDias(d,12,45)),'tal','Trabajo terminado','Técnico '+(1+d0%6),'ERP']);ev.push([fmtH(menosDias(d,13,1)),'lis','Pasa a Listos','Desde: '+UB[caja],'NSYS'])}}
+ else if(m.u==='lis'){ev.push([fmtH(menosDias(d,17,1)),'lis','Pasa a Listos','Perfecto tras la revisión','NSYS'])}
+ if(NOCUENTA.has(m.u))ev.push([fmtH(menosDias(Math.max(d-1,0),11,31)),'nc','Pasa a '+UB[m.u],m.u==='pie'?'Espera una pieza que no hay: no cuenta como stock':'No se puede vender: no cuenta como stock','NSYS']);
+ if(m.p)ev.push([fmtH(menosDias(Math.max(d-2,0),9,32)),'ped','De pedido · '+m.p,'IMEI asociado por Logística 1','ERP']);
+ return ev;
+}
+// ---------- estado ----------
+let verNo=false, sel='iPhone 13 128GB', txtMod='', vista='stock', anterior='stock';
+const F={col:new Set(),gr:new Set(),bat:new Set(),u:new Set(),est:new Set()};
+const DIM={col:m=>m.col,gr:m=>m.gr,bat:m=>m.bat?'Nueva (100 %)':'Original',u:m=>UB[m.u],est:m=>m.p?'De pedido':'Libre'};
+const visibles=()=>M.filter(m=>verNo||!NOCUENTA.has(m.u));
+const enStock=()=>M.filter(m=>!NOCUENTA.has(m.u));
+function grupos(){const g={};visibles().forEach(m=>{const k=m.mod+' '+m.cap;(g[k]=g[k]||[]).push(m)});
+ return Object.entries(g).sort((a,b)=>b[0].localeCompare(a[0],'es',{numeric:true}))}
+const cta=l=>{const s=l.filter(m=>!NOCUENTA.has(m.u));return{tot:s.length,lib:s.filter(m=>!m.p).length,ped:s.filter(m=>m.p).length,lis:s.filter(m=>m.u==='lis').length,tal:s.filter(m=>TALLER.has(m.u)).length,rev:s.filter(m=>['rev','dev'].includes(m.u)).length,nc:l.length-s.length}};
+const pasa=(m,salvo)=>Object.keys(F).every(k=>k===salvo||F[k].size===0||F[k].has(DIM[k](m)));
+const ub=(k)=>'<span class="ub '+k+'">'+UB[k]+'</span>'+(NOCUENTA.has(k)?'<span class="nc">NO CUENTA</span>':'');
+const est=p=>p?'<span class="est-ped">De pedido · '+p+'</span>':'<span class="est-lib">Libre</span>';
+function pintaLista(){
+ const G=grupos();if(!G.find(([k])=>k===sel))sel=G[0][0];
+ document.getElementById('lista').innerHTML=G.filter(([k])=>k.toLowerCase().includes(txtMod)).map(([k,l])=>{const c=cta(l);
+  return '<div class="ls '+(k===sel?'act':'')+'" data-k="'+k+'"><div><div style="font-weight:700">'+k+'</div><div class="tots"><span class="mini l">'+c.lis+'</span><span class="mini t">'+c.tal+'</span><span class="mini r">'+c.rev+'</span><span class="mini p">'+c.ped+'</span><span class="sub">· '+c.lib+' libres'+(verNo&&c.nc?' · '+c.nc+' no cuentan':'')+'</span></div></div><span class="n">'+c.tot+'</span></div>'}).join('')||'<div class="vacio-t">Ningún modelo</div>';
+ document.querySelectorAll('#lista .ls').forEach(e=>e.onclick=()=>{sel=e.dataset.k;Object.values(F).forEach(s=>s.clear());abierto=null;pintaTodo()});
+ document.getElementById('cont').textContent=enStock().length+' móviles en stock';
+}
+let abierto=null;
+function chips(k,cont,et,orden){
+ const l=grupos().find(([g])=>g===sel)[1];const cnt={};l.filter(m=>pasa(m,k)).forEach(m=>{cnt[DIM[k](m)]=(cnt[DIM[k](m)]||0)+1});
+ let vals=[...new Set(l.map(DIM[k]))];if(orden)vals.sort((a,b)=>orden.indexOf(a)-orden.indexOf(b));
+ document.getElementById(cont).innerHTML='<span class="et">'+et+'</span>'+vals.map(v=>{const c=cnt[v]||0;
+  return '<span class="ch '+(F[k].has(v)?'on ':'')+(c===0&&!F[k].has(v)?'cero':'')+'" data-k="'+k+'" data-v="'+v+'">'+(k==='col'?'<span class="mu" style="background:'+(MUESTRA[v]||'#ccc')+'"></span>':'')+v+'<span class="c">'+c+'</span></span>'}).join('');
+}
+function pills(){
+ const l=grupos().find(([g])=>g===sel)[1];
+ const P=[['bat','Batería','todas'],['u','Ubicación','todas'],['est','Estado','todos']];
+ const activos=Object.values(F).reduce((a,s)=>a+s.size,0);
+ document.getElementById('pills').innerHTML=P.map(([k,et,todo])=>{
+  const cnt={};l.filter(m=>pasa(m,k)).forEach(m=>{cnt[DIM[k](m)]=(cnt[DIM[k](m)]||0)+1});const vals=[...new Set(l.map(DIM[k]))].sort();
+  const txt=F[k].size===0?todo:(F[k].size===1?[...F[k]][0]:F[k].size+' elegidas');
+  return '<div class="pill"><button data-p="'+k+'" class="'+(F[k].size?'':'vacio')+'">'+et+': '+txt+' ▾</button>'+(abierto===k?'<div class="menu">'+vals.map(v=>'<label class="'+((cnt[v]||0)===0&&!F[k].has(v)?'cero':'')+'"><input type="checkbox" data-k="'+k+'" data-v="'+v+'" '+(F[k].has(v)?'checked':'')+'>'+v+'<span class="c">'+(cnt[v]||0)+'</span></label>').join('')+'</div>':'')+'</div>'}).join('')
+  +(activos?'<span class="limpiar" id="limpiar">Quitar filtros ('+activos+')</span>':'');
+ document.querySelectorAll('#pills .pill>button').forEach(b=>b.onclick=e=>{e.stopPropagation();abierto=abierto===b.dataset.p?null:b.dataset.p;pills()});
+ document.querySelectorAll('#pills .menu').forEach(mn=>mn.onclick=e=>e.stopPropagation());
+ document.querySelectorAll('#pills input').forEach(i=>i.onchange=()=>{const k=i.dataset.k,v=i.dataset.v;i.checked?F[k].add(v):F[k].delete(v);pintaDer()});
+ const lim=document.getElementById('limpiar');if(lim)lim.onclick=()=>{Object.values(F).forEach(s=>s.clear());abierto=null;pintaDer()};
+}
+function pintaDer(){
+ const l=grupos().find(([g])=>g===sel)[1];const v=l.filter(m=>pasa(m));
+ document.getElementById('tit').innerHTML=sel+' <span class="cont">'+v.length+' de '+l.length+'</span>';
+ chips('col','fColor','Color');chips('gr','fGrado','Grado',ORDEN_GR);pills();
+ document.querySelectorAll('.fl .ch').forEach(e=>e.onclick=()=>{if(e.classList.contains('cero'))return;const k=e.dataset.k,x=e.dataset.v;F[k].has(x)?F[k].delete(x):F[k].add(x);pintaDer()});
+ document.getElementById('tabla').innerHTML='<tr><th>IMEI</th><th>Color</th><th>Grado</th><th>Batería</th><th>eSIM</th><th>SKU</th><th>Ubicación</th><th>Estado</th><th class="num">Días</th></tr>'+
+  (v.length?v.sort((a,b)=>(b.p?1:0)-(a.p?1:0)||a.col.localeCompare(b.col)).map(m=>'<tr class="clic '+(m.p?'ped ':'')+(NOCUENTA.has(m.u)?'nocuenta':'')+'" data-i="'+m.imei+'"><td class="mono">'+m.imei+'</td><td><span class="mu" style="background:'+(MUESTRA[m.col]||'#ccc')+'"></span> '+m.col+'</td><td><span class="gr '+(m.gr==='n/a'?'na':'')+'">'+m.gr+'</span></td><td>'+(m.bat?'Nueva':'Original')+'</td><td>'+(m.esim?'Sí':'')+'</td><td class="mono">'+m.sku+'</td><td>'+ub(m.u)+'</td><td>'+est(m.p)+'</td><td class="num">'+m.dias+'</td></tr>').join('')
+  :'<tr><td colspan="9" class="vacio-t">Ningún móvil con estos filtros</td></tr>');
+ document.querySelectorAll('#tabla tr.clic').forEach(r=>r.onclick=()=>abrirRastro(r.dataset.i));
+}
+function pintaTodo(){pintaLista();pintaDer()}
+// ---------- buscador de IMEI ----------
+const todos=()=>[...M,...VENDIDOS];
+function buscar(inp,caja){
+ const t=inp.value.replace(/\D/g,'');if(t.length<4){caja.classList.add('oculto');return}
+ const r=todos().filter(m=>m.imei.includes(t)).slice(0,6);
+ caja.innerHTML=r.length?r.map(m=>'<div data-i="'+m.imei+'"><span class="mono">'+m.imei+'</span> · '+m.mod+' '+m.cap+' '+m.col+' · '+(m.venta?'vendido el '+fmt(m.venta):UB[m.u]+(m.p?' · de pedido':''))+'</div>').join(''):'<div class="vac">Ningún móvil con ese IMEI</div>';
+ caja.classList.remove('oculto');caja.querySelectorAll('div[data-i]').forEach(d=>d.onclick=()=>{caja.classList.add('oculto');abrirRastro(d.dataset.i)});
+}
+const busImei=document.getElementById('busImei'),sug=document.getElementById('sug');
+busImei.oninput=()=>buscar(busImei,sug);
+busImei.onkeydown=e=>{if(e.key==='Enter'){const m=todos().find(x=>x.imei===busImei.value.trim());if(m){sug.classList.add('oculto');abrirRastro(m.imei)}}};
+document.getElementById('busMod').oninput=e=>{txtMod=e.target.value.toLowerCase();pintaLista()};
+document.getElementById('swNo').onclick=e=>{verNo=!verNo;e.currentTarget.classList.toggle('on',verNo);pintaTodo()};
+document.addEventListener('click',e=>{if(abierto&&!e.target.closest('.pill')){abierto=null;pills()}if(!e.target.closest('.barra'))sug.classList.add('oculto')});
+// ---------- trabajos del taller (la vista de hoy) ----------
+const TRAB_ESTRELLA=[
+ {id:'9230',tipo:'pul',tec:'Técnico 2',ini:'01/10',fin:'02/10',inc:'',obs:'Marcas en el marco',ant:'9104',cli:'Distribuidor B'},
+ {id:'9104',tipo:'rep',tec:'Técnico 5',ini:'30/09',fin:'01/10',inc:'Face ID no reparable aquí',obs:'Devolución del cliente',ant:'8812',cli:''},
+ {id:'8812',tipo:'gla',tec:'Técnico 3',ini:'05/09',fin:'08/09',inc:'',obs:'',ant:'',cli:'Amazon'},
+];
+const TIPO={gla:['Glass','gla'],rep:['Reparación','rep'],pul:['Pulido','pul'],pan:['Pantalla rota','pan']};
+function trabajosDe(m){
+ if(m===ESTRELLA)return TRAB_ESTRELLA;
+ if(m.venta)return m.trabajos?[{id:'7710',tipo:'gla',tec:'Técnico 1',ini:fmt(new Date(m.entrada.getTime()+2*864e5)),fin:fmt(new Date(m.entrada.getTime()+4*864e5)),inc:'',obs:'',ant:'',cli:''}]:[];
+ const ev=eventosDe(m);const r=[];
+ ev.forEach(e=>{if(e[4]==='ERP'&&e[2].startsWith('Trabajo de')){const caja=(Object.keys(UB).find(k=>e[2].toLowerCase().includes(UB[k].replace('Taller · ','').toLowerCase())&&TALLER.has(k)))||'rep';
+  const fin=ev.find(x=>x[2]==='Trabajo terminado');r.push({id:String(9300+(+m.imei.slice(-3))%600),tipo:caja,tec:e[2].split(' a ')[1],ini:e[0].split(' ')[0],fin:fin?fin[0].split(' ')[0]:'',inc:'',obs:'',ant:'',cli:m.p?(m.p.startsWith('SIM')?'Distribuidor B':m.p.startsWith('WEB')?'Cliente web':'Amazon'):''})}});
+ return r;
+}
+let filaResaltada=null;
+function pintaTrab(m){
+ const l=trabajosDe(m);
+ document.getElementById('nTrab').textContent=l.length;
+ document.getElementById('tTrab').innerHTML='<tr><th>Id</th><th>Tipo</th><th>Técnico</th><th>Inicio</th><th>Fin</th><th>Incidencia</th><th>Observación</th><th>Cliente</th><th>Id Rep. Anterior</th></tr>'+
+  (l.length?l.map(j=>'<tr class="clic '+(j.inc?'borde-inc ':'')+(j.id===filaResaltada?'resaltada':'')+'" data-id="'+j.id+'"><td>'+j.id+'</td><td><span class="ub '+TIPO[j.tipo][1]+'">'+TIPO[j.tipo][0]+'</span></td><td>'+j.tec+'</td><td>'+j.ini+'</td><td>'+(j.fin||'<i style="color:var(--texto-suave)">en curso</i>')+'</td><td>'+(j.inc||'<i style="color:var(--texto-suave)">Sin incidencia</i>')+'</td><td>'+j.obs+'</td><td>'+j.cli+'</td><td>'+(j.ant?'<span class="lnk" data-ir="'+j.ant+'">'+j.ant+'</span>':'')+'</td></tr>').join('')
+  :'<tr><td colspan="9" class="vacio-t">Este móvil no ha pasado por el taller</td></tr>');
+ document.querySelectorAll('#tTrab .lnk').forEach(a=>a.onclick=e=>{e.stopPropagation();filaResaltada=a.dataset.ir;pintaTrab(m)});
+ document.querySelectorAll('#tTrab tr.clic').forEach(r=>{r.onclick=()=>{filaResaltada=r.dataset.id;pintaTrab(m)};
+  r.oncontextmenu=e=>{e.preventDefault();const mf=document.getElementById('menuFila');
+   mf.innerHTML='<div>Editar</div><div>Borrar</div><div>Corregir cliente</div><div>Copiar celda</div><div class="nota-m">En el ERP real, este menú hace lo mismo que hoy.</div>';
+   mf.style.left=e.clientX+'px';mf.style.top=e.clientY+'px';mf.classList.remove('oculto')}});
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#menuFila'))document.getElementById('menuFila').classList.add('oculto')});
+let actual=null;
+function pestana(t){document.querySelectorAll('#tabsd span').forEach(s=>s.classList.toggle('act',s.dataset.t===t));
+ document.getElementById('cajaTrab').classList.toggle('oculto',t!=='trab');document.getElementById('cajaRastro').classList.toggle('oculto',t!=='ras')}
+document.querySelectorAll('#tabsd span').forEach(s=>s.onclick=()=>pestana(s.dataset.t));
+// ---------- el rastro como «adicional» ----------
+let modo='A';
+const cajaR=()=>document.getElementById('cajaRastro');
+function aplicarModo(){
+ const tabs=document.getElementById('tabsd'),barra=document.getElementById('barraR'),desp=document.getElementById('desp'),cajon=document.getElementById('cajon');
+ cajon.classList.add('oculto');desp.classList.remove('abierto');desp.querySelector('.fl-d').textContent='▸';document.getElementById('cuerpoDesp').classList.add('oculto');
+ tabs.classList.toggle('oculto',modo!=='B');barra.classList.toggle('oculto',modo!=='A');desp.classList.toggle('oculto',modo!=='C');
+ if(modo==='A')document.getElementById('cuerpoCajon').appendChild(cajaR());
+ if(modo==='C')document.getElementById('cuerpoDesp').appendChild(cajaR());
+ if(modo==='B')document.getElementById('cajaTrab').after(cajaR());
+ cajaR().classList.toggle('oculto',modo==='B');
+ document.getElementById('cajaTrab').classList.remove('oculto');
+ if(modo==='B')pestana('trab');
+}
+document.getElementById('btnRastro').onclick=()=>document.getElementById('cajon').classList.remove('oculto');
+document.getElementById('cerrarCajon').onclick=()=>document.getElementById('cajon').classList.add('oculto');
+document.getElementById('cabDesp').onclick=()=>{const d=document.getElementById('desp');d.classList.toggle('abierto');const ab=d.classList.contains('abierto');document.getElementById('cuerpoDesp').classList.toggle('oculto',!ab);d.querySelector('.fl-d').textContent=ab?'▾':'▸'};
+document.querySelectorAll('#segModo button').forEach(b=>b.onclick=()=>{modo=b.dataset.m;
+ document.querySelectorAll('#segModo button').forEach(x=>x.classList.toggle('act',x===b));
+ const e=document.getElementById('elegirModo');e.dataset.choice='rastro-'+modo;e.textContent='Elijo esta ('+modo+')';e.classList.remove('sel');
+ if(vista==='rastro')aplicarModo()});
+// ---------- rastro ----------
+function abrirRastro(imei,desde){
+ const m=todos().find(x=>x.imei===imei);if(!m)return;actual=m;filaResaltada=null;
+ const origen=desde||vista;anterior=vista==='rastro'?anterior:vista;mostrar('rastro');
+ pintaTrab(m);aplicarModo();
+ const vendido=!!m.venta;
+ document.getElementById('ficha').innerHTML='<div class="imei">'+m.imei+'</div><div class="datos"><span>'+m.mod+' '+m.cap+' <b>'+m.col+'</b></span>'
+  +'<span>Grado <b>'+m.gr+(m.bat&&!['ID','MsA','n/a'].includes(m.gr)?'100':'')+'</b>'+(m===ESTRELLA?' (antes C100 → A100)':'')+'</span><span>SKU <b class="mono">'+m.sku+'</b></span>'
+  +(vendido?'<span><span class="ub ven">Vendido el '+fmt(m.venta)+'</span></span>':'<span>Ubicación '+ub(m.u)+'</span><span>'+est(m.p)+'</span>')
+  +'<span>Lote <b>'+m.lote+'</b></span>'+(vendido?'':'<span>En stock <b>'+m.dias+' días</b>'+(m.entradas?' ('+m.entradas+' entradas)':'')+'</span>')+'</div>';
+ const ev=eventosDe(m).slice().reverse();
+ const nEv=ev.filter(e=>e[1]!=='corte').length;document.getElementById('nEv').textContent=nEv;document.getElementById('subDesp').textContent='· '+nEv+' eventos · por dónde ha pasado este móvil y cuándo';document.getElementById('cajonImei').textContent=m.imei;
+ document.getElementById('tl').innerHTML=ev.map((e,i)=>e[1]==='corte'?'<div class="ev corte"><div class="t">'+e[2]+'</div></div>':
+  '<div class="ev'+(e[4]==='ERP'&&e[1]==='tal'?' enlace':'')+'" style="--c:'+COLOR[e[1]]+'"><div class="fe">'+e[0]+'<span class="src '+e[4].toLowerCase()+'">'+e[4]+'</span>'+'</div><div class="t">'+e[2]+(i===0&&!vendido?'<span class="ahora">AHORA</span>':'')+'</div><div class="d">'+e[3]+'</div></div>').join('');
+}
+document.getElementById('tl').addEventListener('click',e=>{const ev=e.target.closest('.ev.enlace');if(!ev)return;
+ const l=trabajosDe(actual);const txt=ev.querySelector('.t').textContent.toLowerCase();
+ const j=l.find(j=>txt.includes(TIPO[j.tipo][0].toLowerCase()))||l[0];if(j){filaResaltada=j.id;pintaTrab(actual);if(modo==='B')pestana('trab')}});
+document.getElementById('volver').onclick=()=>mostrar(anterior);
+// ---------- IMEIs (la lista de hoy) ----------
+const CON_TRAB=[ESTRELLA,...M.filter(m=>TALLER.has(m.u)||m.gr==='C').slice(0,7),VENDIDOS[1]];
+function pintaImeis(filtro=''){
+ const t=filtro.replace(/\D/g,'');
+ const lista=CON_TRAB.filter(m=>!t||m.imei.includes(t));
+ document.getElementById('contImeis').textContent=CON_TRAB.length+' IMEI con trabajos';
+ const fuera=t.length>=4?todos().filter(m=>m.imei.includes(t)&&!CON_TRAB.includes(m)):[];
+ document.getElementById('sinTrabajos').innerHTML=fuera.length?'<div class="aviso" style="background:var(--sel-suave);border-color:#9fb6dd;color:var(--azul-medio)">También hay '+fuera.length+' móvil'+(fuera.length>1?'es':'')+' sin trabajos del taller con ese IMEI: '+fuera.map(m=>'<a href="#" data-i="'+m.imei+'" style="font-weight:700;color:var(--accion)">'+m.imei+' ('+m.mod+' '+m.cap+(m.venta?', vendido el '+fmt(m.venta):'')+') → ver rastro</a>').join(' · ')+'</div>':'';
+ document.querySelectorAll('#sinTrabajos a').forEach(a=>a.onclick=e=>{e.preventDefault();abrirRastro(a.dataset.i,'buscador')});
+ const trab=m=>m===ESTRELLA?'1 Glass, 1 Rep., 1 Pulido':m.venta?'1 Glass':(m.u==='gla'||m.gr==='C'?'1 Glass':m.u==='pul'?'1 Pulido':'1 Rep.');
+ document.getElementById('tImeis').innerHTML='<tr><th>IMEI teléfono</th><th>Modelo</th><th>Fechas</th><th>Trabajos</th><th>Estado</th><th>Cliente</th></tr>'+
+  (lista.length?lista.map(m=>'<tr class="clic" data-i="'+m.imei+'"><td class="mono">'+m.imei+'</td><td>'+m.mod+'</td><td>'+(m.venta?fmt(m.entrada):fmt(menosDias(m.dias)))+'</td><td>'+trab(m)+'</td><td><i style="color:var(--texto-suave)">Sin incidencia</i></td><td>'+(m.p?(m.p.startsWith('SIM')?'Distribuidor B':m.p.startsWith('WEB')?'Cliente web':'Amazon'):'')+'</td></tr>').join(''):'<tr><td colspan="6" class="vacio-t">Ningún IMEI con trabajos coincide</td></tr>');
+ document.querySelectorAll('#tImeis tr.clic').forEach(r=>r.onclick=()=>abrirRastro(r.dataset.i,'imeis'));
+}
+document.getElementById('busImeis').oninput=e=>pintaImeis(e.target.value);
+// ---------- navegación ----------
+function mostrar(v){vista=v;['Stock','Rastro','Imeis'].forEach(x=>document.getElementById('v'+x).classList.toggle('oculto',x.toLowerCase()!==v));
+ document.querySelectorAll('nav .lk[data-v]').forEach(b=>b.classList.toggle('act',b.dataset.v===(v==='rastro'?anterior:v)));
+ if(v==='imeis')pintaImeis(document.getElementById('busImeis').value)}
+document.querySelectorAll('nav .lk[data-v]').forEach(b=>b.onclick=()=>{anterior=b.dataset.v;mostrar(b.dataset.v)});
+// ---------- estado de NSYS ----------
+const NS={ok:['','<i></i>NSYS: exportación de hoy 13:31 · hace 12 min',''],
+ tarde:['tarde','<i></i>NSYS: última exportación hace 2 h 12 min (11:31)',''],
+ sin:['sin','<i></i>NSYS: sin datos nuevos desde hace 5 h','<b>No llegan datos nuevos de NSYS desde las 08:31.</b> El PC de producción o Drive pueden estar parados. Se enseñan los últimos datos recibidos; lo que haya cambiado desde entonces no se ve.']};
+function nsys(k){document.querySelectorAll('#segNsys button').forEach(b=>b.classList.toggle('act',b.dataset.n===k));
+ const n=document.getElementById('nsys');n.className='nsys '+NS[k][0];n.innerHTML=NS[k][1];
+ const a=document.getElementById('avisoNsys');a.innerHTML=NS[k][2];a.classList.toggle('oculto',!NS[k][2])}
+document.querySelectorAll('#segNsys button').forEach(b=>b.onclick=()=>nsys(b.dataset.n));
+nsys('ok');pintaTodo();
+</script>
+</body>
+</html>
