@@ -72,7 +72,10 @@ teléfonos y el rastro de cada teléfono. Además, el modelo de un IMEI sale del
 - `ClienteDrive` lee las credenciales la primera vez que hace falta, nunca al arrancar.
 
 **Horas y umbrales**
-- Todas las horas son de **Europe/Madrid**, como `LocalDateTime` sin zona, tanto en la base de datos como en la API.
+- Todas las horas del espejo son de **Europe/Madrid**, como `LocalDateTime` sin zona, tanto en la base de datos como en la
+  API. **Ojo:** el resto de la BD (y la JVM) va en UTC, y la web lo pasa a Madrid con `shared/lib/fechas.ts`. Las horas
+  de `Reparacion` que entran en el rastro se pasan de UTC a Madrid en `NsysDAO.trabajos` (`utcAMadrid`). La web corta
+  las del espejo tal cual (`diaNsys`, `rastro.ts`, `stock/nsys.ts`), sin `formatear`.
 - **Importación:** `@Scheduled(initialDelay = 60_000, fixedDelay = 300_000)`.
 - **Freno de seguridad:** un fichero con **menos del 90 %** de las filas de la última importación `OK` se rechaza
   (`MINIMO_FILAS = 0.9`).
@@ -157,16 +160,17 @@ teléfonos y el rastro de cada teléfono. Además, el modelo de un IMEI sale del
 | Fichero | Responsabilidad |
 |---|---|
 | `api/openapi.json`, `src/shared/api/schema.d.ts` (generados), `src/shared/api/client.ts` | Contrato y alias de tipos |
-| `src/shared/lib/telefonoNsys.ts` | Nombre del modelo, colores de las ubicaciones y texto del estado: lo comparten el módulo `telefonos` y `taller/imeis` |
+| `src/shared/lib/telefonoNsys.ts` | Nombre del modelo, colores de las ubicaciones, texto del estado y día dd/mm/aaaa: lo comparten el módulo `telefonos` y `taller/imeis` |
 | `src/test/server.ts` | Handlers por defecto de MSW: NSYS no conoce el IMEI y la búsqueda no encuentra nada |
 | `src/shared/lib/enlaces.ts`, `src/app/shell/navegacion.ts`, `src/app/shell/preferencias.ts`, `src/app/router.tsx` | Grupo «Teléfonos» y ruta `/telefonos/stock` |
 | `src/modules/telefonos/rutas.tsx` | Enlaces del grupo y guarda `RequiereAccesoTelefonos` |
-| `src/modules/telefonos/api.ts` | `useStockTelefonos`, `useEstadoNsys`, `useBuscarMoviles` |
+| `src/shared/api/nsys.ts` | `useBuscarMoviles`: buscar un IMEI en el espejo (lo usan los dos módulos) |
+| `src/modules/telefonos/api.ts` | `useStockTelefonos`, `useEstadoNsys` |
 | `src/modules/telefonos/stock/modelo.ts` | Reglas puras: grupos, totales, filtros, opciones y muestras de color |
 | `src/modules/telefonos/stock/nsys.ts` | Textos de la píldora y de la banda de NSYS, en hora de Madrid |
 | `src/modules/telefonos/stock/{StockTelefonosPage,ListaModelos,FiltrosMoviles,PildoraNsys,BuscadorImei}.tsx`, `columnas.tsx` | Pantalla «Stock de teléfonos» |
 | `src/modules/telefonos/test/fabrica.ts` | Datos sintéticos de los tests del módulo |
-| `src/modules/taller/imeis/apiNsys.ts` | `useFichaMovil`, `useRastro`, `useBuscarMovilesNsys` |
+| `src/modules/taller/imeis/apiNsys.ts` | `useFichaMovil`, `useRastro` |
 | `src/modules/taller/imeis/rastro.ts`, `FichaMovil.tsx`, `PanelRastro.tsx` | Textos del rastro, ficha y panel lateral |
 | `src/modules/taller/imeis/ImeiDetallePage.tsx`, `ImeisPage.tsx`, `src/modules/taller/test/fabrica.ts` | Ficha + «Ver rastro» en el detalle; aviso de móviles sin trabajos en la lista |
 | `tests/e2e/stock-telefonos.spec.ts`, `.env.e2e.example` | E2E de solo lectura en preprod |
@@ -1731,7 +1735,7 @@ git commit -m "feat: lectura en streaming del fichero Items y del maestro de NSY
   - `int empezarImportacion(String fichero, LocalDateTime fechaExportacion, String origen, LocalDateTime ahora)` y `void terminarImportacion(int id, String resultado, int filas, int cambios, String mensaje, LocalDateTime ahora)`.
   - `Optional<Importacion> ultimaImportacion(String origen, Set<String> resultados)`, `Optional<Importacion> primeraImportacion(String origen, Set<String> resultados)` y `Set<String> ficherosProcesados(String origen)`.
   - `int rellenarModelosTelefono()` y `String modeloDe(String imei)`.
-  - `List<MovilNsys> enEmpresa()`, `List<MovilNsys> buscar(String texto, int limite)`, `List<MovilNsys> porImei(String imeiSn)`, `List<EventoNsys> eventos(String imeiSn)` y `List<TrabajoTaller> trabajos(String imei)`.
+  - `List<MovilNsys> enEmpresa()`, `List<MovilNsys> buscar(String texto, int limite)`, `List<MovilNsys> porImei(String imeiSn)`, `List<EventoNsys> eventos(String imeiSn)`, `List<TrabajoTaller> trabajos(String imei)` (horas ya en Madrid) y `static LocalDateTime utcAMadrid(Timestamp)`.
   - `record Importacion(int id, String fichero, LocalDateTime fechaExportacion, String resultado, int filas, String mensaje)`.
   - `record TrabajoTaller(String idRep, LocalDateTime asignado, LocalDateTime terminado, String tecnico)`.
 
@@ -1850,6 +1854,13 @@ class NsysDAOTest {
         assertTrue(dao.buscar("%%", 10).isEmpty());
         verifyNoInteractions(jdbc);
     }
+
+    @Test void lasHorasDelTallerPasanDeUtcAMadrid() {
+        // La BD del taller guarda UTC; el espejo y su API van en hora de Madrid (verano +2, invierno +1).
+        assertEquals(LocalDateTime.of(2026, 9, 12, 13, 1), NsysDAO.utcAMadrid(Timestamp.valueOf(LocalDateTime.of(2026, 9, 12, 11, 1))));
+        assertEquals(LocalDateTime.of(2026, 1, 12, 12, 1), NsysDAO.utcAMadrid(Timestamp.valueOf(LocalDateTime.of(2026, 1, 12, 11, 1))));
+        assertNull(NsysDAO.utcAMadrid(null));
+    }
 }
 ```
 
@@ -1901,6 +1912,8 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1911,10 +1924,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
-/** Acceso a las tablas del espejo de NSYS (spec pieza 1 §4). Las horas son de Madrid. */
+/** Acceso a las tablas del espejo de NSYS (spec pieza 1 §4). Las horas del espejo son de Madrid; las del taller
+ *  (`Reparacion`) están en UTC, como el resto de la BD, y se pasan a Madrid al leerlas. */
 @Repository
 public class NsysDAO {
 
+    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     static final int LOTE = 1000;
     static final String COLUMNAS_MOVIL = "IMEI_SN, BATCH, GOODS, GRADE, STATUS, LOCATION, SUPPLIER, RECEIVING_DATE,"
             + " SOLD_DATE, SKU, MODELO, MODELO_MAESTRO, CAPACIDAD, COLOR, GRADO_DETALLE, ES_ESIM, UBICACION,"
@@ -2093,12 +2108,13 @@ public class NsysDAO {
                         rs.getString("A_NSYS")), imeiSn);
     }
 
-    /** Los trabajos del taller de un IMEI (asignaciones A… y trabajos hechos R/G/P), con el nombre del técnico. */
+    /** Los trabajos del taller de un IMEI (asignaciones A… y trabajos hechos R/G/P), con el nombre del técnico. Sus horas
+     *  pasan de UTC a Madrid para que el rastro no mezcle zonas con los eventos de NSYS. */
     public List<TrabajoTaller> trabajos(String imei) {
         return jdbc.query("SELECT r.ID_REP, r.FECHA_ASIG, r.FECHA_FIN, t.NOMBRE FROM Reparacion r"
                         + " JOIN Tecnico t ON t.ID_TEC = r.ID_TEC WHERE r.IMEI = ? ORDER BY r.FECHA_ASIG, r.ID_REP",
-                (rs, n) -> new TrabajoTaller(rs.getString("ID_REP"), fechaHora(rs.getTimestamp("FECHA_ASIG")),
-                        fechaHora(rs.getTimestamp("FECHA_FIN")), rs.getString("NOMBRE")), imei);
+                (rs, n) -> new TrabajoTaller(rs.getString("ID_REP"), utcAMadrid(rs.getTimestamp("FECHA_ASIG")),
+                        utcAMadrid(rs.getTimestamp("FECHA_FIN")), rs.getString("NOMBRE")), imei);
     }
 
     // ---------------------------------------------------------------- utilidades
@@ -2134,6 +2150,12 @@ public class NsysDAO {
     private static LocalDateTime fechaHora(Timestamp ts) {
         return ts == null ? null : ts.toLocalDateTime();
     }
+
+    /** Una hora del taller (UTC sin zona, como guarda la BD con la JVM y la sesión en UTC) en hora de Madrid. */
+    static LocalDateTime utcAMadrid(Timestamp ts) {
+        return ts == null ? null
+                : ts.toLocalDateTime().atOffset(ZoneOffset.UTC).atZoneSameInstant(MADRID).toLocalDateTime();
+    }
 }
 ```
 
@@ -2142,7 +2164,7 @@ public class NsysDAO {
 - [ ] **Step 4: Ejecuta el test (pasa)**
 
 Run: `mvn -q test -Dtest=NsysDAOTest`
-Expected: `BUILD SUCCESS`, 9 tests en verde.
+Expected: `BUILD SUCCESS`, 10 tests en verde.
 
 - [ ] **Step 5: Commit**
 
@@ -4110,16 +4132,17 @@ git commit -m "feat: el modelo de un IMEI sale del espejo de NSYS y se retira IM
 
 **Files:**
 - Modify: `gestion-reparaciones-web/api/openapi.json`, `gestion-reparaciones-web/src/shared/api/schema.d.ts` (generados), `gestion-reparaciones-web/src/shared/api/client.ts`, `gestion-reparaciones-web/src/test/server.ts`
-- Create: `gestion-reparaciones-web/src/shared/lib/telefonoNsys.ts`, `gestion-reparaciones-web/src/modules/telefonos/api.ts`, `gestion-reparaciones-web/src/modules/telefonos/test/fabrica.ts`, `gestion-reparaciones-web/src/modules/taller/imeis/apiNsys.ts`
+- Create: `gestion-reparaciones-web/src/shared/lib/telefonoNsys.ts`, `gestion-reparaciones-web/src/shared/api/nsys.ts`, `gestion-reparaciones-web/src/modules/telefonos/api.ts`, `gestion-reparaciones-web/src/modules/telefonos/test/fabrica.ts`, `gestion-reparaciones-web/src/modules/taller/imeis/apiNsys.ts`
 - Test: `gestion-reparaciones-web/src/shared/lib/telefonoNsys.test.ts`, `gestion-reparaciones-web/src/modules/telefonos/api.test.tsx`
 
 **Interfaces:**
 - Consumes: el contrato del servidor de las Tasks 8 y 9 (`target/openapi.json` de `/c/Users/dev/Documents/wt/servidor-0917`).
 - Produces:
   - Alias en `client.ts`: `MovilStock`, `EstadoNsys`, `MovilBuscado`, `FichaMovil`, `EventoRastro`.
-  - En `shared/lib/telefonoNsys.ts`: `nombreModeloNsys(modelo, modeloMaestro)`, `clasesUbicacion(ubicacion)` y `textoEstadoMovil(estado)`.
-  - En `modules/telefonos/api.ts`: `useStockTelefonos()`, `useEstadoNsys()` y `useBuscarMoviles(texto)`.
-  - En `modules/taller/imeis/apiNsys.ts`: `useFichaMovil(imei, activo)`, `useRastro(imei, activo)` y `useBuscarMovilesNsys(texto, activo)`.
+  - En `shared/lib/telefonoNsys.ts`: `nombreModeloNsys(modelo, modeloMaestro)`, `clasesUbicacion(ubicacion)`, `textoEstadoMovil(estado)` y `diaNsys(iso)` («2023-05-02» → «02/05/2023»).
+  - En `shared/api/nsys.ts`: `useBuscarMoviles(texto, activo = true)`. Va en `shared` (como `useClientes` en `shared/api/clientes.ts`) porque lo usan los dos módulos y un módulo no importa de otro.
+  - En `modules/telefonos/api.ts`: `useStockTelefonos()` y `useEstadoNsys()`.
+  - En `modules/taller/imeis/apiNsys.ts`: `useFichaMovil(imei, activo)` y `useRastro(imei, activo)`.
   - Fábricas de test: `movil(parcial)`, `estadoNsys(parcial)` y `movilBuscado(parcial)`.
   - Handlers por defecto de MSW para `/api/stock-telefonos/buscar`, `/{imeiSn}` (404) y `/{imeiSn}/rastro`.
 
@@ -4149,7 +4172,7 @@ Crea `src/shared/lib/telefonoNsys.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest'
-import { clasesUbicacion, nombreModeloNsys, textoEstadoMovil } from './telefonoNsys'
+import { clasesUbicacion, diaNsys, nombreModeloNsys, textoEstadoMovil } from './telefonoNsys'
 
 describe('piezas compartidas del espejo de NSYS', () => {
   it('nombre del modelo: el código del ERP, si no el del maestro y si no un aviso', () => {
@@ -4168,6 +4191,11 @@ describe('piezas compartidas del espejo de NSYS', () => {
   it('texto del estado del móvil', () => {
     expect(['STOCK', 'DE_PEDIDO', 'NO_CUENTA', 'VENDIDO', 'BAJA'].map(textoEstadoMovil))
       .toEqual(['Libre', 'De pedido', 'No cuenta como stock', 'Vendido', 'Baja en NSYS'])
+  })
+
+  it('día de NSYS en dd/mm/aaaa, con o sin hora detrás', () => {
+    expect(diaNsys('2023-05-02')).toBe('02/05/2023')
+    expect(diaNsys('2026-09-12T13:01:00')).toBe('12/09/2026')
   })
 })
 ```
@@ -4210,7 +4238,8 @@ import { SessionProvider } from '@/shared/session/SessionProvider'
 import { guardarSesion } from '@/shared/session/storage'
 import { server } from '@/test/server'
 import { SESION_SUPER } from '@/test/render'
-import { useBuscarMoviles, useEstadoNsys, useStockTelefonos } from './api'
+import { useBuscarMoviles } from '@/shared/api/nsys'
+import { useEstadoNsys, useStockTelefonos } from './api'
 import { estadoNsys, movil } from './test/fabrica'
 
 function envoltorio() {
@@ -4290,13 +4319,19 @@ const TEXTO_ESTADO: Record<string, string> = {
 export function textoEstadoMovil(estado: string): string {
   return TEXTO_ESTADO[estado] ?? 'Libre'
 }
+
+/** «2023-05-02» (o «2023-05-02T13:01:00») → «02/05/2023». Las fechas del espejo ya son de Madrid: se cortan del texto,
+ *  sin pasar por `formatear` de `fechas.ts`, que da por hecho UTC. */
+export function diaNsys(iso: string): string {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+}
 ```
 
 Crea `src/modules/telefonos/api.ts`:
 
 ```ts
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { api, type EstadoNsys, type MovilBuscado, type MovilStock } from '@/shared/api/client'
+import { api, type EstadoNsys, type MovilStock } from '@/shared/api/client'
 import { useIntervaloRefresco } from '@/shared/api/refresco'
 
 export const CLAVE_STOCK_TELEFONOS = ['telefonos', 'stock'] as const
@@ -4324,13 +4359,21 @@ export function useEstadoNsys(): UseQueryResult<EstadoNsys | null> {
     meta: { sinCapa: true },
   })
 }
+```
 
-/** Busca por IMEI en todo el espejo, también los vendidos. Con menos de 4 caracteres no pregunta. */
-export function useBuscarMoviles(texto: string): UseQueryResult<MovilBuscado[]> {
+Crea `src/shared/api/nsys.ts`:
+
+```ts
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { api, type MovilBuscado } from './client'
+
+/** Busca por IMEI en todo el espejo de NSYS, también los vendidos (0.9.17). Lo usan el buscador del stock de teléfonos y
+ *  la lista de IMEIs; por eso vive en `shared`. Con menos de 4 caracteres, o con `activo` a false, no pregunta. */
+export function useBuscarMoviles(texto: string, activo = true): UseQueryResult<MovilBuscado[]> {
   const limpio = texto.trim()
   return useQuery({
-    queryKey: ['telefonos', 'buscar', limpio],
-    enabled: limpio.length >= 4,
+    queryKey: ['nsys', 'buscar', limpio],
+    enabled: activo && limpio.length >= 4,
     queryFn: async () => (await api.GET('/api/stock-telefonos/buscar', { params: { query: { imei: limpio } } })).data ?? [],
     meta: { sinCapa: true },
   })
@@ -4341,10 +4384,10 @@ Crea `src/modules/taller/imeis/apiNsys.ts`:
 
 ```ts
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { api, type EventoRastro, type FichaMovil, type MovilBuscado } from '@/shared/api/client'
+import { api, type EventoRastro, type FichaMovil } from '@/shared/api/client'
 
 /** Lecturas del espejo de NSYS para el detalle y la lista de IMEIs (0.9.17). Solo SUPERTECNICO y ADMIN las piden
- *  (`activo`). Un módulo no importa de otro: estas tres viven aquí, separadas de las del stock de teléfonos. */
+ *  (`activo`). La búsqueda de móviles es `useBuscarMoviles` de `shared/api/nsys.ts`. */
 
 /** La ficha de NSYS de un IMEI. Un 404 (NSYS no lo conoce) es normal: sin diálogo, sin reintentos y sin ficha. */
 export function useFichaMovil(imei: string, activo: boolean): UseQueryResult<FichaMovil | null> {
@@ -4365,17 +4408,6 @@ export function useRastro(imei: string, activo: boolean): UseQueryResult<EventoR
     meta: { sinCapa: true },
   })
 }
-
-/** Móviles del espejo cuyo IMEI contiene el texto (también sin trabajos del taller); con menos de 4 caracteres no pregunta. */
-export function useBuscarMovilesNsys(texto: string, activo: boolean): UseQueryResult<MovilBuscado[]> {
-  const limpio = texto.trim()
-  return useQuery({
-    queryKey: ['imeis', 'buscar-nsys', limpio],
-    enabled: activo && limpio.length >= 4,
-    queryFn: async () => (await api.GET('/api/stock-telefonos/buscar', { params: { query: { imei: limpio } } })).data ?? [],
-    meta: { sinCapa: true },
-  })
-}
 ```
 
 En `src/test/server.ts`, al final de la lista de handlers de `setupServer(...)`, añade (con su comentario):
@@ -4392,7 +4424,7 @@ En `src/test/server.ts`, al final de la lista de handlers de `setupServer(...)`,
 - [ ] **Step 4: Ejecuta los tests (pasan) y el tipado**
 
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/telefonos/api.test.tsx && npx tsc -b`
-Expected: 5 tests en verde; `tsc` limpio.
+Expected: 6 tests en verde; `tsc` limpio.
 
 - [ ] **Step 5: Commit**
 
@@ -4410,7 +4442,7 @@ git commit -m "feat: contrato y API del stock de telefonos y del rastro"
 - Test: `gestion-reparaciones-web/src/modules/telefonos/stock/modelo.test.ts`, `gestion-reparaciones-web/src/modules/telefonos/stock/nsys.test.ts`
 
 **Interfaces:**
-- Consumes: `MovilStock`, `MovilBuscado` y `EstadoNsys` (Task 10); `nombreModeloNsys` y `textoEstadoMovil` (Task 10).
+- Consumes: `MovilStock`, `MovilBuscado` y `EstadoNsys` (Task 10); `nombreModeloNsys`, `textoEstadoMovil` y `diaNsys` (Task 10).
 - Produces:
   - **`modelo.ts`:**
     - tipos `Dimension = 'color' | 'grado' | 'bateria' | 'ubicacion' | 'estado'`, `Filtros`, `Opcion = { valor; cuenta }`, `Totales` y `Grupo = { clave; sinModelo; moviles; totales }`;
@@ -4536,7 +4568,7 @@ Crea `src/modules/telefonos/stock/modelo.ts`:
 
 ```ts
 import type { MovilBuscado, MovilStock } from '@/shared/api/client'
-import { nombreModeloNsys, textoEstadoMovil } from '@/shared/lib/telefonoNsys'
+import { diaNsys, nombreModeloNsys, textoEstadoMovil } from '@/shared/lib/telefonoNsys'
 
 /** Reglas puras de «Stock de teléfonos» (0.9.17, spec «Pieza 1 del módulo de teléfonos» §9.2): grupos modelo + capacidad
  *  con sus totales y filtros de un clic por color, grado, batería, ubicación y estado. */
@@ -4633,7 +4665,7 @@ export function ordenarTabla(moviles: MovilStock[]): MovilStock[] {
 
 /** Lo que se dice de un móvil encontrado por el buscador de IMEI. */
 export function textoBuscado(m: MovilBuscado): string {
-  if (m.estado === 'VENDIDO') return m.fechaVenta ? `Vendido el ${m.fechaVenta.slice(8, 10)}/${m.fechaVenta.slice(5, 7)}/${m.fechaVenta.slice(0, 4)}` : 'Vendido'
+  if (m.estado === 'VENDIDO') return m.fechaVenta ? `Vendido el ${diaNsys(m.fechaVenta)}` : 'Vendido'
   if (m.estado === 'BAJA') return 'Baja en NSYS'
   if (m.estado === 'DE_PEDIDO') return `De pedido · ${m.ubicacion ?? SIN_DATO}`
   if (m.estado === 'NO_CUENTA') return `${m.ubicacion ?? SIN_DATO} · no cuenta como stock`
@@ -4968,8 +5000,8 @@ Crea `src/modules/telefonos/stock/BuscadorImei.tsx`:
 
 ```tsx
 import { useState } from 'react'
+import { useBuscarMoviles } from '@/shared/api/nsys'
 import { nombreModeloNsys } from '@/shared/lib/telefonoNsys'
-import { useBuscarMoviles } from '../api'
 import { textoBuscado } from './modelo'
 
 /** Buscador de IMEI en todos los móviles del espejo, también los vendidos: con 4 caracteres o más sugiere hasta 10; al
@@ -5337,7 +5369,7 @@ git commit -m "feat: pantalla Stock de telefonos y grupo Telefonos para supertec
 
 **Interfaces:**
 - Consumes:
-  - `useFichaMovil`, `useRastro` y `useBuscarMovilesNsys` (Task 10, `apiNsys.ts`);
+  - `useFichaMovil` y `useRastro` (Task 10, `apiNsys.ts`) y `useBuscarMoviles` (Task 10, `shared/api/nsys.ts`);
   - `nombreModeloNsys`, `clasesUbicacion` y `textoEstadoMovil` (Task 10);
   - el mecanismo de la página: `setSeleccionada` + `setPeticionDesplazamiento`.
 - Produces:
@@ -5528,6 +5560,7 @@ Crea `src/modules/taller/imeis/rastro.ts`:
 
 ```ts
 import type { EventoRastro } from '@/shared/api/client'
+import { diaNsys } from '@/shared/lib/telefonoNsys'
 
 /** Textos y colores del rastro (0.9.17, spec «Pieza 1 del módulo de teléfonos» §9.3). El servidor manda el evento
  *  estructurado y aquí se compone lo que se lee. Las horas son de Madrid, sin zona: se cortan del texto sin convertir. */
@@ -5537,7 +5570,7 @@ const CATEGORIA: Record<string, string> = { GLASS: 'glass', PULIDO: 'pulido', RE
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
 
 export function fechaRastro(iso: string, soloDia: boolean): string {
-  const dia = `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+  const dia = diaNsys(iso)
   return soloDia ? dia : `${dia} ${iso.slice(11, 16)}`
 }
 
@@ -5593,7 +5626,7 @@ Crea `src/modules/taller/imeis/FichaMovil.tsx`:
 
 ```tsx
 import type { FichaMovil as Ficha } from '@/shared/api/client'
-import { clasesUbicacion, nombreModeloNsys, textoEstadoMovil } from '@/shared/lib/telefonoNsys'
+import { clasesUbicacion, diaNsys, nombreModeloNsys, textoEstadoMovil } from '@/shared/lib/telefonoNsys'
 import { cn } from '@/shared/lib/utils'
 import { CLASES_PILDORA } from '@/shared/ui/pildora'
 
@@ -5601,7 +5634,7 @@ type Props = { ficha: Ficha; eventos: number | null; onVerRastro: () => void }
 
 /** Ficha del móvil según NSYS, encima de la vista de trabajos de hoy (0.9.17, spec §9.3), con el botón del rastro. */
 export function FichaMovil({ ficha, eventos, onVerRastro }: Props) {
-  const venta = ficha.fechaVenta ? `${ficha.fechaVenta.slice(8, 10)}/${ficha.fechaVenta.slice(5, 7)}/${ficha.fechaVenta.slice(0, 4)}` : null
+  const venta = ficha.fechaVenta ? diaNsys(ficha.fechaVenta) : null
   return (
     <section aria-label="Ficha de NSYS" className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-lg bg-superficie px-4 py-3 text-[12.5px] text-azul-medio">
       <span className="font-mono text-[17px] font-extrabold text-azul-noche">{ficha.imeiSn}</span>
@@ -5720,13 +5753,13 @@ export function PanelRastro({ imei, eventos, onCerrar, onIrATrabajo }: Props) {
 > no hace falta `useCallback`.
 
 **`ImeisPage.tsx`:**
-- Imports: `esAdminOSuperTecnico` (junto a `esSuperTecnico`), `useBuscarMovilesNsys` de `./apiNsys` y `nombreModeloNsys` de `@/shared/lib/telefonoNsys`.
+- Imports: `esAdminOSuperTecnico` (junto a `esSuperTecnico`), `useBuscarMoviles` de `@/shared/api/nsys` y `diaNsys` y `nombreModeloNsys` de `@/shared/lib/telefonoNsys`.
 - Tras `const grupos = useMemo(...)`, añade:
 
 ```tsx
   // 0.9.17: al filtrar por un IMEI, el supertécnico y el admin ven también los móviles de NSYS sin trabajos del taller.
   const veNsys = esAdminOSuperTecnico(sesion)
-  const { data: enNsys = [] } = useBuscarMovilesNsys(filtros.imei.split(',')[0] ?? '', veNsys)
+  const { data: enNsys = [] } = useBuscarMoviles(filtros.imei.split(',')[0] ?? '', veNsys)
   // Contra todos los trabajos, no contra los grupos visibles: un IMEI con trabajos fuera de las fechas del filtro no es «sin trabajos».
   const sinTrabajos = enNsys.filter((m) => !trabajos.some((t) => t.imei === m.imeiSn))
 ```
@@ -5741,7 +5774,7 @@ export function PanelRastro({ imei, eventos, onCerrar, onIrATrabajo }: Props) {
             <span key={m.imeiSn}>
               {i > 0 && ' · '}
               <button type="button" onClick={() => abrir(m.imeiSn)} className="cursor-pointer font-bold text-texto-accion underline">{m.imeiSn}</button>
-              {` (${nombreModeloNsys(m.modelo, m.modeloMaestro)}${m.fechaVenta ? `, vendido el ${m.fechaVenta.slice(8, 10)}/${m.fechaVenta.slice(5, 7)}/${m.fechaVenta.slice(0, 4)}` : ''})`}
+              {` (${nombreModeloNsys(m.modelo, m.modeloMaestro)}${m.fechaVenta ? `, vendido el ${diaNsys(m.fechaVenta)}` : ''})`}
             </span>
           ))}
         </div>
