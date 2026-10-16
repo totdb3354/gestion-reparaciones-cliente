@@ -1,7 +1,6 @@
 # Pieza 1 del módulo de teléfonos — Stock de teléfonos y rastro (espejo de NSYS)
 
-Fecha: 2026-10-16. Estado: diseño aprobado por partes en la sesión del 16/10; pendiente de que el usuario revise esta
-spec y del plan.
+Fecha: 2026-10-16. Estado: **aprobada** por el usuario el 16/10; pendiente del plan.
 
 Toca **base de datos** (cinco tablas nuevas, migración aditiva), **servidor** y **web**. Parte de servidor `main`
 `83be807` y web `main` `4aca632` (0.9.16).
@@ -67,8 +66,8 @@ lleve el flujo entero.
 | Detalle del IMEI: ficha de NSYS y «Ver rastro» | **no** | sí | sí |
 | Modelo por IMEI (modal «Asignar trabajos», formulario) | como hoy | como hoy | como hoy |
 
-La ficha y el rastro siguen la misma regla que el stock (datos de NSYS solo para SUPERTECNICO y ADMIN). Está deducido
-de la decisión sobre el stock: se confirma en la revisión de esta spec.
+La ficha y el rastro siguen la misma regla que el stock: los datos de NSYS solo para SUPERTECNICO y ADMIN (confirmado al
+aprobar la spec).
 
 En el servidor: `hasAnyRole('SUPERTECNICO', 'ADMIN')`. Ojo: no hay jerarquía de roles, así que `hasRole('SUPERTECNICO')`
 dejaría fuera al ADMIN.
@@ -389,7 +388,6 @@ la pieza 2.
 
 - **Ubicaciones definitivas:** el usuario confirma la tabla de §4.5 el lunes 19/10. Solo cambia la carga inicial de
   `Nsys_ubicacion`.
-- **Ficha y rastro para el técnico:** confirmar en la revisión que no los ve (§3).
 - **Cuenta de servicio:** crearla y compartir la carpeta y el maestro (paso 1 de §11).
 
 ## 13. Fuera de alcance
