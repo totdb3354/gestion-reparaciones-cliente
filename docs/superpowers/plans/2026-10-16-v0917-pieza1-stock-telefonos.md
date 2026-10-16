@@ -77,8 +77,11 @@ teléfonos y el rastro de cada teléfono. Además, el modelo de un IMEI sale del
   de `Reparacion` que entran en el rastro se pasan de UTC a Madrid en `NsysDAO.trabajos` (`utcAMadrid`). La web corta
   las del espejo tal cual (`diaNsys`, `rastro.ts`, `stock/nsys.ts`), sin `formatear`.
 - **Importación:** `@Scheduled(initialDelay = 60_000, fixedDelay = 300_000)`.
-- **Freno de seguridad:** un fichero con **menos del 90 %** de las filas de la última importación `OK` se rechaza
-  (`MINIMO_FILAS = 0.9`).
+- **Freno de seguridad:** un fichero con **menos del 90 %** de las filas del fichero anterior (`OK` o `RECHAZADO`; si
+  tiene 0 filas, sin freno) se rechaza (`MINIMO_FILAS = 0.9`). Cambiado el 17/10 en la revisión de la Task 6: antes
+  comparaba con el último `OK` y no se recuperaba solo de una bajada real.
+- **Espera de Drive:** un Items modificado hace menos de 2 minutos se deja para la siguiente pasada
+  (`ESPERA_DRIVE`). `FicheroItems` lleva `Instant modificado`. Añadido el 17/10 en la revisión de la Task 6.
 - **Aviso:** se cuentan solo los minutos **hábiles** (07:00-23:00). Más de **60** → `RETRASO`; más de **180** →
   `SIN_DATOS`; sin ninguna importación → `SIN_DATOS`.
 - **Histórico:** `@Scheduled(initialDelay = 120_000, fixedDelay = 60_000)`, **un fichero por pasada** y solo entre las

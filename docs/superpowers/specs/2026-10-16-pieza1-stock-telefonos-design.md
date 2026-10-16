@@ -211,8 +211,10 @@ En los tests todo queda apagado: `OpenApiContractTest` asume que nada consulta a
 - Se lista la carpeta y se toman los `Items_*.xlsx` con fecha en el nombre posterior a la del último `OK` o `RECHAZADO`
   de origen `ACTUAL`.
 - **Si hay varios, se procesan en orden**, para no perder pasos del rastro (por ejemplo, si el servidor estuvo parado).
-- Si uno falla por error (Drive caído, fichero a medio escribir), se reintenta en la siguiente pasada. Si se
-  **rechaza** (formato), se salta y queda registrado.
+- Si uno falla por error (Drive caído), se reintenta en la siguiente pasada. Si se **rechaza** (formato, también un
+  fichero roto), se salta y queda registrado.
+- **Fichero a medio escribir** (decidido el 17/10): un Items modificado en Drive hace menos de **2 minutos** se deja
+  para la siguiente pasada, con los que vengan detrás, para no leerlo a medias.
 
 ### 5.4 Reglas de comparación
 
@@ -240,6 +242,11 @@ Además:
 
 Si el fichero trae **menos del 90 %** de las filas del anterior, se trata como incompleto: `RECHAZADO`, no se aplica y
 sale en el aviso.
+
+«El anterior» es el fichero anterior, se aceptara o lo parara el freno (decidido el 17/10). Así, si NSYS baja sus filas
+de verdad, el primer fichero bajo se rechaza y el siguiente con un número parecido entra solo, sin tocar la BD a mano.
+Si el anterior se rechazó por formato (0 filas), el freno no se aplica a ese fichero. Es seguro: un fichero incompleto
+no borra móviles, solo deja sin actualizar los que faltan.
 
 ### 5.6 Maestro
 
