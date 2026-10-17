@@ -225,7 +225,7 @@ teléfonos y el rastro de cada teléfono. Además, el modelo de un IMEI sale del
   - `enum EstadoMovil { STOCK, DE_PEDIDO, NO_CUENTA, VENDIDO, BAJA }` con `public static final Set<String> VIVOS` y `public static EstadoMovil de(String status, UbicacionNsys caja)`.
   - `final class Traductor` con `Traductor(Collection<ProductoMaestro>, Collection<UbicacionNsys>)`, `ProductoMaestro producto(String goods, String grade)` y `UbicacionNsys caja(String location)`.
 
-- [ ] **Step 1: Migración**
+- [x] **Step 1: Migración**
 
 Crea `sql/migracion-nsys-espejo.sql`:
 
@@ -358,7 +358,7 @@ INSERT INTO Nsys_ubicacion (LOCATION, UBICACION, CUENTA_STOCK, ES_PEDIDO, ORDEN)
     ('MV Pendiente revisar si hay error de inventario',  NULL,                     FALSE, FALSE, 290);
 ```
 
-- [ ] **Step 2: `crear_bd.sql`, `reset-uat.sql` y `schema.md`**
+- [x] **Step 2: `crear_bd.sql`, `reset-uat.sql` y `schema.md`**
 
 - **`crear_bd.sql`:** al final del fichero, tras la última sentencia, añade una línea en blanco y el comentario
   `-- 0.9.17: espejo de NSYS (pieza 1 del módulo de teléfonos; ver sql/migracion-nsys-espejo.sql)`.
@@ -384,7 +384,7 @@ DELETE FROM Nsys_importacion;
 - `Nsys_ubicacion` (0.9.17: traducción de cajas de NSYS a ubicaciones del ERP; datos, no código)
 ```
 
-- [ ] **Step 3: Tests de las reglas de texto, del estado y del traductor (fallan)**
+- [x] **Step 3: Tests de las reglas de texto, del estado y del traductor (fallan)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/NormalizacionTest.java`:
 
@@ -520,12 +520,12 @@ class TraductorTest {
 }
 ```
 
-- [ ] **Step 4: Ejecuta los tests (fallan)**
+- [x] **Step 4: Ejecuta los tests (fallan)**
 
 Run: `mvn -q test -Dtest='NormalizacionTest,EstadoMovilTest,TraductorTest'`
 Expected: error de compilación: no existen `Normalizacion`, `EstadoMovil`, `UbicacionNsys`, `ProductoMaestro` ni `Traductor`.
 
-- [ ] **Step 5: Implementación**
+- [x] **Step 5: Implementación**
 
 Crea `src/main/java/com/reparaciones/servidor/nsys/Normalizacion.java`:
 
@@ -664,12 +664,12 @@ public final class Traductor {
 }
 ```
 
-- [ ] **Step 6: Ejecuta los tests (pasan)**
+- [x] **Step 6: Ejecuta los tests (pasan)**
 
 Run: `mvn -q test -Dtest='NormalizacionTest,EstadoMovilTest,TraductorTest'`
 Expected: `BUILD SUCCESS`, 12 tests en verde.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add sql/migracion-nsys-espejo.sql sql/crear_bd.sql sql/reset-uat.sql docs/schema.md src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys
@@ -697,7 +697,7 @@ git commit -m "feat: esquema del espejo de NSYS y traduccion de una fila (maestr
   - `Comparador.foto(List<FilaItems>, Traductor, LocalDateTime)` → `Map<ClaveMovil, MovilNsys>`.
   - `enum Comparador.Modo { PRIMERA_CARGA, NORMAL, HISTORICO }`.
 
-- [ ] **Step 1: Test (falla)**
+- [x] **Step 1: Test (falla)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/ComparadorTest.java`:
 
@@ -899,12 +899,12 @@ class ComparadorTest {
 }
 ```
 
-- [ ] **Step 2: Ejecuta el test (falla)**
+- [x] **Step 2: Ejecuta el test (falla)**
 
 Run: `mvn -q test -Dtest=ComparadorTest`
 Expected: error de compilación: no existen `FilaItems`, `ClaveMovil`, `MovilNsys`, `EventoNsys`, `TipoEvento`, `ResultadoComparacion` ni `Comparador`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `FilaItems.java`:
 
@@ -1147,12 +1147,12 @@ public final class Comparador {
 }
 ```
 
-- [ ] **Step 4: Ejecuta el test (pasa)**
+- [x] **Step 4: Ejecuta el test (pasa)**
 
 Run: `mvn -q test -Dtest=ComparadorTest`
 Expected: `BUILD SUCCESS`, 13 tests en verde.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys/ComparadorTest.java
@@ -1177,7 +1177,7 @@ git commit -m "feat: comparacion de exportaciones de NSYS (foto y eventos del ra
   - `record ResultadoMaestro(List<ProductoMaestro> productos, List<String> conflictos, Set<String> modelosFueraDeCatalogo)`.
   - En tests, `XlsxDePrueba.libro(Map<String, List<List<Object>>>)`, `XlsxDePrueba.items(List<List<Object>>)` y `XlsxDePrueba.fila(String imei, String goods, String grade, String status, String batch, String location, String recibido, String vendido)`.
 
-- [ ] **Step 1: Dependencia**
+- [x] **Step 1: Dependencia**
 
 En `pom.xml`, justo antes de `<!-- Testing -->`, añade:
 
@@ -1194,7 +1194,7 @@ En `pom.xml`, justo antes de `<!-- Testing -->`, añade:
 Run: `mvn -q -DskipTests package`
 Expected: `BUILD SUCCESS`; se descarga POI.
 
-- [ ] **Step 2: Tests (fallan)**
+- [x] **Step 2: Tests (fallan)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/XlsxDePrueba.java`:
 
@@ -1438,12 +1438,12 @@ class LectorMaestroTest {
 }
 ```
 
-- [ ] **Step 3: Ejecuta los tests (fallan)**
+- [x] **Step 3: Ejecuta los tests (fallan)**
 
 Run: `mvn -q test -Dtest='LectorItemsTest,LectorMaestroTest'`
 Expected: error de compilación: no existen `LectorItems`, `LectorMaestro`, `ResultadoMaestro` ni `FormatoItemsException`.
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 Crea `FormatoItemsException.java`:
 
@@ -1729,12 +1729,12 @@ public final class LectorMaestro {
 > El test `leeSuHojaConModelosYSku` escribe el modelo 13 como número. `DataFormatter` lo devuelve como `"13"`, igual que
 > en el maestro real.
 
-- [ ] **Step 5: Ejecuta los tests (pasan)**
+- [x] **Step 5: Ejecuta los tests (pasan)**
 
 Run: `mvn -q test -Dtest='LectorItemsTest,LectorMaestroTest'`
 Expected: `BUILD SUCCESS`, 9 tests en verde.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add pom.xml src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys
@@ -1762,7 +1762,7 @@ git commit -m "feat: lectura en streaming del fichero Items y del maestro de NSY
   - `record Importacion(int id, String fichero, LocalDateTime fechaExportacion, String resultado, int filas, String mensaje)`.
   - `record TrabajoTaller(String idRep, LocalDateTime asignado, LocalDateTime terminado, String tecnico)`.
 
-- [ ] **Step 1: Test (falla)**
+- [x] **Step 1: Test (falla)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/NsysDAOTest.java`:
 
@@ -1887,12 +1887,12 @@ class NsysDAOTest {
 }
 ```
 
-- [ ] **Step 2: Ejecuta el test (falla)**
+- [x] **Step 2: Ejecuta el test (falla)**
 
 Run: `mvn -q test -Dtest=NsysDAOTest`
 Expected: error de compilación: no existen `NsysDAO` ni `Importacion`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `Importacion.java`:
 
@@ -2184,12 +2184,12 @@ public class NsysDAO {
 
 > `buscar(" 35%_00 ", 10)` limpia el texto a `"3500"`: el test comprueba el `LIKE '%3500%'`.
 
-- [ ] **Step 4: Ejecuta el test (pasa)**
+- [x] **Step 4: Ejecuta el test (pasa)**
 
 Run: `mvn -q test -Dtest=NsysDAOTest`
 Expected: `BUILD SUCCESS`, 10 tests en verde.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys/NsysDAOTest.java
@@ -2212,7 +2212,7 @@ git commit -m "feat: acceso a las tablas del espejo de NSYS"
   - Constructor de Spring `ClienteDrive(@Value("${nsys.drive.credenciales:}") String)` y de paquete `ClienteDrive(HttpClient, ProveedorToken)`.
   - `interface ClienteDrive.ProveedorToken { String token() throws IOException; }` y `static ProveedorToken cuentaDeServicio(String ruta)`.
 
-- [ ] **Step 1: Dependencia**
+- [x] **Step 1: Dependencia**
 
 En `pom.xml`, justo después del bloque de `poi-ooxml` de la Task 3, añade:
 
@@ -2229,7 +2229,7 @@ En `pom.xml`, justo después del bloque de `poi-ooxml` de la Task 3, añade:
 Run: `mvn -q -DskipTests package`
 Expected: `BUILD SUCCESS`.
 
-- [ ] **Step 2: Test (falla)**
+- [x] **Step 2: Test (falla)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/ClienteDriveTest.java`:
 
@@ -2319,12 +2319,12 @@ class ClienteDriveTest {
 }
 ```
 
-- [ ] **Step 3: Ejecuta el test (falla)**
+- [x] **Step 3: Ejecuta el test (falla)**
 
 Run: `mvn -q test -Dtest=ClienteDriveTest`
 Expected: error de compilación: no existe `ClienteDrive`.
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 Crea `ClienteDrive.java`:
 
@@ -2448,12 +2448,12 @@ public class ClienteDrive {
 }
 ```
 
-- [ ] **Step 5: Ejecuta el test (pasa)**
+- [x] **Step 5: Ejecuta el test (pasa)**
 
 Run: `mvn -q test -Dtest=ClienteDriveTest`
 Expected: `BUILD SUCCESS`, 4 tests en verde.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add pom.xml src/main/java/com/reparaciones/servidor/nsys/ClienteDrive.java src/test/java/com/reparaciones/servidor/nsys/ClienteDriveTest.java
@@ -2484,7 +2484,7 @@ git commit -m "feat: cliente de Drive de solo lectura con la cuenta de servicio 
     - `static List<FicheroItems> items(ClienteDrive, String carpeta)`, del más antiguo al más reciente.
   - **`TareaImportacionNsys`** (`@Component`): solo existe con `nsys.importacion.activa=true`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/ImportadorNsysTest.java`:
 
@@ -2708,12 +2708,12 @@ class TareaImportacionNsysTest {
 }
 ```
 
-- [ ] **Step 2: Ejecuta los tests (fallan)**
+- [x] **Step 2: Ejecuta los tests (fallan)**
 
 Run: `mvn -q test -Dtest='ImportadorNsysTest,TareaImportacionNsysTest'`
 Expected: error de compilación: no existen `ImportadorNsys` ni `TareaImportacionNsys`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `ImportadorNsys.java`:
 
@@ -2965,12 +2965,12 @@ public class TareaImportacionNsys {
 }
 ```
 
-- [ ] **Step 4: Ejecuta los tests (pasan)**
+- [x] **Step 4: Ejecuta los tests (pasan)**
 
 Run: `mvn -q test -Dtest='ImportadorNsysTest,TareaImportacionNsysTest'`
 Expected: `BUILD SUCCESS`, 11 tests en verde.
 
-- [ ] **Step 5: Documentación de despliegue y comentario del contrato**
+- [x] **Step 5: Documentación de despliegue y comentario del contrato**
 
 En `docs/deployment.md`, tras la línea `- \`SPRINGDOC_SWAGGER_UI_ENABLED\``, añade:
 
@@ -2992,7 +2992,7 @@ En el Javadoc de `OpenApiContractTest`, cambia `—nada consulta` + salto + ` * 
 Run: `mvn -q test -Dtest=OpenApiContractTest`
 Expected: `BUILD SUCCESS`. El contexto arranca con `ImportadorNsys` y `ClienteDrive`, pero sin ninguna tarea de NSYS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys docs/deployment.md src/test/java/com/reparaciones/servidor/OpenApiContractTest.java
@@ -3013,7 +3013,7 @@ git commit -m "feat: importacion del espejo de NSYS cada 5 minutos con freno del
   - **`HistoricoNsys`** (`@Service`): `void paso()` y `static boolean deNoche(LocalTime)`.
   - **`TareaHistoricoNsys`** (`@Component`): solo existe con `nsys.historico.activo=true`.
 
-- [ ] **Step 1: Test (falla)**
+- [x] **Step 1: Test (falla)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/HistoricoNsysTest.java`:
 
@@ -3141,12 +3141,12 @@ class HistoricoNsysTest {
 > primera llamada a `empezarImportacion`, que devuelve 11. Releer el primer fichero no abre registro, porque ya está
 > hecho.
 
-- [ ] **Step 2: Ejecuta el test (falla)**
+- [x] **Step 2: Ejecuta el test (falla)**
 
 Run: `mvn -q test -Dtest=HistoricoNsysTest`
 Expected: error de compilación: no existe `HistoricoNsys`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `HistoricoNsys.java`:
 
@@ -3328,12 +3328,12 @@ public class TareaHistoricoNsys {
 }
 ```
 
-- [ ] **Step 4: Ejecuta el test (pasa)**
+- [x] **Step 4: Ejecuta el test (pasa)**
 
 Run: `mvn -q test -Dtest=HistoricoNsysTest`
 Expected: `BUILD SUCCESS`, 6 tests en verde.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys/HistoricoNsysTest.java
@@ -3369,7 +3369,7 @@ git commit -m "feat: carga nocturna del historico de exportaciones de NSYS para 
 
     `?` = `nullable`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/AvisoNsysTest.java`:
 
@@ -3688,12 +3688,12 @@ En `OpenApiContractTest`, tras el método `elContratoPublicaLaGestion()`, añade
     }
 ```
 
-- [ ] **Step 2: Ejecuta los tests (fallan)**
+- [x] **Step 2: Ejecuta los tests (fallan)**
 
 Run: `mvn -q test -Dtest='AvisoNsysTest,RastroTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: error de compilación: no existen `AvisoNsys`, `EventoRastro`, `Rastro` ni `StockTelefonosController`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `AvisoNsys.java`:
 
@@ -3941,12 +3941,12 @@ public class StockTelefonosController {
 > `StockTelefonosControllerTest` lee las respuestas con Jackson (`valueToTree`) porque los records son privados, como
 > en `TelefonoController`. `jackson-datatype-jsr310` ya viene con `spring-boot-starter-web`.
 
-- [ ] **Step 4: Ejecuta los tests (pasan)**
+- [x] **Step 4: Ejecuta los tests (pasan)**
 
 Run: `mvn -q test -Dtest='AvisoNsysTest,RastroTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: `BUILD SUCCESS`. Los tests nuevos en verde (4 + 3 + 7 + 2 + 1) y el resto de `OpenApiContractTest` sin cambios.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/nsys src/test/java/com/reparaciones/servidor/controller/RolesStockTelefonosTest.java src/test/java/com/reparaciones/servidor/OpenApiContractTest.java
@@ -3970,7 +3970,7 @@ git commit -m "feat: API de solo lectura del stock de telefonos y del rastro"
   - **`ModeloNsys`** (`@Service`): `String lookupModeloInterno(String imei)`, la misma firma que tenía `ImeiLookupService`. Devuelve `null` si NSYS no conoce el IMEI.
   - **Ruta del modelo:** `GET /api/telefonos/{imei}/modelo` mantiene la ruta, la respuesta (`ValorTexto`) y los permisos, ahora sin llamar fuera ni freno.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `src/test/java/com/reparaciones/servidor/nsys/ModeloNsysTest.java`:
 
@@ -4048,12 +4048,12 @@ En `AsignacionControllerTest` y `FiltroTecnicoControllersTest`:
 - cambia `ImeiLookupService` por `ModeloNsys`. En `AsignacionControllerTest` es la línea `private final ModeloNsys lookup = mock(ModeloNsys.class);`; en `FiltroTecnicoControllersTest`, los dos `mock(ModeloNsys.class)`.
 - El resto de los tests no cambia: `lookupModeloInterno` mantiene el nombre.
 
-- [ ] **Step 2: Ejecuta los tests (fallan)**
+- [x] **Step 2: Ejecuta los tests (fallan)**
 
 Run: `mvn -q test -Dtest='ModeloNsysTest,TelefonoControllerModeloTest,AsignacionControllerTest,FiltroTecnicoControllersTest'`
 Expected: error de compilación (no existe `ModeloNsys` y `TelefonoController` no tiene ese constructor).
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `src/main/java/com/reparaciones/servidor/nsys/ModeloNsys.java`:
 
@@ -4134,7 +4134,7 @@ git rm src/main/java/com/reparaciones/servidor/service/ImeiLookupService.java sr
 Run: `grep -rn "ImeiLookupService\|FrenoLookup\|imeicheck" src/`
 Expected: sin resultados.
 
-- [ ] **Step 4: Ejecuta los tests (pasan) y la suite entera**
+- [x] **Step 4: Ejecuta los tests (pasan) y la suite entera**
 
 Run: `mvn -q test -Dtest='ModeloNsysTest,TelefonoControllerModeloTest,AsignacionControllerTest,FiltroTecnicoControllersTest'`
 Expected: `BUILD SUCCESS`.
@@ -4142,7 +4142,7 @@ Expected: `BUILD SUCCESS`.
 Run: `mvn -q test`
 Expected: `BUILD SUCCESS`, toda la suite en verde, incluidos `OpenApiContractTest` (la ruta `/api/telefonos/{imei}/modelo` sigue respondiendo `ValorTexto`) y `TelefonoControllerEliminarTest`. Anota el total de tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A src
@@ -4169,7 +4169,7 @@ git commit -m "feat: el modelo de un IMEI sale del espejo de NSYS y se retira IM
   - Fábricas de test: `movil(parcial)`, `estadoNsys(parcial)` y `movilBuscado(parcial)`.
   - Handlers por defecto de MSW para `/api/stock-telefonos/buscar`, `/{imeiSn}` (404) y `/{imeiSn}/rastro`.
 
-- [ ] **Step 1: Contrato y tipos**
+- [x] **Step 1: Contrato y tipos**
 
 Run (en `/c/Users/dev/Documents/wt/web-0917`):
 `cp /c/Users/dev/Documents/wt/servidor-0917/target/openapi.json api/openapi.json && npm run api:types:offline`
@@ -4189,7 +4189,7 @@ export type FichaMovil = components['schemas']['StockTelefonosFichaMovil']
 export type EventoRastro = components['schemas']['EventoRastro']
 ```
 
-- [ ] **Step 2: Tests (fallan)**
+- [x] **Step 2: Tests (fallan)**
 
 Crea `src/shared/lib/telefonoNsys.test.ts`:
 
@@ -4303,7 +4303,7 @@ describe('api del stock de teléfonos', () => {
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/telefonos/api.test.tsx`
 Expected: FAIL: no existen `./telefonoNsys` ni `./api`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `src/shared/lib/telefonoNsys.ts`:
 
@@ -4444,12 +4444,12 @@ En `src/test/server.ts`, al final de la lista de handlers de `setupServer(...)`,
   http.get('*/api/stock-telefonos/:imeiSn', () => HttpResponse.json({ message: 'NSYS no conoce el IMEI' }, { status: 404 })),
 ```
 
-- [ ] **Step 4: Ejecuta los tests (pasan) y el tipado**
+- [x] **Step 4: Ejecuta los tests (pasan) y el tipado**
 
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/telefonos/api.test.tsx && npx tsc -b`
 Expected: 6 tests en verde; `tsc` limpio.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/openapi.json src/shared/api src/shared/lib/telefonoNsys.ts src/shared/lib/telefonoNsys.test.ts src/modules/telefonos src/modules/taller/imeis/apiNsys.ts src/test/server.ts
@@ -4473,7 +4473,7 @@ git commit -m "feat: contrato y API del stock de telefonos y del rastro"
     - funciones `grupoDe(m)`, `valor(dim, m)`, `cuentaComoStock(m)`, `pasa(m, f, salvo?)`, `opciones(moviles, dim, f)`, `totales(moviles)`, `agrupar(moviles, verNoCuenta)`, `contarFiltros(f)`, `ordenarTabla(moviles)`, `textoBuscado(m)` y `muestraColor(color)` (color CSS de la muestra; gris si no se conoce).
   - **`nsys.ts`:** `minutosDesde(isoMadrid, ahora)`, `textoPildora(estado, ahora)` y `textoBanda(estado, ahora)`. `textoBanda` devuelve `string | null`: solo hay banda con `SIN_DATOS`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `src/modules/telefonos/stock/modelo.test.ts`:
 
@@ -4585,7 +4585,7 @@ describe('aviso de NSYS', () => {
 Run: `npx vitest run src/modules/telefonos/stock`
 Expected: FAIL: no existen `./modelo` ni `./nsys`.
 
-- [ ] **Step 2: Implementación**
+- [x] **Step 2: Implementación**
 
 Crea `src/modules/telefonos/stock/modelo.ts`:
 
@@ -4767,12 +4767,12 @@ export function textoBanda(e: EstadoNsys | null | undefined, ahora: Date = new D
 > `Intl` con `sv-SE` da `2026-10-16 13:43`, el formato ISO con espacio. Así no depende de la zona del navegador ni de
 > la del entorno de pruebas.
 
-- [ ] **Step 3: Ejecuta los tests (pasan)**
+- [x] **Step 3: Ejecuta los tests (pasan)**
 
 Run: `npx vitest run src/modules/telefonos/stock && npx tsc -b`
 Expected: 11 tests en verde; `tsc` limpio.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/modules/telefonos/stock
@@ -4796,7 +4796,7 @@ git commit -m "feat: reglas puras del stock de telefonos (grupos, totales, filtr
   - `StockTelefonosPage`.
   - `IdGrupoNav` con `'telefonos'`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `src/modules/telefonos/rutas.test.tsx`:
 
@@ -4943,7 +4943,7 @@ En `src/app/shell/navegacion.test.ts`:
 Run: `npx vitest run src/modules/telefonos src/app/shell/navegacion.test.ts`
 Expected: FAIL: no existen `./rutas` ni `./StockTelefonosPage`, y `navegacion` no tiene el grupo.
 
-- [ ] **Step 2: Implementación**
+- [x] **Step 2: Implementación**
 
 Crea `src/modules/telefonos/rutas.tsx`:
 
@@ -5363,7 +5363,7 @@ export function StockTelefonosPage() {
               },
     ```
 
-- [ ] **Step 3: Ejecuta los tests (pasan) y las pruebas del shell**
+- [x] **Step 3: Ejecuta los tests (pasan) y las pruebas del shell**
 
 Run: `npx vitest run src/modules/telefonos src/app/shell`
 Expected: todo en verde.
@@ -5374,7 +5374,7 @@ Expected: todo en verde.
 Run: `npx tsc -b && npm run lint`
 Expected: limpio.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/modules/telefonos src/shared/lib/enlaces.ts src/app
@@ -5400,7 +5400,7 @@ git commit -m "feat: pantalla Stock de telefonos y grupo Telefonos para supertec
   - componentes `FichaMovil` y `PanelRastro`;
   - en la fábrica de tests del taller, `fichaMovil(parcial)` y `eventoRastro(parcial)`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 En `src/modules/taller/test/fabrica.ts`, añade al final:
 
@@ -5577,7 +5577,7 @@ describe('ImeisPage: móviles sin trabajos del taller (0.9.17)', () => {
 Run: `npx vitest run src/modules/taller/imeis`
 Expected: FAIL: no existe `./rastro` y no se pintan ni la ficha ni el aviso.
 
-- [ ] **Step 2: Implementación**
+- [x] **Step 2: Implementación**
 
 Crea `src/modules/taller/imeis/rastro.ts`:
 
@@ -5804,7 +5804,7 @@ export function PanelRastro({ imei, eventos, onCerrar, onIrATrabajo }: Props) {
       )}
 ```
 
-- [ ] **Step 3: Ejecuta los tests (pasan)**
+- [x] **Step 3: Ejecuta los tests (pasan)**
 
 Run: `npx vitest run src/modules/taller/imeis`
 Expected: todo en verde: los tests de antes y los nuevos.
@@ -5812,7 +5812,7 @@ Expected: todo en verde: los tests de antes y los nuevos.
 Run: `npx tsc -b && npm run lint`
 Expected: limpio.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/modules/taller
@@ -5833,7 +5833,7 @@ git commit -m "feat: ficha de NSYS y rastro en panel lateral en el detalle de IM
   - las variables `TEC_USER`/`TEC_PASS`, `E2E_USER`/`E2E_PASS` y `ADMIN_USER`/`ADMIN_PASS` de `~/.env.e2e`.
 - Produces: `stock-telefonos.spec.ts`, que la Task 16 lanza contra preprod.
 
-- [ ] **Step 1: La E2E**
+- [x] **Step 1: La E2E**
 
 Crea `tests/e2e/stock-telefonos.spec.ts`:
 
@@ -5938,7 +5938,7 @@ test('el modelo por IMEI sale del espejo de NSYS (adiós IMEIcheck)', async ({ p
 })
 ```
 
-- [ ] **Step 2: Línea en `.env.e2e.example`**
+- [x] **Step 2: Línea en `.env.e2e.example`**
 
 Al final de `.env.e2e.example`, con una línea en blanco antes:
 
@@ -5948,7 +5948,7 @@ Al final de `.env.e2e.example`, con una línea en blanco antes:
 # rastro, y con E2E_USER que el modelo por IMEI sale del espejo de NSYS. Necesita la importacion de NSYS encendida.
 ```
 
-- [ ] **Step 3: Que Playwright la encuentre y compile**
+- [x] **Step 3: Que Playwright la encuentre y compile**
 
 Run: `npx playwright test --list tests/e2e/stock-telefonos.spec.ts`
 Expected: 4 tests listados (`el técnico no tiene…`, `el supertécnico ve…`, `el admin ve…`, `el modelo por IMEI…`). No se lanza aquí: necesita preprod con la 0.9.17 y la importación encendida (Task 16).
@@ -5956,7 +5956,7 @@ Expected: 4 tests listados (`el técnico no tiene…`, `el supertécnico ve…`,
 Run: `npx tsc -b && npm run lint`
 Expected: sin errores.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/e2e/stock-telefonos.spec.ts .env.e2e.example
@@ -5977,12 +5977,12 @@ git commit -m "test: e2e de solo lectura del stock de telefonos, el rastro y el 
 - Consumes: todo lo de las Tasks 1 a 14.
 - Produces: las ramas `dev_v0917_stock_telefonos` (servidor y web) listas para el merge.
 
-- [ ] **Step 1: Versión de la web**
+- [x] **Step 1: Versión de la web**
 
 Run (en `/c/Users/dev/Documents/wt/web-0917`): `npm version 0.9.17 --no-git-tag-version`
 Expected: `v0.9.17`; `package.json` y las dos entradas de la raíz de `package-lock.json` en `0.9.17`.
 
-- [ ] **Step 2: CHANGELOG de la web**
+- [x] **Step 2: CHANGELOG de la web**
 
 En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su línea en blanco, antes de `## [0.9.16]`:
 
@@ -5995,7 +5995,7 @@ En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su 
 - Requiere el servidor 0.9.17 y la migración `migracion-nsys-espejo.sql`.
 ```
 
-- [ ] **Step 3: Ficha de paridad**
+- [x] **Step 3: Ficha de paridad**
 
 Al final de `docs/paridad/imeis.md`, con una línea en blanco antes:
 
@@ -6013,7 +6013,7 @@ Pruebas: `ImeiDetallePage.test.tsx`, `ImeisPage.test.tsx` y `stock-telefonos.spe
 La vista de trabajos, sus filtros, el menú de fila y el CSV no cambian. El TECNICO ve lo mismo que antes.
 ```
 
-- [ ] **Step 4: Novedades (raíz, sin commit)**
+- [x] **Step 4: Novedades (raíz, sin commit)**
 
 Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.17.md`:
 
@@ -6064,7 +6064,7 @@ Primera pieza del módulo de teléfonos: el **stock de teléfonos** y el **rastr
   enlace.
 ```
 
-- [ ] **Step 5: Suites completas**
+- [x] **Step 5: Suites completas**
 
 Run (servidor): `mvn -q test` en `/c/Users/dev/Documents/wt/servidor-0917`
 Expected: `BUILD SUCCESS`, sin fallos. Anota el total de tests en el informe.
@@ -6081,14 +6081,14 @@ Expected: build sin errores.
 Run (web): `npx playwright test --list`
 Expected: la lista incluye los 4 tests de `stock-telefonos.spec.ts` y los de siempre, sin errores de compilación.
 
-- [ ] **Step 6: Commit de la web**
+- [x] **Step 6: Commit de la web**
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md docs/paridad/imeis.md
 git commit -m "docs: version 0.9.17, changelog y paridad del stock de telefonos"
 ```
 
-- [ ] **Step 7: Entrega (controlador, con OK del usuario)**
+- [x] **Step 7: Entrega (controlador, con OK del usuario)**
 
 1. Revisión final de las dos ramas.
 2. Con el OK del usuario:
@@ -6107,7 +6107,7 @@ git commit -m "docs: version 0.9.17, changelog y paridad del stock de telefonos"
   - `Apuntes/diseno-modulo-telefonos/drive-cuenta-servicio-erp.md` (estado y nombres de las variables confirmados).
 
 **Requisitos antes de empezar:**
-- La fase 1 de `drive-cuenta-servicio-erp.md` está hecha: la cuenta `erp-nsys-lector` existe, la carpeta y el maestro
+- La fase 1 de `drive-cuenta-servicio-erp.md` está hecha: la cuenta de servicio del ERP existe, la carpeta y el maestro
   están compartidos y `probar_drive_erp.py` ha dado OK.
 - Se tienen los dos identificadores, que solo se apuntan en `Apuntes/`.
 - **Ubicaciones:** si el usuario cambia la tabla de §4.5 al confirmarla, se cambia el `INSERT INTO Nsys_ubicacion` de
