@@ -82,6 +82,26 @@ teléfonos y el rastro de cada teléfono. Además, el modelo de un IMEI sale del
   comparaba con el último `OK` y no se recuperaba solo de una bajada real.
 - **Espera de Drive:** un Items modificado hace menos de 2 minutos se deja para la siguiente pasada
   (`ESPERA_DRIVE`). `FicheroItems` lleva `Instant modificado`. Añadido el 17/10 en la revisión de la Task 6.
+- **Revisión final (17/10).** Añadido en el servidor:
+  - freno por claves repetidas (> 1 %);
+  - ficheros con fecha más de un día en el futuro, saltados;
+  - celdas numéricas leídas enteras;
+  - anchos de columna en `AnchosNsys`, cortados al leer;
+  - fallo de `rellenarModelosTelefono` sin tumbar la importación;
+  - plazo total en las llamadas a Drive;
+  - lote más reciente por `VISTO_PRIMERO, RECEIVING_DATE, BATCH`;
+  - motivo genérico para `ERROR`;
+  - `gradoAnterior` sin los cambios solo de batería;
+  - migración con `SET NAMES utf8mb4`, vista previa de intercalaciones y comprobación HEX (6).
+
+  Añadido en la web:
+  - `textoGrado`;
+  - «Volver» al stock con su estado guardado;
+  - píldora gris sin datos;
+  - aviso de IMEIs solo con IMEI completo;
+  - el TECNICO sin el texto de «sin trabajos».
+
+  Detalle en `.superpowers/sdd/v0917/progress.md`.
 - **Aviso:** se cuentan solo los minutos **hábiles** (07:00-23:00). Más de **60** → `RETRASO`; más de **180** →
   `SIN_DATOS`; sin ninguna importación → `SIN_DATOS`.
 - **Histórico:** `@Scheduled(initialDelay = 120_000, fixedDelay = 60_000)`, **un fichero por pasada** y solo entre las

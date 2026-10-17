@@ -248,6 +248,20 @@ de verdad, el primer fichero bajo se rechaza y el siguiente con un número parec
 Si el anterior se rechazó por formato (0 filas), el freno no se aplica a ese fichero. Es seguro: un fichero incompleto
 no borra móviles, solo deja sin actualizar los que faltan.
 
+**Añadido en la revisión final (17/10):**
+- **Claves repetidas:**
+  - un fichero con más de un **1 %** de pares (IMEI/SN, lote) repetidos se rechaza, porque es señal de un fichero mal
+    leído;
+  - con alguna repetida, pero por debajo del 1 %, se aplica y el número se apunta en el registro.
+- **No hay freno por «desaparecidos»:** el espejo nunca borra filas, así que tras un archivado real en NSYS bloquearía
+  para siempre.
+- **Fecha en el futuro:** un fichero cuyo nombre lleva una fecha más de un día por delante se salta y queda en el
+  registro. Si se procesara, un reloj adelantado en el PC del bot congelaría la importación.
+- **Celdas numéricas** (un IMEI guardado como número): se leen enteras, sin notación científica.
+- **Textos de NSYS y del maestro:** se cortan al ancho de su columna al leerlos, así lo comparado es igual a lo guardado.
+  Un maestro que la base no admite se rechaza y no se reintenta.
+- **Modelo del taller (`Telefono.MODELO`):** un fallo al rellenarlo no tumba la importación; se avisa en el registro.
+
 ### 5.6 Maestro
 
 - En cada pasada se mira su `modifiedTime` en Drive. Si es más reciente que el último cargado o rechazado, se recarga
@@ -382,6 +396,17 @@ la pieza 2.
 - **Sin trabajos:** el detalle tiene que funcionar también para un IMEI sin trabajos (hoy se construye solo con
   trabajos). Sale la ficha, la tabla vacía con «Este móvil no ha pasado por el taller» y el rastro.
 
+**Ajustes de la revisión final (17/10):**
+- **Aviso de la lista:**
+  - solo pregunta a NSYS con un IMEI completo de 15 cifras;
+  - solo se enseña cuando el historial del taller ya ha cargado.
+- **Volver al stock:** desde el stock de teléfonos, el detalle de un IMEI vuelve al stock con «← Volver», también tras
+  editar un trabajo. El stock conserva el modelo, los filtros, el interruptor y la búsqueda.
+- **Grado:** «A100» se lee «A · batería nueva». La ficha pone «(antes X)» solo si el grado cambió de verdad, sin contar
+  los cambios que solo son de batería.
+- **Píldora de NSYS:** en gris mientras carga o si no se pudo comprobar («NSYS: no se pudo comprobar»).
+- **Técnico:** el TECNICO no ve el texto «Este móvil no ha pasado por el taller»; su detalle queda exactamente como antes.
+
 ## 10. Pruebas
 
 - **Servidor (JUnit, con ficheros `.xlsx` pequeños de datos inventados en `src/test/resources`):**
@@ -413,6 +438,15 @@ la pieza 2.
    - encender la importación;
    - dejarla unos días con la comparación de §10;
    - comprobar que el modelo por IMEI sale del espejo.
+   - **Lista de comprobación de la revisión final.** El SQL nuevo nunca ha corrido en MariaDB, así que hay que ver:
+     - la vista previa de la migración, con las intercalaciones de la base y de `Telefono.IMEI` iguales;
+     - la comprobación HEX de las ubicaciones con tilde, que debe dar 6;
+     - la primera importación `OK`, con FILAS igual a `COUNT(*)` de `Nsys_movil` y pocas o ninguna fila repetida;
+     - una segunda importación sin cambios en NSYS, con CAMBIOS 0;
+     - el maestro `OK`;
+     - un `Telefono.MODELO` vacío que queda relleno;
+     - una noche de histórico sin `ERROR` repetidos;
+     - si el bot exporta en fin de semana; si no, el lunes por la mañana la píldora saldrá en rojo.
 4. **Producción**, en horario: corte de segundos, migración aditiva y vuelta atrás simple.
    - Mismo compose que en preprod; IMEIcheck se retira en esta misma versión.
    - El histórico se enciende esa noche (`nsys.historico.activo`) y termina en una o dos noches. Como la tarea solo
