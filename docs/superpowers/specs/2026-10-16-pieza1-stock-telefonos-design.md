@@ -278,6 +278,14 @@ no exporta):
 - más de **180 min** → rojo (`SIN_DATOS`), con la banda «No llegan datos nuevos de NSYS desde las HH:MM…»;
 - sin ninguna importación → `SIN_DATOS`.
 
+**Requisito del bot** (17/10). Hasta ahora el bot solo exportaba el Items cuando había cambios en NSYS. Con eso, una
+tarde tranquila o un fin de semana parecerían el PC parado: el 14/10 la banda roja habría salido desde las 20:00 hasta
+pasadas las 9:00. El usuario cambia la automatización para que **exporte en cada vuelta**: cada 30 min, de 7 a 23, todos
+los días, haya cambios o no. Así el aviso solo salta si el bot o el PC se paran de verdad.
+
+Cada Items pesa unos 4,7 MB, unos 150 MB al día. El bot puede borrar los de más de un mes, pero **solo después de que el
+ERP haya cargado el histórico** en producción (§6), porque esa carga necesita los ficheros desde dic. 2023.
+
 ### 5.8 Rendimiento
 
 - Una exportación normal son unas 70.000 filas y unos cientos de cambios: segundos.
