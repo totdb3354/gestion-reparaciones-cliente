@@ -362,22 +362,30 @@ Como el prototipo aprobado:
   - la banda roja cuando no llegan datos;
   - buscador de IMEI en todos los móviles (sugerencias mientras se escribe; al elegir uno, abre su detalle);
   - el interruptor «Ver también lo que no cuenta como stock».
-- **Izquierda:** buscador de modelo y la lista de modelo + capacidad. Cada grupo lleva su total y cuatro números de
-  color (listos, taller, revisión y de pedido) más los libres.
+- **Izquierda:** buscador de modelo y la lista de modelo + capacidad. Cada grupo lleva su total y tres números de color
+  (listos, taller y revisión) más los libres. Con el interruptor, también «N no cuentan».
 - **Derecha:**
   - **Filtros:**
     - chips de **color** (con muestra) y de **grado**, con su número; los que darían cero salen apagados;
     - desplegables con casillas y número para **batería**, **ubicación** y **estado**;
     - «Quitar filtros (n)».
   - **Tabla:** IMEI, color, grado, batería, eSIM, SKU, ubicación, estado («Libre» / «De pedido») y días.
-  - **Filas:** los de pedido llevan el borde rojo de los urgentes. Los que no cuentan como stock, en gris con
-    «NO CUENTA».
+  - **Filas:** los que no cuentan como stock, en gris con «NO CUENTA». Desde el 17/10 entran aquí también los «De
+    pedido».
   - **Clic en una fila:** abre el detalle del IMEI (§9.3).
 - **Pantalla:** cabe en 1366×768 y en 1920×1080, comprobado en el prototipo.
 - **Filtros:** el usuario los quiere **pulir** en la implementación, y el concepto está aprobado.
 
 Con la pieza 1 no hay número de pedido: el estado sale «De pedido» a secas, que es lo que dice NSYS. El número llega con
 la pieza 2.
+
+**«De pedido» no es stock vendible** (decidido el 17/10, tras el ensayo con datos reales):
+- **Qué se vio:** en «Pedidos realizados» había 883 móviles, muchos de 2024: ventas que NSYS no libera nunca. El Excel
+  de stock tampoco cuenta esa caja.
+- **Totales:** no cuentan en «N móviles en stock» ni en los totales de los grupos.
+- **Tabla:** no salen primeros ni en rojo. Van con el interruptor, en gris y con «NO CUENTA», como lo demás que no se
+  puede vender.
+- **Ficha:** la ficha de cada IMEI sigue diciendo «De pedido».
 
 ### 9.3 «IMEIs»
 

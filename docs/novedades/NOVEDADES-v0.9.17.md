@@ -17,16 +17,15 @@ Primera pieza del módulo de teléfonos: el **stock de teléfonos** y el **rastr
 ### 📱 Stock de teléfonos (grupo nuevo «Teléfonos»)
 
 - Los móviles que hay en la empresa según NSYS, agrupados por **modelo y capacidad**. Cada grupo dice cuántos hay
-  listos, en el taller, en revisión y de pedido, y cuántos están libres.
-- Al elegir un modelo salen sus móviles: color, grado, batería, eSIM, SKU, ubicación, estado y días. Los **de pedido**
-  van primero, con el borde rojo.
+  listos, en el taller y en revisión, y cuántos están libres.
+- Al elegir un modelo salen sus móviles: color, grado, batería, eSIM, SKU, ubicación, estado y días.
 - **Filtros de un clic:**
   - color y grado, en chips con su número;
   - batería, ubicación y estado, en desplegables;
   - «Quitar filtros» los borra todos.
 - **Buscar IMEI** en todos los móviles, también en los vendidos.
-- «Ver también lo que no cuenta como stock» enseña, en gris, los que esperan pieza o no se pueden vender. No suman en
-  los totales.
+- «Ver también lo que no cuenta como stock» enseña, en gris, los que esperan pieza, no se pueden vender o están en
+  «Pedidos realizados» (de pedido). No suman en los totales, igual que en el Excel de stock.
 - Arriba se ve la hora de la última exportación de NSYS:
   - si va con retraso, sale en ámbar;
   - si no llegan datos, lo avisa una banda roja.
