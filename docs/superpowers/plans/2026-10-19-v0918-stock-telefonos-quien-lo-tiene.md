@@ -6004,7 +6004,8 @@ git add package.json package-lock.json CHANGELOG.md docs/paridad/imeis.md
 git commit -m "docs: version 0.9.18, changelog y paridad del stock de telefonos"
 ```
 
-- [ ] **Step 7: Entrega (controlador, con OK del usuario)**
+- [x] **Step 7: Entrega (controlador, con OK del usuario)** (20/10, con la 0.9.17 en producción: servidor `2489941`, web
+  `c0f52e6`, tras traer a la rama web la fecha de la 0.9.17 del changelog con `ee96cc2`)
 
 1. Revisión final de las dos ramas.
 2. Con el OK del usuario:
@@ -6022,7 +6023,7 @@ git commit -m "docs: version 0.9.18, changelog y paridad del stock de telefonos"
 
 **Requisitos antes de empezar:** la 0.9.17 está en producción y el merge de la Task 14 está hecho.
 
-- [ ] **Step 1: Guion**
+- [x] **Step 1: Guion** (escrito el 20/10, antes del merge, en `Apuntes/preprod/v0918-preprod.md`; faltan los commits de merge)
 
 Basado en `preprod/v0916-preprod.md` (servidor + web, sin base de datos). **Cada bloque empieza con `hostname` y el seguro de
 `backup-erp.sh`.**
@@ -6089,7 +6090,7 @@ Basado en `preprod/v0916-preprod.md` (servidor + web, sin base de datos). **Cada
 - Create: `Apuntes/prod-v0918.md` (guion).
 - Modify: `Apuntes/despliegue_vdc_produccion.md` (registro).
 
-- [ ] **Step 1: Guion**
+- [x] **Step 1: Guion** (escrito el 20/10, antes del merge, en `Apuntes/prod-v0918.md`; faltan los commits de merge)
 
 Basado en `prod-v0916.md` (servidor + web, sin base de datos). **Cada bloque empieza con `hostname` y la comprobación
 `PRODUCCIÓN (ok)`.**
