@@ -23,8 +23,12 @@ lleva datos inventados. Su barra morada permite encender y apagar lo que va marc
 - **No se ve cuándo se revisó un móvil.** El rastro guarda el paso «En revisión → caja», pero no dice que eso es la
   revisión.
 
+- **El volcado de NSYS se vigila mal.** Para ver si llega un Items cada media hora hay que entrar por SSH a la base. La
+  píldora solo está en «Stock de teléfonos», y en producción no hay correo de avisos del orquestador: si el volcado se
+  para y nadie abre esa página, nadie se entera.
+
 Objetivo: responder sin salir de la pantalla a «¿cuántos hay de cada color y grado?», «¿dónde está este SKU?» y
-«¿quién tiene este móvil?», y que la ficha diga cuándo se revisó.
+«¿quién tiene este móvil?»; que la ficha diga cuándo se revisó; y que se vea desde la web si el volcado de NSYS funciona.
 
 ## 2. Decisiones del usuario (2026-10-17 y 2026-10-19)
 
@@ -51,8 +55,9 @@ Objetivo: responder sin salir de la pantalla a «¿cuántos hay de cada color y 
 
 ## 3. Qué ve cada rol
 
-Igual que en la 0.9.17: «Stock de teléfonos», la ficha y el rastro, solo **SUPERTECNICO** y **ADMIN**. El TECNICO no
-ve nada nuevo. La ruta nueva de la API (§6.2) lleva la misma guarda.
+Igual que en la 0.9.17: «Stock de teléfonos», la ficha y el rastro, solo **SUPERTECNICO** y **ADMIN**. También son
+solo para ellos el popover de importaciones (§4.11) y el indicador de la barra superior (§4.12). El TECNICO no ve nada
+nuevo y no hace ninguna de esas consultas. Las rutas nuevas de la API (§6.2 y §6.5) llevan la misma guarda.
 
 ## 4. Pantalla «Stock de teléfonos»
 
@@ -215,7 +220,43 @@ y `FECHA_FIN` nula):
 - El buscador de IMEI de arriba y la página del IMEI.
 - **«← Volver» al stock** conserva todo: el modelo, la capacidad, el filtro de SKU, los filtros y el interruptor. Se
   amplía el store de la 0.9.17 (`telefonos/stock/estado.ts`).
-- El aviso de datos antiguos, la banda roja y la píldora de NSYS.
+- La banda roja y las reglas del aviso de datos antiguos (`AvisoNsys`: RETRASO a los 60 min hábiles y SIN_DATOS a los
+  180, contando solo de 07:00 a 23:00).
+- **La píldora de NSYS sí cambia:** ahora se puede pulsar (§4.11).
+
+### 4.11 Lista de importaciones al pulsar la píldora de NSYS
+
+- **Para qué:** comprobar fichero a fichero que llega un Items cada media hora sin entrar por SSH a mirar
+  `Nsys_importacion`. El bot exporta en cada vuelta, de 7 a 23, desde el despliegue del 19/10.
+- **Cómo:** al pulsar la píldora se abre un popover con las últimas importaciones `ACTUAL`, de la más reciente a la más
+  antigua (§6.5). Cada fila lleva:
+  - la hora del Items (la del nombre del fichero; con el día si no es de hoy);
+  - el resultado con color: OK en verde, RECHAZADO en ámbar, ERROR en rojo y «en curso» en gris;
+  - los cambios;
+  - los segundos que tardó;
+  - el motivo, si lo hay, en el tooltip o en una segunda línea.
+- **Huecos:** entre dos exportaciones seguidas, si pasan **más de 45 minutos contando solo de 07:00 a 23:00** (la misma
+  cuenta que `AvisoNsys`), se intercala una fila «⚠ falta un Items entre 15:31 y 16:31».
+  - **La noche no cuenta:** de 22:31 a 07:01 no hay hueco.
+  - **Un RECHAZADO cuenta como exportación que llegó:** el fichero existía. Su resultado ya avisa.
+- **Progreso del histórico** (una línea al pie, opcional): «Histórico: N ficheros hechos, hasta el Items del 03/05/2025;
+  termina en el del 16/10/2026». Sirve para seguir las ~3 noches del histórico de producción sin SSH.
+  - El progreso va por fechas, no por ficheros pendientes: contar los pendientes obligaría a listar Drive en cada
+    consulta.
+  - Si no hay ninguna importación `HISTORICO`, la línea no sale.
+- **Se cierra** con Escape o con un clic fuera. Al abrirse pide la lista, y no la vuelve a pedir mientras sigue abierto.
+
+### 4.12 Indicador de NSYS en la barra superior
+
+- **Para qué:** la píldora solo se ve en «Stock de teléfonos», y en producción el correo de avisos del orquestador no
+  está configurado. Si nadie abre esa página, nadie se entera de que el volcado se ha parado.
+- **Qué:** para **ADMIN y SUPERTECNICO**, en cualquier página, un indicador rojo en la barra superior («NSYS sin datos»)
+  cuando `/estado` da **SIN_DATOS**.
+  - Solo con SIN_DATOS, no con RETRASO, para no hacer ruido.
+  - Lleva a «Stock de teléfonos», donde están la banda roja y la lista de §4.11.
+- **De dónde sale:** de la misma consulta `useEstadoNsys` que la píldora, con su mismo intervalo. Si la barra no puede
+  importar del módulo `telefonos` (regla de módulos), el hook pasa a `shared/api/nsys.ts`.
+- **El TECNICO** no hace la consulta (el endpoint le da 403) y no ve nada.
 
 ## 5. Ficha y rastro (IMEIs)
 
@@ -290,11 +331,38 @@ null), según §5.1-§5.2. Se calculan con los eventos que ya lee la ficha.
 `EventoRastro` añade `revision` (null, `ENTRADA` o `DEVOLUCION`). Lo pone `Rastro.unir` en los eventos `UBICACION` que
 cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
 
+### 6.5 `GET /api/stock-telefonos/importaciones?limite=20` (nuevo)
+
+- **Guarda:** SUPERTECNICO y ADMIN, como el resto del controlador.
+- **`limite`:** 20 por defecto. Por encima de 50 se queda en 50, y por debajo de 1, en 1.
+- **`importaciones`:** las últimas filas de `Nsys_importacion` con `ORIGEN = 'ACTUAL'`, de la más reciente a la más
+  antigua (por `FECHA_EXPORTACION` y luego por `ID_IMPORTACION`). Cada una lleva:
+
+  ```
+  Importacion { fichero, fechaExportacion, resultado: OK | RECHAZADO | ERROR | EN_CURSO,
+                filas, cambios, segundos (TERMINADA - EMPEZADA; null si está en curso), motivo }
+  ```
+
+  - **`motivo`:**
+    - con OK y RECHAZADO, el `MENSAJE`, que es un texto nuestro (cajas sin traducir, conflictos del maestro, freno…);
+    - con ERROR, el texto genérico `MOTIVO_ERROR`, como en `/estado`, porque el `MENSAJE` guarda `e.toString()`, que
+      puede llevar ids de Drive o el correo de la cuenta de servicio;
+    - con EN_CURSO, null.
+- **`historico`:** null si no hay ninguna importación `HISTORICO`. Si las hay:
+
+  ```
+  { hechos (OK + RECHAZADO), ultimo: fechaExportacion del último hecho, hasta: fechaExportacion de la primera ACTUAL OK }
+  ```
+
+- **Los huecos los calcula la web** con la regla de §4.11.
+
 ## 7. Rendimiento
 
 - **El stock** suma una consulta pequeña (las asignaciones abiertas), muy por debajo del límite de 15 s.
 - **La web sigue filtrando en local.** La tabla color × grado y los recuentos salen de la lista ya cargada.
 - **`comprobar`:** con 500 IMEIs, una consulta con `IN` por tabla.
+- **`/importaciones`:** como mucho 50 filas de `Nsys_importacion` (índice `ORIGEN, RESULTADO, FECHA_EXPORTACION`) y un recuento de las `HISTORICO`. Solo se pide al abrir el popover.
+- **El indicador de la barra** reutiliza la consulta `/estado`, que ya existe y es pequeña, con el intervalo de la píldora: una petición más por pestaña abierta de ADMIN y SUPERTECNICO.
 
 ## 8. Pruebas
 
@@ -316,6 +384,13 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
     - de «Devolución» a una caja, `DEVOLUCION`;
     - pendiente desde el último evento a «En revisión», o desde la recepción;
     - sin eventos, todo null.
+  - **`/importaciones`:**
+    - solo `ACTUAL`, de la más reciente a la más antigua;
+    - el límite por defecto y el tope (más de 50 da 50; 0 o menos da 1);
+    - un ERROR sale con `MOTIVO_ERROR` y nunca con su `MENSAJE`;
+    - EN_CURSO, con `segundos` null;
+    - `historico` null sin filas `HISTORICO`, y con hechos, último y «hasta» cuando las hay;
+    - TECNICO, 403.
   - **`OpenApiContractTest`** al día.
 - **Web (Vitest + MSW):**
   - **La columna compacta:** totales, pastillas, clic en el nombre o en una pastilla.
@@ -342,11 +417,27 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
   - **La ficha:** «Revisado el …», «Pendiente de revisar…» y nada.
   - **El rastro:** el rótulo «Revisado →».
   - **«← Volver»** conserva capacidad, SKU y filtros.
+  - **El popover de la píldora:**
+    - abre y cierra (Escape y clic fuera);
+    - colores por resultado;
+    - el motivo;
+    - la línea del histórico, que sale o no.
+  - **La detección de huecos:**
+    - 30 minutos no es hueco y 46 dentro de 7-23 sí;
+    - de 22:31 a 07:01 no lo es (la noche fuera);
+    - de 22:31 a 08:01 sí (61 minutos hábiles);
+    - un RECHAZADO cuenta como llegado.
+  - **El indicador de la barra:**
+    - sale solo con SIN_DATOS, y no con RETRASO ni OK;
+    - solo para ADMIN y SUPERTECNICO;
+    - el TECNICO no hace la petición;
+    - lleva a «Stock de teléfonos».
 - **E2E (preprod, solo leen):** se amplía `stock-telefonos.spec.ts`:
   - **El supertécnico** ve «Quién lo tiene» y el filtro Técnico.
   - **El SKU:** busca un SKU tomado de la propia tabla y comprueba la pastilla.
   - **El diálogo de varios IMEIs:** lo abre con dos IMEIs tomados de la tabla y un número inventado, y ve «No está en NSYS».
-  - **El técnico** sigue sin ver nada.
+  - **El popover de la píldora** abre con filas de importaciones (en preprod las hay) y se cierra con Escape.
+  - **El técnico** sigue sin ver nada: ni el popover ni el indicador de la barra.
 
 ## 9. Compatibilidad, despliegue y vuelta atrás
 
