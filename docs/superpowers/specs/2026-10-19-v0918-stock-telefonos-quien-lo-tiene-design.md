@@ -1,6 +1,6 @@
 # 0.9.18 — Stock de teléfonos: columna compacta, buscador de SKU, «Quién lo tiene» y «Revisado»
 
-Fecha: 2026-10-19. Estado: **borrador, pendiente de la revisión del usuario.** Versión **0.9.18**; plan: por escribir.
+Fecha: 2026-10-19. Estado: **aprobada** por el usuario el 19/10, con los tres puntos (D) y las decisiones de §2 tal como están. Versión **0.9.18**; plan: por escribir.
 
 Toca **servidor** y **web**. **No toca la base de datos.** Parte de la 0.9.17 (servidor `main` `d2b717d`, web `main`
 `f460c75`) y se despliega **después** de que la 0.9.17 esté en producción.
@@ -43,7 +43,7 @@ Objetivo: responder sin salir de la pantalla a «¿cuántos hay de cada color y 
   - Se descartaron «dentro de la ubicación» y «solo en la lista izquierda».
 - **Revisado:** el móvil pasa de «sin caja» (En revisión) a tener caja. Lo pendiente de revisar no tiene caja.
 - **El buscador de IMEI se queda como está:** al elegir un IMEI se abre su página en IMEIs, con «← Volver» al stock.
-- **(D) Por defecto del prototipo v8, recomendados y sin confirmar del todo; se confirman en esta revisión:**
+- **(D) Por defecto del prototipo v8; el usuario los confirmó el 19/10 al revisar la spec:**
   - la tabla color × grado **en lugar de** los chips de color y de grado;
   - el grado con color por familias;
   - «Pegar varios IMEIs».
@@ -118,8 +118,8 @@ En lugar de los chips de color y de grado (se puede ver en el prototipo):
   la tabla se ve entera, con lo elegido resaltado.
 - **A su derecha:** la ayuda, los desplegables (§4.5) y los avisos de «Quién lo tiene» (§4.7).
 
-Si en la revisión se prefieren los chips, se quedan como en la 0.9.17. Los desplegables y los avisos van entonces
-debajo de los chips.
+Los chips de color y de grado de la 0.9.17 desaparecen. Si algún día se quisieran de vuelta, el prototipo tiene las dos
+versiones.
 
 ### 4.5 Filtros
 
@@ -452,6 +452,5 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
 
 ## 10. Pendiente (no bloquea el plan)
 
-- **Confirmar los tres (D)** en la revisión de esta spec: tabla color × grado o chips, grado con color, y pegar varios IMEIs.
 - **El límite de 60 minutos del descuadre:** revisarlo con el uso real.
 - **Los fallos de diagnóstico** (columna «Diagnostics»): idea para más adelante (§2).
