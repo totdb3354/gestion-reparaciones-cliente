@@ -252,7 +252,7 @@ volcado de NSYS funciona.
     - `static <T> List<List<T>> trozos(List<T> lista, int tamano)` y `static String marcas(int n)` («?, ?, ?»).
   - `GET /api/stock-telefonos`: cada `MovilStock` añade `List<TrabajoAbierto> trabajos` (vacía si no tiene).
 
-- [ ] **Step 1: Worktree del servidor**
+- [x] **Step 1: Worktree del servidor**
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor
@@ -263,7 +263,7 @@ cd /c/Users/dev/Documents/wt/servidor-0918 && git log --oneline -1
 
 Expected: el último commit de `main` (la 0.9.17 ya en producción).
 
-- [ ] **Step 2: Tests (fallan)**
+- [x] **Step 2: Tests (fallan)**
 
 En `NsysDAOTest.java`, añade los imports `java.sql.ResultSet` y `java.sql.SQLException`, y estos tests al final de la clase:
 
@@ -375,12 +375,12 @@ por
         assertNoNullable(esquemas, "TrabajoAbierto", "categoria", "tecnico", "desde");
 ```
 
-- [ ] **Step 3: Ejecutar los tests y ver que fallan**
+- [x] **Step 3: Ejecutar los tests y ver que fallan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest'`
 Expected: error de compilación: no existe `TrabajoAbierto` ni `NsysDAO.trabajosAbiertos`.
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 Crea `TrabajoAbierto.java`:
 
@@ -503,12 +503,12 @@ En `StockTelefonosController.java`:
                               @Schema(nullable = true) Integer dias, List<TrabajoAbierto> trabajos) {}
 ```
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: `BUILD SUCCESS`. `RolesStockTelefonosTest` sigue en verde: el `@MockBean` devuelve un mapa vacío.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys/TrabajoAbierto.java src/main/java/com/reparaciones/servidor/nsys/NsysDAO.java \
@@ -537,7 +537,7 @@ git commit -m "feat: trabajos abiertos de cada movil en el stock de telefonos (0
   - `EventoRastro` añade al final `String revision` (null, `ENTRADA` o `DEVOLUCION`).
   - `FichaMovil` añade al final `LocalDateTime revisadoEl`, `boolean revisadoDevolucion` y `LocalDate pendienteRevisionDesde`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 Crea `RevisionTest.java`:
 
@@ -754,12 +754,12 @@ por:
         assertNullable(esquemas, "EventoRastro", "lote", "de", "a", "aNsys", "idRep", "tecnico", "categoria", "revision");
 ```
 
-- [ ] **Step 2: Ejecutar los tests y ver que fallan**
+- [x] **Step 2: Ejecutar los tests y ver que fallan**
 
 Run: `mvn -q test -Dtest='RevisionTest,RastroTest,StockTelefonosControllerTest'`
 Expected: error de compilación: no existe `Revision` y `EventoRastro` no tiene 12 componentes.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `Revision.java`:
 
@@ -929,12 +929,12 @@ y el record `FichaMovil` por:
 
 Comprueba que nadie más construye `EventoRastro`: `grep -rn "new EventoRastro" src` solo da `Rastro.java` y `RastroTest.java`.
 
-- [ ] **Step 4: Ejecutar los tests y ver que pasan**
+- [x] **Step 4: Ejecutar los tests y ver que pasan**
 
 Run: `mvn -q test -Dtest='RevisionTest,RastroTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: `BUILD SUCCESS`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys/Revision.java src/main/java/com/reparaciones/servidor/nsys/EventoRastro.java \
@@ -964,7 +964,7 @@ git commit -m "feat: revisado en la ficha y en el rastro, de sin caja a una caja
     ubicacion, estado, LocalDate fechaVenta, List<TrabajoAbierto> trabajos)`; esquema `StockTelefonosMovilComprobado`. Sin
     encontrar, todo null salvo `imei`, `encontrado` (false), `bateriaNueva` (false) y `trabajos` (vacía). Más de 500, 400.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 En `NsysDAOTest.java`, añade al final:
 
@@ -1078,12 +1078,12 @@ En `OpenApiContractTest.java` (`elContratoPublicaElStockDeTelefonos`), añade al
         assertNoNullable(esquemas, "StockTelefonosMovilComprobado", "imei", "encontrado", "bateriaNueva", "trabajos");
 ```
 
-- [ ] **Step 2: Ejecutar los tests y ver que fallan**
+- [x] **Step 2: Ejecutar los tests y ver que fallan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest'`
 Expected: error de compilación: no existen `NsysDAO.porImeis` ni `StockTelefonosController.PeticionComprobar`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 En `NsysDAO.java`, tras el método `porImei`, añade:
 
@@ -1148,12 +1148,12 @@ En `StockTelefonosController.java`:
                                    List<TrabajoAbierto> trabajos) {}
 ```
 
-- [ ] **Step 4: Ejecutar los tests y ver que pasan**
+- [x] **Step 4: Ejecutar los tests y ver que pasan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: `BUILD SUCCESS`. El test de idempotencia del contrato sigue en verde: `POST /comprobar` no declara `Idempotency-Key`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys/NsysDAO.java src/main/java/com/reparaciones/servidor/nsys/StockTelefonosController.java \
@@ -1188,7 +1188,7 @@ git commit -m "feat: comprobar una lista de IMEIs contra el espejo de NSYS (0.9.
     - `ProgresoHistorico(int total, int hechos, LocalDateTime ultimo, LocalDateTime hasta)`;
     - esquemas `StockTelefonosListaImportaciones`, `StockTelefonosFilaImportacion` y `StockTelefonosProgresoHistorico`.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 En `NsysDAOTest.java`, añade el import estático `org.mockito.AdditionalMatchers.and` y al final:
 
@@ -1336,12 +1336,12 @@ En `OpenApiContractTest.java`:
         assertNoNullable(esquemas, "StockTelefonosProgresoHistorico", "total", "hechos");
 ```
 
-- [ ] **Step 2: Ejecutar los tests y ver que fallan**
+- [x] **Step 2: Ejecutar los tests y ver que fallan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest'`
 Expected: error de compilación: no existen `RegistroImportacion`, `ResumenHistorico` ni `importaciones`.
 
-- [ ] **Step 3: Implementación**
+- [x] **Step 3: Implementación**
 
 Crea `RegistroImportacion.java`:
 
@@ -1446,18 +1446,18 @@ En `StockTelefonosController.java`:
 
 `GET /importaciones` no choca con `GET /{imeiSn}`: Spring prefiere la ruta literal.
 
-- [ ] **Step 4: Ejecutar los tests y ver que pasan**
+- [x] **Step 4: Ejecutar los tests y ver que pasan**
 
 Run: `mvn -q test -Dtest='NsysDAOTest,StockTelefonosControllerTest,RolesStockTelefonosTest,OpenApiContractTest'`
 Expected: `BUILD SUCCESS`.
 
-- [ ] **Step 5: Suite completa del servidor y contrato para la web**
+- [x] **Step 5: Suite completa del servidor y contrato para la web**
 
 Run: `mvn -q test`
 Expected: `BUILD SUCCESS`, sin fallos; anota el total de tests. Queda `target/openapi.json` con las rutas nuevas:
 `grep -c "stock-telefonos/importaciones\|stock-telefonos/comprobar\|TrabajoAbierto" target/openapi.json` da más de 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys/RegistroImportacion.java src/main/java/com/reparaciones/servidor/nsys/ResumenHistorico.java \
@@ -1494,7 +1494,7 @@ git commit -m "feat: lista de importaciones de NSYS y progreso del historico (0.
     `noEncontrado(imei)`, `importacion(p)` y `listaImportaciones(p)`.
   - Handlers por defecto de MSW para `/estado` (al día) y `/importaciones` (vacía), antes de `:imeiSn`.
 
-- [ ] **Step 1: Worktree de la web**
+- [x] **Step 1: Worktree de la web**
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
@@ -1505,7 +1505,7 @@ cd /c/Users/dev/Documents/wt/web-0918 && npm ci
 
 Expected: `npm ci` sin errores.
 
-- [ ] **Step 2: Contrato y tipos**
+- [x] **Step 2: Contrato y tipos**
 
 Run (en `/c/Users/dev/Documents/wt/web-0918`):
 `cp /c/Users/dev/Documents/wt/servidor-0918/target/openapi.json api/openapi.json && npm run api:types:offline`
@@ -1525,7 +1525,7 @@ export type ImportacionNsys = components['schemas']['StockTelefonosFilaImportaci
 export type ProgresoHistorico = components['schemas']['StockTelefonosProgresoHistorico']
 ```
 
-- [ ] **Step 3: Tests (fallan)**
+- [x] **Step 3: Tests (fallan)**
 
 En `src/modules/telefonos/api.test.tsx`, cambia los imports de la API y de las fábricas por:
 
@@ -1577,7 +1577,7 @@ Run: `npx vitest run src/modules/telefonos/api.test.tsx`
 Expected: FAIL (no existen `useImportacionesNsys`, `useComprobarImeis` ni las fábricas nuevas) y `npx tsc -b` con errores
 en las fábricas (faltan `trabajos`, `revisadoEl`… y `revision`).
 
-- [ ] **Step 4: Implementación**
+- [x] **Step 4: Implementación**
 
 Sustituye `src/modules/telefonos/api.ts` entero por:
 
@@ -1726,12 +1726,12 @@ En `src/test/server.ts`, justo antes de `http.get('*/api/stock-telefonos/buscar'
 y en el comentario de cabecera de `server` (la lista de handlers por defecto), añade al final: «Y desde la 0.9.18, el estado
 de NSYS y la lista de importaciones (el indicador de la barra superior).»
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos src/modules/taller/imeis src/app/shell`
 Expected: `tsc` limpio y todo en verde.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/openapi.json src/shared/api/schema.d.ts src/shared/api/client.ts src/modules/telefonos/api.ts src/modules/telefonos/api.test.tsx \
@@ -1772,7 +1772,7 @@ git commit -m "feat: contrato y api de la 0.9.18, trabajos abiertos, comprobar I
     - `agrupar`, `grupoDe` y `totales` siguen hasta la Task 7.
   - Fábrica: `AHORA` (ms del 16/10/2026 13:43 en Madrid) y `visto(p, ahora = AHORA): Movil`.
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 Crea `src/modules/telefonos/stock/quien.test.ts`:
 
@@ -1994,7 +1994,7 @@ describe('stock de teléfonos: filtros', () => {
 Run: `npx vitest run src/modules/telefonos/stock/quien.test.ts src/modules/telefonos/stock/grado.test.ts src/modules/telefonos/stock/modelo.test.ts`
 Expected: FAIL (no existen `quien.ts`, `grado.ts`, `visto` ni `valores`).
 
-- [ ] **Step 2: Reglas puras**
+- [x] **Step 2: Reglas puras**
 
 En `src/modules/telefonos/stock/nsys.ts`, tras la función `ahoraEnMadrid`, añade:
 
@@ -2323,7 +2323,7 @@ Run: `npx vitest run src/modules/telefonos/stock/quien.test.ts src/modules/telef
 Expected: PASS. `npx tsc -b` todavía falla en `FiltrosMoviles.tsx`, `columnas.tsx` y `StockTelefonosPage.tsx` (usan
 `'estado'` y `MovilStock`); se arreglan en los pasos siguientes.
 
-- [ ] **Step 3: Tests de la pantalla (fallan)**
+- [x] **Step 3: Tests de la pantalla (fallan)**
 
 En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`:
 1. Cambia el import de las fábricas por `import { estadoNsys, movil, movilBuscado, trabajo } from '../test/fabrica'`.
@@ -2392,7 +2392,7 @@ En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`:
 Run: `npx vitest run src/modules/telefonos/stock/StockTelefonosPage.test.tsx`
 Expected: FAIL (no hay columna «Quién lo tiene» ni filtro «Técnico»).
 
-- [ ] **Step 4: Pantalla**
+- [x] **Step 4: Pantalla**
 
 Crea `src/modules/telefonos/stock/CeldaQuien.tsx`:
 
@@ -2547,12 +2547,12 @@ y, tras los imports, la constante:
 const PIE = '"Quién lo tiene" sale de las asignaciones abiertas del ERP, al momento; la caja, de la última exportación de NSYS. Pasa el ratón por encima para ver desde cuándo. El IMEI abre el detalle del móvil.'
 ```
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/telefonos
@@ -2586,7 +2586,7 @@ git commit -m "feat: quien lo tiene, grado con color y filtro tecnico en el stoc
   - `ListaModelos({ modelos, elegido, capacidad, buscador, onAbrir(modelo, capacidad) })`: el buscador entra como `ReactNode`.
   - `columnasMoviles(abrir, { conCapacidad })`: con `conCapacidad`, la columna «Cap.» detrás del IMEI.
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 En `src/modules/telefonos/stock/modelo.test.ts`:
 1. Cambia el import de `./modelo` por:
@@ -2658,7 +2658,7 @@ describe('stock de teléfonos: una fila por modelo (spec 0.9.18 §4.1) y pestañ
 Run: `npx vitest run src/modules/telefonos/stock/modelo.test.ts`
 Expected: FAIL (no existen `modelosLista`, `pestanasCapacidad`…).
 
-- [ ] **Step 2: Reglas puras y store**
+- [x] **Step 2: Reglas puras y store**
 
 Sustituye `src/modules/telefonos/stock/modelo.ts` entero por:
 
@@ -2898,7 +2898,7 @@ export const claveFiltros = (modelo: string, capacidad: string | null): string =
 Run: `npx vitest run src/modules/telefonos/stock/modelo.test.ts`
 Expected: PASS (la pantalla todavía no compila; se arregla en el paso 4).
 
-- [ ] **Step 3: Tests de la pantalla (fallan)**
+- [x] **Step 3: Tests de la pantalla (fallan)**
 
 Sustituye `src/modules/telefonos/stock/StockTelefonosPage.test.tsx` entero por:
 
@@ -3234,7 +3234,7 @@ describe('Stock de teléfonos (spec pieza 1 §9.2 y spec 0.9.18 §4)', () => {
 Run: `npx vitest run src/modules/telefonos/stock/StockTelefonosPage.test.tsx`
 Expected: FAIL (no hay pastillas ni pestañas; `tsc` falla en la pantalla).
 
-- [ ] **Step 4: Pantalla**
+- [x] **Step 4: Pantalla**
 
 Crea `src/modules/telefonos/stock/BarraReparto.tsx`:
 
@@ -3527,12 +3527,12 @@ export function StockTelefonosPage() {
 
 Comprueba que nada más usa lo que se quita: `grep -rn "agrupar\|grupoDe\|totales(" src --include=*.ts --include=*.tsx` no da nada fuera de `modelo.ts`.
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/telefonos
@@ -3569,7 +3569,7 @@ git commit -m "feat: columna compacta por modelo y pestanas de capacidad en el s
     (`data-testid="pastilla-sku"`).
   - `columnasMoviles(abrir, { conCapacidad, sku })`: con `sku`, la parte buscada va en `<mark>` en la columna SKU.
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 Crea `src/modules/telefonos/stock/buscador.test.ts`:
 
@@ -3670,7 +3670,7 @@ describe('stock de teléfonos: filtro de SKU (spec 0.9.18 §4.2)', () => {
 Run: `npx vitest run src/modules/telefonos/stock/buscador.test.ts src/modules/telefonos/stock/modelo.test.ts`
 Expected: FAIL (no existen `buscador.ts` ni `pasaSku`).
 
-- [ ] **Step 2: Reglas puras y store**
+- [x] **Step 2: Reglas puras y store**
 
 En `src/modules/telefonos/stock/modelo.ts`, tras `contarFiltros`, añade:
 
@@ -3784,7 +3784,7 @@ En `src/modules/telefonos/stock/estado.ts`:
 Run: `npx vitest run src/modules/telefonos/stock/buscador.test.ts src/modules/telefonos/stock/modelo.test.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Tests de la pantalla (fallan)**
+- [x] **Step 3: Tests de la pantalla (fallan)**
 
 En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`, añade dentro del `describe`, tras «escribir en el buscador de la columna…»:
 
@@ -3891,7 +3891,7 @@ En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`, añade dentro del 
 Run: `npx vitest run src/modules/telefonos/stock/StockTelefonosPage.test.tsx`
 Expected: FAIL (no hay lista de SKU ni pastilla).
 
-- [ ] **Step 4: Pantalla**
+- [x] **Step 4: Pantalla**
 
 Crea `src/modules/telefonos/stock/BuscadorModelo.tsx`:
 
@@ -4134,12 +4134,12 @@ export function StockTelefonosPage() {
 }
 ```
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/telefonos
@@ -4171,7 +4171,7 @@ git commit -m "feat: buscador de modelo o SKU y filtro de SKU en el stock de tel
   - La página: «Quitar filtros (n)» en la cabecera del modelo (n cuenta también el SKU), la región «Tabla de móviles» y la
     altura ajustada a la ventana (`h-[calc(100vh-var(--spacing-navbar))]`, la tabla con `alturaMax="100%"`).
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 En `src/modules/telefonos/stock/modelo.test.ts`, añade al import de `./modelo`:
 `casilla, casillaElegida, colorElegido, gradoElegido, matriz, pulsarCasilla, pulsarColor, pulsarGrado, tituloCasilla`, y al final:
@@ -4236,7 +4236,7 @@ describe('stock de teléfonos: tabla color × grado (spec 0.9.18 §4.4)', () => 
 Run: `npx vitest run src/modules/telefonos/stock/modelo.test.ts`
 Expected: FAIL (no existe `matriz`).
 
-- [ ] **Step 2: Reglas puras**
+- [x] **Step 2: Reglas puras**
 
 En `src/modules/telefonos/stock/modelo.ts`, tras `partesSku`, añade:
 
@@ -4322,7 +4322,7 @@ export function pulsarGrado(f: Filtros, grado: string): Filtros {
 Run: `npx vitest run src/modules/telefonos/stock/modelo.test.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Tests de la pantalla (fallan)**
+- [x] **Step 3: Tests de la pantalla (fallan)**
 
 En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`:
 
@@ -4389,7 +4389,7 @@ const colorAzul = () => within(matriz()).getByRole('button', { name: 'Color Azul
 Run: `npx vitest run src/modules/telefonos/stock/StockTelefonosPage.test.tsx`
 Expected: FAIL (no hay tabla «Color y grado» ni región «Tabla de móviles»).
 
-- [ ] **Step 4: Pantalla**
+- [x] **Step 4: Pantalla**
 
 Crea `src/modules/telefonos/stock/MatrizColorGrado.tsx`:
 
@@ -4636,18 +4636,18 @@ export function StockTelefonosPage() {
 queda ninguna referencia a los chips: `grep -rn "group', { name: 'Color'\|aria-label={dim === 'color'" src` solo da el test
 que comprueba que ya no están.
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 6: Comprobación visual con el prototipo**
+- [x] **Step 6: Comprobación visual con el prototipo**
 
 La medida real (sin scroll de página ni lateral a 1366×768 y a 1920×1080, spec §4.6) se comprueba en preprod con datos reales
 (Task 15). Aquí basta con revisar el código frente al prototipo: la tabla color × grado y la columna de filtros en una fila,
 la tabla de móviles debajo ocupando el resto y la columna lateral con su propio scroll.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/modules/telefonos
@@ -4676,7 +4676,7 @@ git commit -m "feat: tabla color por grado en lugar de los chips y stock de tele
   - `ComprobarImeis({ abierto, textoInicial, onCerrar, onAbrirImei })`.
   - `BuscadorImei({ onElegir, onPegarVarios })`: pegar más de un IMEI abre el diálogo con lo pegado.
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 Crea `src/modules/telefonos/stock/varios.test.ts`:
 
@@ -4758,7 +4758,7 @@ describe('pegar varios IMEIs (spec 0.9.18 §4.9)', () => {
 Run: `npx vitest run src/modules/telefonos/stock/varios.test.ts`
 Expected: FAIL (no existe `varios.ts`).
 
-- [ ] **Step 2: Reglas puras**
+- [x] **Step 2: Reglas puras**
 
 Crea `src/modules/telefonos/stock/varios.ts`:
 
@@ -4872,7 +4872,7 @@ export function paraExcel(filas: Fila[], ahora: number): string {
 Run: `npx vitest run src/modules/telefonos/stock/varios.test.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Tests del diálogo y de la pantalla (fallan)**
+- [x] **Step 3: Tests del diálogo y de la pantalla (fallan)**
 
 Crea `src/modules/telefonos/stock/ComprobarImeis.test.tsx`:
 
@@ -4980,7 +4980,7 @@ En `src/modules/telefonos/stock/StockTelefonosPage.test.tsx`, añade `waitFor` a
 Run: `npx vitest run src/modules/telefonos/stock/ComprobarImeis.test.tsx src/modules/telefonos/stock/StockTelefonosPage.test.tsx`
 Expected: FAIL (no existe `ComprobarImeis`, ni el botón ni el pegado).
 
-- [ ] **Step 4: Diálogo, buscador y pantalla**
+- [x] **Step 4: Diálogo, buscador y pantalla**
 
 Crea `src/modules/telefonos/stock/ComprobarImeis.tsx`:
 
@@ -5135,12 +5135,12 @@ En `src/modules/telefonos/stock/StockTelefonosPage.tsx`:
       <ComprobarImeis abierto={varios !== null} textoInicial={varios ?? ''} onCerrar={() => setVarios(null)} onAbrirImei={abrir} />
 ```
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/telefonos
@@ -5168,7 +5168,7 @@ git commit -m "feat: pegar varios IMEIs y comprobarlos contra el espejo de NSYS 
   - `ListaImportacionesNsys()`; `PildoraNsys` con su popover (`aria-label` «Importaciones de NSYS»).
   - `IndicadorNsys()` en `modules/telefonos` (lo monta `app/shell/TopBar.tsx`, que puede importar de los módulos).
 
-- [ ] **Step 1: Tests de las reglas (fallan)**
+- [x] **Step 1: Tests de las reglas (fallan)**
 
 En `src/modules/telefonos/stock/nsys.test.ts`, cambia los imports por:
 
@@ -5228,7 +5228,7 @@ describe('lista de importaciones de la píldora (spec 0.9.18 §4.11)', () => {
 Run: `npx vitest run src/modules/telefonos/stock/nsys.test.ts`
 Expected: FAIL (no existen `minutosHabiles`, `conHuecos`…).
 
-- [ ] **Step 2: Reglas puras**
+- [x] **Step 2: Reglas puras**
 
 En `src/modules/telefonos/stock/nsys.ts`:
 1. Cambia el import de tipos por `import type { EstadoNsys, ImportacionNsys, ProgresoHistorico } from '@/shared/api/client'` y
@@ -5291,7 +5291,7 @@ export function textoHistorico(h: ProgresoHistorico | null | undefined): string 
 Run: `npx vitest run src/modules/telefonos/stock/nsys.test.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Tests de la píldora y de la barra (fallan)**
+- [x] **Step 3: Tests de la píldora y de la barra (fallan)**
 
 Crea `src/modules/telefonos/stock/PildoraNsys.test.tsx`:
 
@@ -5413,7 +5413,7 @@ describe('indicador de NSYS en la barra superior (0.9.18, spec §4.12)', () => {
 Run: `npx vitest run src/modules/telefonos/stock/PildoraNsys.test.tsx src/app/shell/TopBar.test.tsx`
 Expected: FAIL (la píldora no es un botón y no hay indicador).
 
-- [ ] **Step 4: Popover, indicador y barra**
+- [x] **Step 4: Popover, indicador y barra**
 
 Crea `src/modules/telefonos/stock/ListaImportacionesNsys.tsx`:
 
@@ -5534,13 +5534,13 @@ En `src/app/shell/TopBar.tsx`:
    (en ese orden).
 3. Añade al comentario: «Desde la 0.9.18, el aviso «NSYS sin datos» para el supertécnico y el admin.»
 
-- [ ] **Step 5: Ejecutar los tests y ver que pasan**
+- [x] **Step 5: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/modules/telefonos src/app/shell && npm run lint`
 Expected: `tsc` limpio, todo en verde (también los tests de la 0.9.17 de la píldora en `StockTelefonosPage.test.tsx`) y
 lint sin errores nuevos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/telefonos src/app/shell
@@ -5566,7 +5566,7 @@ git commit -m "feat: lista de importaciones en la pildora de NSYS e indicador NS
     `textoRevision(ficha, ahora?) → string | null`.
   - `PanelRastro`: marca de revisión (`data-testid="marca-revision"`) en el evento y en la leyenda.
 
-- [ ] **Step 1: Tests (fallan)**
+- [x] **Step 1: Tests (fallan)**
 
 En `src/shared/lib/telefonoNsys.test.ts`, añade `diasDesdeNsys` al import y, al final del `describe`:
 
@@ -5650,7 +5650,7 @@ describe('PanelRastro: revisado (spec 0.9.18 §5.3)', () => {
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/taller/imeis`
 Expected: FAIL (no existen `diasDesdeNsys` ni `textoRevision`; no hay marca).
 
-- [ ] **Step 2: Implementación**
+- [x] **Step 2: Implementación**
 
 En `src/shared/lib/telefonoNsys.ts`, añade al final:
 
@@ -5746,12 +5746,12 @@ function MarcaRevision({ className }: { className?: string }) {
                   : <span aria-hidden className={cn('absolute top-[3px] -left-[35px] h-3.5 w-3.5 rounded-full border-[3px] border-superficie', v.color)} />}
 ```
 
-- [ ] **Step 3: Ejecutar los tests y ver que pasan**
+- [x] **Step 3: Ejecutar los tests y ver que pasan**
 
 Run: `npx tsc -b && npx vitest run src/shared/lib src/modules/taller/imeis && npm run lint`
 Expected: `tsc` limpio, todo en verde y lint sin errores nuevos.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/shared/lib/telefonoNsys.ts src/shared/lib/telefonoNsys.test.ts src/modules/taller/imeis
@@ -5771,7 +5771,7 @@ git commit -m "feat: revisado en la ficha de NSYS y en el rastro del IMEI (0.9.1
 - Produces: 4 tests nuevos en un bloque en serie con un solo inicio de sesión (el entorno limita los inicios de sesión por
   minuto: con este bloque, el fichero hace 5) y dos comprobaciones nuevas en el test del técnico.
 
-- [ ] **Step 1: El técnico sigue sin ver nada**
+- [x] **Step 1: El técnico sigue sin ver nada**
 
 En el test «el técnico no tiene Teléfonos: ni en la columna, ni por URL, ni por la API»:
 1. Como primera línea del test:
@@ -5793,7 +5793,7 @@ En el test «el técnico no tiene Teléfonos: ni en la columna, ni por URL, ni p
    además: «Quién lo tiene», el filtro Técnico y la tabla color × grado, un SKU de la propia tabla, el diálogo de varios
    IMEIs y la lista de importaciones de la píldora.»
 
-- [ ] **Step 2: Los tests de la 0.9.18**
+- [x] **Step 2: Los tests de la 0.9.18**
 
 Al final del fichero:
 
@@ -5866,13 +5866,13 @@ test.describe('0.9.18: Quién lo tiene, SKU, varios IMEIs e importaciones', () =
 })
 ```
 
-- [ ] **Step 3: Compila y se listan**
+- [x] **Step 3: Compila y se listan**
 
 Run: `npx playwright test tests/e2e/stock-telefonos.spec.ts --list`
 Expected: 8 tests (los 4 de la 0.9.17, contando por 2 el bucle del supertécnico y el admin, y los 4 nuevos), sin errores
 de compilación. No se ejecutan aquí: solo contra preprod (Task 15).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/e2e/stock-telefonos.spec.ts
@@ -5893,12 +5893,12 @@ git commit -m "test: e2e del stock de telefonos con quien lo tiene, SKU, varios 
 - Consumes: todo lo de las Tasks 1 a 13.
 - Produces: las ramas `dev_v0918_stock_telefonos` (servidor y web) listas para el merge.
 
-- [ ] **Step 1: Versión de la web**
+- [x] **Step 1: Versión de la web**
 
 Run (en `/c/Users/dev/Documents/wt/web-0918`): `npm version 0.9.18 --no-git-tag-version`
 Expected: `v0.9.18`; `package.json` y las dos entradas de la raíz de `package-lock.json` en `0.9.18`.
 
-- [ ] **Step 2: CHANGELOG de la web**
+- [x] **Step 2: CHANGELOG de la web**
 
 En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su línea en blanco, antes de `## [0.9.17]`:
 
@@ -5917,7 +5917,7 @@ En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su 
 - Requiere el servidor 0.9.18. Sin migración.
 ```
 
-- [ ] **Step 3: Ficha de paridad**
+- [x] **Step 3: Ficha de paridad**
 
 Al final de `docs/paridad/imeis.md`, con una línea en blanco antes:
 
@@ -5932,7 +5932,7 @@ Añadido, decidido en la spec `2026-10-19-v0918-stock-telefonos-quien-lo-tiene-d
 Pruebas: `FichaMovil.test.tsx`, `PanelRastro.test.tsx` y `rastro.test.ts`. El TECNICO ve lo mismo que antes.
 ```
 
-- [ ] **Step 4: Novedades (raíz, sin commit)**
+- [x] **Step 4: Novedades (raíz, sin commit)**
 
 Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.18.md`:
 
@@ -5982,7 +5982,7 @@ IMEI dice cuándo se revisó.
 - En el rastro, la revisión sale como **«Revisado → caja»**.
 ```
 
-- [ ] **Step 5: Suites completas**
+- [x] **Step 5: Suites completas**
 
 Run (servidor): `mvn -q test` en `/c/Users/dev/Documents/wt/servidor-0918`
 Expected: `BUILD SUCCESS`, sin fallos. Anota el total de tests en el informe.
@@ -5997,7 +5997,7 @@ Expected: build sin errores.
 Run (web): `npx playwright test --list`
 Expected: la lista incluye los 8 de `stock-telefonos.spec.ts` y los de siempre, sin errores de compilación.
 
-- [ ] **Step 6: Commit de la web**
+- [x] **Step 6: Commit de la web**
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md docs/paridad/imeis.md
@@ -6043,8 +6043,18 @@ Basado en `preprod/v0916-preprod.md` (servidor + web, sin base de datos). **Cada
   - E2E de una en una, con ≥ 60 s entre ficheros: `stock-telefonos` (la ampliada), `roles-stock`, `taller` y `columna-lateral`.
   - Capturas de «Stock de teléfonos» a 1366×768 y a 1920×1080 con la cuenta de supertécnico, solo para verlas Claude y el
     usuario (llevan datos reales y no se guardan en ningún repo):
-    - sin scroll de página ni scroll lateral en la tabla (spec §4.6);
-    - con el modelo de más colores y grados abierto, la tabla color × grado cabe y la de móviles sigue teniendo filas a la vista.
+    - sin scroll de página ni scroll lateral en la tabla (spec §4.6), en los dos ejes: con la columna lateral de la app
+      abierta, con «Todas» (que añade «Cap.») y con una capacidad. En local, con datos inventados, ya se midió tras la revisión
+      final: `scrollWidth` igual a `clientWidth` en la región «Tabla de móviles»;
+    - con el modelo de más colores y grados abierto, la tabla color × grado no pasa del 45 % del panel, con su scroll, y la
+      de móviles sigue teniendo filas a la vista.
+  - En un navegador de verdad en una pantalla de 1366×768, la ventana útil mide unos 650 px de alto, menos que en la medición
+    local. Mirar con el usuario cuántas filas de móviles quedan a la vista. Si se queda corto, bajar el tope del 45 % de la
+    tabla color × grado (`StockTelefonosPage.tsx`).
+  - El fichero de E2E hace 5 inicios de sesión: si alguno da el 503 del límite, esperar un minuto y repetir solo ese fichero.
+  - **Ejecución (19-20/10):** Tasks 1-14 hechas y revisadas. Ramas: servidor `9241c64` y web `ea06933`. El registro está en
+    `.superpowers/sdd/v0918/progress.md` y la revisión final en `final-review.md`. Merge y preprod, cuando la 0.9.17 esté en
+    producción.
     - Si no, el arreglo va en la rama nueva `fix_v0918_preprod` (anchos de las columnas, `w-[220px]` de los filtros o la
       altura de la tabla), se vuelve a desplegar y se repiten las capturas.
 - **Pruebas con datos reales, con el usuario:**

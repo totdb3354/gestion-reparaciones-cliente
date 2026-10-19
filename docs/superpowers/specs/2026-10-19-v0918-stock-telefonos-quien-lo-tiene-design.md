@@ -271,6 +271,12 @@ cambio de caja es un evento `UBICACION`.
     revisión.
 - **Revisión de una devolución:** un `UBICACION` con `DE` = «Devolución» (la caja «Funcionalidad pendiente») hacia una
   caja que no sea «Pedidos realizados».
+- **Precisado por el usuario el 19/10 (al cerrar el plan):** «Funcionalidad pendiente» sigue pendiente de revisar, igual que
+  «sin caja»; la revisión es el paso a una caja de verdad.
+  - **Caja de verdad:** destino que no es «En revisión», ni «Devolución», ni «Pedidos realizados».
+  - **Devolución → sin caja** no es revisión.
+  - **Tras una devolución,** la siguiente salida de «sin caja» o de «Devolución» hacia una caja de verdad es la revisión de
+    esa devolución, «Revisado (devolución)».
 - **La hora** es la de la exportación en que se vio el cambio. La ficha y el rastro ya avisan de esos ± 30 min.
 - **Solo hay pasos intermedios desde dic. 2023.** De antes, la ficha no dice nada de la revisión.
 
@@ -278,8 +284,9 @@ cambio de caja es un evento `UBICACION`.
 
 Junto a la ubicación, una de estas:
 - **«Revisado el 17/10/2026, hacia las 10:31»:** la última revisión del lote actual, de entrada o de devolución.
-- **«Pendiente de revisar desde hace N días»:** si ahora mismo está en «En revisión».
-  - N cuenta desde el último evento que lo dejó en «En revisión» y, si no lo hay, desde la fecha de recepción del lote.
+- **«Pendiente de revisar desde hace N días»:** si ahora mismo está en «En revisión» o en «Devolución» (precisado el 19/10).
+  - N cuenta desde que empezó el periodo pendiente actual: el último paso a «En revisión» o a «Devolución» desde una
+    ubicación no pendiente. Pasar de una a otra no reinicia la cuenta. Sin ese paso, desde la fecha de recepción del lote.
 - **Nada:** si no hay datos (anterior a dic. 2023, o vendido sin revisar).
 
 ### 5.3 Rastro
@@ -480,3 +487,14 @@ Recogidos al escribir el plan; no cambian ninguna decisión del usuario.
 8. **Ficha (§5.2):** la de una devolución dice «Revisado (devolución) el …»; con 0 días, «Pendiente de revisar desde hoy».
 9. **`useEstadoNsys` no abre el diálogo de error:** la píldora ya dice «no se pudo comprobar», y el indicador de la barra va
    en todas las vistas (§4.12).
+
+**Después, en las revisiones de la implementación (19-20/10), con el OK del usuario:**
+
+10. **La tabla color × grado** no pasa del 45 % del panel y tiene su propio scroll (§4.4 y §4.6).
+11. **Pegar varios IMEIs:** si la comprobación falla, el diálogo lo dice y «Comprobar» vuelve a preguntar (§4.9).
+12. **Revisado de las devoluciones** (§5.1 y §5.2, precisado por el usuario): «Funcionalidad pendiente» es pendiente de
+    revisar, como «sin caja», y la revisión es el paso a una caja de verdad.
+13. **Anchos de la tabla de móviles:** sus mínimos suman unos 850 px, y «Ubicación» se parte en dos líneas. Así cabe sin
+    scroll lateral a 1366×768 con la columna lateral de la app abierta (§4.6). Medido con Playwright y datos inventados.
+14. **Descuadre (§4.7):** el texto nombra solo a los técnicos cuyo trabajo lleva más de 60 minutos.
+15. **`POST /comprobar`:** un IMEI nulo o vacío en la lista da 400 (§6.2).
