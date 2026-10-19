@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock de teléfonos v8</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos: #3f9f55; --listos-bg: #d8f0dc; --listos-tx: #2f7d3b;
+    --taller: #3b82f6; --taller-bg: #dbe8ff; --taller-tx: #1d4ed8;
+    --rev: #f0a020; --rev-bg: #fdebc8; --rev-tx: #a15c07;
+    --mal-bg: #fde2e2; --mal-tx: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+  .proto { min-height: 36px; flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .grupo-b { display: inline-flex; border: 1px solid #7c3aed; border-radius: 6px; overflow: hidden; }
+  .proto .grupo-b button { background: #5b21b6; color: #fff; border: 0; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .proto .grupo-b button.on { background: #fff; color: #3b0764; font-weight: 700; }
+  .proto label { display: flex; gap: 5px; align-items: center; cursor: pointer; margin-left: 8px; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+
+  header { height: 56px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 26px; height: 26px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  header .usu i { width: 28px; height: 28px; border-radius: 50%; background: #fff; display: inline-block; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 196px; flex: none; background: #fff; padding: 12px 8px; overflow: hidden; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; letter-spacing: .04em; margin: 12px 10px 6px; }
+  nav .it { padding: 8px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--navy); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 22px; }
+  .pild { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e8ecf3; color: #2b3f63; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .nsys { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; }
+  .fila2 { display: flex; align-items: center; gap: 10px; }
+  .buscar { width: 270px; height: 36px; border: 1px solid #cdd4df; border-radius: 8px; padding: 0 12px; font-size: 13px; background: #fff; }
+  .btn-sec { height: 36px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; white-space: nowrap; }
+  .btn-sec:hover { background: #f2f5f9; }
+  .switch { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-left: 8px; cursor: pointer; user-select: none; }
+  .switch .sw { width: 34px; height: 18px; border-radius: 9px; background: #c7ced9; position: relative; }
+  .switch .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .switch.on .sw { background: var(--navy); } .switch.on .sw::after { left: 18px; }
+
+  .paneles { flex: 1; display: flex; gap: 12px; min-height: 0; }
+  .card { background: #fff; border-radius: 10px; }
+  .principal { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; padding: 12px 14px; gap: 8px; }
+
+  /* Columna lateral compacta */
+  .izq { width: 270px; flex: none; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .izq .cabz { padding: 8px; border-bottom: 1px solid var(--borde); }
+  .izq .cabz input { width: 100%; height: 32px; border: 1px solid #cdd4df; border-radius: 6px; padding: 0 10px; font-size: 12.5px; }
+  .izq .lista { overflow-y: auto; flex: 1; }
+  .fm { position: relative; padding: 7px 12px 10px; border-bottom: 1px solid var(--borde); }
+  .fm.on { background: #eef3ff; }
+  .fm .cab { display: flex; align-items: baseline; border: 0; background: none; width: 100%; padding: 0; cursor: pointer; text-align: left; }
+  .fm .cab .nm { font-weight: 700; } .fm .cab .tt { margin-left: auto; font-weight: 700; font-size: 15px; color: var(--navy); }
+  .caps { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .cap { border: 1px solid #d3d9e3; background: #f5f7fa; border-radius: 6px; padding: 1px 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .cap span { color: var(--gris); margin-left: 3px; }
+  .cap:hover, .cap.on { background: var(--navy); color: #fff; border-color: var(--navy); } .cap:hover span, .cap.on span { color: #c9d3e6; }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; display: flex; background: #eef1f5; }
+  .bar i { display: block; height: 100%; } .bar .l { background: var(--listos); } .bar .t { background: var(--taller); } .bar .r { background: var(--rev); }
+  .sug { margin-top: 6px; border: 1px solid #cdd4df; border-radius: 8px; padding: 4px; background: #fff; }
+  .sug .gh { font-size: 10.5px; font-weight: 700; color: var(--gris); margin: 3px 6px 4px; }
+  .sug .op { padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .sug .op:hover, .sug .op.on { background: #eef3ff; }
+  .sug .op .mono { word-break: break-all; } .sug .op .mono b { color: var(--navy); }
+  .sug .op .d { display: flex; font-size: 11px; color: var(--gris); } .sug .op .d b { margin-left: auto; color: var(--tinta); }
+  .sug .mas { font-size: 11px; color: var(--gris); padding: 4px 6px 2px; }
+
+  /* Detalle */
+  .det-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .det-cab h2 { margin: 0; font-size: 17px; }
+  .tabs { display: flex; border: 1px solid #cdd4df; border-radius: 8px; overflow: hidden; }
+  .tabs button { border: 0; border-right: 1px solid #cdd4df; background: #fff; padding: 5px 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button span { color: var(--gris); margin-left: 4px; }
+  .tabs button.on { background: var(--navy); color: #fff; } .tabs button.on span { color: #c9d3e6; }
+  .tabs button:disabled { color: #b3bccb; cursor: default; }
+  .quitar { color: #1d4ed8; font-weight: 600; cursor: pointer; background: none; border: 0; }
+  .skuchip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 12px; font-weight: 600; }
+  .skuchip b { font-family: Consolas, monospace; }
+  .skuchip button { border: 0; background: rgba(255,255,255,.2); color: #fff; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 16px; padding: 0; }
+
+  .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chips .lab { width: 50px; font-size: 11px; font-weight: 700; color: #3c4a63; }
+  .chip { border: 1px solid #cdd4df; background: #f3f5f9; border-radius: 999px; padding: 2px 10px; font-weight: 600; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .chip .c { color: var(--gris); font-weight: 500; }
+  .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); } .chip.on .c { color: #c9d3e6; }
+  .chip:disabled { opacity: .4; cursor: default; }
+  .desps { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .desp { position: relative; }
+  .desp > button { height: 32px; background: var(--navy); color: #fff; border: 0; border-radius: 16px; padding: 0 14px; font-weight: 600; cursor: pointer; font-size: 12.5px; white-space: nowrap; }
+  .lado .desp > button { width: 100%; text-align: left; }
+  .pop { position: absolute; top: 36px; left: 0; z-index: 20; background: #fff; border: 1px solid #cdd4df; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 6px; min-width: 230px; }
+  .pop label { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+  .pop label:hover { background: #f2f5f9; } .pop label .c { margin-left: auto; color: var(--gris); padding-left: 10px; }
+  .pop .sepp { border-top: 1px solid var(--borde); margin: 4px 0; }
+
+  .matriz-w { display: flex; gap: 16px; align-items: flex-start; }
+  table.mat { border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+  table.mat th, table.mat td { border-bottom: 1px solid #eef1f5; }
+  table.mat thead th { padding: 4px 6px; font-weight: 700; color: #2b3a55; cursor: pointer; text-align: center; border-bottom: 1px solid var(--borde); }
+  table.mat thead th.esq { cursor: default; text-align: left; font-size: 11px; color: var(--gris); font-weight: 600; }
+  table.mat tbody th { text-align: left; padding: 3px 10px 3px 4px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  table.mat td.cel { width: 48px; height: 29px; text-align: center; cursor: pointer; position: relative; padding: 0; }
+  table.mat td.cel:hover { background: #eef3ff; }
+  table.mat td.cel .num { font-weight: 700; display: block; line-height: 22px; }
+  table.mat td.cel.cero { color: #c3cad6; cursor: default; }
+  table.mat td.cel .barra { position: absolute; left: 9px; right: 9px; bottom: 4px; height: 3px; display: flex; border-radius: 2px; overflow: hidden; }
+  .barra i { display: block; height: 100%; } .barra .bl { background: var(--listos); } .barra .bt { background: var(--taller); } .barra .br { background: var(--rev); }
+  table.mat td.cel.sel { background: var(--navy); color: #fff; }
+  table.mat th.sel { background: var(--navy) !important; color: #fff; }
+  table.mat td.tot, table.mat th.tot { font-weight: 700; color: #3c4a63; text-align: center; background: #f5f7fa; width: 50px; }
+  table.mat tr.totfila th, table.mat tr.totfila td { background: #f5f7fa; font-weight: 700; color: #3c4a63; text-align: center; }
+  table.mat tr.totfila th { text-align: left; }
+  .lado { display: flex; flex-direction: column; gap: 7px; min-width: 210px; }
+  .ayuda { font-size: 11.5px; color: var(--gris); line-height: 1.45; }
+
+  .tabla-w { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--borde); border-radius: 8px; }
+  table.mov { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mov th { position: sticky; top: 0; background: #f5f7fa; text-align: left; padding: 7px 7px; font-weight: 700; color: #2b3a55; border-bottom: 1px solid var(--borde); white-space: nowrap; z-index: 1; }
+  table.mov td { padding: 6px 7px; border-bottom: 1px solid #eef1f5; white-space: nowrap; }
+  table.mov tbody tr { cursor: pointer; } table.mov tbody tr:hover { background: #f4f6fa; }
+  table.mov tr.nc td { color: #9aa5b5; } table.mov tr.nc .ub, table.mov tr.nc .gp { opacity: .55; }
+  table.mov td.qcol { white-space: normal; min-width: 140px; }
+  table.mov td.mono b { color: var(--navy); background: #fff3b0; }
+  .nocuenta { font-size: 10px; font-weight: 700; color: #8a94a6; border: 1px solid #c8cfda; border-radius: 4px; padding: 0 4px; margin-left: 6px; }
+  .ub { display: inline-block; padding: 1px 9px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+  .ub.Listos { background: var(--listos-bg); color: var(--listos-tx); } .ub.rev { background: var(--rev-bg); color: var(--rev-tx); }
+  .ub.dev { background: var(--mal-bg); color: var(--mal-tx); } .ub.pul { background: #efe4ff; color: #6d28d9; } .ub.gla { background: #d9f3f6; color: #0e7490; }
+  .ub.rep { background: var(--taller-bg); color: var(--taller-tx); } .ub.pan { background: #ffe7d6; color: #c2410c; } .ub.otra { background: #e8ecf3; color: #5b6b85; }
+  .mono { font-family: Consolas, monospace; font-size: 11.5px; }
+  .pie { font-size: 11.5px; color: var(--gris); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,.18); vertical-align: -1px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 0 4px; margin-left: 4px; border: 1px solid #c8cfda; color: #5b6b85; vertical-align: 1px; }
+  .tag.bat { border-color: #9fd8aa; color: var(--listos-tx); }
+
+  /* Quién lo tiene */
+  .quien { display: inline-flex; align-items: center; gap: 5px; }
+  .quien b { font-weight: 700; }
+  .quien .tipo { color: var(--gris); font-size: 11.5px; }
+  .mini { font-size: 10.5px; font-weight: 700; padding: 0 5px; border-radius: 4px; }
+  .mini.ok { background: #e0f2fe; color: #0369a1; } .mini.av { background: var(--rev-bg); color: var(--rev-tx); }
+  .encaja { color: var(--rev-tx); font-weight: 700; }
+  .descuadre { color: var(--mal-tx); font-weight: 700; }
+  .nadie { color: #b3bccb; }
+
+  .gp { display: inline-block; padding: 0 9px; border-radius: 999px; font-weight: 700; font-size: 12px; line-height: 19px; border: 1.5px solid transparent; }
+  .gp.neutro { background: #e8ecf3; color: #2b3f63; } .gp.na { background: #fdecc8; color: #a15c07; }
+  .gp.o-a { border-color: #2563eb; color: #1d4ed8; background: #fff; } .gp.o-b { border-color: #7c3aed; color: #6d28d9; background: #fff; }
+  .gp.o-c { border-color: #ea580c; color: #c2410c; background: #fff; } .gp.o-ms { border-color: #0d9488; color: #0f766e; background: #fff; }
+  .gp.o-id { border-color: #e11d48; color: #be123c; background: #fff; } .gp.o-na { border-color: #d97706; border-style: dashed; color: #a15c07; background: #fff; }
+
+  .velo { position: fixed; inset: 0; background: rgba(7,26,58,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .velo.on { display: flex; }
+  .dlg { width: min(900px, 94vw); max-height: 88vh; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+  .dlg .h { padding: 14px 18px; border-bottom: 1px solid var(--borde); display: flex; align-items: center; }
+  .dlg .h h3 { margin: 0; font-size: 16px; } .dlg .h .x { margin-left: auto; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--gris); }
+  .dlg .c { padding: 12px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; }
+  .dlg textarea { width: 100%; height: 88px; border: 1px solid #cdd4df; border-radius: 8px; padding: 8px 10px; font-family: Consolas, monospace; font-size: 12px; }
+  .dlg .acc { display: flex; gap: 8px; align-items: center; }
+  .btn-pri { height: 34px; background: var(--navy); color: #fff; border: 0; border-radius: 8px; padding: 0 16px; font-weight: 700; cursor: pointer; }
+  .resumen { display: flex; gap: 6px; flex-wrap: wrap; }
+  .resumen .r { padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: #e8ecf3; color: #2b3f63; }
+  .resumen .r.ok { background: var(--listos-bg); color: var(--listos-tx); } .resumen .r.mal { background: var(--mal-bg); color: var(--mal-tx); } .resumen .r.av { background: var(--rev-bg); color: var(--rev-tx); }
+  .dlg .tabla-w { max-height: 44vh; }
+  tr.falta td { background: #fff1f1; } tr.falta td.est { color: var(--mal-tx); font-weight: 700; }
+  tr.aviso td.est { color: var(--rev-tx); font-weight: 700; } tr.gris td { color: #9aa5b5; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #14213d; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 600; opacity: 0; transition: .2s; pointer-events: none; z-index: 60; }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">PROTOTIPO v8 · datos inventados</span>
+  <span>Color y grado:</span>
+  <span class="grupo-b"><button data-cg="tabla" data-choice="cg-tabla">Tabla color × grado</button><button data-cg="chips" data-choice="cg-chips">Chips (como hoy)</button></span>
+  <span class="sep"></span>
+  <label><input type="checkbox" id="optGrado" checked data-choice="grado-color"> Grado con color</label>
+  <label><input type="checkbox" id="optVarios" checked data-choice="pegar-varios"> «Pegar varios IMEIs»</label>
+</div>
+
+<header>
+  <div class="logo"></div>
+  <div class="app">FSGR: <span>Gestión de Stock y Reparaciones V.0.9.18</span></div>
+  <div class="usu"><i></i>Hola, supertécnico</div>
+</header>
+
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div>
+    <div class="it">Asignaciones</div><div class="it">Pendientes</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div>
+    <div class="it">Stock actual</div><div class="it">Pedidos</div><div class="it">Proveedores</div>
+    <div class="sec">TELÉFONOS</div>
+    <div class="it on">Stock de teléfonos</div>
+    <div class="sec">ESTADÍSTICAS</div><div class="it">Rendimiento</div>
+    <div class="sec">CLIENTES</div><div class="it">Listado</div>
+  </nav>
+  <main>
+    <div class="titulo">
+      <h1>Stock de teléfonos</h1>
+      <span class="pild" id="totalStock"></span>
+      <span class="nsys">NSYS: exportación de hoy 11:31 · hace 4 min</span>
+    </div>
+    <div class="fila2">
+      <input class="buscar" id="buscar" placeholder="Buscar IMEI en todos los móviles…">
+      <button class="btn-sec" id="abrirVarios">Pegar varios IMEIs</button>
+      <div class="switch" id="sw" tabindex="0" role="switch"><span class="sw"></span>Ver también lo que no cuenta como stock</div>
+    </div>
+    <div class="paneles" id="paneles"></div>
+  </main>
+</div>
+
+<div class="velo" id="velo">
+  <div class="dlg">
+    <div class="h"><h3>Comprobar una lista de IMEIs</h3><button class="x" id="cerrarDlg" aria-label="Cerrar">×</button></div>
+    <div class="c">
+      <div class="ayuda">Pega los IMEIs como vengan: uno por línea, separados por comas o copiados de una columna de Excel. Se buscan en todos los móviles de NSYS, también en los vendidos.</div>
+      <textarea id="txtImeis"></textarea>
+      <div class="acc"><button class="btn-pri" id="comprobar">Comprobar</button><span class="ayuda" id="lineas"></span>
+        <button class="btn-sec" id="copiar" style="margin-left:auto">Copiar el resultado (para Excel)</button></div>
+      <div class="resumen" id="resumen"></div>
+      <div class="tabla-w"><table class="mov"><thead><tr><th>#</th><th>IMEI</th><th>Modelo</th><th>Color</th><th>Grado</th><th>Ubicación</th><th>Quién lo tiene</th><th>Estado</th></tr></thead><tbody id="resImeis"></tbody></table></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- Datos inventados ----------
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = rng(20261019);
+const pick = (arr, w) => { if (!w) return arr[Math.floor(R() * arr.length)]; let x = R() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < arr.length; i++) { x -= w[i]; if (x < 0) return arr[i]; } return arr[arr.length - 1]; };
+const CORTO = { se2020: 'SE 2020', x: 'X', xr: 'XR', xs: 'XS', xsmax: 'XS Max', air: 'Air' };
+const SUF = { plus: ' Plus', mini: ' mini', pro: ' Pro', promax: ' Pro Max', e: 'e' };
+const corto = c => CORTO[c] || (c.replace(/[^0-9]/g, '') + (SUF[c.replace(/[0-9]/g, '')] || ''));
+const largo = c => 'iPhone ' + corto(c);
+const ORDEN = ['17promax', '17pro', 'air', '17', '16promax', '16pro', '16e', '16', '15promax', '15pro', '15plus', '15', '14promax', '14pro', '14plus', '14',
+  '13promax', '13pro', '13mini', '13', '12promax', '12pro', '12mini', '12', '11promax', '11pro', '11', 'xsmax', 'xs', 'xr', 'se2020'];
+const CAPS = c => ({ '17promax': ['256', '512', '1 TB'], '17pro': ['256', '512', '1 TB'], air: ['256', '512'], '17': ['256', '512'], '16promax': ['256', '512', '1 TB'],
+  '13pro': ['128', '256', '512', '1 TB'], '13promax': ['128', '256', '512', '1 TB'], '14pro': ['128', '256', '512'], '14promax': ['128', '256', '512'],
+  '12': ['64', '128', '256'], '12mini': ['64', '128'], '11': ['64', '128', '256'], '11pro': ['64', '256'], '11promax': ['64', '256'], xs: ['64', '256'], xsmax: ['64', '256'],
+  xr: ['64', '128'], se2020: ['64', '128'] })[c] || ['128', '256', '512'];
+const PESO = { '11': 30, '11pro': 12, '11promax': 10, '12': 35, '12mini': 6, '12pro': 18, '12promax': 14, '13': 32, '13mini': 5, '13pro': 55, '13promax': 20,
+  '14': 40, '14plus': 8, '14pro': 22, '14promax': 16, '15': 24, '15plus': 5, '15pro': 14, '15promax': 10, '16': 12, '16e': 4, '16pro': 8, '16promax': 6,
+  '17': 3, air: 2, '17pro': 2, '17promax': 4, xr: 6, xs: 3, xsmax: 2, se2020: 5 };
+const COLORES = c => /^13pro/.test(c) ? ['Grafito', 'Oro', 'Plata', 'Azul alpino', 'Verde alpino'] : /^14pro/.test(c) ? ['Negro espacial', 'Plata', 'Oro', 'Morado oscuro']
+  : /^1[56]pro/.test(c) ? ['Titanio negro', 'Titanio blanco', 'Titanio natural'] : /^17pro/.test(c) ? ['Plata', 'Naranja cósmico', 'Azul intenso']
+  : /^14/.test(c) ? ['Medianoche', 'Blanco estrella', 'Azul', 'Morado', 'Rojo'] : /^13/.test(c) ? ['Medianoche', 'Blanco estrella', 'Azul', 'Rosa', 'Rojo']
+  : /^12pro/.test(c) ? ['Grafito', 'Plata', 'Oro', 'Azul pacífico'] : ['Negro', 'Blanco', 'Azul', 'Verde', 'Rojo'];
+const HEX = { 'Grafito': '#5b6270', 'Oro': '#ead6a6', 'Plata': '#e9ebee', 'Azul alpino': '#9db4cf', 'Verde alpino': '#5f7a61', 'Medianoche': '#232a36',
+  'Blanco estrella': '#f6f1e8', 'Azul': '#9cc6f5', 'Rosa': '#f7c9d2', 'Rojo': '#d92b2b', 'Verde': '#9fdcae', 'Morado': '#c9b8f5', 'Negro espacial': '#3a3f47',
+  'Morado oscuro': '#4a3863', 'Negro': '#16181d', 'Blanco': '#ffffff', 'Titanio negro': '#3d3d3f', 'Titanio blanco': '#eeece6', 'Titanio natural': '#bdb6a8',
+  'Naranja cósmico': '#e8742c', 'Azul intenso': '#2d3d63', 'Azul pacífico': '#3c5a74' };
+const GRADOS = ['A+', 'A', 'A-', 'B', 'C', 'MsA', 'MsB', 'ID', 'n/a'];
+const PESO_G = [8, 34, 15, 11, 2, 8, 4, 5, 13];
+const UBIC = ['Listos', 'Taller · Pulir', 'Taller · Glass', 'Taller · Reparación', 'Taller · Pantalla rota', 'En revisión', 'Devolución'];
+const PESO_U = [44, 10, 8, 12, 3, 19, 4];
+const esTaller = u => !!u && u.startsWith('Taller');
+const familia = u => u === 'Listos' ? 'l' : (u === 'En revisión' || u === 'Devolución') ? 'r' : 't';
+const claseUb = u => ({ 'Listos': 'Listos', 'En revisión': 'rev', 'Devolución': 'dev', 'Taller · Pulir': 'pul', 'Taller · Glass': 'gla',
+  'Taller · Reparación': 'rep', 'Taller · Pantalla rota': 'pan' })[u] || 'otra';
+const imei = () => { let s = '35'; for (let i = 0; i < 13; i++) s += Math.floor(R() * 10); return s; };
+const sinTilde = s => s.replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o');
+const TEC_REP = ['Juan', 'Lucía', 'Andrés'], TEC_GLASS = ['María', 'Sergio'], TEC_PUL = ['Pedro'];
+const dia = () => `${String(12 + Math.floor(R() * 7)).padStart(2, '0')}/10`;
+const hora = () => `${String(8 + Math.floor(R() * 4)).padStart(2, '0')}:${String(Math.floor(R() * 6) * 10).padStart(2, '0')}`;
+
+function trabajos(ubic, cuenta, estado) {
+  const t = { rep: null, glass: null, pul: null };
+  const r = R();
+  if (ubic === 'Taller · Reparación' || ubic === 'Taller · Pantalla rota') {
+    if (r < .72) { t.rep = { tec: pick(TEC_REP), desde: dia() }; if (R() < .3) t.glass = { tec: pick(TEC_GLASS), desde: dia(), llego: R() < .45 ? hora() : null }; }
+  } else if (ubic === 'Taller · Glass') {
+    if (r < .75) t.glass = { tec: pick(TEC_GLASS), desde: dia(), llego: R() < .6 ? hora() : null };
+  } else if (ubic === 'Taller · Pulir') {
+    if (r < .7) t.pul = { tec: pick(TEC_PUL), desde: dia() };
+  } else if (ubic === 'Listos' && r < .05) {
+    t.rep = { tec: pick(TEC_REP), desde: dia() };
+  } else if (ubic === 'En revisión' && r < .12) {
+    t.rep = { tec: pick(TEC_REP), desde: dia() };
+  } else if (estado === 'De pedido' && r < .06) {
+    t.rep = { tec: pick(TEC_REP), desde: dia() };
+  }
+  return t;
+}
+
+const MOVILES = [];
+for (const c of ORDEN) {
+  const total = PESO[c] || 0, caps = CAPS(c), wcap = [55, 30, 12, 3].slice(0, caps.length), nNo = Math.round(total * .3);
+  for (let i = 0; i < total + nNo; i++) {
+    const cuenta = i < total, cap = pick(caps, wcap), color = pick(COLORES(c)), grado = pick(GRADOS, PESO_G), bat = R() < .3;
+    const esim = /^1[4-7]|air/.test(c) && R() < .25;
+    let ubic, estado;
+    if (cuenta) { ubic = pick(UBIC, PESO_U); estado = 'Libre'; }
+    else if (R() < .6) { ubic = null; estado = 'De pedido'; }
+    else { ubic = pick(['Esperando pieza', 'No vendible']); estado = 'No cuenta'; }
+    MOVILES.push({ imei: imei(), modelo: c, cap, color, grado, bat, esim, ubic, estado, cuenta, trab: trabajos(ubic, cuenta, estado),
+      sku: 'i' + c.toUpperCase() + (esim ? 'eSIM' : '') + cap.replace(' ', '') + sinTilde(color).split(' ').map(x => x[0].toUpperCase() + x.slice(1)).join('') + (grado === 'n/a' ? '' : grado) + (bat ? '100' : ''),
+      dias: 1 + Math.floor(R() * (cuenta ? 90 : 400)) });
+  }
+}
+const VENDIDOS = Array.from({ length: 4 }, () => ({ imei: imei(), modelo: '13', cap: '128', color: 'Azul', grado: 'A', ubic: null, estado: 'Vendido 02/10/2026', cuenta: false, trab: { rep: null, glass: null, pul: null } }));
+
+// ---------- Quién lo tiene ----------
+const tieneTrabajo = m => !!(m.trab.rep || m.trab.glass || m.trab.pul);
+const descuadre = m => tieneTrabajo(m) && (m.ubic === 'Listos' || m.estado === 'De pedido');
+const enCaja = m => esTaller(m.ubic) && !tieneTrabajo(m);
+function tecnicosDe(m) {
+  const t = m.trab, xs = [];
+  if (t.rep) xs.push(t.rep.tec); if (t.glass) xs.push(t.glass.tec); if (t.pul) xs.push(t.pul.tec);
+  return xs;
+}
+function etiquetasTec(m) {
+  const xs = tecnicosDe(m);
+  if (enCaja(m)) xs.push('Sin asignar (en caja de taller)');
+  if (descuadre(m)) xs.push('Con descuadre');
+  return xs;
+}
+function tooltipQuien(m) {
+  const t = m.trab, p = [];
+  if (t.rep) p.push(`Reparación de ${t.rep.tec} desde el ${t.rep.desde}`);
+  if (t.glass) p.push(`Glass de ${t.glass.tec} desde el ${t.glass.desde}: ${t.glass.llego ? 'el móvil le llegó a las ' + t.glass.llego : 'el móvil aún no le ha llegado'}`);
+  if (t.pul) p.push(`Pulido de ${t.pul.tec} desde el ${t.pul.desde}`);
+  if (descuadre(m)) p.push(`Descuadre: NSYS dice «${m.ubic || m.estado}» pero hay un trabajo abierto. ¿Falta cerrarlo o mover la caja?`);
+  if (enCaja(m)) p.push('Está en una caja de taller y nadie lo tiene asignado');
+  return p.join('\n');
+}
+function quienHtml(m) {
+  const t = m.trab;
+  if (descuadre(m)) return `<span class="descuadre">⚠ ${esc(tecnicosDe(m).join(' · '))}: trabajo abierto</span>`;
+  if (enCaja(m)) return '<span class="encaja">⚠ En caja, sin asignar</span>';
+  if (!tieneTrabajo(m)) return '<span class="nadie">—</span>';
+  const p = [];
+  if (t.rep) p.push(`<b>${esc(t.rep.tec)}</b>`);
+  if (t.glass) p.push(`${t.rep ? '<span class="tipo">glass</span> ' : ''}<b>${esc(t.glass.tec)}</b>${t.rep ? '' : ' <span class="tipo">(glass)</span>'} <span class="mini ${t.glass.llego ? 'ok' : 'av'}">${t.glass.llego ? 'llegó ' + t.glass.llego : 'sin entregar'}</span>`);
+  if (t.pul) p.push(`<b>${esc(t.pul.tec)}</b> <span class="tipo">(pulido)</span>`);
+  return `<span class="quien">${p.join(' · ')}</span>`;
+}
+
+// ---------- Estado ----------
+const S = { cg: 'tabla', gradoColor: true, varios: true, modelo: '13pro', cap: '128', verNo: false, textoLat: '', sugSel: -1, sku: null, abierto: null,
+  f: { color: new Set(), grado: new Set(), bat: new Set(), ubic: new Set(), tec: new Set() } };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+function toast(t) { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('on'), 1800); }
+const claseGrado = g => !S.gradoColor ? (g === 'n/a' ? 'gp na' : 'gp neutro')
+  : 'gp o-' + (g === 'n/a' ? 'na' : g === 'ID' ? 'id' : g.startsWith('Ms') ? 'ms' : g[0] === 'A' ? 'a' : g[0] === 'B' ? 'b' : 'c');
+const pillGrado = g => `<span class="${claseGrado(g)}">${esc(g)}</span>`;
+const dot = c => `<span class="dot" style="background:${HEX[c] || '#ccc'}"></span>`;
+const norm = s => String(s).toLowerCase().split(' ').join('');
+const marcar = (s, q) => q && norm(s).startsWith(q) ? `<b>${esc(s.slice(0, q.length))}</b>${esc(s.slice(q.length))}` : esc(s);
+const capTxt = c => c + (/TB/.test(c) ? '' : ' GB');
+const valoresDe = (m, d) => d === 'bat' ? [m.bat ? 'Nueva' : 'Original'] : d === 'ubic' ? [m.ubic || '—'] : d === 'tec' ? etiquetasTec(m) : [m[d]];
+const stockDe = (c, cap) => MOVILES.filter(m => m.modelo === c && m.cuenta && (!cap || m.cap === cap));
+function reparto(xs) { const k = { l: 0, t: 0, r: 0 }; xs.forEach(m => k[familia(m.ubic)]++); return k; }
+function limpiar() { for (const s of Object.values(S.f)) s.clear(); S.sku = null; }
+function abrir(c, cap, sku) { S.modelo = c; S.cap = cap || null; S.abierto = null; limpiar(); S.sku = sku || null; S.verModelo = true; pinta(); }
+function pasaSku(m) { if (!S.sku) return true; const a = norm(m.sku), b = norm(S.sku.texto); return S.sku.exacto ? a === b : a.startsWith(b); }
+function lista() { return MOVILES.filter(m => m.modelo === S.modelo && (!S.cap || m.cap === S.cap) && (S.verNo || m.cuenta) && pasaSku(m)); }
+function pasa(m, salvo) {
+  for (const d of Object.keys(S.f)) {
+    if (salvo && salvo.includes(d)) continue;
+    if (S.f[d].size && !valoresDe(m, d).some(v => S.f[d].has(v))) return false;
+  }
+  return true;
+}
+function contar(xs, d) { const c = {}; for (const m of xs) if (pasa(m, [d])) for (const v of valoresDe(m, d)) c[v] = (c[v] || 0) + 1; return c; }
+const nFiltros = () => Object.values(S.f).reduce((a, s) => a + s.size, 0) + (S.sku ? 1 : 0);
+
+// ---------- Filtros ----------
+function desp(xs, d, nombre) {
+  const c = contar(xs, d), sel = S.f[d];
+  let valores = [...new Set(xs.flatMap(m => valoresDe(m, d)))];
+  if (d === 'tec') {
+    const especiales = ['Sin asignar (en caja de taller)', 'Con descuadre'];
+    valores = valores.filter(v => !especiales.includes(v)).sort().concat(['—sep—'], especiales.filter(v => valores.includes(v)));
+  } else valores.sort();
+  const txt = sel.size === 0 ? (d === 'ubic' || d === 'bat' ? 'todas' : 'todos') : sel.size === 1 ? [...sel][0] : sel.size + ' elegidos';
+  return `<div class="desp"><button data-desp="${d}">${nombre}: ${esc(txt)} ▾</button>${S.abierto === d ? `<div class="pop">${valores.map(v => v === '—sep—' ? '<div class="sepp"></div>' :
+    `<label><input type="checkbox" data-dim="${d}" data-val="${esc(v)}" ${sel.has(v) ? 'checked' : ''}> ${d === 'ubic' && v !== '—' ? `<span class="ub ${claseUb(v)}">${esc(v)}</span>` : esc(v)}<span class="c">${c[v] || 0}</span></label>`).join('')}</div>` : ''}</div>`;
+}
+function desplegables(xs) { return desp(xs, 'bat', 'Batería') + desp(xs, 'ubic', 'Ubicación') + desp(xs, 'tec', 'Técnico'); }
+function chipsHtml(xs, d, etiqueta, valores) {
+  const c = contar(xs, d);
+  return `<div class="chips"><span class="lab">${etiqueta}</span>${valores.filter(v => xs.some(m => m[d] === v) || S.f[d].has(v)).map(v => {
+    const n = c[v] || 0, on = S.f[d].has(v);
+    return `<button class="chip ${on ? 'on' : ''}" data-dimc="${d}" data-val="${esc(v)}" ${!n && !on ? 'disabled' : ''}>${d === 'color' ? dot(v) : ''}${d === 'grado' ? pillGrado(v) : esc(v)} <span class="c">${n}</span></button>`;
+  }).join('')}</div>`;
+}
+function matriz(xs) {
+  const base = xs.filter(m => m.cuenta && pasa(m, ['color', 'grado']));
+  if (!base.length) return '<div class="ayuda" style="padding:20px 6px">No hay móviles en stock con estos filtros.</div>';
+  const colores = COLORES(S.modelo).filter(c => base.some(m => m.color === c) || S.f.color.has(c));
+  const grados = GRADOS.filter(g => base.some(m => m.grado === g) || S.f.grado.has(g));
+  const sc = S.f.color, sg = S.f.grado, haySel = sc.size || sg.size;
+  const enSel = (c, g) => haySel && (!sc.size || sc.has(c)) && (!sg.size || sg.has(g));
+  let h = `<table class="mat"><thead><tr><th class="esq">color \\ grado</th>${grados.map(g => `<th data-col="${esc(g)}" class="${sg.has(g) && !sc.size ? 'sel' : ''}">${pillGrado(g)}</th>`).join('')}<th class="tot">Total</th></tr></thead><tbody>`;
+  for (const c of colores) {
+    h += `<tr><th data-row="${esc(c)}" class="${sc.has(c) && !sg.size ? 'sel' : ''}">${dot(c)} ${esc(c)}</th>`;
+    for (const g of grados) {
+      const cel = base.filter(m => m.color === c && m.grado === g), n = cel.length, k = reparto(cel);
+      h += `<td class="cel ${n ? '' : 'cero'} ${enSel(c, g) ? 'sel' : ''}" data-c="${esc(c)}" data-g="${esc(g)}" title="${n ? esc(`${c} ${g}: ${k.l} listos · ${k.t} en taller · ${k.r} en revisión`) : ''}"><span class="num">${n || '·'}</span>${n ? `<span class="barra"><i class="bl" style="flex:${k.l}"></i><i class="bt" style="flex:${k.t}"></i><i class="br" style="flex:${k.r}"></i></span>` : ''}</td>`;
+    }
+    h += `<td class="tot">${base.filter(m => m.color === c).length}</td></tr>`;
+  }
+  return h + `<tr class="totfila"><th>Total</th>${grados.map(g => `<td>${base.filter(m => m.grado === g).length}</td>`).join('')}<td>${base.length}</td></tr></tbody></table>`;
+}
+
+// ---------- Tabla de móviles ----------
+function tabla(xs) {
+  const filas = xs.filter(m => pasa(m)).sort((a, b) => (b.cuenta - a.cuenta) || (descuadre(b) - descuadre(a)) || (enCaja(b) - enCaja(a)) || (a.dias - b.dias));
+  const conCap = !S.cap;
+  const skuM = s => S.sku ? marcar(s, norm(S.sku.texto)) : esc(s);
+  return { n: filas.length, html: `<div class="tabla-w"><table class="mov"><thead><tr><th>IMEI</th>${conCap ? '<th>Cap.</th>' : ''}<th>Color</th><th>Grado</th><th>SKU</th><th>Ubicación</th><th class="qcol">Quién lo tiene</th><th>Días</th></tr></thead><tbody>${filas.map(m =>
+    `<tr class="${m.cuenta ? '' : 'nc'}" data-imei="${m.imei}"><td class="mono">${m.imei}</td>${conCap ? `<td>${capTxt(m.cap)}</td>` : ''}<td>${dot(m.color)} ${esc(m.color)}</td>
+     <td>${pillGrado(m.grado)}${m.bat ? '<span class="tag bat" title="Batería nueva">100</span>' : ''}${m.esim ? '<span class="tag">eSIM</span>' : ''}</td>
+     <td class="mono">${skuM(m.sku)}</td>
+     <td>${m.ubic ? `<span class="ub ${claseUb(m.ubic)}">${esc(m.ubic)}</span>` : '—'}${m.cuenta ? '' : `<span class="nocuenta">NO CUENTA · ${esc(m.estado)}</span>`}</td>
+     <td class="qcol" title="${esc(tooltipQuien(m))}">${quienHtml(m)}</td><td>${m.dias}</td></tr>`).join('')}</tbody></table></div>` };
+}
+
+function detalleHtml() {
+  const xs = lista(), t = tabla(xs);
+  const tabs = [[null, 'Todas', stockDe(S.modelo).length]].concat(CAPS(S.modelo).map(c => [c, capTxt(c), stockDe(S.modelo, c).length]));
+  const st = xs.filter(m => m.cuenta);
+  const nCaja = st.filter(enCaja).length, nDesc = xs.filter(descuadre).length;
+  let h = `<div class="det-cab"><h2>${esc(largo(S.modelo))}</h2>
+    <div class="tabs">${tabs.map(([c, txt, n]) => `<button data-tab="${c ?? ''}" class="${(S.cap || '') === (c ?? '') ? 'on' : ''}" ${n ? '' : 'disabled'}>${txt}<span>${n}</span></button>`).join('')}</div>
+    <span class="pild">${t.n} móviles</span>
+    ${S.sku ? `<span class="skuchip">SKU${S.sku.exacto ? '' : ' empieza por'} <b>${esc(S.sku.texto)}</b><button id="quitarSku" aria-label="Quitar el filtro de SKU">×</button></span>` : ''}
+    ${nFiltros() ? `<button class="quitar" id="quitar">Quitar filtros (${nFiltros()})</button>` : ''}</div>`;
+  if (S.cg === 'tabla') {
+    h += `<div class="matriz-w"><div>${matriz(xs)}</div><div class="lado">
+      <div class="ayuda">Pulsa una casilla para ver ese color y grado; el color o el grado de la cabecera, para ver solo eso. <b>Ctrl+clic</b> suma casillas.</div>
+      ${desplegables(xs)}
+      <div class="ayuda">${nCaja ? `<span class="encaja">⚠ ${nCaja} en caja de taller sin asignar</span><br>` : ''}${nDesc ? `<span class="descuadre">⚠ ${nDesc} con descuadre</span>` : ''}</div></div></div>`;
+  } else {
+    h += chipsHtml(xs, 'color', 'COLOR', COLORES(S.modelo)) + chipsHtml(xs, 'grado', 'GRADO', GRADOS);
+    h += `<div class="desps">${desplegables(xs)}<span class="ayuda">${nCaja ? `<span class="encaja">⚠ ${nCaja} en caja sin asignar</span>` : ''} ${nDesc ? `<span class="descuadre">· ⚠ ${nDesc} con descuadre</span>` : ''}</span></div>`;
+  }
+  return h + t.html + `<div class="pie">«Quién lo tiene» sale de las asignaciones abiertas del ERP (reparación, glass y pulido). Pasa el ratón por encima para ver desde cuándo. Pulsa una fila para abrir la ficha.</div>`;
+}
+
+// ---------- Columna lateral con buscador de modelo o SKU ----------
+function skusQueEmpiezan(q) {
+  const c = {};
+  for (const m of MOVILES) if (m.cuenta && norm(m.sku).startsWith(q)) { c[m.sku] = c[m.sku] || { sku: m.sku, n: 0, modelo: m.modelo, cap: m.cap }; c[m.sku].n++; }
+  return Object.values(c).sort((a, b) => a.sku.length - b.sku.length || b.n - a.n || a.sku.localeCompare(b.sku));
+}
+function aplicarSku(texto, exacto) {
+  const q = norm(texto);
+  const xs = MOVILES.filter(m => m.cuenta && (exacto ? norm(m.sku) === q : norm(m.sku).startsWith(q)));
+  if (!xs.length) return toast('Ningún móvil en stock tiene un SKU que empiece así');
+  const modelos = [...new Set(xs.map(m => m.modelo))];
+  if (modelos.length > 1) return toast(`Hay SKU de ${modelos.length} modelos que empiezan así: elige uno o escribe más`);
+  const caps = [...new Set(xs.map(m => m.cap))], igual = xs.find(m => norm(m.sku) === q);
+  S.textoLat = ''; S.sugSel = -1;
+  abrir(modelos[0], caps.length === 1 ? caps[0] : null, igual ? { texto: igual.sku, exacto: true } : { texto: texto.trim(), exacto: false });
+}
+function enterLateral() {
+  const q = norm(S.textoLat).replace(/^iphone/, '');
+  const exacto = ORDEN.find(c => c === q || norm(corto(c)) === q);
+  if (exacto && !skusQueEmpiezan(norm(S.textoLat)).length) { S.textoLat = ''; return abrir(exacto, null); }
+  aplicarSku(S.textoLat, false);
+}
+function lateralHtml() {
+  const q = norm(S.textoLat), skus = q.length >= 2 ? skusQueEmpiezan(q) : [], conSku = new Set(skus.map(s => s.modelo));
+  const filas = ORDEN.filter(c => stockDe(c).length && (!q || norm(largo(c)).includes(q) || norm(corto(c)).includes(q) || conSku.has(c))).map(c => {
+    const st = stockDe(c), k = reparto(st);
+    return `<div class="fm ${c === S.modelo ? 'on' : ''}"><button class="cab" data-lat="${c}"><span class="nm">${esc(largo(c))}</span><span class="tt">${st.length}</span></button>
+      <div class="caps">${CAPS(c).map(cap => { const x = stockDe(c, cap).length; return x ? `<button class="cap ${c === S.modelo && S.cap === cap ? 'on' : ''}" data-lat="${c}" data-cap="${cap}">${cap}<span>${x}</span></button>` : ''; }).join('')}</div>
+      <div class="bar"><i class="l" style="flex:${k.l}"></i><i class="t" style="flex:${k.t}"></i><i class="r" style="flex:${k.r}"></i></div></div>`;
+  }).join('');
+  const pie = conSku.size > 1 ? `Hay SKU de ${conSku.size} modelos: elige uno o escribe más` : 'Enter: todos los que empiezan así';
+  const sug = skus.length ? `<div class="sug"><div class="gh">SKU EN STOCK</div>${skus.slice(0, 7).map((s, i) =>
+    `<div class="op ${i === S.sugSel ? 'on' : ''}" data-sku="${esc(s.sku)}"><div class="mono">${marcar(s.sku, q)}</div><div class="d">${esc(largo(s.modelo))} · ${capTxt(s.cap)}<b>${s.n}</b></div></div>`).join('')}
+    <div class="mas">${skus.length > 7 ? `y ${skus.length - 7} más · ` : ''}${pie}</div></div>` : '';
+  return `<div class="card izq"><div class="cabz"><input id="txtLat" placeholder="Buscar modelo o SKU…" value="${esc(S.textoLat)}" autocomplete="off">${sug}</div>
+    <div class="lista">${filas || '<div class="ayuda" style="padding:12px">Ningún modelo ni SKU en stock empieza así.</div>'}</div></div>`;
+}
+
+// ---------- Pintar y enlazar ----------
+function enfocarLat() { const n = $('txtLat'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }
+function pinta() {
+  $('totalStock').textContent = MOVILES.filter(m => m.cuenta).length + ' móviles en stock';
+  $('sw').classList.toggle('on', S.verNo);
+  $('abrirVarios').style.display = S.varios ? '' : 'none';
+  document.querySelectorAll('[data-cg]').forEach(b => b.classList.toggle('on', b.dataset.cg === S.cg));
+  $('paneles').innerHTML = lateralHtml() + `<div class="card principal">${detalleHtml()}</div>`;
+  if (S.verModelo) { S.verModelo = false; const on = document.querySelector('.fm.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+  document.querySelectorAll('[data-lat]').forEach(b => b.onclick = () => abrir(b.dataset.lat, b.dataset.cap || null));
+  document.querySelectorAll('.sug [data-sku]').forEach(e => e.onclick = () => aplicarSku(e.dataset.sku, true));
+  const tl = $('txtLat');
+  tl.oninput = () => { S.textoLat = tl.value; S.sugSel = -1; pinta(); enfocarLat(); };
+  tl.onkeydown = e => {
+    const ops = document.querySelectorAll('.sug .op');
+    if (e.key === 'ArrowDown' && ops.length) { e.preventDefault(); S.sugSel = Math.min(S.sugSel + 1, ops.length - 1); pinta(); enfocarLat(); }
+    else if (e.key === 'ArrowUp' && ops.length) { e.preventDefault(); S.sugSel = Math.max(S.sugSel - 1, -1); pinta(); enfocarLat(); }
+    else if (e.key === 'Enter' && S.textoLat.trim()) { e.preventDefault(); if (S.sugSel >= 0 && ops[S.sugSel]) aplicarSku(ops[S.sugSel].dataset.sku, true); else enterLateral(); }
+    else if (e.key === 'Escape' && S.textoLat) { S.textoLat = ''; S.sugSel = -1; pinta(); enfocarLat(); }
+  };
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { S.cap = b.dataset.tab || null; limpiar(); pinta(); });
+  const q = $('quitar'); if (q) q.onclick = () => { limpiar(); pinta(); };
+  const qs = $('quitarSku'); if (qs) qs.onclick = () => { S.sku = null; pinta(); };
+  document.querySelectorAll('[data-desp]').forEach(e => e.onclick = ev => { ev.stopPropagation(); S.abierto = S.abierto === e.dataset.desp ? null : e.dataset.desp; pinta(); });
+  document.querySelectorAll('.pop').forEach(e => e.onclick = ev => ev.stopPropagation());
+  document.querySelectorAll('.pop input').forEach(e => e.onchange = () => { const s = S.f[e.dataset.dim]; e.checked ? s.add(e.dataset.val) : s.delete(e.dataset.val); pinta(); });
+  document.querySelectorAll('.chip[data-dimc]').forEach(e => e.onclick = () => { const s = S.f[e.dataset.dimc]; s.has(e.dataset.val) ? s.delete(e.dataset.val) : s.add(e.dataset.val); pinta(); });
+  document.querySelectorAll('td.cel:not(.cero)').forEach(e => e.onclick = ev => {
+    const c = e.dataset.c, g = e.dataset.g;
+    if (ev.ctrlKey || ev.metaKey) { S.f.color.add(c); S.f.grado.add(g); }
+    else if (S.f.color.size === 1 && S.f.grado.size === 1 && S.f.color.has(c) && S.f.grado.has(g)) { S.f.color.clear(); S.f.grado.clear(); }
+    else { S.f.color = new Set([c]); S.f.grado = new Set([g]); }
+    pinta();
+  });
+  document.querySelectorAll('th[data-row]').forEach(e => e.onclick = () => { const c = e.dataset.row;
+    if (S.f.color.size === 1 && S.f.color.has(c) && !S.f.grado.size) S.f.color.clear(); else { S.f.color = new Set([c]); S.f.grado.clear(); } pinta(); });
+  document.querySelectorAll('th[data-col]').forEach(e => e.onclick = () => { const g = e.dataset.col;
+    if (S.f.grado.size === 1 && S.f.grado.has(g) && !S.f.color.size) S.f.grado.clear(); else { S.f.grado = new Set([g]); S.f.color.clear(); } pinta(); });
+  document.querySelectorAll('table.mov tbody tr[data-imei]').forEach(e => e.onclick = () => toast('Abriría la ficha de ' + e.dataset.imei));
+}
+document.querySelectorAll('[data-cg]').forEach(b => b.onclick = () => { S.cg = b.dataset.cg; S.abierto = null; pinta(); });
+$('optGrado').onchange = e => { S.gradoColor = e.target.checked; pinta(); };
+$('optVarios').onchange = e => { S.varios = e.target.checked; pinta(); };
+$('sw').onclick = () => { S.verNo = !S.verNo; pinta(); };
+document.addEventListener('click', () => { if (S.abierto) { S.abierto = null; pinta(); } });
+
+// ---------- Varios IMEIs ----------
+const TODOS = MOVILES.concat(VENDIDOS);
+function ejemplo() {
+  const st = MOVILES.filter(m => m.cuenta);
+  const xs = [st.find(enCaja), st.find(m => m.trab.glass), st[40], st.find(descuadre) || st[77], st[101], st[150]].filter(Boolean).map(m => m.imei);
+  return [xs[0], xs[1] + '\t', ' ' + xs[2], xs[3], MOVILES.find(m => m.estado === 'De pedido').imei, VENDIDOS[0].imei, '359999000011112', xs[4], xs[0], 'pendiente', xs[5]].join('\n');
+}
+function comprobar() {
+  const trozos = $('txtImeis').value.split(/[\n,;\t ]+/).map(s => s.trim()).filter(Boolean);
+  const vistos = {}, filas = [], k = { stock: 0, pedido: 0, vend: 0, no: 0, rep: 0, mal: 0 };
+  trozos.forEach((t, i) => {
+    if (!/^\d{15}$/.test(t)) { filas.push(`<tr class="gris"><td>${i + 1}</td><td class="mono">${esc(t)}</td><td colspan="5"></td><td class="est">No es un IMEI</td></tr>`); k.mal++; return; }
+    if (vistos[t]) { filas.push(`<tr class="gris"><td>${i + 1}</td><td class="mono">${t}</td><td colspan="5"></td><td class="est">Repetido (línea ${vistos[t]})</td></tr>`); k.rep++; return; }
+    vistos[t] = i + 1;
+    const m = TODOS.find(x => x.imei === t);
+    if (!m) { filas.push(`<tr class="falta"><td>${i + 1}</td><td class="mono">${t}</td><td colspan="5"></td><td class="est">No está en NSYS</td></tr>`); k.no++; return; }
+    if (m.cuenta) k.stock++; else if (m.estado === 'De pedido') k.pedido++; else if (m.estado.startsWith('Vendido')) k.vend++; else k.stock++;
+    filas.push(`<tr class="${m.cuenta ? '' : 'aviso'}" data-imei="${t}"><td>${i + 1}</td><td class="mono">${t}</td><td>${esc(largo(m.modelo))} ${capTxt(m.cap)}</td><td>${dot(m.color)} ${esc(m.color)}</td><td>${pillGrado(m.grado)}</td><td>${m.ubic ? `<span class="ub ${claseUb(m.ubic)}">${esc(m.ubic)}</span>` : '—'}</td><td>${quienHtml(m)}</td><td class="est">${esc(m.estado)}</td></tr>`);
+  });
+  $('lineas').textContent = trozos.length + ' líneas';
+  $('resumen').innerHTML = `<span class="r ok">${k.stock} en stock</span>` + (k.pedido ? `<span class="r av">${k.pedido} de pedido</span>` : '') +
+    (k.vend ? `<span class="r av">${k.vend} vendido${k.vend > 1 ? 's' : ''}</span>` : '') + (k.no ? `<span class="r mal">${k.no} no está${k.no > 1 ? 'n' : ''} en NSYS</span>` : '') +
+    (k.rep ? `<span class="r">${k.rep} repetido${k.rep > 1 ? 's' : ''}</span>` : '') + (k.mal ? `<span class="r">${k.mal} no es un IMEI</span>` : '');
+  $('resImeis').innerHTML = filas.join('');
+  document.querySelectorAll('#resImeis tr[data-imei]').forEach(e => e.onclick = () => toast('Abriría la ficha de ' + e.dataset.imei));
+}
+function abrirDlg(texto) { $('txtImeis').value = texto; $('velo').classList.add('on'); comprobar(); }
+$('abrirVarios').onclick = () => abrirDlg(ejemplo());
+$('cerrarDlg').onclick = () => $('velo').classList.remove('on');
+$('velo').onclick = e => { if (e.target.id === 'velo') $('velo').classList.remove('on'); };
+$('comprobar').onclick = comprobar;
+$('copiar').onclick = () => toast('Copiado: pégalo en Excel');
+$('buscar').addEventListener('paste', e => { if (!S.varios) return; const t = (e.clipboardData || window.clipboardData).getData('text');
+  if ((t.match(/\d{15}/g) || []).length > 1) { e.preventDefault(); abrirDlg(t); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('velo').classList.remove('on'); });
+
+pinta();
+</script>
+</body>
+</html>
