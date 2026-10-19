@@ -1,6 +1,6 @@
 # 0.9.18 — Stock de teléfonos: columna compacta, buscador de SKU, «Quién lo tiene» y «Revisado»
 
-Fecha: 2026-10-19. Estado: **aprobada** por el usuario el 19/10, con los tres puntos (D) y las decisiones de §2 tal como están. Versión **0.9.18**; plan: por escribir.
+Fecha: 2026-10-19. Estado: **aprobada** por el usuario el 19/10, con los tres puntos (D) y las decisiones de §2 tal como están. Versión **0.9.18**; plan: [`docs/superpowers/plans/2026-10-19-v0918-stock-telefonos-quien-lo-tiene.md`](../plans/2026-10-19-v0918-stock-telefonos-quien-lo-tiene.md) (19/10), con los ajustes de §11.
 
 Toca **servidor** y **web**. **No toca la base de datos.** Parte de la 0.9.17 (servidor `main` `d2b717d`, web `main`
 `f460c75`) y se despliega **después** de que la 0.9.17 esté en producción.
@@ -348,10 +348,12 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
     - con ERROR, el texto genérico `MOTIVO_ERROR`, como en `/estado`, porque el `MENSAJE` guarda `e.toString()`, que
       puede llevar ids de Drive o el correo de la cuenta de servicio;
     - con EN_CURSO, null.
-- **`historico`:** null si no hay ninguna importación `HISTORICO`. Si las hay:
+- **`historico`:** siempre viene (ajuste del plan, §11); `total` = 0 si no hay ninguna importación `HISTORICO`, y entonces la
+  web no pinta la línea:
 
   ```
-  { hechos (OK + RECHAZADO), ultimo: fechaExportacion del último hecho, hasta: fechaExportacion de la primera ACTUAL OK }
+  { total (todas las HISTORICO), hechos (OK + RECHAZADO), ultimo: fechaExportacion del último hecho,
+    hasta: fechaExportacion de la primera ACTUAL OK }
   ```
 
 - **Los huecos los calcula la web** con la regla de §4.11.
@@ -389,7 +391,7 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
     - el límite por defecto y el tope (más de 50 da 50; 0 o menos da 1);
     - un ERROR sale con `MOTIVO_ERROR` y nunca con su `MENSAJE`;
     - EN_CURSO, con `segundos` null;
-    - `historico` null sin filas `HISTORICO`, y con hechos, último y «hasta» cuando las hay;
+    - `historico` con `total` = 0 sin filas `HISTORICO`, y con hechos, último y «hasta» cuando las hay;
     - TECNICO, 403.
   - **`OpenApiContractTest`** al día.
 - **Web (Vitest + MSW):**
@@ -454,3 +456,27 @@ cumplen §5.1. No cambian ni la tabla `Nsys_evento` ni el enum `TipoEvento`.
 
 - **El límite de 60 minutos del descuadre:** revisarlo con el uso real.
 - **Los fallos de diagnóstico** (columna «Diagnostics»): idea para más adelante (§2).
+
+## 11. Ajustes del plan (19/10)
+
+Recogidos al escribir el plan; no cambian ninguna decisión del usuario.
+
+1. **`historico` siempre viene** en `GET /importaciones`, con `total`: así el contrato no lleva un objeto nullable, que
+   springdoc no marca de forma fiable junto a un `$ref` (§6.5). Con el histórico terminado (`ultimo` = `hasta`), la línea dice
+   «Histórico: terminado (N ficheros)».
+2. **Pestañas de capacidad (§4.3):** la web no tiene un catálogo de capacidades. Salen las que el espejo tiene de ese modelo,
+   de cualquier estado de los que llegan al stock; sin stock, apagadas, y con el interruptor encendido se pueden abrir si
+   tienen algo que no cuenta.
+3. **Escribir en el buscador no cambia el modelo abierto (§4.2):** solo filtra la lista; se abre con un clic, con Enter o
+   eligiendo un SKU. En la 0.9.17 el panel seguía al primer modelo visible.
+4. **Ctrl+clic (§4.4)** suma a lo elegido el color y el grado de la casilla, como el prototipo: los filtros siguen siendo por
+   color y por grado (Grafito A + Oro B elige Grafito y Oro en A y B).
+5. **Pegar varios IMEIs (§4.9):**
+   - un número de serie lleva letras y cifras (8-20); unas cifras que no son 15 son «No es un IMEI»;
+   - los números de serie se pasan a mayúsculas antes de comprobarlos;
+   - el resumen añade «N no cuenta(n)» y «N de baja» cuando los hay.
+6. **`PeticionComprobar`** es un record del paquete (no privado) para que el test lo construya; el esquema se llama igual.
+7. **Un móvil de pedido** no sale «en caja, sin asignar» aunque su última caja fuera de taller: ya no está en ella (§4.7).
+8. **Ficha (§5.2):** la de una devolución dice «Revisado (devolución) el …»; con 0 días, «Pendiente de revisar desde hoy».
+9. **`useEstadoNsys` no abre el diálogo de error:** la píldora ya dice «no se pudo comprobar», y el indicador de la barra va
+   en todas las vistas (§4.12).
