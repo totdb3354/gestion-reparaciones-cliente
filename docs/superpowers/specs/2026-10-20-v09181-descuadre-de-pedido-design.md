@@ -67,6 +67,9 @@ Solo `src/modules/telefonos/stock/quien.ts` (`quienLoTiene`):
   los otros worktrees son de otras sesiones.
 - `package.json` a `0.9.18.1` (npm la acepta: el paquete es privado). El aviso de versión nueva compara texto, así que las
   pestañas abiertas se enteran.
+  - Se pone con `npm pkg set version=0.9.18.1` y las dos entradas raíz de `package-lock.json` a mano: `npm version` con
+    cuatro números escribe `0.9.1-8.1` (ajuste del plan).
+  - `src/shared/lib/version.test.ts` exige tres números: pasa a aceptar un cuarto opcional (ajuste del plan).
 - CHANGELOG: entrada nueva `[0.9.18.1]`. La de la `[0.9.18]` se queda como se publicó.
 - `docs/novedades/NOVEDADES-v0.9.18.md` (raíz): se corrige la línea del descuadre, porque el taller aún no la ha recibido.
 - Preprod → producción en horario (solo web) → tag `v0.9.18.1` en la rama del arreglo →
