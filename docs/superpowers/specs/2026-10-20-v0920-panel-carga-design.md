@@ -149,7 +149,7 @@ abierto todo el día y se mantiene al día solo.
 - `useCargaTecnicos(habilitada)`: `refetchInterval` de 30 s (5 s desconectado) mientras está habilitada,
   `meta: { silenciarError: true, sinCapa: true }`. La clave `['carga-tecnicos']` pasa a `shared` para que la regla general la
   pueda nombrar sin que `shared` importe de un módulo.
-- `shared/api/queryClient.ts`: en el `MutationCache`, al terminar bien cualquier mutación, `invalidateQueries` de la clave de
+- `shared/api/queryClient.ts`: en el `MutationCache`, al terminar cualquier mutación (bien o con error, como dice §2), `invalidateQueries` de la clave de
   la carga.
 - `app/shell/TopBar.tsx`: monta `BotonPanelCarga` (en el módulo del panel), el botón «Carga» (solo supertécnico y admin).
 - `shared/lib/store.ts`: `crearStoreLeido(leer)`, un store que relee su fuente (`localStorage`) al reiniciarse. Las pruebas
