@@ -82,6 +82,9 @@ abierto todo el día y se mantiene al día solo.
   solitario**. Si ya estaba en Asignaciones, el resto de filtros se queda como estaba (calco de hoy); si viene de otra pantalla,
   la página arranca con sus filtros de siempre y solo ese técnico.
 - El panel **sigue abierto**.
+- **Excepción:** con una ventana abierta **fuera de Asignaciones**, pulsar un técnico **no hace nada**. Navegar cerraría esa
+  ventana y se perdería lo que no estuviera guardado. En Asignaciones, con «Asignar trabajos» abierto, sí filtra la tabla de
+  detrás: ahí no se pierde nada.
 
 **Actualización:**
 - Con el panel **abierto o minimizado** (la pastilla enseña datos) la carga se pide cada **30 s**; con el banner de conexión
@@ -112,9 +115,26 @@ abierto todo el día y se mantiene al día solo.
 - Varias pestañas: cada una tiene su panel; lo que guarda una lo coge la otra al recargar (sin sincronizar en vivo).
 
 **Capas:**
-- El panel y la pastilla van con `fixed` y **`z-30`**: por debajo del panel de la campana (`z-40`), de los diálogos de Radix
-  (`z-50`, con su fondo oscuro encima) y de la capa de carga (`z-[60]`). Con un diálogo modal abierto queda oscurecido e
-  inerte, como el resto de la pantalla.
+- **Sin ventana abierta:** el panel y la pastilla van con `fixed` y **`z-30`**. Quedan por debajo del panel de la campana y
+  del rastro (`z-40`) y de los menús desplegables (`z-50`), así que no los tapan.
+- **Con una ventana que bloquea abierta** (cualquier diálogo de `shared/ui/dialog.tsx`, es decir, mientras exista su fondo
+  oscuro `[data-slot="dialog-overlay"]`), el panel y la pastilla **suben por encima** (`z-[55]`). Siguen por debajo de la capa
+  de carga (`z-[60]`) y **se pueden usar**: moverlos, minimizarlos, cambiar Pedidos/Total, desplazar la lista con la rueda
+  y pulsar técnicos (con la excepción de «Pulsar un técnico»). Decisión del
+  usuario tras preprod (2026-10-20 noche): «precisamente cuando estás asignando es cuando sientes que pierdes el control de
+  la ventana». Vale para todas las ventanas.
+- Tocar el panel o la pastilla **nunca cierra la ventana de debajo**. El `DialogContent` compartido ignora las interacciones
+  de fuera que caen dentro de un elemento marcado `data-encima-de-ventanas`, y el panel y la pastilla llevan esa marca y
+  `pointer-events: auto`, porque Radix pone `pointer-events: none` en el `body` mientras hay una ventana abierta.
+- **Con una ventana abierta**, además:
+  - la rueda y el arrastre táctil sobre la lista no llegan al bloqueo de scroll de Radix, que escucha en `document`
+    (`stopPropagation`, el mismo patrón que `shared/ui/popover.tsx`), así que la lista se desplaza de forma nativa;
+  - tocar el panel o la pastilla no le quita el foco al campo de la ventana (`preventDefault` en `mousedown`, solo con una
+    ventana abierta). Si no, Radix lo devolvería con el texto entero seleccionado y lo medio escrito (un IMEI) se perdería
+    con la siguiente tecla.
+- **Límites conocidos con una ventana abierta:**
+  - el foco del teclado no sale de la ventana;
+  - para los lectores de pantalla el panel queda oculto (`aria-hidden`).
 
 ## 3. Errores y casos límite
 
@@ -133,7 +153,9 @@ abierto todo el día y se mantiene al día solo.
   inactividad de 2 h (que mira teclado, clic y rueda).
 - **Técnico en el mismo PC:** no se monta ni se pide nada, aunque lo guardado diga «abierto».
 - **«Asignar trabajos»** usa la misma consulta (`useCargaTecnicos(true)`, `carga.pedidos`): con el panel abierto sus cifras
-  también se refrescan cada 30 s. Es el dato correcto y no afecta a sus colas; la ventana tapa el panel mientras está abierta.
+  también se refrescan cada 30 s. Es el dato correcto y no afecta a sus colas. El panel queda por encima de la ventana y se
+  puede usar mientras se asigna (§2, «Capas»). Ni el panel ni la ventana suman lo que hay en la cola sin guardar: entra al
+  pulsar «Guardar».
 
 ## 4. Construcción
 

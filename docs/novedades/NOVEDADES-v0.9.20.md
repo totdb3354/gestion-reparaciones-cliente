@@ -19,6 +19,8 @@ actualiza solo.
   y el programa lo recuerda.
 - **Si lo cierras con «×»**, se vuelve a abrir con «Carga técnicos» en Asignaciones.
 - **No bloquea:** mientras está abierto se puede seguir usando el programa.
+- **Siempre a mano:** con una ventana abierta (por ejemplo «Asignar trabajos») el panel queda por encima y se puede usar;
+  tocarlo no cierra la ventana.
 - **Se mueve:** se arrastra por la cabecera (⋮⋮) y se queda pegado a la esquina más cercana.
 - **Se minimiza** con «–»: queda una pastilla con unas mini-barras de colores y cuántos técnicos están al 90 % o más.
   Un clic la abre.
