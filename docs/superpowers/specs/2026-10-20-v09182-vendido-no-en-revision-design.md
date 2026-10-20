@@ -62,26 +62,32 @@ Con un `Status` que **no es vivo** (todo lo que no es `Available`, `InProcess` n
 ## 3. Datos (preprod y producción)
 
 Dos SQL en `sql/` del servidor: `recuento-nsys-vendido-en-revision.sql` (solo lee) y `limpieza-nsys-vendido-en-revision.sql`
-(en una transacción). Se ejecutan después de desplegar el backend.
+(en una transacción, en `READ COMMITTED` para no frenar a la importación). Se ejecutan después de desplegar el backend y
+mejor justo después de una importación. (Ajustado tras la revisión final: el estado del lote ya no se deduce del esqueleto,
+el «Desde» falso se quita en cualquier lote cerrado y la última caja sale también del «Desde».)
 
-1. **`Nsys_evento`:** se borran los `UBICACION` hacia la ubicación de la caja vacía (la de `Nsys_ubicacion` con `LOCATION`
-   vacía), con `A_NSYS` vacío, cuyo lote **no estaba vivo** en ese momento. Es decir: el último evento de estado del lote
-   (`VENTA`, `VENTA_DESHECHA` o `ESTADO`) con `FECHA` ≤ la del evento es una `VENTA` o un `ESTADO` a un `Status` no vivo.
-   Así entra también la caja vaciada en una exportación posterior a la de la venta.
-2. **Vueltas ya guardadas:** `DE` = NULL en los `UBICACION` con `DE` = la ubicación de la caja vacía que caen a la misma
-   `FECHA` que una vuelta del lote (`VENTA_DESHECHA`, o `ESTADO` de un `Status` no vivo a uno vivo). Es el «Desde: En
-   revisión» falso de una vuelta a una caja.
+**Estado del lote en un momento:** solo cuentan los cambios de estado con hora (`VENTA`, `VENTA_DESHECHA`, `ESTADO`); la
+venta del esqueleto (solo el día) no, porque el esqueleto la apunta en cualquier fila con fecha de venta. Es el `A` del
+último cambio hasta ese momento; si no lo hay, el `DE` del primero después; si tampoco, el `Status` de hoy.
+
+1. **Destinos falsos:** los `UBICACION` y las `ENTRADA` hacia la ubicación de la caja vacía (la de `Nsys_ubicacion` con
+   `LOCATION` vacía), con `A_NSYS` vacío, de un lote **cerrado en ese momento**. Los `UBICACION` se borran; las `ENTRADA`
+   (un lote que llegó ya vendido o de baja) se quedan sin ubicación de destino.
+2. **«Desde» falsos:** `DE` = NULL en los `UBICACION` con `DE` = esa ubicación de un lote **cerrado justo antes** (el `DE`
+   del cambio de estado de la misma exportación o, si no lo hay, el estado de antes). Son las vueltas de un vendido o de
+   una baja a una caja y los cambios de caja de una baja (a «Desguace», por ejemplo), que si no contarían como revisión.
 3. **`Nsys_movil`:** donde el `Status` no es vivo y la caja está vacía, `UBICACION` = NULL y `UBICACION_ULTIMA` = la
-   última ubicación del rastro del lote (el último `UBICACION` o `ENTRADA` con `A` no nulo, ya sin los falsos), o NULL si
-   no la hay. Hoy esa columna dice «En revisión» por el mismo fallo, y saldría como caja si la venta se deshace y el
-   móvil vuelve a «Pedidos realizados» (pasa a menudo: cambios de IMEI en un pedido, ventas anuladas). Lo mismo, en los
-   de pedido que ya volvieron así con el código viejo (`UBICACION_ULTIMA` = «En revisión»), sacado del rastro; si no hay
-   rastro, se deja. Es lo mismo que calcula el código nuevo, así la siguiente
-   importación no vuelve a guardar decenas de miles de filas.
+   última ubicación del ERP del rastro: el `A` del último `UBICACION` o `ENTRADA` o, si no lo tiene, su `DE` cuando es una
+   ubicación del ERP (los destinos falsos se miran sin su `A`); NULL si no la hay. Hoy esa columna dice «En revisión» por
+   el mismo fallo, y saldría como caja si la venta se deshace y el móvil vuelve a «Pedidos realizados» (pasa a menudo:
+   cambios de IMEI en un pedido, ventas anuladas). Lo mismo en los de pedido con «En revisión» de última caja, sacado del
+   rastro; si no hay rastro, se deja. El código nuevo deja tal cual la última caja de una fila sin ubicación, así la
+   siguiente importación no vuelve a guardar decenas de miles de filas.
 
-El recuento se pasa antes y después: eventos que se borran (los de la misma hora que la venta o la baja, y los de después),
-vueltas con el «Desde» falso, filas de `Nsys_movil` que cambian y móviles hoy pendientes de revisar tras una vuelta (con
-su fecha de espera antes y después). En producción, copia a mano antes (`backup-erp.sh`).
+El recuento se pasa antes y después: destinos falsos (por tipo, con o sin cambio de estado a la vez), «Desde» falsos,
+filas de `Nsys_movil` que cambian, móviles hoy pendientes de revisar tras una vuelta y dos comprobaciones (falsos de un lote
+vivo hoy sin ninguna vuelta después: 0; móviles vivos con fecha de venta). En producción, copia a mano antes
+(`backup-erp.sh`).
 
 ## 4. Despliegue
 
@@ -112,7 +118,10 @@ su fecha de espera antes y después). En producción, copia a mano antes (`backu
 - Histórico: una venta con la caja vaciada no apunta `UBICACION` (en `ComparadorTest` con `Modo.HISTORICO`, que es lo
   que llama `HistoricoNsys`).
 - `StockTelefonosControllerTest`: la ficha de un vendido que conserva una caja pendiente no trae `pendienteRevisionDesde`.
-- Los dos SQL, en preprod con el recuento antes y después.
+- Tras la revisión final: un vendido que conservaba la caja y la vacía en otra exportación; un Status vacío (de vendido a
+  sin Status no rompe la importación); una fila guardada con el fallo no da «Desde: En revisión»; la ficha de una baja
+  guardada con el fallo; una devolución con los eventos ya limpios.
+- Los dos SQL, en preprod con el recuento antes y después y un ensayo con `ROLLBACK`.
 
 ## 6. Fuera de este arreglo
 

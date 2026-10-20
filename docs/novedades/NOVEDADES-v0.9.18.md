@@ -32,7 +32,7 @@ La ficha de un IMEI dice cuándo se revisó.
 - **El grado tiene color** por familias (A, B, C, Ms, ID y n/a).
 - **«Pegar varios IMEIs»:** pega una lista de hasta **500** IMEIs (de una columna de Excel, por ejemplo) y dice de cada
   IMEI si está en stock, de pedido, vendido o no está en NSYS, con quién lo tiene. El resultado se copia para Excel.
-  Si la comprobación falla, lo dice y se puede reintentar.
+  Si la comprobación falla, lo dice y se puede reintentar. Un vendido sale sin ubicación (0.9.18.2).
 - **La píldora de NSYS** se puede pulsar: enseña las últimas importaciones y avisa si falta algún Items.
 
 ### 🔔 Barra superior
@@ -45,3 +45,7 @@ La ficha de un IMEI dice cuándo se revisó.
 - La ficha de NSYS dice **cuándo se revisó** el móvil o **desde cuándo espera** la revisión.
 - Un móvil en **Funcionalidad pendiente** también sale como pendiente de revisar; su revisión es el paso a una caja.
 - En el rastro, la revisión sale como **«Revisado → caja»**.
+- Un móvil **vendido o dado de baja** ya no sale **«En revisión»** ni **pendiente de revisar**. NSYS le vacía la caja al
+  cerrarlo, y el rastro ya no apunta un «Pasa a En revisión» en cada venta o baja; también se han quitado los del
+  histórico (0.9.18.2).
+- Una **devolución** espera la revisión desde el día que vuelve, no desde la venta (0.9.18.2).

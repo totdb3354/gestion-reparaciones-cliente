@@ -13,6 +13,14 @@ en `Nsys_evento` y `Nsys_movil`. La web no cambia: ya trata una ubicación nula 
 
 **Spec:** `docs/superpowers/specs/2026-10-20-v09182-vendido-no-en-revision-design.md` (repo raíz, commit `20334c6`).
 
+**Ejecución (20/10, en la misma sesión):** Tasks 1-4 hechas en `hotfix/0.9.18.2` del servidor (`f462380`, `3fa4fbb`,
+`88eef9a`, `df45056`). Revisión final «con arreglos», aplicados en `16db4dd` (Java: `desde()` mira antes lo cerrado sin
+caja, para filas guardadas con el fallo; `EstadoMovil.vivo` también en la venta deshecha; 5 tests más) y `f27b170` (SQL
+rehecho: el estado del lote sin el esqueleto, el «Desde» falso de cualquier lote cerrado, las `ENTRADA` falsas, la última
+caja también desde el `DE`, `READ COMMITTED`). **Los SQL de la Task 4 de abajo son la primera versión: mandan los de
+`sql/` del servidor y la spec §3.** Suite: 1129 tests. Se descartó una 0.9.18.2 de solo web de otra sesión (`8b3138c`),
+por decisión del usuario.
+
 ## Global Constraints
 
 - **Solo servidor + datos:** sin cambios de esquema ni de web. La API no cambia de forma (mismos campos), así que
