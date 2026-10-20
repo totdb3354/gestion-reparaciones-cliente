@@ -325,7 +325,10 @@ git merge --no-ff hotfix/0.9.18.1 -m "merge: el descuadre no cuenta los moviles 
 
 Conflictos esperados y cómo quedan:
 - `package.json` y `package-lock.json`: `0.9.19` (lo de `main`);
-- `CHANGELOG.md`: las dos entradas, en este orden: `[0.9.19]`, `[0.9.18.1]`, `[0.9.18]`.
+- `CHANGELOG.md`: las dos entradas, en este orden: `[0.9.19]`, `[0.9.18.1]`, `[0.9.18]`. **Ojo (revisión final):** las dos
+  acaban con la misma línea `- Solo web: funciona con el servidor 0.9.18. Sin migración.` y git la deja fuera del conflicto,
+  detrás de `>>>>>>>`. Al resolver, la `[0.9.19]` entera **con** su línea «Solo web…», una línea en blanco y la `[0.9.18.1]`
+  entera con la suya (comprobado con `git merge-tree --write-tree main hotfix/0.9.18.1`).
 
 Run: `npm run check`
 Expected: todo en verde. Después `git push origin main` (con el OK).
