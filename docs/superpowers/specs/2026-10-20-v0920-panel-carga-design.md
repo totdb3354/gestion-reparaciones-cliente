@@ -40,11 +40,10 @@ abierto todo el día y se mantiene al día solo.
 - Se ve en **cualquier pantalla** con sesión abierta.
 
 **Abrir y cerrar:**
-- Botón nuevo **«Carga»** en la barra azul (icono `ChartColumn` de lucide + texto), entre el indicador de NSYS y la campana;
-  solo para supertécnico y admin. Resaltado (`bg-white/16`) mientras el panel está abierto o minimizado; `aria-pressed`
-  solo con el panel abierto. Pulsarlo: abierto → cerrado; minimizado o cerrado → abierto.
-- El botón **«Carga técnicos»** de Asignaciones se queda donde está y abre el mismo panel (si ya está abierto, no hace nada;
-  si está minimizado, lo abre).
+- **Sin botón en la barra azul** (decisión del usuario tras probarlo en preprod, 2026-10-20 noche: se quitó el botón
+  «Carga» que llevaba la primera versión).
+- El botón **«Carga técnicos»** de Asignaciones se queda donde está y abre el panel (si ya está abierto, no hace nada; si
+  está minimizado, lo abre). **Es la única forma de reabrirlo después de cerrarlo.**
 - «×» del panel o de la pastilla lo **cierra**: deja de pedir datos.
 - **Escape y un clic fuera no lo cierran** (a diferencia de la campana): es un panel para tenerlo abierto.
 
@@ -66,7 +65,9 @@ abierto todo el día y se mantiene al día solo.
 
 **Posición:**
 - Se guarda como **ancla**: esquina de pantalla (`br`, `bl`, `tr`, `tl`) y distancia a sus dos bordes; arriba se mide desde
-  el borde inferior de la barra azul. **De fábrica: abajo a la derecha, a 16 px.**
+  el borde inferior de la barra azul. **De fábrica: arriba a la derecha, bajo la barra azul, a 16 px** (decisión del
+  usuario tras preprod; antes, abajo a la derecha). De entrada tapa lo que haya arriba a la derecha de cada pantalla (en
+  Asignaciones, «Técnicos de glass» y las últimas columnas de las primeras filas): se mueve o se minimiza, y se recuerda.
 - Al **soltar** el panel o la pastilla, la esquina es la más cercana al **centro** de la caja, y las distancias son las
   suyas a esos dos bordes.
 - Panel y pastilla **comparten el ancla**: la pastilla aparece en la esquina del panel más cercana al borde, y al abrirla el
@@ -103,7 +104,7 @@ abierto todo el día y se mantiene al día solo.
   'total', ancla: { esq, x, y } }`.
 - Lectura y escritura con `try/catch`, como `almacen/pedidos/preferencias.ts`. Lo que no se pueda leer o no tenga forma
   válida (JSON roto, valores desconocidos, números no finitos o negativos) se sustituye campo a campo por lo de fábrica:
-  **abierto, Pedidos, abajo a la derecha a 16 px**. Si no se puede guardar, dura lo que la página.
+  **abierto, Pedidos, arriba a la derecha a 16 px**. Si no se puede guardar, dura lo que la página.
 - Se guarda al cambiar de estado, de alcance y al **soltar** un arrastre (no en cada movimiento).
 - Es **del navegador, no del usuario** (PCs compartidos): el siguiente supertécnico o admin de ese navegador lo ve como lo
   dejó el anterior. Cerrar sesión **no** borra lo guardado; el estado en memoria se reinicia con `reiniciarStores` y, al volver
@@ -138,8 +139,8 @@ abierto todo el día y se mantiene al día solo.
 
 **Piezas** (nombres orientativos; el plan los fija):
 - `shared/lib/panelCarga.ts`: el store del panel (`estado`, `alcance`, `ancla`) con lectura/escritura en `localStorage`, y el
-  aviso de un solo uso «filtrar Asignaciones por el técnico N». En `shared` porque lo usan la barra azul (`app/shell`), el
-  marco (`AppLayout`) y Asignaciones (módulo taller).
+  aviso de un solo uso «filtrar Asignaciones por el técnico N». En `shared` porque lo usan el marco (`AppLayout`) y
+  Asignaciones (módulo taller).
 - `shared/lib/anclaPanel.ts`: funciones puras — ancla al soltar (esquina más cercana + distancias) y estilo recortado para un
   tamaño de caja y de ventana. Sin DOM, con tests propios.
 - `modules/taller/asignaciones/panel/`: `PanelCarga` (decide panel o pastilla), la vista del panel, `PastillaCarga` y el
@@ -151,7 +152,7 @@ abierto todo el día y se mantiene al día solo.
   pueda nombrar sin que `shared` importe de un módulo.
 - `shared/api/queryClient.ts`: en el `MutationCache`, al terminar cualquier mutación (bien o con error, como dice §2), `invalidateQueries` de la clave de
   la carga.
-- `app/shell/TopBar.tsx`: monta `BotonPanelCarga` (en el módulo del panel), el botón «Carga» (solo supertécnico y admin).
+- `app/shell/TopBar.tsx`: sin cambios (el botón `BotonPanelCarga` de la primera versión se quitó tras preprod).
 - `shared/lib/store.ts`: `crearStoreLeido(leer)`, un store que relee su fuente (`localStorage`) al reiniciarse. Las pruebas
   vacían el almacenamiento **antes** de reiniciar los stores.
 - La clave de la carga va en `shared/api/cargaTecnicos.ts`.
@@ -166,7 +167,8 @@ abierto todo el día y se mantiene al día solo.
   pastilla.
 - Recuerdo: lo de fábrica sin nada guardado; JSON roto y campos inválidos; `localStorage` que lanza al leer y al escribir; se
   guarda al soltar y no en cada movimiento.
-- Panel: técnico → ni botón ni panel ni petición; abrir, minimizar, cerrar y reabrir desde la barra y desde Asignaciones;
+- Panel: técnico → ni panel ni petición; la barra azul no tiene botón «Carga»; abrir, minimizar, cerrar y reabrir desde
+  Asignaciones;
   Escape y clic fuera no cierran; ratón encima → no cambia con datos nuevos y se pone al día al salir; pulsar un técnico →
   navega y deja el filtro en solitario, el panel sigue; intervalo de 30 s con el panel abierto y minimizado, sin peticiones
   cerrado; error sin datos → mensaje y sin diálogo global; sin capa de carga.
@@ -176,7 +178,7 @@ abierto todo el día y se mantiene al día solo.
 - Asignaciones: el panel abierto no congela el sondeo de la tabla.
 
 **E2E en preprod** (Chromium, datos sintéticos creados por API y borrados al terminar; nunca en producción):
-- Supertécnico: abre el panel desde la barra, asigna desde la pantalla → la primera barra de ese técnico sube **sin esperar**
+- Supertécnico: con el panel abierto, asigna desde la pantalla → la primera barra de ese técnico sube **sin esperar**
   al sondeo.
 - Una asignación creada por API («otro PC») aparece en **≤ 35 s**.
 - Recargar la página → mismo estado, posición y alcance; arrastrar a otra esquina y minimizar → la pastilla sale ahí.
