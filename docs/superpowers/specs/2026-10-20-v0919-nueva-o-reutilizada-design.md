@@ -1,9 +1,9 @@
 # 0.9.19 — Formulario de reparación: «Nueva» o «Reutilizada» en la celda del SKU
 
 Fecha: 2026-10-20. Estado: diseño aprobado en el brainstorming, pendiente del plan.
-Va en la **0.9.19 de la web**, que se sube junta con «Completar pulidos» (ya en `main` de la web) y el panel de carga (su spec
-dice 0.9.20; decisión del usuario del 2026-10-20: las tres van en la misma subida y se renumera al cerrar). **Solo web**: sin
-cambios en el servidor ni en la base; funciona con el servidor 0.9.18.
+Va en la **0.9.19**, que se sube junta (decisión del usuario del 2026-10-20) con «Completar pulidos» (ya en `main` de la web),
+el panel de carga (su spec dice 0.9.20: se renumera al cerrar) y el «SKU del taller» (otra sesión; lleva servidor y base).
+**Esta pieza es solo web**: sin cambios en el servidor ni en la base; funciona con el servidor 0.9.18.
 Prototipo aprobado: `assets/2026-10-20-v0919-prototipo-nueva-o-reutilizada.html` (versión 5; la pestaña «Hoy» es la referencia).
 
 ## 1. Qué cambia
@@ -17,7 +17,7 @@ tocado la fila.
 **Ahora** cada pieza empieza por decir si es **nueva o reutilizada**, en la **celda del SKU**, el mismo sitio y el mismo gesto
 que ya funciona con «— Elige color —» del chasis: hasta elegir, la fila no deja seguir.
 
-**Por qué ahora:** es el paso previo del «SKU del taller» (0.9.20). Con él, una batería nueva pondrá «batería nueva» (A → A100)
+**Por qué ahora:** es el paso previo del «SKU del taller» (va en la misma subida). Con él, una batería nueva pondrá «batería nueva» (A → A100)
 en el móvil y una reutilizada no; si «reutilizada» no se marca bien, el ERP vendería como batería nueva una que no lo es.
 
 **Decisiones del usuario:**
@@ -91,10 +91,11 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
   «a 0 sin Reutilizado» (`filaEditadaInvalida`, contador en rojo). Las filas nuevas que se añaden en la edición funcionan como
   en el flujo nuevo.
 - **Solicitud ya guardada en el servidor:**
-  - **Pendiente:** SKU fijo (desplegable deshabilitado), contador apagado, «Pieza» con la marca **«Solicitada»** sin «×», y la
-    banda verde de hoy. Al lado de la marca, el botón **«↺ Reutilizada»** (sustituye a la casilla, que hoy se puede marcar en
-    ese caso): elegido, la marca pasa a «↺ Reutilizada ×», y su «×» la devuelve a «Solicitada».
-  - **En camino:** igual, sin «↺ Reutilizada», y el botón derecho «⚠ En camino» de hoy.
+  - **Pendiente:** SKU fijo (desplegable deshabilitado, para que se vea qué se pidió), contador apagado y la banda verde de hoy
+    («✓ Solicitud de reposición pendiente»), que ya dice que está pedida. En «Pieza», el botón **«↺ Reutilizada»** (sustituye a
+    la casilla, que hoy se puede marcar en ese caso): elegido, la marca pasa a «↺ Reutilizada ×», y su «×» lo deshace. (No
+    lleva marca «Solicitada»: con el botón al lado no cabe en la columna y repetiría la banda.)
+  - **En camino:** igual, con «Pieza» vacía y el botón derecho «⚠ En camino» de hoy.
   - **Recibida** (`recibidoPendienteUso`): fila sin elegir con el SKU de la solicitud y el «✓ Recibido» de hoy a la derecha.
     Se usa eligiendo «+ Nueva».
 - **«Ya reparado»** y **filas sin SKU para el modelo**: igual que hoy (bloqueadas; en una fila sin SKU, los dos botones se
@@ -130,8 +131,8 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
     guardada, como hoy.
   - Nuevo selector «filas elegidas sin SKU» para el aviso de «Terminar».
   - Edición (`filaEditada…`) y solicitudes guardadas (`aplicarSolicitud`): la elección inicial según §2.
-- `FilaComponente.tsx`: la celda del SKU pinta los dos botones o el desplegable; la columna «Pieza», la marca con su «×» (y el
-  «↺ Reutilizada» de las filas con solicitud pendiente). El contador pinta «—» en una reutilizada.
+- `FilaComponente.tsx`: la celda del SKU pinta los dos botones o el desplegable; la columna «Pieza», la marca con su «×» o el
+  «↺ Reutilizada» de las filas con solicitud pendiente. El contador pinta «—» en una reutilizada.
 - `FormularioReparacion.tsx`: la cabecera («Pieza») y los anchos.
 - `SubFilaAgotado.tsx`: sin cambios de aspecto; deja de salir cuando `subFila` lo dice.
 - `borrador.ts`: deducir la elección al aplicar un borrador.
@@ -147,7 +148,7 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
 - Selectores: `subFila` (sin elegir y Reutilizada nunca; Nueva sin stock y en el límite; solicitud guardada como hoy),
   `filaActiva`, `filaEditadaInvalida`, `previsionStock` al cambiar de Nueva a Reutilizada en edición.
 - Edición: arranca elegida según lo guardado; cambiar de tipo con la «×»; sin elegir no deja guardar.
-- Solicitudes guardadas: pendiente (marca sin «×», «↺ Reutilizada» y vuelta), en camino, recibida.
+- Solicitudes guardadas: pendiente («↺ Reutilizada» y vuelta con la «×»), en camino, recibida.
 - Borrador: elección deducida; borradores de antes.
 - `FilaComponente`: los cuatro estados de la tabla de §2 y los nombres accesibles.
 - `useGuardado`: el aviso de SKU pendiente no pasa a confirmar.
@@ -164,19 +165,23 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
 
 ## 6. Entrega
 
-- Rama `feature/nueva-o-reutilizada` en un **worktree** de la web (la copia principal de la web la usan otras sesiones).
-- Versión **0.9.19** de la web (el `package.json` ya la tiene): una sección más en `CHANGELOG.md` (requiere servidor 0.9.18,
-  sin migración) y en `docs/novedades/NOVEDADES-v0.9.19.md` de la raíz.
+- Rama `dev_v0919_nueva_reutilizada` en un **worktree** de la web (la copia principal de la web la usan otras sesiones).
+- Versión **0.9.19** de la web (el `package.json` ya la tiene): una sección más en `CHANGELOG.md` (esta pieza no necesita
+  servidor nuevo ni migración; lo que pida la subida entera lo fija el SKU del taller) y en
+  `docs/novedades/NOVEDADES-v0.9.19.md` de la raíz.
 - `docs/paridad/formulario.md` de la web: la casilla «Reutilizado» pasa a ser la elección en la celda del SKU, con las
   diferencias deliberadas respecto al JavaFX (elección obligatoria, banda de agotado solo con Nueva, «Solicitar pieza» directo,
   cambiar de tipo en la edición con la «×»).
-- **Avisar al taller antes de subirla**: cambia la costumbre de pulsar «+». Un párrafo corto con captura en las novedades.
-- Despliegue de **solo web, en horario** (sin migración; vuelta atrás = web anterior), junto con lo demás de la 0.9.19.
+- **Avisar al taller antes de subirla**: cambia la costumbre de pulsar «+». Un apartado corto en las novedades, sin capturas
+  (el repo es público: las del programa real no van en `docs/`); el aviso en el taller lo da el usuario con la pantalla.
+- Se despliega con el resto de la 0.9.19. Por sí sola sería de solo web y en horario; la subida entera lleva la migración del
+  SKU del taller y se decide con esa pieza.
 - Merge `--no-ff`, push y tag **solo cuando lo diga el usuario**.
 
 ## 7. Fuera de esta versión
 
 - El aviso al terminar («Vas a gastar del stock real»): descartado por ahora (§1).
-- **SKU del taller (0.9.20):** que el ERP cambie color, grado y batería del móvil tras la reparación y la edición a mano del SKU
-  (color, grado y batería nueva). Decisiones ya tomadas en `Apuntes/plan-futuro.md` §5; se diseña aparte, con servidor y base.
+- **SKU del taller** (misma subida, otra sesión y otra spec): que el ERP cambie color, grado y batería del móvil tras la
+  reparación y la edición a mano del SKU (color, grado y batería nueva). Decisiones en `Apuntes/plan-futuro.md` §5. Lo
+  automático de la batería lee la elección de esta pieza (Nueva → batería nueva).
 - La descripción completa del móvil donde pone «Modelo» (idea del 2026-10-20, en el plan).
