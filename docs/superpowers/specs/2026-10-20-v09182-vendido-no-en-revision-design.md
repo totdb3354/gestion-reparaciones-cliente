@@ -1,6 +1,7 @@
 # 0.9.18.2 — Un móvil vendido o dado de baja no está «En revisión»
 
-Fecha: 2026-10-20. Estado: diseño aprobado por el usuario (20/10), pendiente del plan.
+Fecha: 2026-10-20. Estado: diseño aprobado por el usuario (20/10); plan en
+`docs/superpowers/plans/2026-10-20-v09182-vendido-no-en-revision.md`.
 Arreglo aparte del **servidor**, sacado del tag `v0.9.18` (hoy `main` del servidor = `v0.9.18`). **Servidor + limpieza de
 datos** en las tablas `Nsys_*`: sin cambios de esquema ni de web. Funciona con la web 0.9.18, 0.9.18.1 y 0.9.19.
 
@@ -73,8 +74,9 @@ Dos SQL en `sql/` del servidor: `recuento-nsys-vendido-en-revision.sql` (solo le
 3. **`Nsys_movil`:** donde el `Status` no es vivo y la caja está vacía, `UBICACION` = NULL y `UBICACION_ULTIMA` = la
    última ubicación del rastro del lote (el último `UBICACION` o `ENTRADA` con `A` no nulo, ya sin los falsos), o NULL si
    no la hay. Hoy esa columna dice «En revisión» por el mismo fallo, y saldría como caja si la venta se deshace y el
-   móvil vuelve a «Pedidos realizados» (pasa a menudo: cambios de IMEI en un pedido, ventas anuladas). Es lo mismo que
-   calcula el código nuevo, así la siguiente
+   móvil vuelve a «Pedidos realizados» (pasa a menudo: cambios de IMEI en un pedido, ventas anuladas). Lo mismo, en los
+   de pedido que ya volvieron así con el código viejo (`UBICACION_ULTIMA` = «En revisión»), sacado del rastro; si no hay
+   rastro, se deja. Es lo mismo que calcula el código nuevo, así la siguiente
    importación no vuelve a guardar decenas de miles de filas.
 
 El recuento se pasa antes y después: eventos que se borran (los de la misma hora que la venta o la baja, y los de después),
@@ -107,7 +109,8 @@ su fecha de espera antes y después). En producción, copia a mano antes (`backu
   - devolución con los eventos de hoy, ya limpiados por el SQL (sin el falso de la venta, con la vuelta a «Devolución»):
     pendiente desde el día de la vuelta;
   - una vuelta seguida de una caja de verdad y otra vez «sin caja»: pendiente desde la segunda vez, no desde la vuelta.
-- `HistoricoNsysTest`: una venta con la caja vaciada no apunta `UBICACION` en el histórico.
+- Histórico: una venta con la caja vaciada no apunta `UBICACION` (en `ComparadorTest` con `Modo.HISTORICO`, que es lo
+  que llama `HistoricoNsys`).
 - `StockTelefonosControllerTest`: la ficha de un vendido que conserva una caja pendiente no trae `pendienteRevisionDesde`.
 - Los dos SQL, en preprod con el recuento antes y después.
 
