@@ -13,6 +13,8 @@ teléfonos y en «Pegar varios IMEIs»; el descuadre queda solo para un móvil e
 
 **Tech Stack:** React 19 + TypeScript; pruebas con Vitest (`npm run check` = lint + typecheck + test) y Playwright para la E2E.
 
+**Estado (21/10):** HECHO. Producción 20/10 22:40 (web `8a5b942`, commit suelto), tag `v0.9.18.1` = `27637b5`, merge a `main` de la web `bfe1e19`. El gitlink de la raíz no se movió a `v0.9.18.1` (otras sesiones lo llevan con la 0.9.20).
+
 **Spec:** `docs/superpowers/specs/2026-10-20-v09181-descuadre-de-pedido-design.md` (raíz).
 
 ## Global Constraints
@@ -56,7 +58,7 @@ teléfonos y en «Pegar varios IMEIs»; el descuadre queda solo para un móvil e
   13:43 en Madrid; el `trabajo()` por defecto es una reparación de «Técnico 1» desde las 09:00 de ese día).
 - Produces: `quienLoTiene(m, ahora): Quien` con la misma firma y el mismo tipo `Quien`; solo cambia cuándo `descuadre` es `true`.
 
-- [ ] **Step 1: Worktree y dependencias**
+- [x] **Step 1: Worktree y dependencias**
 
 ```bash
 git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web fetch -q origin --tags
@@ -66,7 +68,7 @@ cd /c/Users/dev/Documents/wt/web-09181 && npm ci --no-audit --no-fund && git log
 
 Expected: `a501202 docs: fecha de la 0.9.18 en el changelog`.
 
-- [ ] **Step 2: Las pruebas que fallan**
+- [x] **Step 2: Las pruebas que fallan**
 
 En `src/modules/telefonos/stock/quien.test.ts`, sustituir el caso entero que empieza por
 `it('descuadre: trabajo abierto hace más de 60 minutos con el móvil en Listos o de pedido', () => {` (líneas 56-66) por:
@@ -99,12 +101,12 @@ En `src/modules/telefonos/stock/quien.test.ts`, sustituir el caso entero que emp
 
 El caso `'un móvil de pedido no está en la caja, aunque su última caja sea de taller'` se queda como está.
 
-- [ ] **Step 3: Comprobar que fallan**
+- [x] **Step 3: Comprobar que fallan**
 
 Run: `cd /c/Users/dev/Documents/wt/web-09181 && npx vitest run src/modules/telefonos/stock/quien.test.ts`
 Expected: FAIL, **2 failed**: los dos casos «(0.9.18.1)», con `expected true to be false` en `descuadre`. El de «Listos» pasa.
 
-- [ ] **Step 4: La regla**
+- [x] **Step 4: La regla**
 
 En `src/modules/telefonos/stock/quien.ts`, la cabecera (líneas 4-6) pasa a:
 
@@ -141,7 +143,7 @@ del descuadre (líneas 62-75) queda así (lo de en medio, `texto` y `titulo`, ig
 
 Desaparecen `fueraDelTaller` y `caja`.
 
-- [ ] **Step 5: Comprobar que pasan, y la suite entera**
+- [x] **Step 5: Comprobar que pasan, y la suite entera**
 
 Run: `cd /c/Users/dev/Documents/wt/web-09181 && npx vitest run src/modules/telefonos/stock/quien.test.ts`
 Expected: PASS, 13 tests (eran 11: uno cambia y entran dos).
@@ -149,7 +151,7 @@ Expected: PASS, 13 tests (eran 11: uno cambia y entran dos).
 Run: `npm run check`
 Expected: lint y typecheck sin errores; todas las pruebas en verde (dos más que en `v0.9.18`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /c/Users/dev/Documents/wt/web-09181
@@ -169,7 +171,7 @@ git commit -m "fix: un movil de pedido con trabajo abierto no es descuadre; solo
 - Consumes: Task 1.
 - Produces: la rama `hotfix/0.9.18.1` lista para preprod.
 
-- [ ] **Step 1: La prueba de la versión acepta cuatro números**
+- [x] **Step 1: La prueba de la versión acepta cuatro números**
 
 En `src/shared/lib/version.test.ts`, el caso pasa a:
 
@@ -179,7 +181,7 @@ En `src/shared/lib/version.test.ts`, el caso pasa a:
   })
 ```
 
-- [ ] **Step 2: Versión**
+- [x] **Step 2: Versión**
 
 Run: `cd /c/Users/dev/Documents/wt/web-09181 && npm pkg set version=0.9.18.1 && grep -n '"version": "0.9.18"' package-lock.json`
 Expected: `package.json` con `"version": "0.9.18.1"`; el grep da las líneas 3 y 9 de `package-lock.json`.
@@ -190,7 +192,7 @@ línea 3, y la de `packages[""]`, línea 9). Ninguna otra.
 Run: `git diff --stat`
 Expected: `package.json` y `package-lock.json` con 1 línea cada uno más la de `version.test.ts`.
 
-- [ ] **Step 3: CHANGELOG**
+- [x] **Step 3: CHANGELOG**
 
 En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su línea en blanco, antes de `## [0.9.18]`:
 
@@ -204,7 +206,7 @@ En `CHANGELOG.md`, tras la línea `El formato sigue [Keep a Changelog]…` y su 
 
 La entrada `[0.9.18]` no se toca.
 
-- [ ] **Step 4: Comprobar y commit**
+- [x] **Step 4: Comprobar y commit**
 
 Run: `npm run check`
 Expected: todo en verde.
@@ -214,7 +216,7 @@ git add package.json package-lock.json CHANGELOG.md src/shared/lib/version.test.
 git commit -m "docs: version 0.9.18.1 y changelog del descuadre sin los moviles de pedido"
 ```
 
-- [ ] **Step 5: Novedades de la 0.9.18 (raíz)**
+- [x] **Step 5: Novedades de la 0.9.18 (raíz)**
 
 En `docs/novedades/NOVEDADES-v0.9.18.md` de la raíz, las dos líneas
 
@@ -237,7 +239,7 @@ git add docs/novedades/NOVEDADES-v0.9.18.md
 git commit -m "docs: novedades de la 0.9.18 con el descuadre sin los moviles de pedido (0.9.18.1)"
 ```
 
-- [ ] **Step 6: Push de la rama (con el OK del usuario)**
+- [x] **Step 6: Push de la rama (con el OK del usuario)**
 
 ```bash
 cd /c/Users/dev/Documents/wt/web-09181 && git push -u origin hotfix/0.9.18.1
@@ -253,7 +255,7 @@ cd /c/Users/dev/Documents/wt/web-09181 && git push -u origin hotfix/0.9.18.1
 
 **Requisitos:** Task 2 con la rama subida. **Preguntar al usuario si preprod está libre**: otras sesiones prueban allí la 0.9.19.
 
-- [ ] **Step 1: Guion**
+- [x] **Step 1: Guion**
 
 Basado en `preprod/v0919-preprod.md` (solo web). **Cada bloque empieza con `hostname` y la comprobación de `backup-erp.sh`.**
 - **Bloque 1 (solo lee):** commit actual de la web (`git -C gestion-reparaciones-web log --oneline -1`, **se apunta para el
@@ -272,7 +274,7 @@ Basado en `preprod/v0919-preprod.md` (solo web). **Cada bloque empieza con `host
   en rojo (si los hay en los datos de preprod).
 - **Vuelta atrás:** el bloque 3.
 
-- [ ] **Step 2: Ejecución con el usuario y registro**
+- [x] **Step 2: Ejecución con el usuario y registro**
 
 1. El usuario pega los bloques y Claude valida cada salida antes de seguir.
 2. Entrada en `despliegue_preprod.md` con los commits, la E2E y lo que se vio a mano.
@@ -287,7 +289,7 @@ Basado en `preprod/v0919-preprod.md` (solo web). **Cada bloque empieza con `host
 - Modify: `Apuntes/despliegue_vdc_produccion.md` (registro); en la raíz, el gitlink de la web y `Apuntes/plan-futuro.md`
   (fuera del repo); en la memoria, `project_produccion_vdc.md`
 
-- [ ] **Step 1: Guion y despliegue**
+- [x] **Step 1: Guion y despliegue**
 
 Basado en el bloque de la web de `prod-v0918.md`.
 - **En horario:** solo web, sin migración, corte de unos segundos de nginx y vuelta atrás simple.
@@ -303,7 +305,7 @@ Basado en el bloque de la web de `prod-v0918.md`.
   `git -C gestion-reparaciones-web checkout main` antes del `pull --ff-only`.
 - **Sin E2E en producción.**
 
-- [ ] **Step 2: Fecha y tag (con el OK del usuario)**
+- [x] **Step 2: Fecha y tag (con el OK del usuario)**
 
 ```bash
 cd /c/Users/dev/Documents/wt/web-09181
@@ -312,7 +314,7 @@ git add CHANGELOG.md && git commit -m "docs: fecha de la 0.9.18.1 en el changelo
 git tag v0.9.18.1 && git push origin hotfix/0.9.18.1 v0.9.18.1
 ```
 
-- [ ] **Step 3: Merge a `main` de la web (con el OK del usuario)**
+- [x] **Step 3: Merge a `main` de la web (con el OK del usuario)**
 
 Solo si en el clon principal `git status` está limpio, en `main`, y `git fetch` deja `main` igual a `origin/main`; si no,
 parar y preguntar al usuario (otras sesiones trabajan en él).
@@ -333,7 +335,7 @@ Conflictos esperados y cómo quedan:
 Run: `npm run check`
 Expected: todo en verde. Después `git push origin main` (con el OK).
 
-- [ ] **Step 4: Raíz, limpieza y registro**
+- [x] **Step 4: Raíz, limpieza y registro**
 
 1. Gitlink de la web al commit del tag **sin tocar la copia del submódulo** (la usan otras sesiones):
    `git -C /c/Users/dev/Documents/ProgramaReparaciones update-index --cacheinfo 160000,$(git -C /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web rev-parse v0.9.18.1^{commit}),gestion-reparaciones-web`
