@@ -25,8 +25,9 @@ La ficha de un IMEI dice cuándo se revisó.
 - **«Quién lo tiene»:** el técnico que tiene el móvil (reparación, glass o pulido) y, en la glass, si ya le llegó. Avisa
   de dos cosas:
   - **«En caja, sin asignar»:** está en una caja de taller y nadie lo tiene;
-  - **descuadre:** hay un trabajo abierto **de hace más de una hora** pero NSYS dice que está en Listos o de pedido.
-    Falta cerrar el trabajo o mover la caja.
+  - **descuadre:** hay un trabajo abierto **de hace más de una hora** pero NSYS dice que está en Listos. Falta cerrar el
+    trabajo o mover la caja. Un móvil de pedido con trabajo abierto no es descuadre: tiene dueño, pero se repara hasta que
+    NSYS lo pone Released (0.9.18.1).
 - Un filtro **«Técnico»**, con «Sin asignar» y «Con descuadre».
 - **El grado tiene color** por familias (A, B, C, Ms, ID y n/a).
 - **«Pegar varios IMEIs»:** pega una lista de hasta **500** IMEIs (de una columna de Excel, por ejemplo) y dice de cada
