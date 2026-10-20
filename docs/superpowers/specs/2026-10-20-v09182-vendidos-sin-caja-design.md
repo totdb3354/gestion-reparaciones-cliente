@@ -1,6 +1,7 @@
 # 0.9.18.2 — Un móvil vendido o dado de baja no está «En revisión»
 
-Fecha: 2026-10-20. Estado: diseño aprobado en el brainstorming, pendiente del plan.
+Fecha: 2026-10-20. Estado: **DESCARTADA** (20/10, decisión del usuario). El mismo problema se arregla en el origen, en el
+**servidor**: spec `2026-10-20-v09182-vendido-no-en-revision-design.md`. La web no cambia y se queda en la 0.9.18.1.
 Arreglo aparte de la **web**, sobre la 0.9.18.1 (rama desde el tag `v0.9.18.1`). **Solo web**: sin cambios en el servidor ni
 en la base; funciona con el servidor 0.9.18.
 

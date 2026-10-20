@@ -1,5 +1,9 @@
 # 0.9.18.2 — Un móvil vendido o dado de baja no está «En revisión» · Plan de implementación
 
+> **DESCARTADO (20/10, decisión del usuario):** se arregla solo en el servidor
+> (`plans/2026-10-20-v09182-vendido-no-en-revision.md`). La Task 1 llegó a hacerse (web `bf54cfd`) y se borró con su rama
+> local, que nunca se subió. No ejecutar.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** que un móvil vendido o dado de baja no salga «En revisión» ni «Pendiente de revisar» en la ficha del IMEI, ni con
