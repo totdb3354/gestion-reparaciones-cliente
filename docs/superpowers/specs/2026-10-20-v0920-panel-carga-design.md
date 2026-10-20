@@ -41,8 +41,8 @@ abierto todo el día y se mantiene al día solo.
 
 **Abrir y cerrar:**
 - Botón nuevo **«Carga»** en la barra azul (icono `ChartColumn` de lucide + texto), entre el indicador de NSYS y la campana;
-  solo para supertécnico y admin. Resaltado (`bg-white/16`) mientras el panel está abierto o minimizado. Pulsarlo: abierto →
-  cerrado; minimizado o cerrado → abierto.
+  solo para supertécnico y admin. Resaltado (`bg-white/16`) mientras el panel está abierto o minimizado; `aria-pressed`
+  solo con el panel abierto. Pulsarlo: abierto → cerrado; minimizado o cerrado → abierto.
 - El botón **«Carga técnicos»** de Asignaciones se queda donde está y abre el mismo panel (si ya está abierto, no hace nada;
   si está minimizado, lo abre).
 - «×» del panel o de la pastilla lo **cierra**: deja de pedir datos.
@@ -87,11 +87,12 @@ abierto todo el día y se mantiene al día solo.
   activo, cada **5 s** (como el resto de la web). **Cerrado no pide nada.**
 - Con la pestaña oculta no pide (comportamiento por defecto de TanStack); al volver a la pestaña recarga al momento
   (`refetchOnWindowFocus`, política global).
-- **Escrituras propias al momento, con una regla general:** cada escritura que termina bien desde este navegador, en
-  cualquier pantalla, invalida la carga. Si el panel está cerrado no hay ninguna petición (la consulta no está activa); si
-  está abierto o minimizado, es una petición más. Así no depende de acordarse de cada botón (asignar, reasignar, borrar,
-  editar cliente, solicitudes de pieza, glass, pulido, formulario…). Las invalidaciones que ya existen (`useRecargar`, modal
-  «Asignar trabajos») se quedan.
+- **Escrituras propias al momento, con una regla general:** cada escritura que termina desde este navegador, bien o con
+  error (un 409 es que algo cambió por debajo), en cualquier pantalla, invalida la carga. Si el panel está cerrado no hay
+  ninguna petición (la consulta no está activa); si está abierto o minimizado, es una petición más. Así no depende de
+  acordarse de cada botón (asignar, reasignar, borrar, editar cliente, solicitudes de pieza, glass, pulido, formulario…).
+  Las invalidaciones explícitas de la carga que ya existían (`useRecargar`, modal «Asignar trabajos») **se quitan**: con la
+  regla general, cada escritura pide la carga una sola vez.
 - **Ratón encima:** mientras el puntero está dentro del panel (o arrastrándolo), se pinta la **última copia** y no se
   reordena ni cambia ninguna cifra. Al salir, se pinta lo último que haya llegado. La consulta sigue su curso por debajo.
 - El panel **no congela** el sondeo de la tabla de Asignaciones (la ventana de hoy sí lo hacía con `onInteraccion`): estando
@@ -150,7 +151,10 @@ abierto todo el día y se mantiene al día solo.
   pueda nombrar sin que `shared` importe de un módulo.
 - `shared/api/queryClient.ts`: en el `MutationCache`, al terminar bien cualquier mutación, `invalidateQueries` de la clave de
   la carga.
-- `app/shell/TopBar.tsx`: el botón «Carga» (solo supertécnico y admin).
+- `app/shell/TopBar.tsx`: monta `BotonPanelCarga` (en el módulo del panel), el botón «Carga» (solo supertécnico y admin).
+- `shared/lib/store.ts`: `crearStoreLeido(leer)`, un store que relee su fuente (`localStorage`) al reiniciarse. Las pruebas
+  vacían el almacenamiento **antes** de reiniciar los stores.
+- La clave de la carga va en `shared/api/cargaTecnicos.ts`.
 - `app/shell/AppLayout.tsx`: monta `PanelCarga` (solo supertécnico y admin).
 - `AsignacionesPage.tsx`: «Carga técnicos» abre el panel; consume el aviso de filtro (pone `tecnicos: [id]` y lo vacía); se
   quitan `cargaAbierta` y el `marcar` de la ventana.
@@ -167,7 +171,8 @@ abierto todo el día y se mantiene al día solo.
   navega y deja el filtro en solitario, el panel sigue; intervalo de 30 s con el panel abierto y minimizado, sin peticiones
   cerrado; error sin datos → mensaje y sin diálogo global; sin capa de carga.
 - Pastilla: mini-barras y contador (con N > 0, con 0 y sin jornada); clic abre; arrastre no abre.
-- Regla general: una mutación cualquiera que termina bien invalida la carga; una que falla, no.
+- Regla general: una mutación cualquiera que termina bien vuelve a pedir la carga; una que falla, también; sin nadie
+  mirando la carga, ninguna petición.
 - Asignaciones: el panel abierto no congela el sondeo de la tabla.
 
 **E2E en preprod** (Chromium, datos sintéticos creados por API y borrados al terminar; nunca en producción):
@@ -180,7 +185,10 @@ abierto todo el día y se mantiene al día solo.
 
 ## 6. Entrega
 
-- Rama `feature/panel-carga` en un **worktree** de la web (la copia principal de la web la usa otra sesión).
+- Rama `dev_v0920_panel_carga` (convención de ramas por área) en el **worktree** `/c/Users/dev/Documents/wt/web-0920` (la
+  copia principal de la web la usa otra sesión).
+- Las E2E de antes entran con el panel **cerrado** (sembrado en `playwright.config.ts`) para que no tape botones; la nueva
+  parte de un navegador limpio.
 - Versión **0.9.20** de la web: `package.json`, `CHANGELOG.md` (requiere servidor 0.9.18, sin migración) y
   `docs/novedades/NOVEDADES-v0.9.20.md` en la raíz.
 - `docs/paridad/asignaciones.md`: la sección «Ventana "Carga de técnicos"» pasa a describir el panel, con las diferencias
