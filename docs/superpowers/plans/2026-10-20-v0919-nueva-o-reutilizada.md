@@ -1701,4 +1701,6 @@ prepara los comandos y el usuario los ejecuta (cada bloque empieza con `hostname
   límite de inicios de sesión, esperar un minuto y repetir solo ese fichero.
 - [ ] **Step 3: Prueba a mano en preprod con el usuario:** una batería nueva, una reutilizada, un chasis con color, «Solicitar
   pieza» de una pieza sin stock, «Volver atrás», y editar una reparación de nueva a reutilizada; mirar que el stock cuadra.
+  Además (revisión final): chasis «Nueva» + color + «Añadir observación» (debe dejar), y que «↺ Reutilizada ×» cabe en la
+  columna «Pieza» sin cortarse.
 - [ ] **Step 4: Registro:** resultado en `.superpowers/sdd/v0919-nr/progress.md` y en `Apuntes/despliegue_preprod.md`.
