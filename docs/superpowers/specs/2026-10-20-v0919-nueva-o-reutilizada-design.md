@@ -50,7 +50,7 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
 | Sin elegir | «+ Nueva» y «↺ Reutilizada» (o «Solicitar pieza» y «↺ Reutilizada», ver abajo) | 0, apagado | el del SKU que viene elegido, o «—» | vacía | nunca |
 | Nueva | desplegable, todos los SKU, los sin stock con «(sin stock)» | 1 al elegir (si el SKU tiene stock), «+/−» encendidos | «12 → 11» en rojo | «+ Nueva ×» | con SKU sin stock: «Solicitar pieza»; con todo el stock gastado: «Solicitar y descontar stock» |
 | Reutilizada | desplegable, todos los SKU | «—», apagado | el del SKU, sin flecha | «↺ Reutilizada ×» | nunca |
-| Solicitada (local) | desplegable con el SKU sin stock | 0, apagado | 0 | «Solicitada ×» | verde: «✓ Solicitud de reposición pendiente» |
+| Solicitada (local; también con cantidad > 0 en la variante límite) | desplegable con el SKU sin stock | 0, apagado | 0 | «Solicitada ×» | verde: «✓ Solicitud de reposición pendiente» |
 
 **Elegir:**
 - **«+ Nueva»**: la fila pasa a Nueva. Si el SKU elegido tiene stock, el contador queda en 1; si no, en 0 y sale la banda
@@ -82,6 +82,9 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
 - **Nuevo:** si al pulsar «Terminar asignación» alguna fila tiene la elección hecha pero **no el SKU** (chasis o tapa sin
   color), no se pasa a «✓ Confirmar terminar»: sale el aviso de error de la web con «Falta elegir el SKU de: Chasis.» (los
   nombres de las filas, separados por comas).
+- **Nuevo (ajuste del 20/10):** una fila con «Nueva» sobre un SKU **sin stock y sin solicitud** tampoco deja terminar: la zona de
+  guardar se ve y sale «Sin stock: Batería. Pídela con «Solicitar pieza» o quítala con la ×.» (en edición: «Elige otro SKU o
+  quítala con la ×.»; en plural, «Pídelas… quítalas»). Si hay también un SKU que falta, cada aviso va en su línea.
 
 **Lo que ya existe hoy:**
 - **Editar una reparación** (`modo === 'editar'`): la fila editada arranca con su elección hecha según lo guardado (cantidad
@@ -114,7 +117,7 @@ las columnas no cambia (870 px): «Pieza» crece lo que necesite la marca más l
 - **Cambiar de modelo** (`CAMBIAR_MODELO`): las filas que hoy se reinician vuelven **sin elegir**.
 - **El stock cambia mientras el formulario está abierto:** el botón «Solicitar pieza» / «+ Nueva» se decide con el stock que
   cargó el formulario (como hoy el «+»). El servidor sigue siendo quien valida al guardar.
-- **Accesibilidad:** los botones llevan nombre con la pieza («Nueva Batería», «Reutilizada Batería», «Solicitar Cámara»,
+- **Accesibilidad:** los botones llevan nombre con la pieza («Nueva Batería», «Reutilizada Batería», «Solicitar pieza Cámara»,
   «Volver atrás Chasis»), en lugar de «Sumar…» y la casilla «Reutilizado…». Los «Sumar / Restar» del contador se quedan.
 
 ## 4. Construcción

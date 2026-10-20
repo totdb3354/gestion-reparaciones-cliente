@@ -15,6 +15,7 @@
   elegido no se pierde.
 - **Si no queda stock** de ninguna pieza de ese tipo, el botón ya dice **«Solicitar pieza»**. Si solo falta la que has elegido
   (por ejemplo, un color), al elegirla sale la banda de siempre para pedirla.
+- **Si eliges «Nueva» y no queda stock**, pídela con «Solicitar pieza» o quítala con la ×: si no, no deja terminar.
 - **Chasis y tapa:** después de «Nueva» o «Reutilizada», elige el color. Sin color no deja terminar.
 - **Editar una reparación:** con la × se puede pasar una pieza de nueva a reutilizada (y al revés); el stock se ajusta solo.
 
