@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · SKU del taller (base)</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos-bg: #d8f0dc; --listos-tx: #2f7d3b; --taller-bg: #dbe8ff; --taller-tx: #1d4ed8;
+    --rev-bg: #fdebc8; --rev-tx: #a15c07; --mal-bg: #fde2e2; --mal-tx: #b91c1c;
+    --tal: #7c3aed; --tal-bg: #f1eafe; --tal-tx: #6d28d9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         min-height: 100vh; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+
+  .proto { flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .grupo-b { display: inline-flex; border: 1px solid #7c3aed; border-radius: 6px; overflow: hidden; }
+  .proto .grupo-b button { background: #5b21b6; color: #fff; border: 0; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .proto .grupo-b button.on { background: #fff; color: #3b0764; font-weight: 700; }
+  .proto .lab { opacity: .8; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+  .proto .accion { background: #f1e356; color: #001232; border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+
+  .guia { background: #f4f1fb; border-bottom: 1px solid #d9cff3; padding: 8px 16px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; font-size: 12px; line-height: 1.45; }
+  .guia h2 { margin: 0 0 3px; font-size: 13px; color: #3b0764; }
+  .guia ol { margin: 0; padding-left: 18px; }
+  .guia p { margin: 0; }
+
+  header { height: 50px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; font-weight: 600; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 190px; flex: none; background: #fff; padding: 12px 8px; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; margin: 10px 10px 6px; }
+  nav .it { padding: 7px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--navy); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 21px; }
+  .nsys { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; }
+  .card { background: #fff; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .tabs { display: flex; border: 1px solid #cdd4df; border-radius: 8px; overflow: hidden; width: max-content; }
+  .tabs button { border: 0; border-right: 1px solid #cdd4df; background: #fff; padding: 6px 14px; font-weight: 600; cursor: pointer; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--navy); color: #fff; }
+  .tabs .num { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--tal); color: #fff; font-size: 11px; }
+  .det-cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .det-cab h2 { margin: 0; font-size: 16px; }
+  .chipf { border: 1px solid #cdd4df; background: #f3f5f9; border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 12px; cursor: pointer; }
+  .chipf.on { background: var(--tal); border-color: var(--tal); color: #fff; }
+  .btn { height: 32px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; }
+  .btn:hover { background: #f2f5f9; }
+  .btn.pri { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .btn.pri:disabled { opacity: .45; cursor: default; }
+  .btn.peq { height: 26px; padding: 0 9px; font-size: 12px; }
+  .ayuda { font-size: 12px; color: var(--gris); }
+
+  .tabla-w { border: 1px solid var(--borde); border-radius: 8px; overflow: auto; }
+  table.mov { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mov th { background: #f5f7fa; text-align: left; padding: 7px 8px; font-weight: 700; color: #2b3a55; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  table.mov td { padding: 6px 8px; border-bottom: 1px solid #eef1f5; white-space: nowrap; vertical-align: middle; }
+  table.mov tbody tr.clic { cursor: pointer; } table.mov tbody tr.clic:hover { background: #f4f6fa; }
+  table.mov tr.sel td { background: #eef3ff; }
+  .mono { font-family: Consolas, monospace; }
+  .ub { display: inline-block; padding: 1px 9px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+  .ub.Listos { background: var(--listos-bg); color: var(--listos-tx); } .ub.Taller { background: var(--taller-bg); color: var(--taller-tx); } .ub.Rev { background: var(--rev-bg); color: var(--rev-tx); }
+  .gp { display: inline-block; padding: 0 9px; border-radius: 999px; font-weight: 700; font-size: 12px; line-height: 19px; border: 1.5px solid #2563eb; color: #1d4ed8; background: #fff; }
+  .gp.c { border-color: #ea580c; color: #c2410c; } .gp.b { border-color: #7c3aed; color: #6d28d9; } .gp.ms { border-color: #0d9488; color: #0f766e; }
+  .cien { font-size: 10px; font-weight: 700; color: #2f7d3b; border: 1px solid #9fd8aa; border-radius: 4px; padding: 0 3px; margin-left: 4px; }
+
+  /* Lo del taller */
+  .tal { display: inline-flex; align-items: center; gap: 4px; }
+  .marca-t { font-size: 10px; font-weight: 700; color: #fff; background: var(--tal); border-radius: 4px; padding: 0 4px; line-height: 15px; }
+  .nsysde { font-size: 11px; color: var(--gris); }
+  .nsysde s { color: #9aa5b5; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tal); display: inline-block; }
+
+  /* Ficha (panel) */
+  .ficha { border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+  .ficha .l1 { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ficha .imei { font-family: Consolas, monospace; font-size: 17px; font-weight: 800; }
+  .ficha .datos { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; font-size: 12.5px; }
+  .ficha .datos .k { color: var(--gris); }
+  .rastro { border-top: 1px solid var(--borde); padding-top: 8px; }
+  .rastro h4 { margin: 0 0 6px; font-size: 12px; color: #3c4a63; }
+  .ev { display: flex; gap: 10px; font-size: 12px; padding: 3px 0; }
+  .ev .f { color: var(--gris); width: 92px; flex: none; }
+  .ev .o { width: 70px; flex: none; font-weight: 700; font-size: 10.5px; }
+  .ev .o.o-taller { color: var(--tal-tx); } .ev .o.o-nsys { color: #2f7d3b; } .ev .o.o-trab { color: var(--taller-tx); }
+
+  /* Diálogo */
+  .velo { position: fixed; inset: 0; background: rgba(7,26,58,.45); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .dlg { width: min(560px, 94vw); background: #fff; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.3); overflow: hidden; }
+  .dlg .h { padding: 14px 18px; border-bottom: 1px solid var(--borde); display: flex; align-items: center; }
+  .dlg .h h3 { margin: 0; font-size: 15px; } .dlg .h .x { margin-left: auto; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--gris); }
+  .dlg .c { padding: 12px 18px; display: grid; grid-template-columns: 130px 1fr; gap: 10px 12px; align-items: center; }
+  .dlg .c .k { font-weight: 600; color: #3c4a63; }
+  .dlg select, .dlg textarea { border: 1px solid #cdd4df; border-radius: 8px; padding: 6px 8px; font-family: inherit; font-size: 13px; }
+  .dlg textarea { height: 64px; resize: vertical; }
+  .dlg .pre { grid-column: 1 / -1; background: #f7f5fd; border: 1px solid #e3dbfa; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.6; }
+  .dlg .pre .aviso { color: var(--rev-tx); font-weight: 600; }
+  .dlg .pie { padding: 12px 18px; border-top: 1px solid var(--borde); display: flex; gap: 8px; align-items: center; }
+  .dlg .pie .izq { margin-right: auto; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 600; z-index: 60; }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">Prototipo · SKU del taller (base)</span>
+  <span class="lab">Lista:</span>
+  <span class="grupo-b" id="varLista">
+    <button data-v="A" data-choice="lista-A">A · se vacía sola</button>
+    <button data-v="B" data-choice="lista-B">B · sola + «Ya lo pasé»</button>
+    <button data-v="C" data-choice="lista-C">C · sin lista (filtro)</button>
+  </span>
+  <span class="sep"></span>
+  <span class="lab">Cómo se ve:</span>
+  <span class="grupo-b" id="varVista">
+    <button data-v="linea" data-choice="vista-linea">«NSYS: Azul» debajo</button>
+    <button data-v="marca" data-choice="vista-marca">solo marca (al pasar el ratón)</button>
+  </span>
+  <span class="sep"></span>
+  <button class="accion" id="simCoincide">Simular importación: NSYS ya coincide</button>
+  <button class="accion" id="simOtro">Simular: en NSYS ponen otro color</button>
+  <button class="accion" id="reiniciar" style="background:#47536a;color:#fff">Reiniciar</button>
+</div>
+
+<div class="guia">
+  <div>
+    <h2>Qué es esto</h2>
+    <p>La base del SKU del taller: el ERP guarda <b>lo del taller por encima de NSYS</b> (color, grado y batería nueva, y con ellos el
+    SKU del maestro) hasta que NSYS lo alcance. Lo morado es lo del taller. Pulsa un móvil para ver su ficha y su rastro, y
+    «Corregir» para cambiarlo a mano (con motivo). Lo automático desde las reparaciones va en la segunda pieza; aquí sale un
+    ejemplo ya hecho (el ···044, por una reparación).</p>
+  </div>
+  <div>
+    <h2>Qué probar</h2>
+    <ol>
+      <li>Abre ···055 y corrígelo a mano (p. ej. A con batería nueva). Mira el SKU nuevo y la lista «Por pasar a NSYS».</li>
+      <li>Pon un color y grado sin SKU en el maestro (Verde · B): se guarda igual y avisa.</li>
+      <li>«Simular importación: NSYS ya coincide»: la primera fila de la lista desaparece sola y el rastro lo dice.</li>
+      <li>«Simular: en NSYS ponen otro color»: manda NSYS (lo más reciente) y el taller deja de mandar en el color.</li>
+      <li>Cambia «Lista» (A, B, C) y «Cómo se ve» y quédate con lo que mejor encaje.</li>
+    </ol>
+  </div>
+</div>
+
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de reparaciones</span></span><span class="usu">Imad · Supertécnico</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div><div class="it">Piezas</div><div class="it on">Stock de teléfonos</div><div class="it">Pedidos</div>
+  </nav>
+  <main>
+    <div class="titulo"><h1>Stock de teléfonos</h1><span class="nsys">NSYS: hace 8 min</span></div>
+    <div class="card">
+      <div class="det-cab">
+        <h2>iPhone 13 · 128 GB</h2>
+        <div class="tabs" id="tabs"></div>
+        <span style="flex:1"></span>
+        <span id="filtroC"></span>
+        <span id="exportar"></span>
+      </div>
+      <div id="vista"></div>
+    </div>
+    <div id="ficha"></div>
+  </main>
+</div>
+<div id="capa"></div>
+<div id="toast"></div>
+
+<script>
+// ── Maestro inventado: color en castellano (como el espejo) → nombre del producto en NSYS (inglés) ──
+const COLORES = ['Azul', 'Rojo', 'Medianoche', 'Blanco estelar', 'Rosa', 'Verde']
+const INGLES = { Azul: 'Blue', Rojo: '(PRODUCT)RED', Medianoche: 'Midnight', 'Blanco estelar': 'Starlight', Rosa: 'Pink', Verde: 'Green' }
+const LETRAS = ['A', 'A-', 'B', 'C']
+const goods = (color) => `Apple iPhone 13 128GB ${INGLES[color]}`
+const gradoNsys = (g) => (g.ms ? 'Ms' : '') + g.letra + (g.bat ? '100' : '')
+const textoGrado = (g) => gradoNsys(g)
+/** SKU del maestro para un color y un grado; null si el maestro no tiene esa combinación (inventado: Verde con B). */
+function skuDe(color, g) {
+  if (color === 'Verde' && g.letra === 'B') return null
+  const letra = g.letra === 'C' ? 'A' : g.letra // en el maestro, un C ya lleva el SKU de después del taller
+  return 'i13128' + color.replace(/ (\w)/g, (_, l) => l.toUpperCase()).replace(/ /g, '') + (g.ms ? 'Ms' : '') + letra + (g.bat ? '100' : '')
+}
+
+const BASE = [
+  { imei: '350000000000011', color: 'Azul', g: { letra: 'A', ms: false, bat: false }, ub: 'Listos', quien: '', dias: 12 },
+  { imei: '350000000000022', color: 'Azul', g: { letra: 'C', ms: false, bat: false }, ub: 'Taller', quien: 'Técnico 2 · Reparación', dias: 30 },
+  { imei: '350000000000033', color: 'Medianoche', g: { letra: 'A-', ms: false, bat: false }, ub: 'Listos', quien: '', dias: 5 },
+  { imei: '350000000000044', color: 'Azul', g: { letra: 'A', ms: false, bat: false }, ub: 'Listos', quien: '', dias: 21 },
+  { imei: '350000000000055', color: 'Blanco estelar', g: { letra: 'B', ms: false, bat: false }, ub: 'Rev', quien: '', dias: 9 },
+  { imei: '350000000000066', color: 'Rosa', g: { letra: 'A', ms: false, bat: true }, ub: 'Listos', quien: '', dias: 3 },
+  { imei: '350000000000077', color: 'Verde', g: { letra: 'A-', ms: true, bat: false }, ub: 'Listos', quien: '', dias: 44 },
+]
+
+let variante = 'A', vistaCel = 'linea', pestana = 'moviles', filtroTaller = false
+let nsys, taller, rastro, abierto, pasados
+
+function reiniciar() {
+  nsys = Object.fromEntries(BASE.map((m) => [m.imei, { color: m.color, g: { ...m.g } }]))
+  taller = {}
+  rastro = Object.fromEntries(BASE.map((m) => [m.imei, [{ f: '02/10 09:12', o: 'nsys', t: `Entrada: ${goods(m.color)} · ${gradoNsys(m.g)}` }]]))
+  // Ejemplo de lo automático (pieza 2): reparación con chasis rojo nuevo
+  taller['350000000000044'] = { color: { a: 'Rojo', de: 'Azul', por: 'Reparación R20261020_4 · chasis chai13red nuevo · Técnico 2', f: '20/10 10:41' } }
+  rastro['350000000000044'].push({ f: '20/10 10:41', o: 'trab', t: 'Reparación R20261020_4 terminada (Técnico 2): chasis chai13red, nuevo' },
+    { f: '20/10 10:41', o: 'taller', t: 'Taller: color Azul → Rojo (por la reparación R20261020_4)' })
+  abierto = null
+  pasados = new Set()
+  pintar()
+}
+
+// ── Lo que vale: lo del taller por encima de NSYS ──
+function efectivo(imei) {
+  const n = nsys[imei], t = taller[imei] || {}
+  return { color: t.color ? t.color.a : n.color, g: t.grado ? t.grado.a : n.g }
+}
+const iguales = (a, b) => a.letra === b.letra && a.ms === b.ms && a.bat === b.bat
+function pendiente(imei) {
+  const n = nsys[imei], t = taller[imei]
+  if (!t) return false
+  if (variante === 'B' && pasados.has(imei)) return false
+  return (t.color && t.color.a !== n.color) || (t.grado && !iguales(t.grado.a, n.g))
+}
+const pendientes = () => BASE.map((m) => m.imei).filter(pendiente)
+const tieneTaller = (imei) => !!taller[imei] && (taller[imei].color || taller[imei].grado)
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const claseGrado = (g) => (g.ms ? 'ms' : g.letra === 'C' ? 'c' : g.letra === 'B' ? 'b' : '')
+const pildoraGrado = (g) => `<span class="gp ${claseGrado(g)}">${esc((g.ms ? 'Ms' : '') + g.letra)}</span>${g.bat ? '<span class="cien" title="Batería nueva">100</span>' : ''}`
+
+/** Celda con lo del taller: valor y, debajo o al pasar el ratón, lo que dice NSYS. */
+function celdaTaller(html, deNsys, cambiado) {
+  if (!cambiado) return html
+  if (vistaCel === 'linea') return `<span class="tal">${html}<span class="marca-t">taller</span></span><div class="nsysde">NSYS: ${esc(deNsys)}</div>`
+  return `<span class="tal" title="Lo del taller. NSYS dice: ${esc(deNsys)}">${html}<span class="dot"></span></span>`
+}
+
+function filaMovil(m) {
+  const n = nsys[m.imei], e = efectivo(m.imei), t = taller[m.imei] || {}
+  const sku = skuDe(e.color, e.g), skuN = skuDe(n.color, n.g)
+  const cambiaSku = (t.color || t.grado) && sku !== skuN
+  return `<tr class="clic ${abierto === m.imei ? 'sel' : ''}" data-imei="${m.imei}">
+    <td class="mono">${m.imei}</td>
+    <td>${celdaTaller(esc(e.color), n.color, !!t.color && t.color.a !== n.color)}</td>
+    <td>${celdaTaller(pildoraGrado(e.g), gradoNsys(n.g), !!t.grado && !iguales(t.grado.a, n.g))}</td>
+    <td>${celdaTaller(`<span class="mono">${sku ? esc(sku) : '<i style="color:#a15c07">sin SKU en el maestro</i>'}</span>`, skuN || '—', cambiaSku)}</td>
+    <td><span class="ub ${m.ub}">${m.ub === 'Rev' ? 'En revisión' : m.ub === 'Taller' ? 'Taller · Reparación' : 'Listos'}</span></td>
+    <td>${esc(m.quien)}</td>
+    <td>${m.dias} días</td>
+  </tr>`
+}
+
+function vistaMoviles() {
+  const filas = BASE.filter((m) => !filtroTaller || pendiente(m.imei))
+  return `<div class="ayuda">Color, grado y SKU son los que valen: lo del taller (morado) por encima de NSYS. Los filtros y la tabla color × grado del stock usan estos mismos valores.</div>
+  <div class="tabla-w"><table class="mov"><thead><tr><th>IMEI</th><th>Color</th><th>Grado</th><th>SKU</th><th>Ubicación</th><th>Quién lo tiene</th><th>Días</th></tr></thead>
+  <tbody>${filas.map(filaMovil).join('') || '<tr><td colspan="7" class="ayuda">Ningún móvil.</td></tr>'}</tbody></table></div>`
+}
+
+function vistaLista() {
+  const lista = pendientes()
+  const filas = lista.map((imei) => {
+    const n = nsys[imei], e = efectivo(imei), t = taller[imei]
+    const por = [t.color && `Color: ${t.color.por}`, t.grado && `Grado: ${t.grado.por}`].filter(Boolean).join('<br>')
+    const desde = [t.color && t.color.f, t.grado && t.grado.f].filter(Boolean).sort().pop()
+    return `<tr><td class="mono">${imei}</td>
+      <td>${esc(goods(n.color))}<br><span class="nsysde">grado ${esc(gradoNsys(n.g))}</span></td>
+      <td><b>${esc(goods(e.color))}</b><br><span class="nsysde">grado <b>${esc(gradoNsys(e.g))}</b></span></td>
+      <td class="mono">${esc(skuDe(e.color, e.g) || '—')}</td>
+      <td style="white-space:normal;min-width:220px">${por}</td><td>${desde}</td>
+      ${variante === 'B' ? `<td><button class="btn peq" data-pasado="${imei}">Ya lo pasé</button></td>` : ''}</tr>`
+  }).join('')
+  return `<div class="ayuda">Lo que hay que cambiar a mano en NSYS (producto y grado de cada móvil). ${variante === 'A' ? 'Cada fila desaparece sola cuando la importación (cada 30 min) ve NSYS igual.' : 'Desaparece sola cuando la importación ve NSYS igual, o al momento con «Ya lo pasé» (si luego NSYS no coincide, vuelve).'}</div>
+  <div class="tabla-w"><table class="mov"><thead><tr><th>IMEI</th><th>En NSYS hoy</th><th>Poner en NSYS</th><th>SKU nuevo</th><th>Por qué</th><th>Desde</th>${variante === 'B' ? '<th></th>' : ''}</tr></thead>
+  <tbody>${filas || `<tr><td colspan="7" class="ayuda">Nada por pasar: NSYS está al día con el taller.</td></tr>`}</tbody></table></div>`
+}
+
+function pintarFicha() {
+  if (!abierto) return ''
+  const m = BASE.find((x) => x.imei === abierto), n = nsys[abierto], e = efectivo(abierto), t = taller[abierto] || {}
+  const sku = skuDe(e.color, e.g)
+  const lin = (k, v, deN, camb) => `<span class="k">${k}</span><span>${v}${camb ? ` <span class="marca-t">taller</span> <span class="nsysde">NSYS: ${esc(deN)}</span>` : ''}</span>`
+  return `<div class="ficha" id="fichaMovil">
+    <div class="l1"><span class="imei">${abierto}</span><span>iPhone 13 128GB</span>
+      <span class="ub ${m.ub}">${m.ub === 'Rev' ? 'En revisión' : m.ub === 'Taller' ? 'Taller · Reparación' : 'Listos'}</span>
+      <span style="flex:1"></span><button class="btn" id="corregir">Corregir color, grado o batería…</button>
+      <button class="btn peq" id="cerrarFicha">Cerrar</button></div>
+    <div class="datos">
+      ${lin('Color', esc(e.color), n.color, !!t.color && t.color.a !== n.color)}
+      ${lin('Grado', esc(gradoNsys(e.g)), gradoNsys(n.g), !!t.grado && !iguales(t.grado.a, n.g))}
+      ${lin('SKU', `<span class="mono">${sku ? esc(sku) : '<i style="color:#a15c07">sin SKU en el maestro</i>'}</span>`, skuDe(n.color, n.g) || '—', (t.color || t.grado) && sku !== skuDe(n.color, n.g))}
+      ${pendiente(abierto) ? `<span class="k"></span><span style="color:var(--tal-tx);font-weight:600">Por pasar a NSYS: ${esc(goods(e.color))} · grado ${esc(gradoNsys(e.g))}</span>` : ''}
+    </div>
+    <div class="rastro"><h4>Rastro</h4>${rastro[abierto].slice().reverse().map((ev) => `<div class="ev"><span class="f">${ev.f}</span><span class="o o-${ev.o}">${ev.o === 'taller' ? 'TALLER' : ev.o === 'nsys' ? 'NSYS' : 'TRABAJO'}</span><span>${esc(ev.t)}</span></div>`).join('')}</div>
+  </div>`
+}
+
+// ── Diálogo «Corregir» ──
+let borr = null
+function abrirCorregir() {
+  const e = efectivo(abierto)
+  borr = { color: e.color, letra: e.g.letra, ms: e.g.ms, bat: e.g.bat, motivo: '' }
+  pintarDialogo()
+}
+function pintarDialogo() {
+  if (!borr) { document.getElementById('capa').innerHTML = ''; return }
+  const n = nsys[abierto], e = efectivo(abierto)
+  const g = { letra: borr.letra, ms: borr.ms, bat: borr.bat }
+  const cambiaColor = borr.color !== e.color, cambiaGrado = !iguales(g, e.g)
+  const sku = skuDe(borr.color, g)
+  const valido = (cambiaColor || cambiaGrado) && borr.motivo.trim() !== ''
+  const tieneT = tieneTaller(abierto)
+  document.getElementById('capa').innerHTML = `<div class="velo"><div class="dlg" role="dialog" aria-label="Corregir ${abierto}">
+    <div class="h"><h3>Corregir ${abierto}</h3><button class="x" id="dX">×</button></div>
+    <div class="c">
+      <span class="k">Color</span><select id="dColor">${COLORES.map((c) => `<option ${c === borr.color ? 'selected' : ''}>${c}</option>`).join('')}</select>
+      <span class="k">Grado</span><select id="dLetra">${LETRAS.map((l) => `<option ${l === borr.letra ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <span class="k"></span><label><input type="checkbox" id="dBat" ${borr.bat ? 'checked' : ''}> Batería nueva (100)</label>
+      <span class="k"></span><label><input type="checkbox" id="dMs" ${borr.ms ? 'checked' : ''}> Mensaje de pieza (Ms)</label>
+      <span class="k">Motivo</span><textarea id="dMotivo" placeholder="Obligatorio: por qué se corrige">${esc(borr.motivo)}</textarea>
+      <div class="pre">
+        ${cambiaColor ? `Color: ${esc(e.color)} → <b>${esc(borr.color)}</b><br>` : ''}
+        ${cambiaGrado ? `Grado: ${esc(gradoNsys(e.g))} → <b>${esc(gradoNsys(g))}</b><br>` : ''}
+        ${!cambiaColor && !cambiaGrado ? 'Sin cambios todavía.<br>' : ''}
+        SKU: ${sku ? `<b class="mono">${esc(sku)}</b>` : '<span class="aviso">el maestro no tiene SKU para este color y grado: se guarda igual y el móvil sale «sin SKU»</span>'}<br>
+        En NSYS habrá que poner: ${esc(goods(borr.color))} · grado ${esc(gradoNsys(g))}
+        ${borr.color === n.color && iguales(g, n.g) ? '<br><span style="color:#2f7d3b;font-weight:600">Coincide con NSYS: se quita lo del taller.</span>' : ''}
+      </div>
+    </div>
+    <div class="pie">
+      ${tieneT ? '<button class="btn izq" id="dVolver" title="Quita lo del taller y vuelve a lo que dice NSYS">Volver a lo de NSYS</button>' : '<span class="izq"></span>'}
+      <button class="btn" id="dCancelar">Cancelar</button>
+      <button class="btn pri" id="dGuardar" ${valido ? '' : 'disabled'}>Guardar</button>
+    </div></div></div>`
+  const $ = (id) => document.getElementById(id)
+  $('dColor').onchange = (ev) => { borr.color = ev.target.value; pintarDialogo() }
+  $('dLetra').onchange = (ev) => { borr.letra = ev.target.value; pintarDialogo() }
+  $('dBat').onchange = (ev) => { borr.bat = ev.target.checked; pintarDialogo() }
+  $('dMs').onchange = (ev) => { borr.ms = ev.target.checked; pintarDialogo() }
+  $('dMotivo').oninput = (ev) => { borr.motivo = ev.target.value; const b = $('dGuardar'); b.disabled = !((cambiaColor || cambiaGrado) && borr.motivo.trim() !== '') }
+  $('dX').onclick = $('dCancelar').onclick = () => { borr = null; pintarDialogo() }
+  $('dGuardar').onclick = guardarCorreccion
+  if ($('dVolver')) $('dVolver').onclick = () => {
+    const motivo = borr.motivo.trim() || 'sin motivo'
+    delete taller[abierto]; pasados.delete(abierto)
+    rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: vuelve a lo de NSYS (Imad · «${motivo}»)` })
+    borr = null; pintarDialogo(); aviso('Lo del taller quitado: vale lo de NSYS'); pintar()
+  }
+}
+const ahora = () => new Date().toTimeString().slice(0, 5).replace(/^/, '20/10 ')
+function guardarCorreccion() {
+  const n = nsys[abierto], e = efectivo(abierto), g = { letra: borr.letra, ms: borr.ms, bat: borr.bat }
+  const t = taller[abierto] || {}
+  const por = `A mano · Imad · «${borr.motivo.trim()}»`
+  if (borr.color !== e.color) {
+    rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: color ${e.color} → ${borr.color} (${por})` })
+    if (borr.color === n.color) delete t.color; else t.color = { a: borr.color, de: n.color, por, f: ahora() }
+  }
+  if (!iguales(g, e.g)) {
+    rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: grado ${gradoNsys(e.g)} → ${gradoNsys(g)} (${por})` })
+    if (iguales(g, n.g)) delete t.grado; else t.grado = { a: g, de: n.g, por, f: ahora() }
+  }
+  if (t.color || t.grado) taller[abierto] = t; else delete taller[abierto]
+  pasados.delete(abierto)
+  borr = null; pintarDialogo(); aviso('Corrección guardada'); pintar()
+}
+
+// ── Simulaciones de la importación ──
+function simCoincide() {
+  const imei = BASE.map((m) => m.imei).find((i) => taller[i] && ((taller[i].color && taller[i].color.a !== nsys[i].color) || (taller[i].grado && !iguales(taller[i].grado.a, nsys[i].g))))
+  if (!imei) { aviso('No hay nada pendiente de pasar a NSYS'); return }
+  const e = efectivo(imei)
+  nsys[imei] = { color: e.color, g: { ...e.g } }
+  rastro[imei].push({ f: ahora(), o: 'nsys', t: `NSYS: ahora ${goods(e.color)} · ${gradoNsys(e.g)} (ya coincide con el taller: pasado)` })
+  delete taller[imei]; pasados.delete(imei)
+  aviso(`Importación: ···${imei.slice(-3)} ya coincide en NSYS; sale de la lista`); pintar()
+}
+function simOtro() {
+  const imei = BASE.map((m) => m.imei).find((i) => taller[i] && taller[i].color)
+  if (!imei) { aviso('No hay ningún color cambiado en el taller'); return }
+  const nuevo = COLORES.find((c) => c !== taller[imei].color.a && c !== nsys[imei].color)
+  rastro[imei].push({ f: ahora(), o: 'nsys', t: `NSYS: color ${nsys[imei].color} → ${nuevo} (cambio en NSYS posterior: manda NSYS; el color del taller, ${taller[imei].color.a}, deja de valer)` })
+  nsys[imei] = { ...nsys[imei], color: nuevo }
+  delete taller[imei].color
+  if (!taller[imei].grado) delete taller[imei]
+  aviso(`Importación: en NSYS ···${imei.slice(-3)} pasa a ${nuevo}: manda NSYS`); pintar()
+}
+
+function aviso(t) {
+  const el = document.getElementById('toast')
+  el.innerHTML = `<div class="toast">${esc(t)}</div>`
+  clearTimeout(aviso.tm); aviso.tm = setTimeout(() => { el.innerHTML = '' }, 2600)
+}
+
+function pintar() {
+  document.querySelectorAll('#varLista button').forEach((b) => b.classList.toggle('on', b.dataset.v === variante))
+  document.querySelectorAll('#varVista button').forEach((b) => b.classList.toggle('on', b.dataset.v === vistaCel))
+  if (variante === 'C' && pestana === 'lista') pestana = 'moviles'
+  const n = pendientes().length
+  document.getElementById('tabs').innerHTML = `<button data-p="moviles" class="${pestana === 'moviles' ? 'on' : ''}">Móviles</button>` +
+    (variante !== 'C' ? `<button data-p="lista" class="${pestana === 'lista' ? 'on' : ''}" data-choice="ver-lista">Por pasar a NSYS<span class="num">${n}</span></button>` : '')
+  document.getElementById('filtroC').innerHTML = variante === 'C' && pestana === 'moviles'
+    ? `<button class="chipf ${filtroTaller ? 'on' : ''}" id="chipTaller">Cambiados en taller sin pasar a NSYS (${n})</button>` : ''
+  document.getElementById('exportar').innerHTML = pestana === 'lista' ? '<button class="btn" id="btnExportar">Exportar a Excel</button>' : ''
+  document.getElementById('vista').innerHTML = pestana === 'lista' ? vistaLista() : vistaMoviles()
+  document.getElementById('ficha').innerHTML = pintarFicha()
+
+  document.querySelectorAll('#tabs button').forEach((b) => { b.onclick = () => { pestana = b.dataset.p; pintar() } })
+  document.querySelectorAll('tr.clic').forEach((tr) => { tr.onclick = () => { abierto = tr.dataset.imei; pintar() } })
+  document.querySelectorAll('[data-pasado]').forEach((b) => { b.onclick = () => { pasados.add(b.dataset.pasado); aviso('Quitado de la lista (vuelve si la importación no lo ve igual)'); pintar() } })
+  const chip = document.getElementById('chipTaller'); if (chip) chip.onclick = () => { filtroTaller = !filtroTaller; pintar() }
+  const exp = document.getElementById('btnExportar'); if (exp) exp.onclick = () => aviso('Descargado «por-pasar-a-nsys.xlsx» (simulado)')
+  const cor = document.getElementById('corregir'); if (cor) cor.onclick = abrirCorregir
+  const cf = document.getElementById('cerrarFicha'); if (cf) cf.onclick = () => { abierto = null; pintar() }
+}
+
+document.querySelectorAll('#varLista button').forEach((b) => { b.onclick = () => { variante = b.dataset.v; filtroTaller = false; pintar() } })
+document.querySelectorAll('#varVista button').forEach((b) => { b.onclick = () => { vistaCel = b.dataset.v; pintar() } })
+document.getElementById('simCoincide').onclick = simCoincide
+document.getElementById('simOtro').onclick = simOtro
+document.getElementById('reiniciar').onclick = reiniciar
+reiniciar()
+</script>
+</body>
+</html>
