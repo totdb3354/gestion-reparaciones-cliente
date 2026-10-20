@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · ¿Nueva o reutilizada? (v3)</title>
+<style>
+:root {
+  --azul-noche: #001232; --azul-medio: #2C3B54; --azul-gris: #586376; --superficie: #FFFFFF;
+  --fondo-vista: #DDE1E7; --fondo-input: #F3F3F3; --gris-borde: #A9A9A9; --gris-disabled: #E7E7E7;
+  --verde-ok: #4CAF50; --recibido-bg: #E8F5E9; --recibido-text: #2E7D32;
+  --form-barra-bg: #C8CDD6; --form-cabecera-bg: #BCC2CB; --form-cabecera-brd: #A8AEB7; --form-fila-brd: #E0E0E0;
+  --form-obs-bg: #888888; --form-guardada-bg: #F1F8F1; --fila-reparado-brd: #C5E1C5;
+  --form-zona-bg: #ECEEF1; --form-zona-brd: #CFD3DA; --rojo-cancelar: #C94040;
+  --aviso-bg: #FFF3E0; --aviso-text: #E65100;
+  --pill-aviso-bg: #FCE7C3; --pill-aviso-text: #9A6B00; --form-otros-bg: #F6F7F9;
+  --tipo-rep-bg: #E3F2FD; --tipo-rep-text: #1565C0;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; background: #9AA1AC; color: var(--azul-medio); font-size: 12px; }
+button { font-family: inherit; }
+
+.proto { background: #1B2333; color: #E8ECF3; padding: 8px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.proto h1 { font-size: 13px; margin: 0 8px 0 0; font-weight: 700; }
+.tab { cursor: pointer; border: 1px solid #47536A; background: transparent; color: #C9D1DE; padding: 5px 12px; border-radius: 16px; font-size: 12px; }
+.tab.activa { background: #F1E356; color: #001232; border-color: #F1E356; font-weight: 700; }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #C9D1DE; cursor: pointer; margin-left: 6px; }
+.toggle input { accent-color: #F1E356; width: 15px; height: 15px; margin: 0; }
+.proto .sep { flex: 1; }
+.proto .accion { cursor: pointer; border: 0; border-radius: 4px; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+.reiniciar { background: #47536A; color: #fff; }
+.elegir { background: #4CAF50; color: #fff; }
+.elegir.hecho { background: #2E7D32; }
+
+.guia { background: #F4F6F9; border-bottom: 1px solid #C4CAD4; padding: 10px 16px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px; }
+.guia h2 { margin: 0 0 4px; font-size: 13px; color: var(--azul-noche); }
+.guia p { margin: 0; font-size: 12px; line-height: 1.45; }
+.guia ol { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.5; }
+.guia .etq { font-size: 10.5px; font-weight: 700; color: var(--azul-gris); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+
+.escena { padding: 14px 16px; overflow-x: auto; }
+.modal { min-width: 1030px; background: var(--fondo-vista); display: flex; flex-direction: column; height: 470px; box-shadow: 0 6px 24px rgba(0,0,0,.25); position: relative; }
+.barra { display: flex; align-items: center; gap: 16px; background: var(--form-barra-bg); padding: 10px 16px; }
+.barra b { font-size: 13px; color: var(--azul-medio); }
+.barra .flex { flex: 1; }
+.barra .cerrar { font-size: 16px; font-weight: 700; color: var(--azul-gris); background: none; border: 0; cursor: default; }
+.combo { height: 27px; border: 1px solid var(--gris-borde); background: var(--superficie); color: var(--azul-noche); font-size: 11px; padding: 0 6px; font-family: inherit; }
+.combo:disabled { opacity: .5; }
+.cabecera { display: flex; border-bottom: 1px solid var(--form-cabecera-brd); background: var(--form-cabecera-bg); }
+.cabecera span { flex-shrink: 0; white-space: nowrap; overflow: hidden; padding: 6px 10px; font-size: 12px; color: var(--azul-gris); }
+.cuerpo { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.fila { display: flex; align-items: center; min-height: 37px; background: var(--fondo-input); border-bottom: 1px solid var(--form-fila-brd); }
+.fila.guardada { background: var(--form-guardada-bg); border-color: var(--fila-reparado-brd); }
+.celda { flex-shrink: 0; padding: 0 10px; font-size: 12px; }
+.w70 { width: 70px; } .w100 { width: 100px; } .w110 { width: 110px; } .w140 { width: 140px; } .w240 { width: 240px; } .w280 { width: 280px; }
+.contador { display: flex; align-items: center; width: 70px; flex-shrink: 0; }
+.contador .num { width: 34px; text-align: center; font-size: 20px; color: var(--gris-borde); }
+.contador .num.con { color: #000; }
+.masmenos { display: flex; flex-direction: column; width: 35px; }
+.masmenos button { height: 18px; width: 35px; border: 0; border-radius: 0; background: var(--gris-borde); color: var(--gris-disabled); font-size: 14px; font-weight: 700; line-height: 1; padding: 0; cursor: pointer; }
+.masmenos button + button { margin-top: 1px; }
+.masmenos button:disabled { opacity: .4; cursor: default; }
+.stock { text-align: center; }
+.stock.baja { color: var(--rojo-cancelar); font-weight: 700; }
+.reu { display: flex; align-items: center; gap: 6px; }
+.reu input { width: 15px; height: 15px; margin: 0; accent-color: var(--azul-noche); }
+.reu input:disabled + span { opacity: .45; }
+.obs button { display: flex; align-items: center; gap: 6px; height: 27px; border: 0; background: var(--form-obs-bg); color: var(--gris-disabled); font-size: 11px; padding: 4px 10px; cursor: pointer; }
+.obs button:disabled { opacity: .4; cursor: default; }
+.obs .texto { font-size: 12px; color: #000; }
+.derecha { margin-left: auto; flex-shrink: 0; padding-right: 10px; display: flex; align-items: center; gap: 8px; }
+.btn-fila { height: 27px; border: 0; border-radius: 4px; background: var(--azul-noche); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer; }
+.etq-guardada { height: 27px; display: inline-flex; align-items: center; padding: 4px 10px; font-size: 11px; background: var(--recibido-bg); color: var(--recibido-text); }
+.gasta { font-size: 11px; font-weight: 700; color: var(--aviso-text); }
+.pista { font-size: 11px; color: var(--aviso-text); font-weight: 700; }
+.subfila { display: flex; align-items: center; gap: 10px; padding: 4px 8px 4px 70px; background: #FFF8E0; border-bottom: 1px solid var(--form-fila-brd); }
+.subfila span { font-size: 11px; color: #7A5C00; white-space: pre-wrap; }
+.subfila.ok { background: var(--recibido-bg); }
+.subfila.ok span { color: var(--recibido-text); font-weight: 700; }
+.subfila .ambar { border: 0; border-radius: 4px; background: #C07800; color: #fff; font-size: 11px; padding: 4px 10px; cursor: pointer; }
+.subfila .enlace { border: 0; background: none; color: var(--azul-gris); font-size: 11px; text-decoration: underline; cursor: pointer; }
+
+/* La elección, en la celda del SKU (encima del desplegable) */
+.eleccion { display: flex; gap: 6px; width: 240px; }
+.eleccion button { flex: 1; height: 27px; border: 1px solid var(--azul-noche); background: var(--superficie); color: var(--azul-noche); font-size: 11.5px; font-weight: 600; cursor: pointer; border-radius: 3px; }
+.eleccion button.reutilizada { border-color: var(--recibido-text); color: var(--recibido-text); }
+.eleccion button.solicitar { border-color: #C07800; color: #8A5300; background: #FFF8E0; }
+.marca.pedida { background: #FFF8E0; color: #8A5300; }
+.eleccion button:hover:not(:disabled) { background: var(--fondo-input); }
+.eleccion button:disabled { opacity: .4; cursor: default; }
+
+/* La marca de la derecha, con su × */
+.marca { display: inline-flex; align-items: center; height: 24px; border-radius: 12px; padding: 0 4px 0 9px; font-size: 11px; font-weight: 700; gap: 3px; white-space: nowrap; }
+.marca.nueva { background: var(--tipo-rep-bg); color: var(--tipo-rep-text); }
+.marca.reu { background: var(--recibido-bg); color: var(--recibido-text); }
+.marca button { width: 18px; height: 18px; border: 0; border-radius: 9px; background: transparent; color: inherit; font-size: 13px; font-weight: 700; cursor: pointer; line-height: 1; padding: 0; }
+.marca button:hover { background: rgba(0,0,0,.08); }
+
+.otras { background: var(--form-otros-bg); border-top: 1px solid var(--form-cabecera-brd); padding: 8px 16px; color: var(--azul-gris); font-size: 11px; }
+.otras b { color: var(--azul-medio); letter-spacing: .03em; }
+.era { height: 24px; border: 1px solid #F5B942; background: var(--pill-aviso-bg); color: var(--pill-aviso-text); font-size: 11px; font-weight: 700; padding: 0 8px; border-radius: 12px; cursor: pointer; white-space: nowrap; }
+
+.resumen { border-top: 2px solid #F5B942; background: var(--aviso-bg); padding: 10px 16px; font-size: 12px; color: var(--azul-medio); }
+.resumen .tit { font-weight: 700; color: var(--aviso-text); margin-bottom: 6px; font-size: 12.5px; }
+.resumen ul { margin: 0 0 6px; padding: 0; list-style: none; }
+.resumen li { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.resumen li .q { font-weight: 700; color: var(--azul-noche); min-width: 22px; }
+.resumen li .s { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; }
+.resumen li .queda { color: var(--azul-gris); }
+.resumen .nota { color: var(--azul-gris); font-size: 11.5px; }
+.resumen .reus { margin-top: 4px; color: var(--recibido-text); font-size: 11.5px; }
+
+.zona { display: flex; justify-content: flex-end; align-items: center; gap: 12px; border-top: 1px solid var(--form-zona-brd); background: var(--form-zona-bg); padding: 12px 16px; }
+.zona .msg { font-size: 12px; color: var(--rojo-cancelar); font-weight: 700; }
+.primario { height: 34px; border: 0; border-radius: 4px; background: var(--azul-noche); color: #fff; font-size: 13px; font-weight: 700; padding: 0 18px; cursor: pointer; white-space: pre; }
+
+.terminada { position: absolute; inset: 0; background: rgba(221,225,231,.97); display: flex; align-items: center; justify-content: center; }
+.terminada .caja { background: #fff; padding: 22px 28px; border-radius: 6px; box-shadow: 0 4px 18px rgba(0,0,0,.15); min-width: 460px; }
+.terminada h3 { margin: 0 0 10px; color: var(--recibido-text); font-size: 15px; }
+.terminada ul { margin: 0 0 14px; padding-left: 18px; line-height: 1.6; }
+
+.registro { margin-top: 12px; min-width: 1030px; background: #F4F6F9; padding: 10px 16px; border-radius: 4px; }
+.registro .etq { font-size: 10.5px; font-weight: 700; color: var(--azul-gris); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.registro ul { margin: 0; padding-left: 18px; line-height: 1.55; font-size: 12px; }
+.registro .vacio { color: var(--azul-gris); font-size: 12px; }
+.stockmini { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 11.5px; color: var(--azul-gris); }
+.stockmini b { color: var(--azul-noche); font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <h1>Prototipo v5 · ¿pieza nueva o reutilizada?</h1>
+  <button class="tab" data-choice="ver-hoy" data-v="hoy">Hoy</button>
+  <button class="tab" data-choice="ver-E" data-v="E">Tu idea · la elección en la celda del SKU</button>
+  <label class="toggle" data-choice="toggle-avisoB"><input type="checkbox" id="avisoB"> + aviso al terminar</label>
+  <span class="sep"></span>
+  <button class="accion reiniciar" id="reiniciar">Reiniciar</button>
+  <button class="accion elegir" id="elegir">Me quedo con esta</button>
+</div>
+
+<div class="guia">
+  <div>
+    <div class="etq" id="guia-etq"></div>
+    <h2 id="guia-tit"></h2>
+    <p id="guia-txt"></p>
+  </div>
+  <div>
+    <div class="etq">Qué probar</div>
+    <ol>
+      <li>Batería <b>reutilizada</b> «con prisa»: haz lo de siempre y termina. ¿Te habría frenado?</li>
+      <li>Chasis rojo <b>nuevo</b> (la tapa toma el rojo sola) y tapa <b>reutilizada</b>; termina.</li>
+      <li><b>Volver atrás:</b> la «×» de la marca de la derecha, o «−» hasta 0 en una nueva. Cambia una de Nueva a Reutilizada.</li>
+      <li><b>Sin stock:</b> la cámara (ningún SKU con stock) ya enseña «📨 Solicitar pieza» en lugar de «Nueva». El chasis Starlight o la pantalla incell, como nueva, sacan la banda de pedirla. Como reutilizadas, entran sin más.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="escena">
+  <div class="modal" id="modal">
+    <div class="barra">
+      <b>IMEI: 350000000000123</b>
+      <span class="flex"></span>
+      <span style="color:var(--azul-gris)">Filtrar por modelo:</span>
+      <select class="combo" disabled style="width:180px"><option>iPhone 13</option></select>
+      <button class="cerrar" tabindex="-1">✕</button>
+    </div>
+    <div class="cabecera" id="cabecera"></div>
+    <div class="cuerpo">
+      <div id="filas"></div>
+      <div class="otras"><b>OTRAS ACCIONES</b> · Añadir otro… (no cambia en este prototipo)</div>
+      <div style="flex:1"></div>
+    </div>
+    <div id="resumen"></div>
+    <div class="zona">
+      <span class="msg" id="zona-msg"></span>
+      <button class="primario" id="terminar">Terminar asignación</button>
+    </div>
+    <div id="terminada"></div>
+  </div>
+
+  <div class="registro">
+    <div class="etq">Lo que ha pasado (simulado)</div>
+    <div id="registro"></div>
+    <div class="stockmini" id="stockmini"></div>
+  </div>
+</div>
+
+<script>
+const GUIAS = {
+  hoy: {
+    etq: 'Referencia',
+    tit: 'Hoy: «+» gasta del stock, la casilla «Reutilizado» no',
+    txt: 'Así está ahora. «+» descuenta una pieza del stock y «Reutilizado» no descuenta. Si por costumbre pulsas «+» con una pieza reutilizada, nada te avisa. Además, el SKU que viene elegido se escoge mirando el stock, y un SKU sin stock no se puede poner aunque la pieza sea reutilizada.'
+  },
+  E: {
+    etq: 'Tu idea · versión 5 (con «Solicitar pieza» directo)',
+    tit: 'En la celda del SKU, primero «Nueva» o «Reutilizada»; después, el desplegable',
+    txt: 'Las columnas, como hoy. Hasta elegir, en la celda del SKU están los dos botones y el contador está apagado. Con «Nueva», aparece el desplegable y el contador se enciende en 1; si el SKU no tiene stock, se queda en 0 y debajo sale «Solicitar pieza», como hoy. Si ningún SKU de la pieza tiene stock, el botón ya pone «📨 Solicitar pieza» y la pide directamente. Con «Reutilizada», aparece el desplegable, sin contador y sin esa banda (el stock da igual). A la derecha queda la marca «Nueva» o «↺ Reutilizada». Si la pieza solo tiene un SKU, se queda ese. Volver atrás: la «×» de la marca, o «−» hasta 0 en una nueva. El color elegido no se pierde.'
+  }
+}
+
+const BASE = [
+  { p: 'bat', nombre: 'Batería', opciones: [['bati13', 12]] },
+  { p: 'cha', nombre: 'Chasis', opciones: [['chai13blue', 4], ['chai13red', 2], ['chai13midnight', 5], ['chai13starlight', 0]] },
+  { p: 'tapa', nombre: 'Tapa trasera', opciones: [['tapai13blue', 3], ['tapai13red', 1], ['tapai13midnight', 6], ['tapai13starlight', 2]] },
+  { p: 'lcd', nombre: 'Pantalla', opciones: [['lcdi13', 3], ['lcdi13incell', 0]] },
+  { p: 'cam', nombre: 'Cámara', opciones: [['cami13', 0]] },
+]
+const CON_COLOR = ['cha', 'tapa']
+
+let variante = 'E'
+let avisoB = false
+let filas, stock, registro, paso, msg, elegida = null, ultimaTerminada = []
+
+const $ = (id) => document.getElementById(id)
+const hora = () => new Date().toTimeString().slice(0, 5)
+const sku = (f) => (f.sel === null ? null : f.opciones[f.sel])
+const stockDe = (f) => (f.sel === null ? null : stock[sku(f)])
+const activa = (f) => f.sel !== null && (f.cantidad > 0 || f.reutilizado || f.agotado !== null)
+const color = (s) => s.replace(/^(cha|tapa)i13/, '')
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const conColor = (f) => CON_COLOR.includes(f.p)
+const primeroConStock = (f) => { const j = f.opciones.findIndex((s) => stock[s] > 0); return j >= 0 ? j : null }
+const algunoConStock = (f) => f.opciones.some((s) => stock[s] > 0)
+/** Hoy: chasis y tapa sin elegir; el resto, el primer SKU con stock o, si ninguno, el primero. */
+const selInicial = (f) => (conColor(f) ? null : (primeroConStock(f) ?? 0))
+
+function reiniciar() {
+  stock = {}
+  BASE.forEach((b) => b.opciones.forEach(([s, n]) => { stock[s] = n }))
+  filas = BASE.map((b) => {
+    const f = { p: b.p, nombre: b.nombre, opciones: b.opciones.map((o) => o[0]), cantidad: 0, reutilizado: false, modo: null, obs: null, guardada: null, confirmando: false, pista: '', agotado: null }
+    f.sel = selInicial(f)
+    return f
+  })
+  registro = []
+  paso = 0
+  msg = ''
+  ultimaTerminada = []
+  render()
+}
+
+function cambiar(i, fn) {
+  const f = filas[i]
+  if (f.guardada || paso === 2) return
+  filas.forEach((o) => { o.pista = '' })
+  fn(f)
+  f.confirmando = false
+  if (paso === 1) paso = 0
+  msg = ''
+  render()
+}
+
+// ── Hoy ──
+function sumar(i) { cambiar(i, (f) => { if (!f.reutilizado && f.sel !== null && f.cantidad < stockDe(f)) f.cantidad++ }) }
+function marcar(i, v) { cambiar(i, (f) => { if (v && f.cantidad > 0) return; f.reutilizado = v }) }
+function restar(i) {
+  cambiar(i, (f) => {
+    if (f.cantidad <= 0) return
+    f.cantidad--
+    // Tu idea: una nueva que baja a 0 vuelve al principio (la elección otra vez en la celda del SKU).
+    if (variante === 'E' && f.cantidad === 0) f.modo = null
+  })
+}
+
+// ── Tu idea ──
+/** Cantidad de una nueva tras elegir o cambiar el SKU: 1 si hay stock (o la que tenía, sin pasarse); 0 si no hay
+ *  (entonces sale «Sin stock… Solicitar pieza», como hoy). */
+function cantidadNueva(f) {
+  const s = stockDe(f)
+  if (s === null || s < 1) return 0
+  return Math.min(Math.max(f.cantidad, 1), s)
+}
+
+/** Elegir en la celda del SKU. «Nueva»: el contador arranca en 1 si el SKU tiene stock; si no, en 0 y sale la banda de
+ *  pedir la pieza. «Reutilizada»: conserva el SKU, sin contador y sin banda. */
+function elegir(i, modo) {
+  cambiar(i, (f) => {
+    f.agotado = null
+    if (modo === 'nueva') {
+      f.modo = 'nueva'
+      f.reutilizado = false
+      f.cantidad = 0
+      f.cantidad = cantidadNueva(f)
+    } else {
+      f.modo = 'reu'
+      f.cantidad = 0
+      f.reutilizado = true
+    }
+  })
+}
+/** «Solicitar pieza» directo (ningún SKU con stock). Con el SKU ya puesto, abre la solicitud (en la app, su diálogo) y, si se
+ *  cancela, la fila no cambia. Con SKU por elegir (chasis o tapa sin ningún color con stock), funciona como «Nueva»: al
+ *  elegir el color sale la banda de pedirla. */
+function pedirDirecto(i) {
+  const f = filas[i]
+  if (f.sel === null) { elegir(i, 'nueva'); return }
+  const d = prompt(`Solicitar ${f.nombre} ${sku(f)} (no hay stock). Descripción (opcional):`, '')
+  if (d === null) return
+  cambiar(i, (g) => {
+    g.modo = 'nueva'
+    g.reutilizado = false
+    g.cantidad = 0
+    g.agotado = { descripcion: d.trim() || null }
+  })
+}
+/** La × de la marca: la fila vuelve al principio; el SKU elegido se conserva. */
+function volver(i) {
+  cambiar(i, (f) => {
+    f.modo = null
+    f.cantidad = 0
+    f.reutilizado = false
+    f.agotado = null
+  })
+}
+
+function cambiarSku(i, idx) {
+  cambiar(i, (f) => {
+    const enNueva = variante === 'E' && f.modo === 'nueva'
+    f.sel = idx
+    f.agotado = null
+    if (enNueva) f.cantidad = cantidadNueva(f)
+    else if (f.cantidad > stockDe(f)) f.cantidad = 0
+    // Enlace de color (0.9.7): chasis → tapa; tapa → chasis si ya estaba elegido.
+    const otra = filas.find((o) => o.p === (f.p === 'cha' ? 'tapa' : f.p === 'tapa' ? 'cha' : ''))
+    if (!otra || otra.guardada) return
+    if (f.p === 'tapa' && otra.sel === null) return
+    const j = otra.opciones.findIndex((s) => color(s) === color(sku(f)))
+    if (j < 0 || j === otra.sel) return
+    otra.sel = j
+    otra.agotado = null
+    if (variante === 'E' && otra.modo === 'nueva') otra.cantidad = cantidadNueva(otra)
+    else if (otra.cantidad > stockDe(otra)) otra.cantidad = 0
+    otra.confirmando = false
+  })
+}
+
+/** «Solicitar pieza» / «Solicitar y descontar stock» de la banda (en la app abre su diálogo; aquí, un prompt). */
+function solicitar(i) {
+  const d = prompt('Descripción de la solicitud (opcional)', '')
+  if (d === null) return
+  cambiar(i, (f) => { f.agotado = { descripcion: d.trim() || null } })
+}
+function cancelarSolicitud(i) { cambiar(i, (f) => { f.agotado = null }) }
+function observacion(i) {
+  const t = prompt('Observación para ' + filas[i].nombre)
+  if (t && t.trim()) cambiar(i, (f) => { f.obs = t.trim() })
+}
+function borrarObs(i) { cambiar(i, (f) => { f.obs = null }) }
+
+function aplicar(f) {
+  const s = sku(f)
+  const lineas = []
+  if (f.cantidad > 0) {
+    const antes = stock[s]
+    stock[s] -= f.cantidad
+    lineas.push(`🔻 ${f.nombre} ${s}: ${f.cantidad} del stock (${antes} → ${stock[s]})`)
+  } else if (f.reutilizado) {
+    lineas.push(`↺ ${f.nombre} ${s}: reutilizada (el stock no se toca)`)
+  }
+  if (f.agotado) lineas.push(`📨 ${f.nombre} ${s}: solicitud de reposición${f.agotado.descripcion ? ` («${f.agotado.descripcion}»)` : ''}`)
+  lineas.forEach((l) => registro.push(`${hora()} · ${l}`))
+  return lineas.join(' · ')
+}
+
+function guardarFila(i) {
+  const f = filas[i]
+  if (f.guardada || !activa(f) || paso === 2) return
+  if (!f.confirmando) { f.confirmando = true; render(); return }
+  aplicar(f)
+  f.guardada = hora()
+  f.confirmando = false
+  render()
+}
+
+function terminar() {
+  if (paso === 2) return
+  const faltan = variante === 'E' ? filas.filter((f) => !f.guardada && f.modo !== null && f.sel === null) : []
+  if (faltan.length) { msg = `Falta elegir el SKU de: ${faltan.map((f) => f.nombre).join(', ')}.`; render(); return }
+  const pendientes = filas.filter((f) => activa(f) && !f.guardada)
+  if (pendientes.length === 0 && !filas.some((f) => f.guardada)) { msg = 'Añade al menos una pieza.'; render(); return }
+  if (paso === 0) { paso = 1; msg = ''; render(); return }
+  ultimaTerminada = pendientes.map(aplicar)
+  pendientes.forEach((f) => { f.guardada = hora() })
+  registro.push(`${hora()} · Asignación terminada`)
+  paso = 2
+  render()
+}
+
+function eraReutilizadaEnResumen(i) {
+  const f = filas[i]
+  if (f.guardada || paso !== 1) return
+  f.cantidad = 0
+  f.reutilizado = true
+  if (variante === 'E') f.modo = 'reu'
+  f.agotado = null
+  f.confirmando = false
+  render()
+}
+
+// ───────────── Pintar ─────────────
+
+function cabecera() {
+  if (variante === 'E') return [['Unit (+/-)', 'w70'], ['Componente', 'w100'], ['SKU', 'w240'], ['Stock', 'w70 stock'], ['Pieza', 'w140'], ['Observación', 'w280']]
+  return [['Unit (+/-)', 'w70'], ['Componente', 'w100'], ['SKU', 'w240'], ['Stock', 'w70 stock'], ['¿Reutilizado?', 'w110'], ['Observación', 'w280']]
+}
+
+function desplegable(f, i, inerte) {
+  const vacio = conColor(f) ? '— Elige color —' : '—'
+  const ops = f.opciones.map((s, j) => {
+    const sinStock = stock[s] === 0
+    return `<option value="${j}" ${f.sel === j ? 'selected' : ''}>${s}${sinStock ? '  (sin stock)' : ''}</option>`
+  }).join('')
+  return `<select class="combo" style="width:240px" ${inerte ? 'disabled' : ''} onchange="cambiarSku(${i}, Number(this.value))">${f.sel === null ? `<option selected disabled>${vacio}</option>` : ''}${ops}</select>`
+}
+
+function celdaSku(f, i, inerte) {
+  if (variante === 'E' && f.modo === null && !inerte) {
+    // Ningún SKU de la pieza tiene stock: el botón ya lo dice y abre directamente la solicitud.
+    const izquierda = algunoConStock(f)
+      ? `<button class="nueva" onclick="elegir(${i}, 'nueva')">+ Nueva</button>`
+      : `<button class="solicitar" title="Ningún SKU de esta pieza tiene stock" onclick="pedirDirecto(${i})">📨 Solicitar pieza</button>`
+    return `<div class="celda w240" style="padding:0"><div class="eleccion">
+      ${izquierda}
+      <button class="reutilizada" onclick="elegir(${i}, 'reu')">↺ Reutilizada</button>
+    </div></div>`
+  }
+  return `<div class="celda w240" style="padding:0">${desplegable(f, i, inerte)}</div>`
+}
+
+function celdaStock(f) {
+  const s = stockDe(f)
+  if (s === null) return '<span class="celda w70 stock">—</span>'
+  if (variante === 'E' && f.cantidad > 0 && !f.guardada) return `<span class="celda w70 stock baja">${s} → ${s - f.cantidad}</span>`
+  return `<span class="celda w70 stock">${s}</span>`
+}
+
+function celdaObs(f, i, inerte) {
+  if (f.obs === null) return `<div class="celda w280 obs"><button ${inerte ? 'disabled' : ''} onclick="observacion(${i})">✎ Añadir observación</button></div>`
+  return `<div class="celda w280 obs" style="display:flex;gap:6px;align-items:center"><span class="texto">${esc(f.obs)}</span>${inerte ? '' : `<button style="background:none;color:var(--azul-gris);padding:0 4px" onclick="borrarObs(${i})">🗑</button>`}</div>`
+}
+
+function derecha(f, i) {
+  if (f.guardada) return `<div class="derecha"><span class="etq-guardada">✓ Guardada ${f.guardada}</span></div>`
+  const pista = f.pista ? `<span class="pista">⚠ ${esc(f.pista)}</span>` : ''
+  if (!activa(f) || paso === 2) return `<div class="derecha">${pista}</div>`
+  const aviso = avisoB && f.confirmando && f.cantidad > 0 ? `<span class="gasta">⚠ gasta ${f.cantidad} del stock real (quedan ${stockDe(f) - f.cantidad})</span>` : ''
+  return `<div class="derecha">${pista}${aviso}<button class="btn-fila" onclick="guardarFila(${i})">${f.confirmando ? '✓ Confirmar' : '✓ Guardar fila'}</button></div>`
+}
+
+function contador(f, i, inerte) {
+  let mas, menos, texto = String(f.cantidad), con = f.cantidad > 0
+  if (variante === 'E') {
+    mas = !inerte && f.modo === 'nueva' && f.sel !== null && f.cantidad < stockDe(f)
+    menos = !inerte && f.modo === 'nueva' && f.cantidad > 0
+    if (f.modo === 'reu') { texto = '—'; con = false }
+  } else {
+    mas = !inerte && !f.reutilizado && f.sel !== null && f.cantidad < stockDe(f)
+    menos = !inerte && f.cantidad > 0
+  }
+  return `<div class="contador"><span class="num ${con ? 'con' : ''}">${texto}</span>
+    <div class="masmenos"><button ${mas ? '' : 'disabled'} onclick="sumar(${i})">+</button><button ${menos ? '' : 'disabled'} onclick="restar(${i})">-</button></div></div>`
+}
+
+function celdaPieza(f, i, inerte) {
+  if (variante !== 'E') {
+    const habil = !inerte && f.cantidad === 0 && f.sel !== null
+    return `<label class="celda w110 reu"><input type="checkbox" ${f.reutilizado ? 'checked' : ''} ${habil ? '' : 'disabled'} onchange="marcar(${i}, this.checked)"><span>Reutilizado</span></label>`
+  }
+  if (f.modo === null) return '<span class="celda w140"></span>'
+  const x = inerte ? '' : `<button title="Volver atrás: la fila queda como al principio" onclick="volver(${i})">×</button>`
+  if (f.modo === 'nueva' && f.agotado && f.cantidad === 0) return `<span class="celda w140"><span class="marca pedida">📨 Solicitada${x}</span></span>`
+  if (f.modo === 'nueva') return `<span class="celda w140"><span class="marca nueva">+ Nueva${x}</span></span>`
+  return `<span class="celda w140"><span class="marca reu">↺ Reutilizada${x}</span></span>`
+}
+
+/** Banda de agotado bajo la fila (calco de SubFilaAgotado). Hoy sale con cualquier SKU sin stock, aunque la pieza esté
+ *  marcada como reutilizada o no se haya tocado la fila; en tu idea, solo con «Nueva». */
+function subFila(f, i) {
+  if (f.guardada || paso === 2 || f.sel === null) return ''
+  if (variante === 'E' && f.modo !== 'nueva') return ''
+  const s = stockDe(f)
+  if (f.agotado) {
+    const texto = s > 0 ? `✓  ${s} uds. se descontarán al guardar — solicitud pendiente` : '✓  Solicitud de reposición pendiente'
+    const desc = f.agotado.descripcion ? ` — «${esc(f.agotado.descripcion)}»` : ''
+    return `<div class="subfila ok"><span>${texto}${desc}</span><button class="enlace" onclick="cancelarSolicitud(${i})">Cancelar solicitud</button></div>`
+  }
+  if (s === 0) return `<div class="subfila"><span>⚠  Sin stock disponible. Solicita la pieza para que el admin gestione el pedido.</span><button class="ambar" onclick="solicitar(${i})">Solicitar pieza</button></div>`
+  if (!f.reutilizado && f.cantidad >= s) return `<div class="subfila"><span>⚠  Stock agotado. Puedes descontar los componentes fallidos y solicitar reposición.</span><button class="ambar" onclick="solicitar(${i})">Solicitar y descontar stock</button></div>`
+  return ''
+}
+
+function fila(f, i) {
+  const inerte = !!f.guardada || paso === 2
+  return `<div class="fila ${f.guardada ? 'guardada' : ''}">
+    ${contador(f, i, inerte)}
+    <span class="celda w100">${f.nombre}</span>
+    ${celdaSku(f, i, inerte)}
+    ${celdaStock(f)}
+    ${celdaPieza(f, i, inerte)}
+    ${celdaObs(f, i, inerte)}
+    ${derecha(f, i)}
+  </div>${subFila(f, i)}`
+}
+
+function resumenB() {
+  if (!avisoB || paso !== 1) return ''
+  const pend = filas.filter((f) => activa(f) && !f.guardada)
+  const nuevas = pend.filter((f) => f.cantidad > 0)
+  const reus = pend.filter((f) => f.reutilizado)
+  if (nuevas.length === 0) return ''
+  const lis = nuevas.map((f) => {
+    const i = filas.indexOf(f)
+    return `<li><span class="q">${f.cantidad} ×</span><span>${f.nombre}</span><span class="s">${sku(f)}</span><span class="queda">quedarán ${stockDe(f) - f.cantidad}</span><button class="era" onclick="eraReutilizadaEnResumen(${i})">↺ Era reutilizada</button></li>`
+  }).join('')
+  const lineaReus = reus.length ? `<div class="reus">↺ Reutilizadas, no gastan stock: ${reus.map((f) => `${f.nombre} (${sku(f)})`).join(' · ')}</div>` : ''
+  return `<div class="resumen"><div class="tit">⚠ Vas a gastar del stock real:</div><ul>${lis}</ul>
+    <div class="nota">Si alguna de estas piezas es reutilizada, pásala ahora: si no, el stock queda descuadrado.</div>${lineaReus}</div>`
+}
+
+function render() {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('activa', t.dataset.v === variante))
+  $('avisoB').checked = avisoB
+  const g = GUIAS[variante]
+  $('guia-etq').textContent = g.etq + (avisoB ? ' · con el aviso al terminar' : '')
+  $('guia-tit').textContent = g.tit
+  $('guia-txt').textContent = g.txt
+  $('cabecera').innerHTML = cabecera().map(([t, c]) => `<span class="${c}">${t}</span>`).join('')
+  $('filas').innerHTML = filas.map((f, i) => fila(f, i)).join('')
+  $('resumen').innerHTML = resumenB()
+  $('terminar').textContent = paso === 1 ? '✓  Confirmar terminar' : 'Terminar asignación'
+  $('zona-msg').textContent = msg
+  $('terminada').innerHTML = paso === 2
+    ? `<div class="terminada"><div class="caja"><h3>✓ Asignación terminada</h3><ul>${ultimaTerminada.map((l) => `<li>${esc(l)}</li>`).join('') || '<li>Solo había filas ya guardadas.</li>'}</ul><button class="primario" onclick="reiniciar()">Otra reparación</button></div></div>`
+    : ''
+  $('registro').innerHTML = registro.length ? `<ul>${registro.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : '<span class="vacio">Todavía nada. Lo que se guarde aparece aquí, con el stock de antes y el de después.</span>'
+  $('stockmini').innerHTML = 'Stock ahora: ' + Object.entries(stock).map(([s, n]) => `<span><b>${s}</b> ${n}</span>`).join('')
+  const e = $('elegir')
+  const clave = variante + (avisoB ? '+aviso' : '')
+  e.textContent = elegida === clave ? '✓ Elegida' : 'Me quedo con esta'
+  e.classList.toggle('hecho', elegida === clave)
+}
+
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => { variante = t.dataset.v; reiniciar() }))
+$('avisoB').addEventListener('change', (ev) => { avisoB = ev.target.checked; if (paso === 1) paso = 0; render() })
+$('reiniciar').addEventListener('click', reiniciar)
+$('terminar').addEventListener('click', terminar)
+$('elegir').addEventListener('click', () => {
+  elegida = variante + (avisoB ? '+aviso' : '')
+  if (window.brainstorm) window.brainstorm.choice('opcion-' + elegida, { text: GUIAS[variante].tit + (avisoB ? ' + aviso al terminar' : '') })
+  render()
+})
+reiniciar()
+</script>
+</body>
+</html>
