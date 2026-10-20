@@ -21,6 +21,11 @@ caja también desde el `DE`, `READ COMMITTED`). **Los SQL de la Task 4 de abajo 
 `sql/` del servidor y la spec §3.** Suite: 1129 tests. Se descartó una 0.9.18.2 de solo web de otra sesión (`8b3138c`),
 por decisión del usuario.
 
+**Tasks 5 y 6 hechas el 21/10:** preprod de 00:22 a 01:05 y producción de 01:03 a 01:12, de noche y solo el backend. En
+las dos se borraron 38.600 eventos falsos, se quitaron 2.601 «Desde» falsos y se arreglaron 38.459 filas, con
+`falsos_dudosos` 0. Tag `v0.9.18.2` = `f27b170`; merge a `main` del servidor `4c4cfe5`. Registros en
+`Apuntes/despliegue_preprod.md` y `Apuntes/despliegue_vdc_produccion.md`.
+
 ## Global Constraints
 
 - **Solo servidor + datos:** sin cambios de esquema ni de web. La API no cambia de forma (mismos campos), así que
