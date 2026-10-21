@@ -1,11 +1,12 @@
-# 0.9.19 — SKU del taller (pieza 1: la base)
+# 0.9.21 — SKU del taller (pieza 1: la base)
 
 Fecha: 2026-10-21. Estado: diseño aprobado en el brainstorming, pendiente del plan.
-Va en la **0.9.19** (decisión del usuario del 2026-10-20: la subida junta «Completar pulidos», el formulario «Nueva o
-Reutilizada», el panel de carga y el SKU del taller). **Servidor + base + web.** El SKU del taller se parte en dos piezas
-(decisión del 2026-10-21): esta es la **base**; la **pieza 2** (lo automático desde las reparaciones: chasis de otro color →
-color, chasis nuevo → A, batería nueva → «100») va en su propia spec y se apoya en esta.
-Prototipo aprobado: `assets/2026-10-21-v0919-prototipo-sku-del-taller-base.html` (variantes elegidas: lista «A · se vacía sola»
+Va en la **0.9.21**. Al principio iba en una subida conjunta de la 0.9.19, pero la 0.9.19 (completar pulidos y formulario
+«Nueva o Reutilizada») y la 0.9.20 (panel de carga) salieron a producción el 2026-10-21 sin esperar a esto; así que sale
+sola. **Servidor + base + web**, desde los `main` de ese momento (web `55db8e9`, 0.9.20; servidor 0.9.18.2). El SKU del
+taller se parte en dos piezas (decisión del 2026-10-21): esta es la **base**; la **pieza 2** (lo automático desde las
+reparaciones: chasis de otro color → color, chasis nuevo → A, batería nueva → «100») va en su propia spec y se apoya en esta.
+Prototipo aprobado: `assets/2026-10-21-v0921-prototipo-sku-del-taller-base.html` (variantes elegidas: lista «A · se vacía sola»
 y «NSYS: Azul» debajo).
 Decisiones de producto previas: `Apuntes/plan-futuro.md` §5 («SKU del taller»).
 
@@ -140,10 +141,10 @@ Las dos cosas quedan en el rastro. Un móvil que ya no está en el espejo deja s
   a lo de NSYS → sale de la lista.
 
 ## 6. Entrega
-- Ramas `dev_v0919_sku_taller` en servidor y web, en worktrees.
+- Ramas `dev_v0921_sku_taller` en servidor y web, en worktrees.
 - Migración aditiva (solo `CREATE TABLE`): compatible con la web anterior; despliegue según
-  `feedback_despliegue_en_horario` junto con el resto de la 0.9.19.
-- Paridad (nueva sección en `docs/paridad/imeis.md` y en la del stock), CHANGELOG de servidor y web, novedades de la 0.9.19.
+  `feedback_despliegue_en_horario` (sale sola: servidor, web y migración).
+- Paridad (nueva sección en `docs/paridad/imeis.md` y en la del stock), CHANGELOG de servidor y web, novedades de la 0.9.21 (`docs/novedades/NOVEDADES-v0.9.21.md`).
 - Merge `--no-ff`, push y tags solo con el OK del usuario.
 
 ## 7. Fuera de esta pieza
