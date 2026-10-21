@@ -4635,8 +4635,9 @@ git commit -m "test: e2e del SKU del taller con un movil sintetico de preprod (0
 
 Si `package.json` ya está en `0.9.21` (la «Corrección en NSYS» entró antes con la versión subida), este paso no hace nada.
 Si no:
-Run (en `/c/Users/dev/Documents/wt/web-0921-sku`): `npm version 0.9.21 --no-git-tag-version`
-Expected: `v0.9.21`; `package.json` y las dos entradas de la raíz de `package-lock.json` en `0.9.21`.
+Run (en `/c/Users/dev/Documents/wt/web-0921-sku`): `npm pkg set version=0.9.21` (convención del proyecto; nada de
+`npm version`) y, a mano, las dos entradas de la raíz de `package-lock.json` (`"version"` y `packages[""].version`) a `0.9.21`.
+Expected: `package.json` y las dos entradas de la raíz de `package-lock.json` en `0.9.21`.
 
 - [ ] **Step 2: CHANGELOG de la web**
 
