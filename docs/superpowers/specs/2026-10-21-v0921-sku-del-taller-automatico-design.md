@@ -1,6 +1,7 @@
 # 0.9.21 — SKU del taller (pieza 2: lo automático desde las reparaciones)
 
-Fecha: 2026-10-21. Estado: diseño aprobado en el brainstorming, pendiente del plan.
+Fecha: 2026-10-21. Estado: diseño aprobado; plan escrito (`plans/2026-10-21-v0921-sku-del-taller-automatico.md`). Los ajustes
+que fijó el plan están en el §8 y mandan sobre lo de arriba si chocan.
 Va en la **0.9.21**, después de la pieza 1 (`2026-10-21-v0921-sku-del-taller-base-design.md`), en la que se apoya: la tabla
 `Taller_cambio`, «lo que vale», el SKU del maestro, el cierre automático, el rastro y la lista «Por pasar a NSYS».
 **Servidor + web** (sin migración propia: la columna `ID_CAMBIO_ANTERIOR` va ya en la de la pieza 1).
@@ -130,3 +131,40 @@ grado y la batería nueva del móvil según las piezas usadas, avisa antes en el
 ## 7. Fuera de esta pieza
 - Otras piezas que puedan cambiar el grado (pantalla, glass, pulido): no cambian nada; si hace falta, se corrige a mano.
 - Escribir en NSYS desde el ERP.
+
+## 8. Ajustes del plan (2026-10-21)
+
+Fijados al escribir el plan; mandan sobre lo de arriba si chocan. Las tres preguntas del plan se resolvieron con lo
+recomendado (avisos en `Taller_aviso`; «<técnico>» = quien guarda; los avisos, solo en el rastro), a falta de que el usuario lo
+revise.
+
+1. **Los avisos van en una tabla nueva, `Taller_aviso`**, dentro de la misma migración de la pieza 1 (sin migración propia):
+   el rastro tiene que apuntar «no se puede deducir», «no se puede calcular», «Se deshace…» y «corrígelo a mano», y no son
+   cambios de `Taller_cambio`.
+2. **Deshacer pasa el cambio a `SUSTITUIDO`, no a `QUITADO`:** en la pieza 1 `QUITADO` es «vuelve a lo de NSYS» (nace cerrado)
+   y el rastro lo contaría así; el «Se deshace…» lo cuenta el aviso. Un `SUSTITUIDO` al que no apunta ningún
+   `ID_CAMBIO_ANTERIOR` es uno ya deshecho (una edición anterior) y no vuelve a avisar.
+3. **Al deshacer, se salta el anterior que venga de una reparación ya borrada** (vuelve el de antes de ese, o NSYS): si no,
+   volvería el color de una reparación que ya no existe.
+4. **Nombre en inglés de cada color:** el del Goods más usado de ese color (`NsysDAO.goodsMasUsados` de la pieza 1), detrás de
+   la capacidad y sin «eSIM» final; un color del maestro sin ningún móvil en NSYS no tiene nombre y no encaja (aviso).
+5. **Encaje del color:** primero el nombre exacto (con los alias de `Color_equivalencia` en los dos lados); solo si ninguno,
+   el color base. Tabla oficial → base fija de 14 entradas (las de §2.2 más los titanio, mist/sky/deep blue, cloud white y
+   light gold de `colores.ts`).
+6. **Previsualización:** cada fila lleva `idRep` (null en las nuevas; el de la R… que se edita), para deshacer y volver a
+   aplicar como «Guardar cambios»; la respuesta siempre trae `enNsys`, `antes` y `despues` (iguales si no cambia nada) en vez
+   de «vacío» (un objeto nullable junto a un `$ref` da problemas en el contrato).
+7. **La ruta va en un controlador propio**, `SkuTallerController` (`/api/reparaciones/sku-taller`), para no tocar las guardas
+   del de reparaciones.
+8. **«<técnico>» en el rastro y en «Por qué» es quien guarda** (su usuario, como el «quién» de la pieza 1): el técnico en su
+   formulario; el supertécnico al editar o borrar.
+9. **El aviso «el grado (…) no se puede calcular» también va al rastro** (la spec solo lo pedía en la banda): es donde el
+   supertécnico lo ve.
+10. **Editar solo la observación o la cantidad no toca el taller** (spec: «otro SKU, o nueva ↔ reutilizada»).
+11. **La tapa no toca el color si en el mismo guardado hay un chasis cuyo color se deduce**, sea cual sea el orden, y entonces
+    tampoco avisa de su color.
+12. **Retraso de la banda: 500 ms**, con el mismo patrón de temporizador que el autoguardado (sus 2 s llegarían tarde al
+    segundo clic de «Terminar»).
+13. **«No la pide en un IMEI que no está en NSYS»:** la web no lo sabe de antemano (el técnico no ve NSYS); la primera
+    respuesta lo dice (`enNsys: false`) y ese formulario deja de pedir.
+14. **La batería reutilizada sobre un grado sin forma también avisa** («con ninguna pieza», spec §2.1).
