@@ -105,7 +105,9 @@ Las dos cosas quedan en el rastro. Un móvil que ya no está en el espejo deja s
 **Base de datos** (migración aditiva, `sql/migracion-sku-taller.sql`, y `crear_bd.sql`):
 - Tabla **`Taller_cambio`**: `ID_CAMBIO` (PK), `IMEI_SN`, `DATO` enum(`COLOR`, `GRADO`), `VALOR` (lo del taller),
   `VALOR_NSYS` (lo que NSYS tenía al hacerlo), `ORIGEN` enum(`MANO`, `REPARACION`), `ID_REP` (null; pieza 2), `ID_USU`,
-  `MOTIVO`, `FECHA`, `ESTADO` enum(`VIGENTE`, `PASADO`, `MANDA_NSYS`, `QUITADO`, `SUSTITUIDO`), `CERRADO_EN`. Índices por
+  `MOTIVO`, `FECHA`, `ESTADO` enum(`VIGENTE`, `PASADO`, `MANDA_NSYS`, `QUITADO`, `SUSTITUIDO`), `CERRADO_EN`,
+  `ID_CAMBIO_ANTERIOR` (null; el cambio vigente del mismo IMEI y dato al que sustituye: lo usa la pieza 2 para «al deshacer,
+  vuelve el anterior»; añadido el 21/10 para no hacer otra migración). Índices por
   (`IMEI_SN`, `DATO`, `ESTADO`) y por `ESTADO`. Como mucho un `VIGENTE` por IMEI y dato (lo garantiza el servidor).
 - Sin cambios en las tablas `Nsys_*`.
 
