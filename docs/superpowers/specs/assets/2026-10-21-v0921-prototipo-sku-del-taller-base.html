@@ -152,7 +152,7 @@
   </div>
 </div>
 
-<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de reparaciones</span></span><span class="usu">Imad · Supertécnico</span></header>
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de reparaciones</span></span><span class="usu">Supertécnico 1 · Supertécnico</span></header>
 <div class="cuerpo">
   <nav>
     <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
@@ -351,7 +351,7 @@ function pintarDialogo() {
   if ($('dVolver')) $('dVolver').onclick = () => {
     const motivo = borr.motivo.trim() || 'sin motivo'
     delete taller[abierto]; pasados.delete(abierto)
-    rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: vuelve a lo de NSYS (Imad · «${motivo}»)` })
+    rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: vuelve a lo de NSYS (Supertécnico 1 · «${motivo}»)` })
     borr = null; pintarDialogo(); aviso('Lo del taller quitado: vale lo de NSYS'); pintar()
   }
 }
@@ -359,7 +359,7 @@ const ahora = () => new Date().toTimeString().slice(0, 5).replace(/^/, '20/10 ')
 function guardarCorreccion() {
   const n = nsys[abierto], e = efectivo(abierto), g = { letra: borr.letra, ms: borr.ms, bat: borr.bat }
   const t = taller[abierto] || {}
-  const por = `A mano · Imad · «${borr.motivo.trim()}»`
+  const por = `A mano · Supertécnico 1 · «${borr.motivo.trim()}»`
   if (borr.color !== e.color) {
     rastro[abierto].push({ f: ahora(), o: 'taller', t: `Taller: color ${e.color} → ${borr.color} (${por})` })
     if (borr.color === n.color) delete t.color; else t.color = { a: borr.color, de: n.color, por, f: ahora() }

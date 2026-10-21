@@ -118,9 +118,9 @@ maestro, deje corregirlo a mano y lleve una lista «Por pasar a NSYS» que se va
   «IMEI · Modelo · En NSYS hoy · Poner en NSYS · SKU nuevo · Por qué · Desde»; ayuda «Lo que hay que cambiar a mano en NSYS
   (producto y grado de cada móvil). Cada fila desaparece sola cuando la importación (cada 30 min) ve NSYS igual.»; vacía,
   «Nada por pasar: NSYS está al día con el taller.»; botón «Exportar a Excel» y aviso «Copiado: pégalo en Excel»; «Por qué»:
-  «Color: a mano · Imad · «motivo»» (sin motivo, sin la última parte).
-- **Rastro** (fuente «TALLER», leyenda «Lo del taller»): «Taller: color Azul → Rojo (a mano · Imad · «motivo»)»,
-  «Vuelve a lo de NSYS: grado A100 → B (a mano · Imad · «motivo»)», «Pasado a NSYS: grado A100» y
+  «Color: a mano · Supertécnico 1 · «motivo»» (sin motivo, sin la última parte).
+- **Rastro** (fuente «TALLER», leyenda «Lo del taller»): «Taller: color Azul → Rojo (a mano · Supertécnico 1 · «motivo»)»,
+  «Vuelve a lo de NSYS: grado A100 → B (a mano · Supertécnico 1 · «motivo»)», «Pasado a NSYS: grado A100» y
   «Manda NSYS: color Verde (el del taller, Rojo, deja de valer)». Sin motivo, el paréntesis acaba en el nombre.
 
 **Colores (tokens nuevos del tema, los del prototipo)**
@@ -3557,11 +3557,11 @@ En `src/modules/taller/imeis/rastro.test.ts`, añade al final del `describe`:
 ```ts
   it('lo del taller (spec 0.9.21 §2.4)', () => {
     const taller = (p: Parameters<typeof eventoRastro>[0]) =>
-      eventoRastro({ fuente: 'TALLER', lote: null, aNsys: null, tecnico: 'Imad', origen: 'MANO', ...p })
+      eventoRastro({ fuente: 'TALLER', lote: null, aNsys: null, tecnico: 'Supertécnico 1', origen: 'MANO', ...p })
     expect(verEvento(taller({ tipo: 'TALLER_CAMBIO', dato: 'COLOR', de: 'Azul', a: 'Rojo', motivo: 'chasis rojo' })))
-      .toMatchObject({ titulo: 'Taller: color Azul → Rojo (a mano · Imad · «chasis rojo»)', detalle: null, color: 'bg-taller' })
+      .toMatchObject({ titulo: 'Taller: color Azul → Rojo (a mano · Supertécnico 1 · «chasis rojo»)', detalle: null, color: 'bg-taller' })
     expect(verEvento(taller({ tipo: 'TALLER_VUELTA', dato: 'GRADO', de: 'A100', a: 'B', motivo: null })).titulo)
-      .toBe('Vuelve a lo de NSYS: grado A100 → B (a mano · Imad)')
+      .toBe('Vuelve a lo de NSYS: grado A100 → B (a mano · Supertécnico 1)')
     expect(verEvento(taller({ tipo: 'TALLER_PASADO', dato: 'GRADO', de: 'A100', a: 'A100' })).titulo).toBe('Pasado a NSYS: grado A100')
     expect(verEvento(taller({ tipo: 'TALLER_MANDA_NSYS', dato: 'COLOR', de: 'Rojo', a: 'Verde' })).titulo)
       .toBe('Manda NSYS: color Verde (el del taller, Rojo, deja de valer)')
@@ -3574,8 +3574,8 @@ En `src/modules/taller/imeis/PanelRastro.test.tsx`, añade al final del fichero:
 describe('PanelRastro: lo del taller (spec 0.9.21 §2.4)', () => {
   it('el cambio del taller sale con su fuente y la leyenda lo explica', () => {
     render(<PanelRastro imei="351900000000041" eventos={[eventoRastro({ fuente: 'TALLER', tipo: 'TALLER_CAMBIO', lote: null, aNsys: null,
-      dato: 'GRADO', de: 'B', a: 'A100', tecnico: 'Imad', origen: 'MANO', motivo: 'batería' })]} onCerrar={() => {}} onIrATrabajo={() => {}} />)
-    expect(screen.getByText('Taller: grado B → A100 (a mano · Imad · «batería»)')).toBeInTheDocument()
+      dato: 'GRADO', de: 'B', a: 'A100', tecnico: 'Supertécnico 1', origen: 'MANO', motivo: 'batería' })]} onCerrar={() => {}} onIrATrabajo={() => {}} />)
+    expect(screen.getByText('Taller: grado B → A100 (a mano · Supertécnico 1 · «batería»)')).toBeInTheDocument()
     expect(screen.getByText('TALLER')).toHaveClass('bg-taller-bg')
     expect(screen.getByText('Lo del taller')).toBeInTheDocument()
   })
@@ -3655,7 +3655,7 @@ const DATO: Record<string, string> = { COLOR: 'color', GRADO: 'grado' }
 const ORIGEN: Record<string, string> = { MANO: 'a mano', REPARACION: 'por una reparación' }
 const dato = (e: EventoRastro) => DATO[e.dato ?? ''] ?? 'dato'
 
-/** «(a mano · Imad · «motivo»)»: cómo, quién y por qué; sin motivo, el paréntesis acaba en el nombre. */
+/** «(a mano · Supertécnico 1 · «motivo»)»: cómo, quién y por qué; sin motivo, el paréntesis acaba en el nombre. */
 function comoTaller(e: EventoRastro): string {
   return `(${[ORIGEN[e.origen ?? ''] ?? 'a mano', e.tecnico ?? '—', e.motivo ? `«${e.motivo}»` : null].filter(Boolean).join(' · ')})`
 }
@@ -4185,7 +4185,7 @@ import { modeloDeFila, paraExcel, textoDesde, textoEnNsys, textoPorQue } from '.
 
 describe('lista «Por pasar a NSYS» (spec 0.9.21 §2.4)', () => {
   it('por qué: a mano con quién y motivo; sin motivo, sin la última parte; la reparación de la pieza 2', () => {
-    expect(textoPorQue(porQue({ dato: 'COLOR', usuario: 'Imad', motivo: 'chasis rojo' }))).toBe('Color: a mano · Imad · «chasis rojo»')
+    expect(textoPorQue(porQue({ dato: 'COLOR', usuario: 'Supertécnico 1', motivo: 'chasis rojo' }))).toBe('Color: a mano · Supertécnico 1 · «chasis rojo»')
     expect(textoPorQue(porQue({ motivo: null }))).toBe('Grado: a mano · Técnico 1')
     expect(textoPorQue(porQue({ origen: 'REPARACION', idRep: 'R20261020_4', usuario: 'Técnico 2', motivo: null })))
       .toBe('Grado: reparación R20261020_4 · Técnico 2')
@@ -4288,7 +4288,7 @@ import { diaNsys, nombreModeloNsys, SIN_SKU_MAESTRO, textoPoner } from '@/shared
 
 const DATO: Record<string, string> = { COLOR: 'Color', GRADO: 'Grado' }
 
-/** «Color: a mano · Imad · «motivo»»; el de una reparación (pieza 2), «Grado: reparación R… · Técnico 2». */
+/** «Color: a mano · Supertécnico 1 · «motivo»»; el de una reparación (pieza 2), «Grado: reparación R… · Técnico 2». */
 export function textoPorQue(p: PorQueTaller): string {
   const como = p.origen === 'REPARACION' ? `reparación ${p.idRep ?? '—'}` : 'a mano'
   return `${DATO[p.dato] ?? p.dato}: ${[como, p.usuario ?? '—', p.motivo ? `«${p.motivo}»` : null].filter(Boolean).join(' · ')}`

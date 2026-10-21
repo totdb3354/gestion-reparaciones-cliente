@@ -78,7 +78,7 @@ Las dos cosas quedan en el rastro. Un móvil que ya no está en el espejo deja s
 - **Ficha del IMEI:** lo mismo en Color, Grado y SKU; si hay algo por pasar, una línea «Por pasar a NSYS: <producto> · grado
   <grado>».
 - **«Pegar varios IMEIs»** y el buscador de IMEI: color y grado que valen, con la marca.
-- **Rastro:** cada cambio del taller («Taller: color Azul → Rojo (a mano · Imad · «motivo»)») y cada cierre («Pasado a NSYS»,
+- **Rastro:** cada cambio del taller («Taller: color Azul → Rojo (a mano · Supertécnico 1 · «motivo»)») y cada cierre («Pasado a NSYS»,
   «Manda NSYS: …», «Vuelve a lo de NSYS»), mezclados por fecha con lo de NSYS y los trabajos, como hoy.
 - **Pestaña «Por pasar a NSYS (N)»** en el stock de teléfonos, junto a la vista de móviles:
   - columnas: IMEI · Modelo · En NSYS hoy (producto · grado) · Poner en NSYS (producto · grado) · SKU nuevo · Por qué (a mano:

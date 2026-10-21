@@ -3540,7 +3540,7 @@ const DATO: Record<string, string> = { COLOR: 'color', GRADO: 'grado' }
 const ORIGEN: Record<string, string> = { MANO: 'a mano', REPARACION: 'por una reparación' }
 const dato = (e: EventoRastro) => DATO[e.dato ?? ''] ?? 'dato'
 
-/** «(a mano · Imad · «motivo»)»: cómo, quién y por qué; sin motivo, el paréntesis acaba en el nombre. */
+/** «(a mano · Supertécnico 1 · «motivo»)»: cómo, quién y por qué; sin motivo, el paréntesis acaba en el nombre. */
 function comoTaller(e: EventoRastro): string {
   return `(${[ORIGEN[e.origen ?? ''] ?? 'a mano', e.tecnico ?? '—', e.motivo ? `«${e.motivo}»` : null].filter(Boolean).join(' · ')})`
 }
