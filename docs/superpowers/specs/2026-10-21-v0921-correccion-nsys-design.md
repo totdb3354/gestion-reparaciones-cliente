@@ -1,6 +1,6 @@
 # 0.9.21 (pieza «corrección en NSYS») — Una baja y alta en otro lote es el mismo móvil
 
-Fecha: 2026-10-21. Estado: borrador, pendiente de que lo revise el usuario.
+Fecha: 2026-10-21. Estado: aprobada por el usuario (21/10), pendiente del plan.
 **Pieza de la 0.9.21**, la misma versión que el «SKU del taller» (decisión del usuario el 21/10: sin cuatro números).
 Se programa primero y **entra la primera en `main`** del servidor y de la web; las ramas del SKU del taller salen de ahí.
 Sube a producción con el resto de la 0.9.21. **Servidor + web, sin base de datos**: no cambia el esquema ni lo guardado.
@@ -98,8 +98,10 @@ La cadena del lote que enseña la ficha (el más reciente) cuenta como un solo m
 ## 7. Entrega
 
 - Ramas `dev_v0921_correccion_nsys` en el servidor (desde `main` `4c4cfe5`) y en la web (desde `main`).
-- **CHANGELOG de la web:** una línea en la entrada `[0.9.21]`, sin fecha ni cambio de la versión del `package.json` (los
-  pone quien cierre la 0.9.21). **Novedades:** `docs/novedades/NOVEDADES-v0.9.21.md` de la raíz, con su apartado.
+- **Versión y documentos compartidos** (acordado con la sesión del SKU del taller, que entra después y añade lo suyo sin
+  volver a subir la versión): esta pieza sube la web a **0.9.21** (`npm pkg set version=0.9.21` y las dos entradas raíz
+  de `package-lock.json` a mano; nunca `npm version`), abre `## [0.9.21] - 2026-10-XX` en el CHANGELOG de la web y crea
+  `docs/novedades/NOVEDADES-v0.9.21.md` en la raíz. La fecha y el tag `v0.9.21`, tras producción y con el OK del usuario.
 - Merge `--no-ff` a `main` de los dos repos y push, con el OK del usuario; aviso a la sesión del SKU del taller con los
   commits.
 - Preprod con `main` (sin datos que limpiar); producción con el resto de la 0.9.21.
