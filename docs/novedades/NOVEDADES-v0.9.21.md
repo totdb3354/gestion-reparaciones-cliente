@@ -24,6 +24,11 @@ lista de lo que hay que cambiar en NSYS.
   - **«Exportar a Excel»** copia la lista para pegarla en una hoja.
 - «Pegar varios IMEIs» y el buscador de IMEI también enseñan lo que vale, con la marca.
 
+### 📊 Carga de técnicos
+
+- El panel flotante es **un poco más grande**: más ancho, con más sitio para el nombre del técnico, la letra algo mayor y
+  la lista más alta. Si tapa algo, se minimiza como antes.
+
 ### 🔎 IMEIs
 
 - **Correcciones de NSYS:** cuando en NSYS se corrige un móvil dándolo de baja y de alta en otro lote (por ejemplo, tras
