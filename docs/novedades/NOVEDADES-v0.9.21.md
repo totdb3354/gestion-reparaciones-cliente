@@ -1,13 +1,19 @@
 # 🎉 Novedades — Versión 0.9.21
 
-El ERP ya sabe lo que el taller cambia en un móvil (color, grado y batería nueva) aunque NSYS todavía no lo diga, y lleva la
+El ERP ya sabe lo que el taller cambia en un móvil (color, grado y batería nueva) —también solo, al guardar una reparación— aunque NSYS todavía no lo diga, y lleva la
 lista de lo que hay que cambiar en NSYS.
 
 ---
 
-## 🧰 Para todos
+## 🔧 Formulario de reparación
 
-- El técnico ve el programa como hasta ahora.
+- Al guardar una reparación con **chasis**, **tapa trasera** o **batería** de un móvil de NSYS, el programa **cambia solo el
+  color y el grado** del móvil:
+  - chasis o tapa (nuevos o reutilizados) → el color de la pieza y grado **A** (se conservan «Ms» y «100»);
+  - batería nueva → el grado lleva «100»; batería reutilizada → se le quita.
+- Encima de «Terminar asignación» sale una banda con cómo quedará: «Al guardar, este móvil pasará a: Rojo · A100 (ahora: Azul ·
+  B)». Si el color o el grado no se pueden calcular, la banda lo dice y lo corregirá un supertécnico.
+- Editar o borrar una reparación deshace lo que había cambiado (si nadie lo ha tocado después).
 
 ---
 
@@ -23,6 +29,7 @@ lista de lo que hay que cambiar en NSYS.
   - Si después alguien pone en NSYS **otra cosa**, manda NSYS.
   - **«Exportar a Excel»** copia la lista para pegarla en una hoja.
 - «Pegar varios IMEIs» y el buscador de IMEI también enseñan lo que vale, con la marca.
+- En «Por pasar a NSYS» también salen los cambios de las reparaciones («Color: reparación R… · quién · pieza»).
 
 ### 📊 Carga de técnicos
 
@@ -43,6 +50,6 @@ lista de lo que hay que cambiar en NSYS.
   - **«Volver a lo de NSYS»** quita lo del taller.
 - La ficha dice **«Por pasar a NSYS: …»** mientras NSYS no lo tenga.
 - El **rastro** cuenta cada cambio del taller, cuándo pasó a NSYS y cuándo mandó NSYS.
+- El rastro dice qué reparación cambió el color o el grado, cuándo se deshizo y lo que hay que corregir a mano.
 
-> ⚠️ El ERP no cambia nada en NSYS: la lista es lo que hay que pasar a mano. Lo automático desde las reparaciones (chasis de
-> otro color, batería nueva…) llega en la siguiente pieza.
+> ⚠️ El ERP no cambia nada en NSYS: la lista es lo que hay que pasar a mano.
