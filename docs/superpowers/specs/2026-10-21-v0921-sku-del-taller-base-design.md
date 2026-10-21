@@ -1,6 +1,7 @@
 # 0.9.21 — SKU del taller (pieza 1: la base)
 
-Fecha: 2026-10-21. Estado: diseño aprobado en el brainstorming, pendiente del plan.
+Fecha: 2026-10-21. Estado: diseño aprobado; plan escrito (`plans/2026-10-21-v0921-sku-del-taller-base.md`). Los ajustes que fijó
+el plan están en el §8 y mandan sobre lo de arriba si chocan.
 Va en la **0.9.21**. Al principio iba en una subida conjunta de la 0.9.19, pero la 0.9.19 (completar pulidos y formulario
 «Nueva o Reutilizada») y la 0.9.20 (panel de carga) salieron a producción el 2026-10-21 sin esperar a esto; así que sale
 sola. **Servidor + base + web**, desde los `main` de ese momento (web `55db8e9`, 0.9.20; servidor 0.9.18.2). El SKU del
@@ -154,3 +155,37 @@ Las dos cosas quedan en el rastro. Un móvil que ya no está en el espejo deja s
   con `ORIGEN = REPARACION` y `ID_REP`.
 - Escribir en NSYS desde el ERP (no hay API de escritura).
 - La descripción completa del móvil en las tablas del taller (idea aparte del plan).
+
+## 8. Ajustes del plan (2026-10-21)
+
+Fijados al escribir el plan; mandan sobre lo de arriba si chocan.
+
+1. **Columnas de más en `Taller_cambio`:**
+   - `ID_CAMBIO_ANTERIOR` (null, clave ajena a `Taller_cambio.ID_CAMBIO`): el VIGENTE del mismo IMEI y dato al que sustituye
+     (el que pasa a SUSTITUIDO). **Añadido por la pieza 2, aprobado el 21/10.** En esta pieza solo se rellena al sustituir.
+   - `VALOR_CIERRE` (null): lo que NSYS tenía al cerrarse solo (PASADO y MANDA_NSYS), para que el rastro diga «Manda NSYS:
+     color Verde…».
+   - «Lo que valía antes» no se guarda: se deduce al leer (el VALOR del anterior o, si no hay, VALOR_NSYS).
+   - `VALOR` admite null (solo al volver a un NSYS que no tiene ese dato); `MOTIVO` es `VARCHAR(500)`; `ID_USU` lleva clave
+     ajena a `Usuario` con `ON DELETE SET NULL`, como `Log_Actividad`.
+2. **Quién y por qué vuelve a NSYS:** «Volver a lo de NSYS», y una corrección al valor de NSYS, se guardan como **un cambio
+   propio en estado QUITADO** (nace cerrado, con su usuario y su motivo) y dejan el VIGENTE anterior en SUSTITUIDO. Así el
+   rastro y el registro saben quién volvió y por qué sin columnas de cierre.
+3. **Cierre con NSYS sin el dato:** si NSYS ahora no tiene el dato (un producto que el maestro no traduce deja el color
+   vacío), el cambio sigue vigente: no se sabe si coincide.
+4. **SKU también por `MODELO`:** el SKU y los colores se buscan con `MODELO` (código del ERP, null fuera del catálogo)
+   además de `MODELO_MAESTRO`, `CAPACIDAD` y `ES_ESIM`: un iPad 11 nunca pasa por un iPhone 11 (como `LectorMaestro`).
+5. **`GET /{imeiSn}/colores`** devuelve, además de los colores, el producto que habría que poner en NSYS con cada uno, el
+   producto actual y los SKU del modelo por color y grado: la vista previa del diálogo sale sin otra llamada.
+6. **«NSYS: —»** cuando el taller cambia un dato que NSYS no sabe (p. ej. un SKU que NSYS no tenía).
+7. **Buscador de IMEI:** no enseña el grado (tampoco hoy); lleva el color que vale con la marca.
+8. **«Exportar a Excel»** copia la tabla para pegarla en Excel (tabuladores), como «Copiar el resultado (para Excel)» de
+   «Pegar varios IMEIs» (la spec lo pide «como la exportación de Pegar varios IMEIs»); el aviso es «Copiado: pégalo en
+   Excel». El prototipo simulaba una descarga `.xlsx`: la web no tiene escritor de xlsx.
+9. **«Desde»** de la lista es la fecha del cambio vigente **más antiguo** del móvil, y la lista va de más antiguo a más
+   reciente por esa fecha (el prototipo tomaba el más reciente).
+10. **«Volver a lo de NSYS»** usa la misma acción del registro, `CORREGIR_MOVIL_TALLER`, con « (vuelve a lo de NSYS)» en el
+    detalle. `PUT` y `DELETE /{imeiSn}/taller` responden **204**; la web recarga la ficha, el rastro, el stock y la lista.
+11. **Ficha:** con el grado cambiado por el taller no se dice «(antes X)» (ese grado anterior es el de NSYS).
+12. **Documentación:** el servidor no tiene CHANGELOG; su parte va en `docs/schema.md`. No hay ficha de paridad del stock de
+    teléfonos (no existe en el JavaFX): la sección nueva va en `docs/paridad/imeis.md` y el resto en el CHANGELOG de la web.
