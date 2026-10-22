@@ -1,6 +1,7 @@
 # 0.9.21 — Descripción completa donde pone «Modelo»
 
-Fecha: 2026-10-22. Estado: diseño aprobado por el usuario, pendiente del plan.
+Fecha: 2026-10-22. Estado: diseño aprobado; plan escrito (`plans/2026-10-22-v0921-descripcion-completa.md`). Los ajustes del
+plan están en el §7 y mandan sobre lo de arriba si chocan.
 Va en la **0.9.21**, antes de producción, junto con la «Corrección en NSYS», el panel de carga más grande y el SKU del taller
 (piezas 1 y 2; specs `2026-10-21-v0921-*`), en los que se apoya. **Servidor + web, sin base de datos.**
 Idea del 2026-10-20 apuntada en `Apuntes/plan-futuro.md` §5 («Descripción completa donde pone «Modelo»»).
@@ -83,3 +84,25 @@ color del espejo de NSYS, con lo del taller por encima (el color que vale de la 
 - El color de cuando se hizo el trabajo en el historial.
 - El grado en las listas.
 - Una búsqueda o un filtro por capacidad o color en estas pantallas.
+
+## 7. Ajustes del plan (2026-10-22)
+
+Fijados al escribir el plan; mandan sobre lo de arriba si chocan. Ancho de las columnas «Modelo»: el de hoy (se corta con
+«…» y «Copiar celda» copia el texto entero); se mira en preprod y se ensancha si molesta (decisión del controlador con lo
+recomendado).
+
+1. **`ReparacionResumen` es una clase con setters, no un record:** `capacidad` y `color` van al final con su getter y su setter
+   y nacen a `null`. El constructor no cambia, así que los demás `new ReparacionResumen(…)` del repo (`RESUMEN_MAPPER`,
+   `CargaTecnicos`, `PrediccionGlass` y sus tests) no se tocan y salen con `null` sin escribirlo.
+2. **El color sale de un método nuevo, `TallerNsys.colorDeTodos()`:** la misma consulta única de los vigentes que
+   `valedorDeTodos()` y el mismo color, pero **sin cargar nunca el maestro**, que solo hace falta para el SKU (estas listas no lo
+   llevan).
+3. **Todo o nada:** si falla la lectura del espejo o la del taller, ninguna fila lleva capacidad ni color (no se enseña el color de
+   NSYS sin saber si el taller lo cambió). Si ningún IMEI de la lista está en el espejo, no se lee el taller.
+4. **El móvil de un IMEI en la vista IMEIs** (modelo del grupo y barra del detalle) es el primer modelo, la primera capacidad y el
+   primer color no vacíos de sus trabajos (`movilDe`), como ya se hacía con el modelo: si una de las tres listas no pudo leer
+   NSYS, vale lo de otra.
+5. **Los CSV de «Pulidos pendientes» e «Historial de pulidos» salen de las páginas a funciones puras** (`pendientes/csvPulidos.ts`
+   y `historial/csvTrabajos.ts`) para probarlos sin montar el `AppLayout`; mismo fichero y mismas columnas, más las dos nuevas.
+6. **Anchos:** las columnas «Modelo» conservan su ancho; un texto largo se corta con «…» como cualquier celda y «Copiar celda»
+   copia el texto entero.
