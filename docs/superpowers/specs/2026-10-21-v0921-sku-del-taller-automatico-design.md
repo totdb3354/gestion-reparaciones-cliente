@@ -1,7 +1,7 @@
 # 0.9.21 — SKU del taller (pieza 2: lo automático desde las reparaciones)
 
 Fecha: 2026-10-21. Estado: diseño aprobado; plan escrito (`plans/2026-10-21-v0921-sku-del-taller-automatico.md`). Los ajustes
-que fijó el plan están en el §8 y mandan sobre lo de arriba si chocan.
+que fijó el plan están en el §8 y mandan sobre lo de arriba si chocan; el §9 (22/10, sin banda) manda sobre todo.
 Va en la **0.9.21**, después de la pieza 1 (`2026-10-21-v0921-sku-del-taller-base-design.md`), en la que se apoya: la tabla
 `Taller_cambio`, «lo que vale», el SKU del maestro, el cierre automático, el rastro y la lista «Por pasar a NSYS».
 **Servidor + web** (sin migración propia: la columna `ID_CAMBIO_ANTERIOR` va ya en la de la pieza 1).
@@ -168,3 +168,12 @@ revise.
 13. **«No la pide en un IMEI que no está en NSYS»:** la web no lo sabe de antemano (el técnico no ve NSYS); la primera
     respuesta lo dice (`enNsys: false`) y ese formulario deja de pedir.
 14. **La batería reutilizada sobre un grado sin forma también avisa** («con ninguna pieza», spec §2.1).
+
+## 9. Sin banda en el formulario (2026-10-22, tras preprod)
+
+Decisión del usuario antes de producción: **la banda del §2.4 se quita** (también para el supertécnico). Al técnico no le
+sirve y el supertécnico ve lo mismo después en «Por pasar a NSYS», la ficha y el rastro, antes de tocar NSYS a mano. Manda
+sobre el §1 («Aviso»), el §2.4, el §3, la parte web del §5, el §6 y los ajustes 12 y 13: el formulario no pide la previa ni
+enseña nada; el servidor aplica lo mismo al guardar. La ruta `POST /api/reparaciones/sku-taller/previsualizar` se queda en el
+servidor 0.9.21 sin uso en la web (el E2E la usa para elegir el chasis); quitarla o dejarla se decide en la próxima versión
+del servidor. Web: `3f6769a` (merge `d3296a0`).

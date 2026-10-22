@@ -11,8 +11,8 @@ lista de lo que hay que cambiar en NSYS.
   color y el grado** del móvil:
   - chasis o tapa (nuevos o reutilizados) → el color de la pieza y grado **A** (se conservan «Ms» y «100»);
   - batería nueva → el grado lleva «100»; batería reutilizada → se le quita.
-- Encima de «Terminar asignación» sale una banda con cómo quedará: «Al guardar, este móvil pasará a: Rojo · A100 (ahora: Azul ·
-  B)». Si el color o el grado no se pueden calcular, la banda lo dice y lo corregirá un supertécnico.
+- El técnico no tiene que hacer nada más: el formulario no cambia. El supertécnico lo revisa en «Por pasar a NSYS» antes de
+  cambiarlo en NSYS, y corrige a mano lo que no se pudo calcular.
 - Editar o borrar una reparación deshace lo que había cambiado (si nadie lo ha tocado después).
 
 ---
