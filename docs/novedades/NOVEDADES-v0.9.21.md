@@ -17,6 +17,16 @@ lista de lo que hay que cambiar en NSYS.
 
 ---
 
+## 📋 Listas del taller (todos los roles)
+
+- Donde ponía solo el modelo, ahora pone el **móvil entero**: **«iPhone 13 128GB Azul»** (la capacidad y el color de NSYS, con
+  el color que haya puesto el taller). En Asignaciones, Pendientes, Pulidos pendientes, el Historial, IMEIs y el detalle del
+  IMEI, y también al copiar la celda.
+- Los CSV que llevan «Modelo» traen al lado **«Capacidad»** y **«Color»**.
+- Un móvil que no está en NSYS (de un cliente) sigue con el modelo solo. En el historial sale el color de hoy.
+
+---
+
 ## 👀 Supertécnicos y administrador
 
 ### 📱 Stock de teléfonos
