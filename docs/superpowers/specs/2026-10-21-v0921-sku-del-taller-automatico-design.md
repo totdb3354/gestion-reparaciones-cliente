@@ -184,3 +184,11 @@ Decisión del usuario tras ver un caso real en producción: **solo el chasis pon
 color (con las mismas reglas del §2.2 y del ajuste 11) y nada del grado, ni avisa de un grado sin la forma de NSYS. Manda
 sobre el §2.1 («chasis o tapa → A») y el §1. Servidor: `PiezaTaller.Tipo.conGrado()` (chasis y batería), `GradoTaller` y
 `EfectoTaller`; rama `hotfix/0.9.21.1`. Los cambios de grado que ya hizo una tapa en producción se revisan uno a uno.
+
+**Chasis sobre «n/a» o sin grado (mismo hotfix, 2026-10-23).** Un chasis sobre un grado «n/a» o vacío lo deja en **A** (sin
+Ms ni 100: no hay nada que conservar) y, con batería nueva en el mismo guardado, en **A100**. Dentro de un guardado **el
+chasis se aplica antes que las demás piezas**, sea cual sea el orden de las filas (orden estable para el resto), para que
+«n/a» + batería + chasis no quede en A sin el 100 ni con un aviso falso de la batería. La batería sola sobre «n/a» sigue
+sin cambiarlo y con el aviso; ID, F, A+, G y P no cambian con ninguna pieza y siguen avisando. Entre guardados distintos
+(«✓ Guardar fila» de una en una) cuenta el orden en que se guardan. Manda sobre el §2.1 («un grado sin esa forma no se
+puede calcular») y sobre la regla «fila a fila y en su orden». Servidor: `GradoTaller.sinGrado`, `EfectoTaller` (orden).

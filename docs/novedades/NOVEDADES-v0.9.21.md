@@ -12,7 +12,10 @@ lista de lo que hay que cambiar en NSYS.
   - chasis (nuevo o reutilizado) → el color de la pieza y grado **A** (se conservan «Ms» y «100»);
   - tapa trasera sola (nueva o reutilizada) → solo el color de la pieza; el grado no cambia (desde la 0.9.21.1; en la
     0.9.21 también ponía la A);
-  - batería nueva → el grado lleva «100»; batería reutilizada → se le quita.
+  - batería nueva → el grado lleva «100»; batería reutilizada → se le quita;
+  - móvil sin grado en NSYS («n/a» o vacío) → el chasis lo deja en **A**, y con batería nueva en la misma reparación, en
+    **A100**, se guarden las filas en el orden que sea (desde la 0.9.21.1). La batería sola no lo cambia; ID, F, A+, G y P
+    tampoco cambian con ninguna pieza: lo corrige un supertécnico.
 - El técnico no tiene que hacer nada más: el formulario no cambia. El supertécnico lo revisa en «Por pasar a NSYS» antes de
   cambiarlo en NSYS, y corrige a mano lo que no se pudo calcular.
 - Editar o borrar una reparación deshace lo que había cambiado (si nadie lo ha tocado después).
