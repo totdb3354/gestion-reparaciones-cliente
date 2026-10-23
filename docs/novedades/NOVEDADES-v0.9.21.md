@@ -9,7 +9,9 @@ lista de lo que hay que cambiar en NSYS.
 
 - Al guardar una reparación con **chasis**, **tapa trasera** o **batería** de un móvil de NSYS, el programa **cambia solo el
   color y el grado** del móvil:
-  - chasis o tapa (nuevos o reutilizados) → el color de la pieza y grado **A** (se conservan «Ms» y «100»);
+  - chasis (nuevo o reutilizado) → el color de la pieza y grado **A** (se conservan «Ms» y «100»);
+  - tapa trasera sola (nueva o reutilizada) → solo el color de la pieza; el grado no cambia (desde la 0.9.21.1; en la
+    0.9.21 también ponía la A);
   - batería nueva → el grado lleva «100»; batería reutilizada → se le quita.
 - El técnico no tiene que hacer nada más: el formulario no cambia. El supertécnico lo revisa en «Por pasar a NSYS» antes de
   cambiarlo en NSYS, y corrige a mano lo que no se pudo calcular.

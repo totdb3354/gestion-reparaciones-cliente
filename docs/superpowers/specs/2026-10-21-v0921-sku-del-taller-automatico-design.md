@@ -177,3 +177,10 @@ sobre el §1 («Aviso»), el §2.4, el §3, la parte web del §5, el §6 y los a
 enseña nada; el servidor aplica lo mismo al guardar. La ruta `POST /api/reparaciones/sku-taller/previsualizar` se queda en el
 servidor 0.9.21 sin uso en la web (el E2E la usa para elegir el chasis); quitarla o dejarla se decide en la próxima versión
 del servidor. Web: `3f6769a` (merge `d3296a0`).
+
+## 10. La tapa trasera no cambia el grado (2026-10-23, 0.9.21.1)
+
+Decisión del usuario tras ver un caso real en producción: **solo el chasis pone la letra A**; la tapa trasera cambia el
+color (con las mismas reglas del §2.2 y del ajuste 11) y nada del grado, ni avisa de un grado sin la forma de NSYS. Manda
+sobre el §2.1 («chasis o tapa → A») y el §1. Servidor: `PiezaTaller.Tipo.conGrado()` (chasis y batería), `GradoTaller` y
+`EfectoTaller`; rama `hotfix/0.9.21.1`. Los cambios de grado que ya hizo una tapa en producción se revisan uno a uno.
