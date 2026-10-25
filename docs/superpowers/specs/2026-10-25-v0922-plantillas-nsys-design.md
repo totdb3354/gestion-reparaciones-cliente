@@ -1,6 +1,8 @@
 # 0.9.22 — Lo que no cuadra con NSYS: cuatro listas y plantillas para subir
 
-Fecha: 2026-10-25. Estado: **diseño aprobado** (brainstorming del 23-25/10 con el usuario); plan pendiente (otra sesión).
+Fecha: 2026-10-25. Estado: **diseño aprobado** (brainstorming del 23-25/10 con el usuario). Pieza 1 en `main` el 25/10 (servidor
+`8f00adf`, plan `2026-10-25-v0922-pieza1-nombres-nsys.md`); plan de la pieza 2 escrito el 25/10
+(`2026-10-25-v0922-pieza2-plantillas-nsys.md`, ajustes en el §10).
 Prototipo aprobado: `assets/2026-10-25-v0922-prototipo-plantillas-nsys.html` (diseño C). Plantilla de NSYS vacía:
 `assets/2026-10-25-v0922-plantilla-nsys-vacia.xlsx` («Upload batch with IMEI», tal cual la da NSYS).
 Se apoya en la 0.9.21 (SKU del taller, «Por pasar a NSYS», corrección en NSYS, `Taller_cambio` y `Taller_aviso`).
@@ -205,3 +207,20 @@ Se miran a la vez en NSYS, antes o durante el plan; ninguna cambia el diseño, s
 2. **Decimales en «Purchase price»**: si NSYS los acepta, el «Total cost» va tal cual (535,41); si no, sin decimales.
 3. **IMEI repetido**: si NSYS avisa al subir un IMEI que ya tiene en un lote activo (si no avisa, entra en el backlog el control
    desde la importación del §8).
+
+## 10. Ajustes del plan de la pieza 2 (25/10)
+
+Plan: `docs/superpowers/plans/2026-10-25-v0922-pieza2-plantillas-nsys.md` (sección «Ajustes a la spec»). En resumen:
+1. Una marca «Hecho» anterior al cambio vigente de su fila no vale (era de un cambio anterior del mismo móvil) y el repaso la borra;
+   una marca cuya fila ya no está se borra en el repaso, sea cual sea su hora.
+2. Storage se escribe «256 GB» (texto, comprobado el 22/10) aunque la plantilla vacía valide la columna D con una lista de números.
+3. Purchase price, número con sus decimales hasta mirar el §9.2; un lote sin coste deja la celda vacía en rojo.
+4. Las tarjetas van en `GET /api/stock-telefonos/por-pasar/tarjetas`; `GET /por-pasar` sigue igual para la web anterior. Las
+   descargas mandan `X-Filas` y el nombre en `Content-Disposition`.
+5. «Trabajos» de «No está en NSYS»: los hechos (R, G, P) y las asignaciones abiertas; «Último trabajo», el más reciente de todas sus
+   filas; cliente, el del último trabajo o, si no tiene, el del teléfono.
+6. «Qué hacer» de SIN_DESHACER dice el dato del aviso («ese color» o «ese grado»).
+7. «Revisado» sale en el rastro como evento propio a la hora de la revisión: «Revisado por <quién>: color sin deducir (reparación R…)».
+8. El paso 4 del §2.1 («compruébalo») llega también a la ficha y a «Corregir…».
+9. El número de la pestaña cuenta lo pendiente (como dice el §3.1), no el total.
+10. «Corregir…» de «Revisar a mano» abre el detalle del IMEI.
