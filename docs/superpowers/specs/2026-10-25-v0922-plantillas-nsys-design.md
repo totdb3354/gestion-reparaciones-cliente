@@ -168,8 +168,7 @@ plantilla).
 ## 5. Errores y casos límite
 - **Grado antes que color**: si alguien cambia el grado en NSYS y después sube la plantilla de color (con el grado de antes),
   el grado vuelve atrás y la fila de grado vuelve a salir. La ayuda pide el orden color → grado.
-- **Precio con decimales**: comprobar en la primera subida que NSYS los acepta; si no, se quitan los decimales.
-- **Doble subida**: «Hecho» lo evita; además, según el usuario, NSYS avisa de IMEIs repetidos (por comprobar).
+- **Precio con decimales** y **doble subida**: ver §9 (por mirar en NSYS). «Hecho» ya evita subir dos veces desde el ERP.
 - **IMEI en NSYS con el IMEI2 o el número de serie**: sale en «No está en NSYS» hasta que NSYS lo tenga con ese IMEI.
 - **Rendimiento**: el límite de 15 s por petición no se sube. Las listas son cortas; el cruce de «No está en NSYS» (todos los
   IMEIs del taller contra el espejo) se mide en preprod.
@@ -197,3 +196,11 @@ plantilla).
 - Avisar de un IMEI repetido en NSYS tras una doble subida (posible control futuro desde la importación).
 - Detectar capacidad o SIM/eSIM mal en NSYS (el taller no lo apunta: no hay con qué comparar).
 - Quitar a mano un móvil de «No está en NSYS».
+
+## 9. Por mirar en NSYS (con el usuario, juntas)
+Se miran a la vez en NSYS, antes o durante el plan; ninguna cambia el diseño, solo detalles de la plantilla o de la ayuda:
+1. **Cómo se borran** los móviles antes de volver a subirlos: uno a uno o hay forma en bloque (si la hay, la ayuda de «Cambio de
+   color» lo dice; el ERP sigue sin borrar nada).
+2. **Decimales en «Purchase price»**: si NSYS los acepta, el «Total cost» va tal cual (535,41); si no, sin decimales.
+3. **IMEI repetido**: si NSYS avisa al subir un IMEI que ya tiene en un lote activo (si no avisa, entra en el backlog el control
+   desde la importación del §8).
