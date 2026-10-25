@@ -12,6 +12,8 @@
     que va en rojo).
   - **Revisar a mano**: lo que el programa no supo calcular al guardar una reparación. «Corregir…» abre el móvil; «✓ Revisado»
     si ya estaba bien.
+- Los móviles vendidos o de baja en NSYS no salen en Cambio de color ni en Cambio de grado (no se vuelven a subir); si vuelven a
+  la empresa, salen otra vez.
 - **«Hecho»** en cada fila (y «✓ Marcar todo»): la fila se queda en gris y ya no va en la plantilla. Desaparece sola cuando NSYS
   lo tiene; si se marcó por error, vuelve a salir con un aviso.
 - Si NSYS nunca ha escrito un color, el producto lleva **«compruébalo»** (en amarillo en la plantilla): míralo antes de subirlo.

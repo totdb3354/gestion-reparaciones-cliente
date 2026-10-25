@@ -224,3 +224,6 @@ Plan: `docs/superpowers/plans/2026-10-25-v0922-pieza2-plantillas-nsys.md` (secci
 8. El paso 4 del §2.1 («compruébalo») llega también a la ficha y a «Corregir…».
 9. El número de la pestaña cuenta lo pendiente (como dice el §3.1), no el total.
 10. «Corregir…» de «Revisar a mano» abre el detalle del IMEI.
+11. (Revisión final, 26/10) «Cambio de color» y «Cambio de grado» (y la plantilla de color y el repaso de sus «Hecho») solo llevan
+    los móviles que NSYS tiene en la empresa: en stock, de pedido o en una caja que no cuenta. Un vendido o de baja no se vuelve a
+    subir (sería stock que no hay); su cambio sigue vigente y, si el móvil vuelve, sale otra vez solo. `GET /por-pasar` no cambia.
