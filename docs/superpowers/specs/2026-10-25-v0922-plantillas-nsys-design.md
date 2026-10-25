@@ -72,8 +72,9 @@ plantilla).
 ### 2.4 Base de datos y recarga
 - Migración **aditiva**: `Nsys_producto.NOMBRE` (el «Product Name», `VARCHAR(150) NULL`) y `Nsys_movil.COSTE`
   (`DECIMAL(10,2) NULL`). Comprobación final al estilo de `migracion-sku-taller.sql` (antes/después).
-- El maestro se recarga solo cuando cambia en Drive: tras desplegar, se recarga una vez aunque no haya cambiado si alguna fila
-  tiene `NOMBRE` vacío (para no esperar al próximo cambio). `COSTE` se rellena con la siguiente importación de Items (los lotes
+- El maestro se recarga solo cuando cambia en Drive: tras desplegar, se recarga una vez por arranque aunque no haya cambiado si
+  ninguna fila tiene `NOMBRE` (el maestro se cargó antes de la columna; para no esperar al próximo cambio). Un maestro con
+  filas sin nombre de verdad no se recarga en cada arranque. `COSTE` se rellena con la siguiente importación de Items (los lotes
   que ya no vienen en el fichero se quedan sin coste; no hace falta histórico).
 - La web no cambia en esta pieza. Puede ir sola a producción en horario (migración aditiva, servidor con corte ~5 s).
 
