@@ -10,10 +10,14 @@
   - **Cambio de grado**: «Copiar lista» para tenerlos delante; en NSYS se cambian uno a uno, **después** del color.
   - **No está en NSYS**: móviles que han pasado por el taller y NSYS no conoce, con su plantilla de altas (rellena en el Excel lo
     que va en rojo).
-  - **Revisar a mano**: lo que el programa no supo calcular al guardar una reparación. «Corregir…» abre el móvil; «✓ Revisado»
-    si ya estaba bien.
+  - **Revisar a mano**: los móviles **sin grado** que han pasado por el taller («Sin grado en NSYS»; se van solos cuando NSYS los
+    gradúa) y lo que el programa no supo calcular al guardar una reparación. «Corregir…» abre el móvil; «✓ Revisado» si ya estaba
+    bien.
 - Los móviles vendidos o de baja en NSYS no salen en Cambio de color ni en Cambio de grado (no se vuelven a subir); si vuelven a
   la empresa, salen otra vez.
+- Si se cambia la batería a un móvil sin grado, el programa se acuerda: cuando el móvil tenga grado, le pone (o le quita) el 100 y
+  sale en «Cambio de grado».
+- Un móvil vendido que vuelve al taller (devolución o garantía) sale con un aviso en ámbar: haz antes la devolución en NSYS.
 - **«Hecho»** en cada fila (y «✓ Marcar todo»): la fila se queda en gris y ya no va en la plantilla. Desaparece sola cuando NSYS
   lo tiene; si se marcó por error, vuelve a salir con un aviso.
 - **«descartar»** en «No está en NSYS»: si una fila no debería estar (no es un móvil, es de un cliente…), el enlace «descartar»
