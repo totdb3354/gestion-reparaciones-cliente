@@ -47,8 +47,10 @@ Un descarte por IMEI: descartar otra vez lo sustituye. El servidor anterior no l
 ### 4.1 Cuándo vale un descarte
 
 Una fila de «No está en NSYS» está **descartada** si su IMEI (por `claveCruce`) tiene descarte con `FECHA` **no anterior** a la
-**última asignación** del taller de ese IMEI. `AltaTaller` gana `ultimoEn`: la fecha de asignación de su último trabajo (el mismo
-que ya da `ultimo`, por asignación y luego por id; hoy solo guarda `desde`, la primera). Horas de Madrid en los dos lados.
+**última asignación** del taller de ese IMEI. `AltaTaller` gana `ultimoEn`: la fecha de su **última asignación** (A…, AG…, AP…; por asignación y luego por id); sin
+asignaciones, la de su último trabajo. Hoy solo guarda `desde`, la primera. Horas de Madrid en los dos lados. Terminar la
+asignación que estaba abierta al descartar no la saca (al terminar se crea su fila R/G/P con la hora del cierre, que no es un
+trabajo nuevo): ajuste de la revisión final, 27/10.
 
 Si hay descarte pero es anterior a la última asignación (trabajo nuevo después), la fila **sale** con el aviso de §5.4.
 
