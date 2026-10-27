@@ -16,6 +16,8 @@
   la empresa, salen otra vez.
 - **«Hecho»** en cada fila (y «✓ Marcar todo»): la fila se queda en gris y ya no va en la plantilla. Desaparece sola cuando NSYS
   lo tiene; si se marcó por error, vuelve a salir con un aviso.
+- **«descartar»** en «No está en NSYS»: si una fila no debería estar (no es un móvil, es de un cliente…), el enlace «descartar»
+  la quita con un motivo. Solo vuelve si el taller le hace un trabajo nuevo. «Ver descartados» al pie, con «deshacer».
 - Si NSYS nunca ha escrito un color, el producto lleva **«compruébalo»** (en amarillo en la plantilla): míralo antes de subirlo.
 - El producto que hay que poner en NSYS sale casi siempre, también para colores que ningún móvil de ese modelo y capacidad tiene
   todavía en NSYS.
@@ -24,6 +26,11 @@
 
 - Al guardar una reparación con chasis o tapa trasera, el programa deduce el color en más casos (colores que aún no tiene ningún
   móvil en NSYS). Menos avisos de «el color del chasis no se puede deducir».
+
+## 🔔 Avisos
+
+- Los avisos de abajo llevan una **×** para cerrarlos antes y la barra amarilla que se consume (también el de «Deshacer» de
+  Asignaciones).
 
 ---
 
