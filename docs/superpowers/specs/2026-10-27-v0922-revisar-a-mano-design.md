@@ -122,6 +122,11 @@ Si ya se aplicó, su cambio se deshace como cualquier otro (`PlanDeshacer`). Si 
 o ya no es una batería). Si se edita a otra batería (nueva ↔ reutilizada), el guardado nuevo deja su propio aviso, que es el más
 reciente.
 
+**Ajuste de la revisión final (decidido por el usuario el 27/10):** al deshacer un cambio de GRADO (borrar o editar la R… del
+chasis que aplicó la batería, o la de la batería que aplicó la importación), las baterías que se usaron con él (las que dio por
+usadas el ERP en ese mismo segundo) vuelven a quedar pendientes. Así, editar el chasis deja otra vez A100 y borrarlo devuelve el
+móvil a «Sin grado» con su batería. («Corregir…» con letra seguido de «Volver a lo de NSYS» no pasa por deshacer: no la reabre.)
+
 ### 5.5 «Corregir…»
 
 `GET /api/stock-telefonos/{imei}/colores` (las opciones del diálogo) gana al final `bateriaIdRep`, `bateriaNueva` y `bateriaEn`
@@ -135,7 +140,15 @@ Un móvil **vendido** (`VENDIDO`) o **de baja** (`BAJA`) en NSYS **ha vuelto** s
 - la venta: `soldDate` de su fila del espejo (va sin hora: el mismo día no cuenta);
 - la baja: el día de `cambiado` de su fila del espejo (la última vez que NSYS la cambió).
 
-Su `vueltoDesde` es la asignación (hora de Madrid) del **primer** trabajo posterior. En «Revisar a mano» (avisos y «Sin grado»),
+Su `vueltoDesde` es la asignación (hora de Madrid) del **primer** trabajo posterior.
+
+**Ajuste de la revisión final (decidido por el usuario el 27/10, la misma idea que el arreglo 3823dab de la pieza 3):** terminar
+una asignación crea su fila R/G/P con la hora del cierre (y «✓ Guardar fila» las crea con la asignación abierta), que no es una
+vuelta. Por eso **cuentan las asignaciones (A…/AG…/AP…) de un día posterior**, y una R/G/P de un día posterior **solo si no es de
+una asignación que ya estaba abierta el día de la venta o de la baja** (asignada ese día o antes y sin terminar al acabar ese día;
+la R/G/P «es de» ella si se hizo mientras seguía abierta o al cerrarla). Queda: filas añadidas mucho después a una asignación ya
+cerrada siguen contando; una asignación abierta ese día y nunca terminada hace que ninguna R/G/P posterior cuente (las
+asignaciones nuevas sí). En «Revisar a mano» (avisos y «Sin grado»),
 **Cambio de color** y **Cambio de grado**:
 
 - un vendido o de baja que **no** ha vuelto no sale;
