@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · «Descartar» y avisos con barra · 0.9.22</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos-tx: #2f7d3b; --tal: #7c3aed; --crema: #f5efd6; --amarillo: #f1e356;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         min-height: 100vh; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+
+  .proto { flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+  .proto .accion { background: #f1e356; color: #001232; border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+  .proto .accion.gris { background: #47536a; color: #fff; }
+
+  .guia { background: #f4f1fb; border-bottom: 1px solid #d9cff3; padding: 8px 16px; display: grid; grid-template-columns: 1fr 1.1fr; gap: 18px; font-size: 12px; line-height: 1.45; }
+  .guia h2 { margin: 0 0 3px; font-size: 13px; color: #3b0764; }
+  .guia ol { margin: 0; padding-left: 18px; }
+  .guia p { margin: 0; }
+
+  header { height: 50px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; font-weight: 600; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 190px; flex: none; background: #fff; padding: 12px 8px; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; margin: 10px 10px 6px; }
+  nav .it { padding: 7px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--navy); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 21px; }
+  .nsys { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; }
+  .card { background: #fff; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  .tabs { display: flex; border: 1px solid #cdd4df; border-radius: 8px; overflow: hidden; width: max-content; background: #fff; }
+  .tabs button { border: 0; border-right: 1px solid #cdd4df; background: #fff; padding: 6px 14px; font-weight: 600; cursor: pointer; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--navy); color: #fff; }
+  .num { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--tal); color: #fff; font-size: 11px; text-align: center; }
+  .num.cero { background: #c3cad6; }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .tile { border: 1.5px solid var(--borde); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; background: #fbfcfe; border-top-width: 4px; }
+  .tile:hover { border-color: #b8c2d3; }
+  .tile.on { border-color: var(--navy); background: #fff; box-shadow: 0 0 0 2px rgba(7,26,58,.12); }
+  .tile.color { border-top-color: #7c3aed; } .tile.grado { border-top-color: #2563eb; } .tile.noesta { border-top-color: #dc2626; } .tile.revisar { border-top-color: #d97706; }
+  .tile .tt { font-weight: 700; font-size: 13px; }
+  .tile .big { font-size: 26px; font-weight: 800; line-height: 1; }
+  .tile .big small { font-size: 12px; font-weight: 600; color: var(--gris); margin-left: 4px; }
+  .tile .ex { font-size: 11.5px; color: var(--gris); min-height: 46px; line-height: 1.35; }
+  .tile .pie { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  .cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ayuda { font-size: 11.5px; color: var(--gris); max-width: 880px; line-height: 1.45; margin: 0; }
+  .btn { height: 32px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: #f2f5f9; }
+  .btn.pri { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .btn.pri:hover:not(:disabled) { background: #102a55; }
+  .btn.rojo { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+  .btn.rojo:hover:not(:disabled) { background: #991b1b; }
+  .btn:disabled { opacity: .42; cursor: not-allowed; }
+  .btn.peq { height: 26px; padding: 0 9px; font-size: 12px; }
+
+  .tabla-w { border: 1px solid var(--borde); border-radius: 8px; overflow: auto; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.t th { background: #fbf6ea; text-align: left; padding: 7px 8px; font-weight: 700; color: #2b3a55; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  table.t td { padding: 6px 8px; border-top: 1px solid #eef1f5; vertical-align: top; }
+  table.t td.nw { white-space: nowrap; }
+  .mono { font-family: Consolas, monospace; font-size: 11.5px; }
+  .link { color: var(--navy); cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+  .link:hover { text-decoration: underline; }
+  .sutil { color: #8a97a8; font-size: 11px; margin-left: 8px; }
+  .sutil:hover { color: #b91c1c; }
+  .gr { display: block; font-size: 11px; color: var(--gris); }
+  .vacio { padding: 14px 10px; color: var(--gris); font-size: 12px; }
+  tr.hecho td { background: #f6f8f6; color: #8a97a8; }
+  .marca-h { display: inline-block; font-size: 11px; font-weight: 700; color: #2f7d3b; background: #e3f5e6; border: 1px solid #9fd8aa; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+  .antes { display: block; margin-top: 3px; font-size: 11px; color: #a15c07; max-width: 260px; white-space: normal; }
+
+  .pie-desc { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .pie-desc .link { color: #6b7a90; }
+  table.desc td { background: #f6f7f9; color: #6b7a90; }
+  .motivo { font-style: italic; color: #4b5870; }
+
+  .velo { position: fixed; inset: 0; background: rgba(7,26,58,.45); display: flex; align-items: center; justify-content: center; z-index: 80; }
+  .dlg { background: #fff; border-radius: 10px; width: 470px; max-width: 92vw; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  .dlg h3 { margin: 0; font-size: 15px; color: var(--navy); }
+  .dlg p { margin: 0; font-size: 12.5px; line-height: 1.45; color: #33415c; }
+  .dlg label { font-size: 12px; font-weight: 700; color: #22314f; }
+  .dlg textarea { width: 100%; min-height: 64px; border: 1px solid #b8c2d3; border-radius: 6px; padding: 6px 8px; font: inherit; resize: vertical; }
+  .dlg .botones { display: flex; justify-content: flex-end; gap: 8px; }
+  .dlg .ej { font-size: 11px; color: var(--gris); }
+
+  .fichero { border: 1px dashed #b39ddb; border-radius: 10px; background: #faf8ff; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .fichero .fh { display: flex; align-items: center; gap: 10px; }
+  .fichero .fh b { color: #3b0764; }
+  .xls { border-collapse: collapse; font-size: 11.5px; background: #fff; }
+  .xls th, .xls td { border: 1px solid #d5dbe5; padding: 3px 7px; white-space: nowrap; }
+  .xls th { background: #eef1f6; font-weight: 700; color: #33415c; }
+  .xls td.fila { background: #eef1f6; color: #6b7a90; text-align: right; }
+  .xls td.rell { background: #fde8e8; color: #b91c1c; font-style: italic; }
+  .xls td.vac { color: #b6bfcc; }
+
+  /* El aviso de abajo, como el de la app (AvisoBreveHost), con la X a la derecha. */
+  .aviso { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 10px;
+           min-width: 320px; max-width: min(560px, 92vw); background: var(--navy); color: var(--crema); border-radius: 10px; padding: 12px 10px 15px 14px;
+           font-size: 13px; font-weight: 600; box-shadow: 0 8px 22px rgba(0,0,0,.25); overflow: hidden; }
+  .aviso .ico { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #2f9e44; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .aviso .txt { flex: 1; line-height: 1.35; }
+  .aviso .deshacer { flex: none; border: 1px solid var(--crema); color: var(--crema); background: transparent; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .aviso .deshacer:hover { background: #102a55; }
+  .aviso .x { flex: none; width: 24px; height: 24px; border: 0; background: transparent; color: var(--crema); opacity: .7; font-size: 16px; line-height: 1; cursor: pointer; border-radius: 6px; }
+  .aviso .x:hover { opacity: 1; background: rgba(255,255,255,.12); }
+  .aviso .barra { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.1); }
+  .aviso .barra i { display: block; height: 100%; background: var(--amarillo); transform-origin: left; animation: consume linear forwards; }
+  @keyframes consume { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">Prototipo · «Descartar» en «No está en NSYS» y avisos con barra y X · 0.9.22</span>
+  <span class="sep"></span>
+  <button class="accion" id="simImport">Simular importación de NSYS</button>
+  <button class="accion" id="simTrabajo">Simular trabajo nuevo del taller en un descartado</button>
+  <button class="accion" id="demoDeshacer">Ver el aviso de Asignaciones («Deshacer»)</button>
+  <button class="accion gris" id="reiniciar">Reiniciar</button>
+</div>
+
+<div class="guia">
+  <div>
+    <h2>Qué cambia respecto a la v1</h2>
+    <p><b>Avisos de abajo más cortos</b>, y <b>todos</b> con la barra amarilla que se consume y una <b>X</b> a la derecha para
+    cerrarlos antes. Son los dos que tiene la app: el aviso breve (4 s; ya tenía barra, ahora también X) y el de Asignaciones con
+    «Deshacer» (8 s; no tenía ni barra ni X). Lo de «descartar» sigue igual que en la v1.</p>
+  </div>
+  <div>
+    <h2>Qué probar</h2>
+    <ol>
+      <li>«descartar» en «SIN-IMEI-CAM», con motivo: el aviso de abajo es corto, con barra y X.</li>
+      <li>La X lo cierra al momento; si no, se va solo cuando la barra se acaba.</li>
+      <li>«Ver el aviso de Asignaciones»: el de «Deshacer», ahora con barra (8 s) y X.</li>
+      <li>El resto como en la v1: «Ver descartados», «deshacer», importación y trabajo nuevo.</li>
+    </ol>
+  </div>
+</div>
+
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de reparaciones</span></span><span class="usu">Supertécnico 1 · Supertécnico</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div><div class="it">Piezas</div><div class="it">Pedidos</div>
+    <div class="sec">TELÉFONOS</div><div class="it on">Stock de teléfonos</div>
+  </nav>
+  <main>
+    <div class="titulo"><h1>Stock de teléfonos</h1><span class="nsys">NSYS: hace 8 min</span></div>
+    <div id="arriba"></div>
+    <div class="card" id="contenido"></div>
+    <div id="fichero"></div>
+  </main>
+</div>
+<div id="dialogo"></div>
+<div id="aviso"></div>
+
+<script>
+const LOTE_ALTA = 'AJUSTE'
+const AVISO_MS = 4000, DESHACER_MS = 8000
+const NOESTA0 = [
+  { imei: '350000000000088', modelo: 'iPhone 14', ultimo: 'R20261006_57 · Reparación', tec: 'Técnico 2', cliente: 'AMAZON', n: 2, desde: '06/10/2026' },
+  { imei: 'SIN-IMEI-CAM', modelo: '—', ultimo: 'R20260803_14 · Reparación', tec: 'Técnico 3', cliente: '—', n: 1, desde: '03/08/2026' },
+  { imei: '350000000000111', modelo: 'iPhone 12', ultimo: 'R20260701_09 · Reparación', tec: 'Técnico 1', cliente: 'Cliente de fuera', n: 1, desde: '01/07/2026' },
+  { imei: '350000000000099', modelo: 'iPhone 13 Pro', ultimo: 'P20260918_12 · Pulido', tec: 'Técnico 5', cliente: '—', n: 1, desde: '18/09/2026' },
+]
+const OTRAS = { color: 3, grado: 5, revisar: 2 }
+
+const S = { sub: 'noesta', noesta: [], marca: {}, descarte: {}, antes: {}, verDesc: false, fichero: null, dlg: null }
+let reloj = 31
+const hora = () => `12:${String(reloj++).padStart(2, '0')}`
+function reiniciar() { S.noesta = NOESTA0.map((x) => ({ ...x })); S.marca = {}; S.descarte = {}; S.antes = {}; S.verDesc = false; S.fichero = null; S.dlg = null; reloj = 31 }
+reiniciar()
+
+const $ = (id) => document.getElementById(id)
+const desc = (imei) => S.descarte[imei]
+const visibles = () => S.noesta.filter((c) => !desc(c.imei))
+const descartados = () => S.noesta.filter((c) => desc(c.imei))
+const hecho = (imei) => S.marca[imei] && S.marca[imei].hora
+const pendientes = () => visibles().filter((c) => !hecho(c.imei))
+const N = { color: () => OTRAS.color, grado: () => OTRAS.grado, noesta: () => pendientes().length, revisar: () => OTRAS.revisar }
+const total = () => N.color() + N.grado() + N.noesta() + N.revisar()
+const num = (n) => `<span class="num ${n === 0 ? 'cero' : ''}">${n}</span>`
+const NOMBRE = { color: 'Cambio de color', grado: 'Cambio de grado', noesta: 'No está en NSYS', revisar: 'Revisar a mano' }
+const EX = {
+  color: 'Cambia el producto: en NSYS, bórralo y súbelo otra vez con la plantilla (con el grado que tiene hoy en NSYS).',
+  grado: 'Cambia el grado: se corrige aparte en NSYS, uno a uno. Si el móvil también cambia de color, primero el color.',
+  noesta: 'NSYS no lo conoce: dalo de alta con la plantilla (rellena lo que falta).',
+  revisar: 'El ERP no supo calcularlo: mira el móvil y corrígelo en su ficha.',
+}
+const AYUDA_NOESTA = 'Móviles que han pasado por el taller y NSYS no conoce. La plantilla lleva lo que sabe el ERP; lo demás va vacío para rellenarlo en el Excel. Cada fila se va sola cuando la importación los ve en NSYS. Si una fila no debería estar aquí (no es un móvil, es de un cliente…), «descartar» la quita con un motivo; solo vuelve si el taller le hace un trabajo nuevo.'
+
+/** El aviso de abajo: corto, con barra que se consume y X. Con `deshacer`, el de Asignaciones (8 s, sin cerrarse al hacer clic). */
+function avisar(texto, deshacer) {
+  clearTimeout(avisar.h)
+  const ms = deshacer ? DESHACER_MS : AVISO_MS
+  $('aviso').innerHTML = `<div class="aviso" role="status" data-cuerpo="${deshacer ? '' : 'cierra'}"><span class="ico">✓</span><span class="txt">${texto}</span>
+    ${deshacer ? '<button class="deshacer" id="avisoDeshacer">Deshacer</button>' : ''}<button class="x" id="avisoX" aria-label="Cerrar aviso" title="Cerrar">×</button>
+    <div class="barra"><i style="animation-duration:${ms}ms"></i></div></div>`
+  avisar.deshacer = deshacer || null
+  avisar.h = setTimeout(cerrarAviso, ms)
+}
+function cerrarAviso() { clearTimeout(avisar.h); $('aviso').innerHTML = ''; avisar.deshacer = null }
+
+function celdaHecho(c) {
+  const m = S.marca[c.imei]
+  if (m && m.hora) return `<span class="marca-h" title="Marcado por Supertécnico 1 a las ${m.hora}">✓ Hecho ${m.hora}</span><br><button class="link" style="font-size:11px" data-deshacer="${c.imei}">deshacer</button>`
+  return `<button class="btn peq" data-hecho="${c.imei}">Hecho</button><button class="link sutil" data-descartar="${c.imei}" title="No va a NSYS: quitarlo de la lista (con motivo)">descartar</button>${m && m.volvio ? `<span class="antes" style="color:#b91c1c;font-weight:700">${m.volvio}</span>` : ''}`
+}
+
+function tablaNoesta() {
+  const abrir = (i) => `<button class="link mono" data-abrir="${i}">${i}</button>`
+  const n = pendientes().length
+  const filas = visibles().map((c) => `<tr class="${hecho(c.imei) ? 'hecho' : ''}"><td class="nw">${abrir(c.imei)}${S.antes[c.imei] ? `<span class="antes">${S.antes[c.imei]}</span>` : ''}</td><td class="nw">${c.modelo}<span class="gr">el del taller</span></td>
+      <td class="nw">${c.ultimo}</td><td class="nw">${c.tec}</td><td class="nw">${c.cliente}</td><td class="nw" style="text-align:right">${c.n}</td><td class="nw">${c.desde}</td><td class="nw">${celdaHecho(c)}</td></tr>`).join('')
+  const d = descartados()
+  if (d.length === 0) S.verDesc = false
+  const pie = d.length === 0 ? '' : `<div class="pie-desc"><button class="link" id="verDesc">${S.verDesc ? 'Ocultar descartados' : `Ver descartados (${d.length})`}</button></div>`
+  const listaDesc = !S.verDesc || d.length === 0 ? '' : `<div class="tabla-w"><table class="t desc"><thead><tr><th>IMEI</th><th>Modelo</th><th>Último trabajo</th><th>Descartado</th><th>Motivo</th><th></th></tr></thead><tbody>${d.map((c) => {
+      const x = desc(c.imei)
+      return `<tr><td class="nw mono">${c.imei}</td><td class="nw">${c.modelo}</td><td class="nw">${c.ultimo}</td><td class="nw">${x.por} · ${x.en}</td><td class="motivo">«${x.motivo}»</td><td class="nw"><button class="link" style="font-size:11px" data-recuperar="${c.imei}">deshacer</button></td></tr>`
+    }).join('')}</tbody></table></div>`
+  return `<div class="tabla-w"><table class="t"><thead><tr><th>IMEI</th><th>Modelo</th><th>Último trabajo</th><th>Técnico</th><th>Cliente</th><th>Trabajos</th><th>Desde</th><th><button class="btn peq" data-todo="1" ${n ? '' : 'disabled'}>✓ Marcar todo (${n})</button></th></tr></thead>
+    <tbody>${filas || '<tr><td colspan="8" class="vacio">Todos los móviles del taller están en NSYS.</td></tr>'}</tbody></table></div>${pie}${listaDesc}`
+}
+
+function pintar() {
+  $('arriba').innerHTML = `<div class="tabs"><button>Móviles</button><button class="on">Por pasar a NSYS${num(total())}</button></div>`
+  const tiles = ['color', 'grado', 'noesta', 'revisar'].map((v) => {
+    let big = N[v](), extra = ''
+    if (v === 'noesta') {
+      big = visibles().length
+      const h = visibles().filter((c) => hecho(c.imei)).length
+      if (h) extra = ` · ${h} hecho${h === 1 ? '' : 's'}`
+    }
+    const pie = v === 'noesta'
+      ? `<button class="btn pri peq" data-accion="noesta" ${pendientes().length ? '' : 'disabled'}>⬇ Descargar plantilla${pendientes().length ? ` (${pendientes().length})` : ''}</button>`
+      : v === 'color' ? `<button class="btn pri peq">⬇ Descargar plantilla (${OTRAS.color})</button>` : v === 'grado' ? `<button class="btn peq">Copiar lista (${OTRAS.grado})</button>` : '<button class="btn peq">Ver</button>'
+    return `<div class="tile ${v} ${S.sub === v ? 'on' : ''}" data-sub="${v}"><div class="tt">${NOMBRE[v]}</div>
+      <div class="big">${big}<small>móvil${big === 1 ? '' : 'es'}${extra}</small></div><div class="ex">${EX[v]}</div><div class="pie">${pie}</div></div>`
+  }).join('')
+  const cuerpo = S.sub === 'noesta' ? `<div class="cab"><p class="ayuda">${AYUDA_NOESTA}</p></div>${tablaNoesta()}`
+    : `<div class="vacio" style="padding:24px">En este prototipo solo cambia «No está en NSYS». Las demás tarjetas siguen como el diseño aprobado el 25/10.</div>`
+  $('contenido').innerHTML = `<div class="tiles">${tiles}</div>${cuerpo}`
+  pintarFichero(); pintarDialogo()
+}
+
+function pintarFichero() {
+  const f = S.fichero
+  if (!f) { $('fichero').innerHTML = ''; return }
+  const cols = ['IMEI/SN *', 'Manufacturer *', 'Model *', 'Storage', 'Color', 'Grade', 'Purchase price', 'Supplier Name', 'Batch Number', 'Group of Goods', 'EAN', 'UPC', 'Description', 'Status']
+  const celda = (v, clase = '') => `<td class="${clase || (v === '' ? 'vac' : '')}">${v === '' ? '·' : v}</td>`
+  $('fichero').innerHTML = `<div class="fichero"><div class="fh"><b>Así sale «${f.nombre}» (solo en el prototipo)</b><span class="ayuda">Los descartados no van.</span>
+      <button class="btn peq" style="margin-left:auto" id="cerrarFichero">Cerrar</button></div>
+    <div style="overflow:auto"><table class="xls"><thead><tr><th></th>${cols.map((c, i) => `<th>${String.fromCharCode(65 + i)} · ${c}</th>`).join('')}</tr></thead>
+      <tbody>${f.filas.map((r, i) => `<tr><td class="fila">${7 + i}</td>${r.map(([v, c]) => celda(v, c)).join('')}</tr>`).join('')}</tbody></table></div></div>`
+}
+
+function pintarDialogo() {
+  const d = S.dlg
+  if (!d) { $('dialogo').innerHTML = ''; return }
+  const listo = d.motivo.trim() !== ''
+  $('dialogo').innerHTML = `<div class="velo" id="velo"><div class="dlg" role="dialog" aria-label="Descartar">
+    <h3>Descartar de «No está en NSYS»</h3>
+    <p><b class="mono">${d.imei}</b> deja de salir aquí y no va en la plantilla de altas. Las importaciones de NSYS no lo devuelven; solo sale otra vez si el taller le hace un trabajo nuevo.</p>
+    <label for="motivoDesc">Motivo (obligatorio)</label>
+    <textarea id="motivoDesc" placeholder="Por qué no va a NSYS">${d.motivo}</textarea>
+    <span class="ej">Ejemplos: «no es un móvil, es una cámara», «móvil de un cliente, no es stock».</span>
+    <div class="botones"><button class="btn" id="cancelarDesc">Cancelar</button><button class="btn rojo" id="confirmarDesc" ${listo ? '' : 'disabled'}>Descartar</button></div>
+  </div></div>`
+  const t = $('motivoDesc'); t.focus(); t.setSelectionRange(t.value.length, t.value.length)
+  t.addEventListener('input', () => { S.dlg.motivo = t.value; $('confirmarDesc').disabled = t.value.trim() === '' })
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.dlg) { S.dlg = null; pintarDialogo() } })
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'velo') { S.dlg = null; pintarDialogo(); return }
+  if (e.target.id === 'avisoX') { cerrarAviso(); return }
+  if (e.target.id === 'avisoDeshacer') { const f = avisar.deshacer; cerrarAviso(); if (f) f(); return }
+  const cuerpoAviso = e.target.closest('.aviso')
+  if (cuerpoAviso) { if (cuerpoAviso.dataset.cuerpo === 'cierra') cerrarAviso(); return }
+  const b = e.target.closest('button, .tile'); if (!b) return
+  if (b.id === 'reiniciar') { reiniciar(); pintar(); avisar('Datos de ejemplo de nuevo'); return }
+  if (b.id === 'demoDeshacer') { avisar('A20261026_41 marcada como urgente', () => avisar('Deshecho: A20261026_41 ya no es urgente')); return }
+  if (b.id === 'cancelarDesc') { S.dlg = null; pintarDialogo(); return }
+  if (b.id === 'confirmarDesc') {
+    const { imei, motivo } = S.dlg
+    S.descarte[imei] = { por: 'Supertécnico 1', en: `26/10/2026 ${hora()}`, motivo: motivo.trim() }
+    delete S.antes[imei]; delete S.marca[imei]; S.dlg = null; S.fichero = null
+    avisar(`Descartado «${imei}»`)
+    pintar(); return
+  }
+  if (b.dataset.descartar) { S.dlg = { imei: b.dataset.descartar, motivo: '' }; pintarDialogo(); return }
+  if (b.dataset.recuperar) { const i = b.dataset.recuperar; delete S.descarte[i]; avisar(`«${i}» vuelve a la lista`); pintar(); return }
+  if (b.id === 'verDesc') { S.verDesc = !S.verDesc; pintar(); return }
+  if (b.id === 'simImport') {
+    let fuera = 0
+    for (const c of visibles()) if (hecho(c.imei)) { if (c.imei === '350000000000099') { S.marca[c.imei] = { volvio: `Marcado «Hecho» a las ${S.marca[c.imei].hora}, pero NSYS sigue sin conocerlo: vuelve a salir` } } else { S.noesta = S.noesta.filter((x) => x !== c); delete S.marca[c.imei]; fuera++ } }
+    avisar(`Importación: ${descartados().length} descartado${descartados().length === 1 ? '' : 's'} sigue${descartados().length === 1 ? '' : 'n'} igual${fuera ? `; ${fuera} dado${fuera === 1 ? '' : 's'} de alta` : ''}`)
+    pintar(); return
+  }
+  if (b.id === 'simTrabajo') {
+    const c = descartados()[0]
+    if (!c) { avisar('Descarta algo primero'); return }
+    const x = desc(c.imei)
+    S.antes[c.imei] = `Salió otra vez: trabajo nuevo R20261026_40 después de que ${x.por} lo descartara el ${x.en} («${x.motivo}»)`
+    c.ultimo = 'R20261026_40 · Reparación'; c.n += 1; delete S.descarte[c.imei]
+    avisar(`«${c.imei}» vuelve: tiene un trabajo nuevo`); pintar(); return
+  }
+  if (b.dataset.hecho) { S.marca[b.dataset.hecho] = { hora: hora() }; pintar(); return }
+  if (b.dataset.deshacer) { delete S.marca[b.dataset.deshacer]; pintar(); return }
+  if (b.dataset.todo) { e.stopPropagation(); const h = hora(); pendientes().forEach((c) => { S.marca[c.imei] = { hora: h } }); pintar(); return }
+  if (b.id === 'cerrarFichero') { S.fichero = null; pintar(); return }
+  if (b.dataset.accion) {
+    e.stopPropagation()
+    S.fichero = { nombre: 'NSYS_altas_2026-10-26.xlsx', filas: pendientes().map((c) => [[c.imei], ['Apple'], [c.modelo, 'rell'], ['rellenar', 'rell'], ['rellenar', 'rell'],
+      ['rellenar', 'rell'], ['rellenar', 'rell'], ['rellenar', 'rell'], [LOTE_ALTA], ['iPhone'], [''], [''], [''], ['0']]) }
+    avisar(`Descargado «NSYS_altas_2026-10-26.xlsx» · ${pendientes().length} móviles`); pintar(); return
+  }
+  if (b.dataset.sub) { S.sub = b.dataset.sub; pintar(); return }
+  if (b.dataset.abrir) { avisar(`En la app: abre el detalle de ${b.dataset.abrir}`); return }
+})
+pintar()
+</script>
+</body>
+</html>
