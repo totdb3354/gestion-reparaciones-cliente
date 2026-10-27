@@ -13,11 +13,12 @@
   - **Revisar a mano**: los móviles **sin grado** que han pasado por el taller («Sin grado en NSYS»; se van solos cuando NSYS los
     gradúa) y lo que el programa no supo calcular al guardar una reparación. «Corregir…» abre el móvil; «✓ Revisado» si ya estaba
     bien.
-- Los móviles vendidos o de baja en NSYS no salen en Cambio de color ni en Cambio de grado (no se vuelven a subir); si vuelven a
-  la empresa, salen otra vez.
+- Los móviles vendidos o de baja en NSYS no salen en Cambio de color, en Cambio de grado ni en Revisar a mano (no se vuelven a
+  subir); si vuelven al taller, salen otra vez.
 - Si se cambia la batería a un móvil sin grado, el programa se acuerda: cuando el móvil tenga grado, le pone (o le quita) el 100 y
   sale en «Cambio de grado».
-- Un móvil vendido que vuelve al taller (devolución o garantía) sale con un aviso en ámbar: haz antes la devolución en NSYS.
+- Un móvil vendido o de baja que vuelve al taller (devolución o garantía) sale con un aviso en ámbar: míralo antes en NSYS (si
+  estaba vendido, haz antes la devolución).
 - **«Hecho»** en cada fila (y «✓ Marcar todo»): la fila se queda en gris y ya no va en la plantilla. Desaparece sola cuando NSYS
   lo tiene; si se marcó por error, vuelve a salir con un aviso.
 - **«descartar»** en «No está en NSYS»: si una fila no debería estar (no es un móvil, es de un cliente…), el enlace «descartar»
@@ -30,6 +31,8 @@
 
 - Al guardar una reparación con chasis o tapa trasera, el programa deduce el color en más casos (colores que aún no tiene ningún
   móvil en NSYS). Menos avisos de «el color del chasis no se puede deducir».
+- Los grados F, Fd, RMA e ID no cambian con ninguna pieza. A+ cuenta como A: si a un A+ se le cambia el chasis o la batería, sale
+  en «Cambio de grado» con A en lugar de A+ (por ejemplo, A+ con batería nueva pasa a A100).
 
 ## 🔔 Avisos
 
