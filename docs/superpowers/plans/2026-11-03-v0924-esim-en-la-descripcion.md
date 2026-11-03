@@ -146,7 +146,7 @@ en las de NSYS (ficha, buscador, «Por pasar a NSYS», «Pegar varios IMEIs») y
   - `TallerDePrueba.esim(String imei, String color, String grade): MovilNsys` (prueba): como `movil(…)` pero con
     `esEsim = true` y el producto «Apple iPhone 13 eSIM 128GB Blue». La usa también la Task 2.
 
-- [ ] **Step 1: Worktree del servidor**
+- [x] **Step 1: Worktree del servidor**
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-servidor
@@ -159,7 +159,7 @@ Expected: el worktree creado sobre `origin/main` (el 03/11, `71f1ee1`). Apunta e
 (`.superpowers/sdd/v0924-esim/progress.md`, raíz; créalo si no existe). Línea base: `mvn -q test` en el worktree, en verde (si
 algo falla ya en `main`, apuntarlo y avisar).
 
-- [ ] **Step 2: El móvil eSIM de prueba**
+- [x] **Step 2: El móvil eSIM de prueba**
 
 En `src/test/java/com/reparaciones/servidor/nsys/TallerDePrueba.java`, justo después del método `movil(String imei, String
 color, String grade)` (antes del comentario «/** Un móvil cuyo producto no está en el maestro…»), añade:
@@ -173,7 +173,7 @@ color, String grade)` (antes del comentario «/** Un móvil cuyo producto no est
     }
 ```
 
-- [ ] **Step 3: Las pruebas que fallan**
+- [x] **Step 3: Las pruebas que fallan**
 
 En `DescripcionMovilTest.java`, al final de la clase (antes de la última `}`), añade:
 
@@ -239,12 +239,12 @@ por
                 "capacidad, color y esEsim van al final de ReparacionResumen");
 ```
 
-- [ ] **Step 4: Comprobar que fallan**
+- [x] **Step 4: Comprobar que fallan**
 
 Run: `mvn -q test -Dtest='DescripcionMovilTest,DescripcionMovilRutasTest,OpenApiContractTest'`
 Expected: FAIL al compilar las pruebas: `cannot find symbol … isEsEsim()` en `DescripcionMovilTest`.
 
-- [ ] **Step 5: El campo y el relleno**
+- [x] **Step 5: El campo y el relleno**
 
 En `model/ReparacionResumen.java`, sustituye
 
@@ -327,12 +327,12 @@ En `nsys/DescripcionMovil.java`:
         masReciente.forEach((clave, m) -> moviles.put(clave, new DelEspejo(m.capacidad(), color.apply(m), m.esEsim())));
 ```
 
-- [ ] **Step 6: Comprobar que pasan**
+- [x] **Step 6: Comprobar que pasan**
 
 Run: `mvn -q test -Dtest='DescripcionMovilTest,DescripcionMovilRutasTest,OpenApiContractTest'`
 Expected: PASS (código de salida 0, sin `FAIL` ni `ERROR`).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/model/ReparacionResumen.java \
@@ -363,7 +363,7 @@ git commit -m "feat: las listas del taller dicen si el movil es eSIM, de la mism
   `FilaSinGradoNsys`; en Java, el accesor `esEsim()` de los cuatro records `Fila…Nsys`. `target/openapi.json` con todo, para la
   Task 3.
 
-- [ ] **Step 1: Las pruebas que fallan**
+- [x] **Step 1: Las pruebas que fallan**
 
 En `StockTelefonosControllerTest.java`, al final de la clase (antes de la última `}`), añade:
 
@@ -433,12 +433,12 @@ línea, antes de la `}` que cierra el test), añade:
             assertNoNullable(esquemas, esquema, "esEsim");
 ```
 
-- [ ] **Step 2: Comprobar que fallan**
+- [x] **Step 2: Comprobar que fallan**
 
 Run: `mvn -q test -Dtest='StockTelefonosControllerTest,TarjetasNsysTest,OpenApiContractTest'`
 Expected: FAIL al compilar las pruebas: `cannot find symbol … esEsim()` en `TarjetasNsysTest` (los records aún no lo tienen).
 
-- [ ] **Step 3: Los records de `StockTelefonosController`**
+- [x] **Step 3: Los records de `StockTelefonosController`**
 
 En `nsys/StockTelefonosController.java`:
 - sustituye
@@ -524,7 +524,7 @@ Y donde se construyen:
   y `abiertos.getOrDefault(NsysDAO.claveCruce(imei), List.of()), v.colorNsys(), v.gradoNsys());` por
   `abiertos.getOrDefault(NsysDAO.claveCruce(imei), List.of()), v.colorNsys(), v.gradoNsys(), m.esEsim());`
 
-- [ ] **Step 4: Los cuatro records de las tarjetas**
+- [x] **Step 4: Los cuatro records de las tarjetas**
 
 En `nsys/FilaColorNsys.java`:
 - en el comentario del record, sustituye
@@ -681,12 +681,12 @@ Si al compilar sale otro `new FilaColorNsys(…)`, `new FilaGradoNsys(…)`, `ne
 no está aquí (el 03/11 solo había los de `TarjetasNsys` y los constructores cortos), se le añade `false` (o `m.esEsim()` si tiene
 el `MovilNsys` a mano) y se apunta en el registro.
 
-- [ ] **Step 5: Comprobar que pasan**
+- [x] **Step 5: Comprobar que pasan**
 
 Run: `mvn -q test -Dtest='StockTelefonosControllerTest,TarjetasNsysTest,OpenApiContractTest'`
 Expected: PASS.
 
-- [ ] **Step 6: El contrato**
+- [x] **Step 6: El contrato**
 
 En `docs/api_contract.md`, justo después de la viñeta de la 0.9.21 que termina en
 «…`modelo` sigue siendo el código de `Telefono.MODELO`.», añade:
@@ -700,13 +700,13 @@ En `docs/api_contract.md`, justo después de la viñeta de la 0.9.21 que termina
   NSYS» (un aviso sin móvil en el espejo, `false`). El stock (`GET /api/stock-telefonos`) ya lo traía.
 ```
 
-- [ ] **Step 7: Suite completa del servidor**
+- [x] **Step 7: Suite completa del servidor**
 
 Run: `mvn -q test`
 Expected: sin fallos. Después, `grep -c '"esEsim"' target/openapi.json` da **al menos 9** (los 8 esquemas de esta pieza y
 `StockTelefonosMovilStock`). Anota el total de tests en el registro.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/main/java/com/reparaciones/servidor/nsys/StockTelefonosController.java \
@@ -745,7 +745,7 @@ git commit -m "feat: la ficha, el buscador, comprobar y las cuatro tarjetas de N
   `FilaColorNsys`, `FilaGradoNsys`, `FilaRevisarNsys` y `FilaSinGradoNsys`; las fábricas lo traen (`false`, salvo
   `filaGrado()` y `filaRevisar()`, `true`).
 
-- [ ] **Step 1: Worktree de la web**
+- [x] **Step 1: Worktree de la web**
 
 ```bash
 cd /c/Users/dev/Documents/ProgramaReparaciones/gestion-reparaciones-web
@@ -758,7 +758,7 @@ cd /c/Users/dev/Documents/wt/web-0924-esim && npm ci
 Expected: el worktree sobre `origin/main` (el 03/11, `206fa5b`, 0.9.22.1; si la 0.9.23 ya ha entrado, su merge) y `npm ci` sin
 errores. Apunta en el registro el commit y si lleva o no la 0.9.23. Línea base: `npm run check` en verde.
 
-- [ ] **Step 2: Contrato y tipos**
+- [x] **Step 2: Contrato y tipos**
 
 Run (en `/c/Users/dev/Documents/wt/web-0924-esim`):
 `cp /c/Users/dev/Documents/wt/servidor-0924-esim/target/openapi.json api/openapi.json && npm run api:types:offline`
@@ -773,7 +773,7 @@ Expected: `git diff --stat` enseña solo `api/openapi.json` y `src/shared/api/sc
 **Si el diff toca algo más, parar y avisar** (el `main` del servidor y el contrato de la web no van a la par). Apunta en el
 registro si se fueron las rutas retiradas.
 
-- [ ] **Step 3: Las fábricas (el tipo las rompe)**
+- [x] **Step 3: Las fábricas (el tipo las rompe)**
 
 Run: `npx tsc -b`
 Expected: errores por `esEsim` que falta en las fábricas `resumen()` y `fichaMovil()` (`src/modules/taller/test/fabrica.ts`) y
@@ -833,14 +833,14 @@ Run: `npx tsc -b`
 Expected: limpio. Run: `npx vitest run src/modules/telefonos src/modules/taller`
 Expected: PASS (las pantallas aún no miran `esEsim`, así que nada cambia).
 
-- [ ] **Step 4: Commit del contrato**
+- [x] **Step 4: Commit del contrato**
 
 ```bash
 git add api/openapi.json src/shared/api/schema.d.ts src/modules/taller/test/fabrica.ts src/modules/telefonos/test/fabrica.ts
 git commit -m "chore: contrato y tipos con esEsim en las listas del taller y en las de NSYS (0.9.24)"
 ```
 
-- [ ] **Step 5: Las pruebas que fallan**
+- [x] **Step 5: Las pruebas que fallan**
 
 En `src/shared/lib/telefonoNsys.test.ts`, añade `conEsim, nombreMovilNsys, SIN_MODELO_MAESTRO` a la lista del `import … from
 './telefonoNsys'` (línea 2) y, al final del fichero, añade:
@@ -944,13 +944,13 @@ detrás de su primer test, añade:
   })
 ```
 
-- [ ] **Step 6: Comprobar que fallan**
+- [x] **Step 6: Comprobar que fallan**
 
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/taller/imeis/FichaMovil.test.tsx src/modules/telefonos/stock/StockTelefonosPage.test.tsx src/modules/telefonos/stock/porPasar.test.ts src/modules/telefonos/stock/varios.test.ts src/modules/taller/imeis/ImeisPage.test.tsx`
 Expected: FAIL: `telefonoNsys.test.ts` porque `conEsim`, `nombreMovilNsys` y `SIN_MODELO_MAESTRO` no existen; en los demás, los
 textos con «eSIM» no salen («iPhone 14 256GB Negro» en vez de «iPhone 14 eSIM 256GB Negro», etc.).
 
-- [ ] **Step 7: `conEsim` y `nombreMovilNsys`**
+- [x] **Step 7: `conEsim` y `nombreMovilNsys`**
 
 En `src/shared/lib/telefonoNsys.ts`, sustituye
 
@@ -989,7 +989,7 @@ export const nombreMovilNsys = (m: { modelo: string | null; modeloMaestro: strin
   conEsim(nombreModeloNsys(m.modelo, m.modeloMaestro), m.esEsim)
 ```
 
-- [ ] **Step 8: Las cinco copias de NSYS**
+- [x] **Step 8: Las cinco copias de NSYS**
 
 `src/modules/taller/imeis/FichaMovil.tsx`:
 - en el import de `@/shared/lib/telefonoNsys`, cambia `nombreModeloNsys` por `nombreMovilNsys`;
@@ -1070,13 +1070,13 @@ Run: `grep -rn "nombreModeloNsys" src --include=*.ts --include=*.tsx | grep -v t
 Expected: solo `src/shared/lib/telefonoNsys.ts` (la definición y `nombreMovilNsys`), `src/modules/telefonos/stock/porPasar.ts`
 (`modeloDelTaller`) y `src/modules/telefonos/stock/modelo.ts` (`modeloDe`, la lista de modelos del stock, que no cambia).
 
-- [ ] **Step 9: Comprobar que pasan**
+- [x] **Step 9: Comprobar que pasan**
 
 Run: `npx vitest run src/shared/lib/telefonoNsys.test.ts src/modules/taller/imeis src/modules/telefonos`
 Expected: PASS. Run: `npx tsc -b` y `npm run lint`
 Expected: limpios.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/shared/lib/telefonoNsys.ts src/shared/lib/telefonoNsys.test.ts \
@@ -1115,7 +1115,7 @@ git commit -m "feat: la ficha, el buscador, por pasar a NSYS, pegar varios y el 
 Las pantallas no cambian de código: todas pintan `descripcionTrabajo` (columnas «Modelo», «Copiar celda», la confirmación de
 «Completar seleccionados» y la barra del detalle). Sus pruebas sí ganan un caso con eSIM.
 
-- [ ] **Step 1: Las pruebas que fallan**
+- [x] **Step 1: Las pruebas que fallan**
 
 En `src/modules/taller/lib/modelos.test.ts`, añade `nombreTrabajo` a la lista del `import … from './modelos'` y, al final del
 fichero, añade:
@@ -1264,13 +1264,13 @@ describe('CSV agrupado_resumen: «Modelo» (0.9.24)', () => {
 })
 ```
 
-- [ ] **Step 2: Comprobar que fallan**
+- [x] **Step 2: Comprobar que fallan**
 
 Run: `npx vitest run src/modules/taller/lib src/modules/taller/pendientes/textoCelda.test.ts src/modules/taller/historial/columnasTrabajo.test.ts src/modules/taller/asignaciones/columnas.test.tsx src/modules/taller/imeis/ImeiDetallePage.test.tsx src/modules/taller/asignaciones/csv.test.ts src/modules/taller/pendientes/csvPulidos.test.ts src/modules/taller/historial/csvTrabajos.test.ts src/modules/taller/imeis/csvImeis.test.ts`
 Expected: FAIL: `nombreTrabajo` no existe; `movilDe` no trae `esEsim`; los textos dicen «iPhone 14 256GB Negro» y los CSV
 «iPhone 14», sin «eSIM».
 
-- [ ] **Step 3: `nombreTrabajo`, `descripcionTrabajo` y `movilDe`**
+- [x] **Step 3: `nombreTrabajo`, `descripcionTrabajo` y `movilDe`**
 
 En `src/modules/taller/lib/modelos.ts`, sustituye
 
@@ -1369,7 +1369,7 @@ export function movilDe(trabajos: ReparacionResumen[]): Pick<GrupoImei, 'modelo'
 (`construir` ya hace `...movilDe(trabajos)`: el grupo gana `esEsim` sin tocarlo. El `Pick` dice lo mismo que el tipo de antes,
 más `esEsim`.)
 
-- [ ] **Step 4: «Modelo» de los cuatro CSV**
+- [x] **Step 4: «Modelo» de los cuatro CSV**
 
 `src/modules/taller/asignaciones/csv.ts`:
 - sustituye `import { traducirModelo } from '../lib/modelos'` por `import { nombreTrabajo } from '../lib/modelos'`;
@@ -1404,14 +1404,14 @@ más `esEsim`.)
 Run: `grep -n "traducirModelo" src/modules/taller/asignaciones/csv.ts src/modules/taller/pendientes/csvPulidos.ts src/modules/taller/historial/csvTrabajos.ts src/modules/taller/imeis/csvImeis.ts`
 Expected: nada.
 
-- [ ] **Step 5: Comprobar que pasan**
+- [x] **Step 5: Comprobar que pasan**
 
 Run: `npx vitest run src/modules/taller`
 Expected: PASS (también el CSV de `ImeisPage.test.tsx`, que sigue con «iPhone 14» porque su fila no es eSIM). Run: `npx tsc -b` y
 `npm run lint`
 Expected: limpios.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/modules/taller/lib/modelos.ts src/modules/taller/lib/modelos.test.ts \
@@ -1439,7 +1439,7 @@ git commit -m "feat: las listas del taller y la columna Modelo de sus csv dicen 
   `esEsim` (Tasks 1-2); las pantallas de las Tasks 3-4.
 - Produces: la E2E que el controlador lanza en preprod (fuera de este plan).
 
-- [ ] **Step 1: La prueba**
+- [x] **Step 1: La prueba**
 
 Crea `tests/e2e/esim-descripcion.spec.ts`:
 
@@ -1515,14 +1515,14 @@ test('la descripción del móvil dice eSIM en IMEIs, en el detalle y en la ficha
 })
 ```
 
-- [ ] **Step 2: Comprobar que compila y se lista**
+- [x] **Step 2: Comprobar que compila y se lista**
 
 Run: `npx playwright test --list`
 Expected: la lista de siempre más `esim-descripcion.spec.ts › la descripción del móvil dice eSIM en IMEIs, en el detalle y en la
 ficha, y no en uno con SIM física`, sin errores de compilación. Run: `npm run lint`
 Expected: limpio. (No se lanza contra preprod aquí: lo hace el controlador tras subir las dos ramas.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/e2e/esim-descripcion.spec.ts
@@ -1543,7 +1543,7 @@ git commit -m "test: E2E de solo lectura de la eSIM en la descripcion del movil 
 - Consumes: todo lo de las Tasks 1-5.
 - Produces: las ramas `dev_v0924_esim` (servidor y web) listas para la revisión y el merge.
 
-- [ ] **Step 1: Versión de la web**
+- [x] **Step 1: Versión de la web**
 
 Run (en `/c/Users/dev/Documents/wt/web-0924-esim`):
 
@@ -1558,7 +1558,7 @@ Expected: `$V` es la versión de partida (`0.9.22.1`, o `0.9.23` si ya entró) y
 `package-lock.json` (la raíz y `packages[""]`). Si toca más líneas de `package-lock.json`, deshacer con
 `git checkout package-lock.json` y cambiar esas dos a mano.
 
-- [ ] **Step 2: CHANGELOG de la web**
+- [x] **Step 2: CHANGELOG de la web**
 
 En `CHANGELOG.md`, justo **encima** de la primera entrada `## [` (la más reciente), añade:
 
@@ -1571,7 +1571,7 @@ En `CHANGELOG.md`, justo **encima** de la primera entrada `## [` (la más recien
 
 ```
 
-- [ ] **Step 3: Paridad**
+- [x] **Step 3: Paridad**
 
 En cada uno de los cuatro ficheros, justo **después** de la viñeta que empieza por «- **Diferencia deliberada (0.9.21):**» (hay
 una en cada fichero), añade la viñeta indicada:
@@ -1600,7 +1600,7 @@ una en cada fichero), añade la viñeta indicada:
 - **Diferencia deliberada (0.9.24):** el «Modelo» del maestro y del detalle, sus «Copiar celda», la barra «IMEI · modelo» del detalle y el aviso de los móviles sin trabajos («(iPhone 14 eSIM, vendido el …)») llevan «eSIM» detrás del modelo si NSYS dice que el móvil es eSIM; un IMEI es eSIM si lo es en alguno de sus trabajos (spec raíz `docs/superpowers/specs/2026-11-03-v0924-esim-en-la-descripcion-design.md`). El CSV `agrupado_resumen` dice «iPhone 14 eSIM» en «Modelo». Pruebas: `grupoImei.test.ts`, `csvImeis.test.ts`, `ImeiDetallePage.test.tsx` e `ImeisPage.test.tsx`.
 ```
 
-- [ ] **Step 4: Commit de la web**
+- [x] **Step 4: Commit de la web**
 
 ```bash
 git add package.json package-lock.json CHANGELOG.md docs/paridad/asignaciones.md docs/paridad/pendientes.md \
@@ -1608,7 +1608,7 @@ git add package.json package-lock.json CHANGELOG.md docs/paridad/asignaciones.md
 git commit -m "docs: version 0.9.24, changelog y paridad de la eSIM en la descripcion del movil"
 ```
 
-- [ ] **Step 5: Novedades (raíz, sin commit)**
+- [x] **Step 5: Novedades (raíz, sin commit)**
 
 Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.24.md`:
 
@@ -1627,7 +1627,7 @@ Crea `C:/Users/dev/Documents/ProgramaReparaciones/docs/novedades/NOVEDADES-v0.9.
 - La eSIM sale de NSYS: si NSYS la tiene mal, se corrige en NSYS.
 ```
 
-- [ ] **Step 6: Suites completas**
+- [x] **Step 6: Suites completas**
 
 Run (servidor): `mvn -q test` en `/c/Users/dev/Documents/wt/servidor-0924-esim`
 Expected: sin fallos. Anota el total en el registro.
@@ -1641,7 +1641,7 @@ Expected: build sin errores.
 Run (web): `npx playwright test --list`
 Expected: la lista de siempre más `esim-descripcion.spec.ts`, sin errores de compilación.
 
-- [ ] **Step 7: Plan maestro y registro**
+- [x] **Step 7: Plan maestro y registro**
 
 En `C:/Users/dev/Documents/Apuntes/plan-futuro.md`, justo **después** de la entrada que empieza por
 «- [ ] **Descripción completa donde pone «Modelo»**» (antes de «- [ ] **Backlog de la 0.9.16**»), añade:

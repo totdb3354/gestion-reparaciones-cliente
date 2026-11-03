@@ -1,6 +1,6 @@
 # 0.9.24 — La descripción del móvil dice si es eSIM
 
-Fecha: 2026-11-03. Estado: **diseño aprobado** en el brainstorming del 03/11; plan escrito (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`). Los ajustes del plan están en el §7 y mandan sobre lo de arriba si chocan.
+Fecha: 2026-11-03. Estado: **implementada y en `main` el 03/11** (servidor `1f2d89c`, web `c65ddfb`), falta preprod y producción; diseño aprobado en el brainstorming del 03/11; plan escrito (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`). Los ajustes del plan están en el §7 y mandan sobre lo de arriba si chocan.
 **Servidor + web, sin base de datos.** Amplía la 0.9.21 «Descripción completa donde pone «Modelo»»
 (`2026-10-22-v0921-descripcion-completa-design.md`), que dejó la descripción en modelo, capacidad y color.
 
@@ -122,3 +122,6 @@ Fijados al escribir el plan (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`)
    («Apple iPhone 14 eSIM 256GB Midnight», chasis `chai14yellowesim`): `true`.
 6. **E2E** `tests/e2e/esim-descripcion.spec.ts`: se salta con el motivo si el historial de preprod no tiene un trabajo de un
    móvil eSIM y otro sin eSIM, los dos con modelo y capacidad de NSYS.
+7. **Si el nombre ya dice eSIM, no se repite** (revisión final, 03/11): un modelo fuera del catálogo del ERP se nombra con el
+   texto del maestro, que ya lleva «eSIM» («17 e eSIM» → «iPhone 17 e eSIM»); `conEsim` no le añade otro. Misma regla que
+   `Normalizacion.esEsim` del servidor (contiene «esim», sin mirar mayúsculas).
