@@ -101,6 +101,10 @@ En `src/modules/taller/asignaciones/modal/`:
 
 - **Items con retraso**: si alguien acaba de dar de alta el móvil en NSYS y el bot aún no ha exportado, el aviso sale igual. La
   hora del último Items deja ver que puede ir con retraso.
+- **Items nuevo con el modal abierto** (revisión final, decisión del usuario del 03/11: se deja así): la respuesta de NSYS
+  se guarda mientras el modal está abierto, pero la hora del último Items se actualiza sola. Si alguien da de alta el móvil
+  en NSYS y llega un Items que ya lo trae, el modal sigue diciendo «No está en NSYS», ahora con la hora nueva, hasta que se
+  cierre. Es raro tener el modal abierto tanto tiempo, y después de guardar manda la tarjeta «No está en NSYS».
 - **NSYS lo tiene con el IMEI2 o el número de serie**: avisa, igual que la tarjeta (spec 0.9.22 §5).
 - **Vendido o de baja en NSYS**: no avisa (decisión del usuario).
 - **Clientes cargando**: la cola de efectos del modal espera a la lista de clientes (D6). La pregunta a NSYS espera con el
