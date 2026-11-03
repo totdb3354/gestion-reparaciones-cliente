@@ -1,6 +1,6 @@
 # 0.9.24 — La descripción del móvil dice si es eSIM
 
-Fecha: 2026-11-03. Estado: **diseño aprobado** en el brainstorming del 03/11, pendiente del plan.
+Fecha: 2026-11-03. Estado: **diseño aprobado** en el brainstorming del 03/11; plan escrito (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`). Los ajustes del plan están en el §7 y mandan sobre lo de arriba si chocan.
 **Servidor + web, sin base de datos.** Amplía la 0.9.21 «Descripción completa donde pone «Modelo»»
 (`2026-10-22-v0921-descripcion-completa-design.md`), que dejó la descripción en modelo, capacidad y color.
 
@@ -104,3 +104,21 @@ teléfonos, como marca junto al grado. **Ahora**, cuando el móvil es eSIM, la d
 - Un filtro o una búsqueda por eSIM en las listas del taller.
 - Separar el 14 y el 14 eSIM en la lista de modelos del stock.
 - Corregir la eSIM desde el taller.
+
+## 7. Ajustes del plan (2026-11-03)
+
+Fijados al escribir el plan (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`); mandan sobre lo de arriba si chocan.
+
+1. **El servidor no tiene CHANGELOG ni versión en el `pom.xml`:** su 0.9.24 es el tag y la entrada del CHANGELOG de la web; el
+   contrato se apunta en `docs/api_contract.md` del servidor (§5).
+2. **`main` del servidor ya no es `d714d3f`:** el 03/11 es `71f1ee1`, que suma a la 0.9.22.2 el borrado de las 24 rutas retiradas
+   (sp7b tarea 27, otra sesión). La rama sale de `origin/main` al crearla y la subida del servidor lleva las tres cosas. El
+   contrato de la web, regenerado aquí, pierde además esas rutas si nadie lo ha refrescado antes.
+3. **`esEsim` va al final** de cada respuesta, como la capacidad y el color de la 0.9.21. Los constructores cortos de
+   `FilaColorNsys`, `FilaGradoNsys` y `FilaRevisarNsys` («un móvil en la empresa», sin uso hoy) pasan `false`.
+4. **Nombres en la web:** `conEsim(nombre, esEsim)`, `nombreMovilNsys(m)` y la constante `SIN_MODELO_MAESTRO` en
+   `src/shared/lib/telefonoNsys.ts`; `nombreTrabajo(t)` en `src/modules/taller/lib/modelos.ts`.
+5. **Fábricas de prueba:** `esEsim: false` por defecto, salvo `filaGrado()` y `filaRevisar()`, que ya describen un móvil eSIM
+   («Apple iPhone 14 eSIM 256GB Midnight», chasis `chai14yellowesim`): `true`.
+6. **E2E** `tests/e2e/esim-descripcion.spec.ts`: se salta con el motivo si el historial de preprod no tiene un trabajo de un
+   móvil eSIM y otro sin eSIM, los dos con modelo y capacidad de NSYS.
