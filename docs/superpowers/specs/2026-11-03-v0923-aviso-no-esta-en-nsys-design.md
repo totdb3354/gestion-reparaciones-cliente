@@ -91,8 +91,10 @@ En `src/modules/taller/asignaciones/modal/`:
   (los IMEIs quedan preguntados y sin respuesta).
 - **`FilaCola.tsx`**, **`PanelPulido.tsx`** y **`DetalleEntrada.tsx`**: la marca y la línea de §2.2. `AsignarTrabajosDialog`
   lee `useEstadoNsys()` y pasa `ultimaExportacion` a los paneles.
-- **Hora del Items**: el texto «hoy 13:40» o «del 02/11 22:10» sale de `src/modules/telefonos/stock/nsys.ts`. Se exporta una
-  función pequeña con los `hora`, `diaMes` y `esHoy` que ya usa la píldora.
+- **Hora del Items**: el texto «hoy 13:40» o «del 02/11 22:10» sale de `cuandoItems`, una función nueva de
+  `src/shared/lib/telefonoNsys.ts`. Un módulo no puede importar de otro (regla de ESLint), así que va en `shared` y no en
+  `telefonos/stock/nsys.ts`. Por lo mismo, `useEstadoNsys`, `CLAVE_ESTADO_NSYS` y `MAX_IMEIS` suben de `telefonos/api.ts` a
+  `src/shared/api/nsys.ts`, y el módulo de teléfonos los reexporta (ajuste del plan).
 - **Token de color**: se usa `text-texto-error`. No hace falta uno nuevo.
 
 ## 5. Casos límite
@@ -121,8 +123,9 @@ En `src/modules/taller/asignaciones/modal/`:
   - `FilaCola`, roja y verde: con técnicos lleva «Marta · no está en NSYS»;
   - `PanelPulido` y `DetalleEntrada`: la línea con la hora, la línea sin hora y nada si NSYS lo tiene o no hay respuesta;
   - `AsignarTrabajosDialog.test.tsx`: un flujo completo con el servidor simulado.
-- **E2E en preprod**: un IMEI inventado avisa; uno real del espejo de preprod no. Va en la E2E de asignaciones que ya
-  existe (`e2e/asignar.spec.ts`), con los datos sintéticos por API y su limpieza.
+- **E2E en preprod**: un IMEI inventado avisa; uno real del espejo de preprod no. Va en un fichero propio de solo lectura,
+  `tests/e2e/aviso-no-nsys.spec.ts`: pica los dos, mira las marcas y cierra con «Descartar», sin guardar nada ni limpiar.
+  Se lanza junto con `tests/e2e/asignar.spec.ts` (ajuste del plan).
 
 ## 7. Versión y entrega
 
