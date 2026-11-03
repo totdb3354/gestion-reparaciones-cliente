@@ -1,6 +1,6 @@
 # 0.9.24 — La descripción del móvil dice si es eSIM
 
-Fecha: 2026-11-03. Estado: **implementada y en `main` el 03/11** (servidor `1f2d89c`, web `c65ddfb`), falta preprod y producción; diseño aprobado en el brainstorming del 03/11; plan escrito (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`). Los ajustes del plan están en el §7 y mandan sobre lo de arriba si chocan.
+Fecha: 2026-11-03. Estado: **EN PRODUCCIÓN el 03/11 20:58** (servidor `1f2d89c`, web `c65ddfb`; tags `v0.9.24`, web `344c29d` con la fecha del CHANGELOG); diseño aprobado en el brainstorming del 03/11; plan escrito (`plans/2026-11-03-v0924-esim-en-la-descripcion.md`). Los ajustes del plan están en el §7 y mandan sobre lo de arriba si chocan.
 **Servidor + web, sin base de datos.** Amplía la 0.9.21 «Descripción completa donde pone «Modelo»»
 (`2026-10-22-v0921-descripcion-completa-design.md`), que dejó la descripción en modelo, capacidad y color.
 
