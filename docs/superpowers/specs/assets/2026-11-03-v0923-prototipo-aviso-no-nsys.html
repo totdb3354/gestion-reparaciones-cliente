@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aviso No está en NSYS</title>
+<style>
+  :root {
+    --azul-noche: #001232; --azul-medio: #2C3B54; --azul-gris: #586376; --superficie: #FFFFFF;
+    --fondo-vista: #DDE1E7; --borde-input: #D4D8DE; --pill-bg: #F0F2F5; --pill-borde: #C8CDD5;
+    --texto-error: #B03040; --tipo-rep-bg: #E3F2FD; --tipo-rep-text: #1565C0; --tipo-glass-bg: #E0F2F1;
+    --tipo-glass-text: #00796B; --recibido-text: #2E7D32; --badge-neutro-bg: #E8EAF0; --seleccion-suave: #EAF1FF;
+    --cola-roja: #C0392B; --cola-roja-brd: #EFC4C0; --cola-roja-bg: #FDE2E1; --cola-verde-brd: #BFE0C2;
+    --pill-modelo-bg: #E3F1E4; --pill-modelo-text: #1B5E20; --pill-aviso-bg: #FCE7C3; --pill-aviso-text: #9A6B00;
+    --pill-buscando-bg: #EEF1F5; --cola-quitar: #C2B3B3; --pulido-sel-bg: #F3EEFB;
+    /* lo nuevo del prototipo: el rojo de los mensajes de error del modal (--color-texto-error) */
+    --nsys-text: #B03040;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #C9CED6; color: var(--azul-medio); }
+  .marco { max-width: 1180px; margin: 0 auto; padding: 18px 16px 40px; display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .lado { width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; }
+  .caja { background: #fff; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .caja h2 { margin: 0 0 4px; font-size: 16px; }
+  .caja h3 { margin: 0 0 8px; font-size: 13px; color: var(--azul-gris); text-transform: uppercase; letter-spacing: .03em; }
+  .caja p, .caja li { font-size: 12.5px; line-height: 1.45; color: var(--azul-gris); }
+  .caja ol { padding-left: 18px; margin: 0; }
+  .caja li { margin-bottom: 4px; }
+  .caja code { font-family: Consolas, monospace; font-size: 12px; color: var(--azul-medio); }
+  .options { display: flex; flex-direction: column; gap: 6px; }
+  .option { border: 1.5px solid var(--borde-input); border-radius: 7px; padding: 8px 10px; cursor: pointer; display: flex; gap: 10px; align-items: flex-start; }
+  .option:hover { border-color: var(--azul-gris); }
+  .option.selected { border-color: var(--azul-noche); background: var(--seleccion-suave); }
+  .option .letra { font-weight: 800; font-size: 14px; color: var(--azul-noche); width: 16px; }
+  .option b { font-size: 13px; color: var(--azul-medio); }
+  .option span.d { display: block; font-size: 11.5px; color: var(--azul-gris); margin-top: 2px; }
+  .ejemplos { display: flex; flex-direction: column; gap: 5px; }
+  .ejemplo { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .ejemplo button { font-family: Consolas, monospace; font-size: 12px; font-weight: 700; color: var(--azul-medio); background: var(--pill-bg);
+    border: 1px solid var(--pill-borde); border-radius: 5px; padding: 3px 7px; cursor: pointer; }
+  .ejemplo button:hover { background: var(--seleccion-suave); }
+  .ejemplo span { color: var(--azul-gris); }
+  .boton-sec { font-size: 12px; font-weight: 700; color: var(--azul-medio); background: var(--pill-bg); border: 1px solid var(--pill-borde);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  .fallo { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--azul-gris); margin-top: 8px; }
+
+  /* el modal, con las medidas del real */
+  .modal { flex: 1; min-width: 640px; max-width: 720px; background: var(--fondo-vista); border-radius: 10px; padding: 26px;
+    box-shadow: 0 12px 40px rgba(0,18,50,.25); display: flex; flex-direction: column; gap: 12px; }
+  .titulo { font-size: 20px; font-weight: 700; margin: 0; }
+  .descr { font-size: 11px; color: var(--azul-gris); margin: -6px 0 0; }
+  .toggle { display: inline-flex; }
+  .toggle button { display: flex; align-items: center; gap: 6px; border: 1px solid var(--pill-borde); padding: 5px 14px; font-size: 12px;
+    font-weight: 700; background: var(--pill-bg); color: var(--azul-gris); cursor: pointer; margin-left: -1px; }
+  .toggle button:first-child { border-radius: 24px 0 0 24px; margin-left: 0; }
+  .toggle button:last-child { border-radius: 0 24px 24px 0; }
+  .toggle button.activa { background: var(--azul-noche); border-color: var(--azul-noche); color: #fff; }
+  .contador { border-radius: 10px; padding: 0 7px; font-size: 10.5px; font-weight: 700; }
+  .contador.pend { background: var(--cola-roja-bg); color: var(--cola-roja); }
+  .contador.neutro { background: var(--badge-neutro-bg); color: var(--azul-gris); }
+  .etq { font-size: 12px; font-weight: 700; color: var(--azul-gris); }
+  .campo { display: flex; flex-direction: column; gap: 4px; }
+  .campo input, .inp { border: 1px solid var(--borde-input); border-radius: 4px; background: #fff; padding: 11px; font-size: 14px; color: var(--azul-medio); font-family: inherit; }
+  .mensaje { min-height: 15px; font-size: 11px; margin: 0; color: var(--texto-error); }
+  .mensaje.ok { color: var(--recibido-text); }
+  .mensaje.nsys { color: var(--nsys-text); }
+  hr { border: 0; border-top: 1px solid var(--borde-input); margin: 0; width: 100%; }
+  .fila-colas { display: flex; gap: 18px; flex-wrap: wrap; }
+  .colas { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; }
+  .cab-roja { font-size: 11.5px; font-weight: 700; color: var(--cola-roja); }
+  .cab-verde { font-size: 11.5px; font-weight: 700; color: var(--recibido-text); padding-top: 10px; }
+  .lista { max-height: 220px; min-height: 34px; overflow-y: auto; border-radius: 6px; background: #fff; }
+  .lista.roja { border: 1px solid var(--cola-roja-brd); }
+  .lista.verde { border: 1px solid var(--cola-verde-brd); }
+  .fila { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--pill-buscando-bg); padding: 7px 9px; cursor: pointer; }
+  .fila.sel { border-left: 4px solid var(--azul-medio); background: var(--seleccion-suave); padding-left: 5px; }
+  .fila .cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+  .fila .linea { display: flex; align-items: center; gap: 8px; }
+  .imei { font-family: Consolas, monospace; font-size: 12px; font-weight: 700; color: var(--azul-medio); flex-shrink: 0; }
+  .tipo { border-radius: 6px; padding: 0 6px; font-size: 9.5px; font-weight: 700; flex-shrink: 0; }
+  .tipo.rep { background: var(--tipo-rep-bg); color: var(--tipo-rep-text); }
+  .tipo.glass { background: var(--tipo-glass-bg); color: var(--tipo-glass-text); }
+  .pildora { flex-shrink: 0; border-radius: 6px; padding: 2px 8px; font-size: 10.5px; font-weight: 700; }
+  .pildora.modelo { background: var(--pill-modelo-bg); color: var(--pill-modelo-text); }
+  .pildora.buscando { background: var(--pill-buscando-bg); color: var(--azul-gris); }
+  .pildora.aviso { background: var(--pill-aviso-bg); color: var(--pill-aviso-text); }
+  /* la marca nueva: texto pequeño en la segunda línea de la fila, sin relleno */
+  .nsys { flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: var(--nsys-text); white-space: nowrap; cursor: help; }
+  .tecs { font-size: 10.5px; color: var(--azul-gris); }
+  .quitar { flex-shrink: 0; border: 0; background: none; color: var(--cola-quitar); font-size: 12px; cursor: pointer; padding: 0 4px; }
+  .quitar:hover { color: var(--cola-roja); }
+  .detalle { flex: 1; min-width: 280px; border: 1px solid var(--borde-input); border-radius: 6px; background: #fff; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px; }
+  .detalle.off { opacity: .6; pointer-events: none; }
+  .imei-curso { font-family: Consolas, monospace; font-size: 18px; font-weight: 700; color: var(--azul-medio); }
+  .nota-nsys { font-size: 11px; color: var(--nsys-text); margin-top: -4px; }
+  .tecnicos { display: flex; flex-direction: column; gap: 4px; }
+  .tecnicos label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--azul-medio); }
+  .tecnicos .pct { margin-left: auto; font-size: 11px; color: var(--azul-gris); }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--azul-gris); }
+  textarea.inp { padding: 8px; font-size: 13px; resize: vertical; }
+  .primario { width: 100%; border: 0; border-radius: 6px; background: var(--azul-medio); color: #fff; font-weight: 700; font-size: 13px; padding: 9px; cursor: pointer; }
+  .primario:disabled { opacity: .5; cursor: default; }
+  .pie { display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--borde-input); padding-top: 14px; }
+  .pie .resumen { font-size: 12px; font-weight: 700; color: var(--azul-gris); flex: 1; }
+  .guardar { border: 0; border-radius: 6px; background: var(--azul-medio); color: #fff; padding: 11px 22px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .guardar:disabled { opacity: .5; cursor: default; }
+  .tostada { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--azul-noche); color: #fff; font-size: 13px;
+    padding: 10px 16px; border-radius: 8px; max-width: 560px; box-shadow: 0 6px 20px rgba(0,0,0,.3); display: none; }
+  /* pulido */
+  .lista-pulido { max-height: 300px; width: 280px; min-width: 280px; overflow-y: auto; border: 1px solid var(--cola-verde-brd); border-radius: 6px; background: #fff; }
+  .fila-p { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--pill-buscando-bg); padding: 8px; cursor: pointer; }
+  .fila-p.sel { background: var(--pulido-sel-bg); }
+  .sub { font-size: 11px; color: var(--azul-gris); }
+  .sub.sin { color: var(--cola-roja); font-weight: 700; }
+  select.inp { padding: 9px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="marco">
+  <div class="lado">
+    <div class="caja">
+      <h2>Aviso «No está en NSYS» al picar</h2>
+      <p><b>Aprobado el 03/11: variante A, en rojo</b> (spec <code>2026-11-03-v0923-aviso-no-esta-en-nsys-design.md</code>).
+        B y C se quedan para comparar.</p>
+      <p>Al picar un IMEI, si NSYS no lo tiene en ningún lote del último Items, el modal lo dice sin molestar: no bloquea nada y al guardar
+        el móvil sale igualmente en la tarjeta «No está en NSYS». Un vendido o de baja <b>no</b> avisa (NSYS lo conoce).</p>
+    </div>
+    <div class="caja">
+      <h3>Variante</h3>
+      <div class="options" id="variantes">
+        <div class="option selected" data-choice="A" onclick="elegirVariante(this)">
+          <div class="letra">A</div>
+          <div><b>Texto en la fila + línea en el detalle</b><span class="d">Se ve en la cola aunque piques veinte seguidos (debajo del IMEI, donde van los técnicos); el detalle dice de qué Items sale.</span></div>
+        </div>
+        <div class="option" data-choice="B" onclick="elegirVariante(this)">
+          <div class="letra">B</div>
+          <div><b>Solo una línea en el detalle</b><span class="d">Lo más discreto: solo se ve con el IMEI abierto.</span></div>
+        </div>
+        <div class="option" data-choice="C" onclick="elegirVariante(this)">
+          <div class="letra">C</div>
+          <div><b>Solo el mensaje bajo el campo</b><span class="d">Sale al picar y se borra al picar el siguiente.</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caja">
+      <h3>IMEIs de ejemplo (inventados)</h3>
+      <div class="ejemplos">
+        <div class="ejemplo"><button onclick="picar('356000000000045')">356000000000045</button><span>nuevo: ni el ERP ni NSYS lo conocen</span></div>
+        <div class="ejemplo"><button onclick="picar('356000000000037')">356000000000037</button><span>ya pasó por el taller (iPhone 14), NSYS no</span></div>
+        <div class="ejemplo"><button onclick="picar('356000000000011')">356000000000011</button><span>en NSYS, en stock</span></div>
+        <div class="ejemplo"><button onclick="picar('356000000000029')">356000000000029</button><span>en el ERP y en NSYS</span></div>
+        <div class="ejemplo"><button onclick="picar('356000000000052')">356000000000052</button><span>en NSYS, vendido: no avisa</span></div>
+        <div class="ejemplo"><button onclick="pegarVarios()">Pegar 3</button><span>…060, …078 (no en NSYS) y …086</span></div>
+      </div>
+      <label class="fallo"><input type="checkbox" id="fallo" onchange="estado.fallo = this.checked"> Simular que la consulta a NSYS falla</label>
+    </div>
+    <div class="caja">
+      <h3>Qué probar</h3>
+      <ol>
+        <li>Pica <code>…045</code>: falta modelo <i>y</i> no está en NSYS; las dos marcas conviven.</li>
+        <li>Pica <code>…037</code>: el modelo sale del ERP, pero NSYS no lo tiene.</li>
+        <li>Pica <code>…011</code>, <code>…029</code> y <code>…052</code>: no sale nada.</li>
+        <li>Pasa el ratón por la marca «no está en NSYS» (variante A): la explicación sale ahí.</li>
+        <li>Asigna uno que no está: la marca sigue en la lista verde.</li>
+        <li>«Pegar 3»: se comprueban los tres de una vez, sin abrirlos.</li>
+        <li>Cambia de variante con varios IMEIs en la cola y compara.</li>
+        <li>Marca «la consulta falla» y pica otro: no se dice nada (no se inventa un aviso).</li>
+        <li>Pestaña Pulido: lo mismo.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="modal" id="modal"></div>
+</div>
+<div class="tostada" id="tostada"></div>
+
+<script>
+  // Datos inventados: el espejo de NSYS (Items) y los modelos que ya sabe el ERP.
+  const ESPEJO = {
+    '356000000000011': { modelo: 'IPHONE13', estado: 'STOCK' },
+    '356000000000029': { modelo: 'IPHONE12', estado: 'STOCK' },
+    '356000000000052': { modelo: 'IPHONE11', estado: 'VENDIDO' },
+    '356000000000086': { modelo: 'IPHONE13PRO', estado: 'DE_PEDIDO' },
+  }
+  const ERP = { '356000000000029': 'IPHONE12', '356000000000037': 'IPHONE14', '356000000000060': 'IPHONE12' }
+  const ULTIMO_ITEMS = 'hoy 13:40'
+  const NOMBRE = { IPHONE11: 'iPhone 11', IPHONE12: 'iPhone 12', IPHONE13: 'iPhone 13', IPHONE13PRO: 'iPhone 13 Pro', IPHONE14: 'iPhone 14',
+    IPHONE14PRO: 'iPhone 14 Pro', IPHONE15: 'iPhone 15' }
+  const TECNICOS = [{ id: 1, nombre: 'Marta', pct: 'P62%' }, { id: 2, nombre: 'Jorge', pct: 'P48%' }, { id: 3, nombre: 'Lucía', pct: 'P71%' },
+    { id: 4, nombre: 'Pablo', pct: 'P35%' }]
+  const AYUDA = `NSYS no tiene este IMEI en ningún lote del último Items (${ULTIMO_ITEMS}). Al guardar saldrá en «No está en NSYS».`
+
+  const estado = { variante: 'A', pestana: 'REPARACION', rep: [], glass: [], pulido: [], actual: null, pulidoSel: null, seq: 0,
+    defTec: { REPARACION: [], GLASS: [] }, tecPulido: null, msg: null, msgPulido: null, fallo: false }
+
+  const colaDe = (t) => (t === 'GLASS' ? estado.glass : estado.rep)
+  const entrada = (seq) => estado.rep.find((e) => e.seq === seq) || estado.glass.find((e) => e.seq === seq)
+
+  // La comprobación contra el espejo: true = no está, false = sí está (cualquier estado), null = no se sabe (fallo).
+  function comprobar(imei) { return estado.fallo ? null : !(imei in ESPEJO) }
+
+  function avisoAlPicar(imei, noNsys) {
+    return estado.variante === 'C' && noNsys === true
+      ? { texto: `${imei} no está en NSYS (último Items: ${ULTIMO_ITEMS}).`, tono: 'nsys' } : null
+  }
+
+  function picar(imei) {
+    if (estado.pestana === 'PULIDO') return picarPulido(imei)
+    const cola = estado.pestana
+    if (colaDe(cola).some((e) => e.imei === imei)) {
+      estado.msg = { texto: `Ese IMEI ya está en la cola (${cola === 'GLASS' ? 'Glass' : 'Reparación'}).`, tono: 'error' }
+      return pintar()
+    }
+    const e = { seq: ++estado.seq, imei, tipo: cola, modelo: null, buscando: true, noNsys: undefined, tecnicos: [...estado.defTec[cola]],
+      asignada: false, comentario: '' }
+    colaDe(cola).push(e)
+    estado.actual = e.seq
+    estado.msg = null
+    pintar()
+    setTimeout(() => {
+      e.modelo = ERP[imei] || (ESPEJO[imei] && ESPEJO[imei].modelo) || null
+      e.buscando = false
+      e.noNsys = comprobar(imei)
+      const m = avisoAlPicar(imei, e.noNsys)
+      if (m && estado.actual === e.seq) estado.msg = m
+      pintar()
+    }, 550)
+  }
+
+  function picarPulido(imei) {
+    if (estado.pulido.some((f) => f.imei === imei)) {
+      estado.msgPulido = { texto: 'Ese IMEI ya está en la lista de pulido.', tono: 'error' }
+      return pintar()
+    }
+    const f = { seq: ++estado.seq, imei, idTec: estado.tecPulido, noNsys: undefined, comentario: '' }
+    estado.pulido.push(f)
+    estado.pulidoSel = f.seq
+    estado.msgPulido = null
+    pintar()
+    setTimeout(() => {
+      f.noNsys = comprobar(imei)
+      const m = avisoAlPicar(imei, f.noNsys)
+      if (m) estado.msgPulido = m
+      pintar()
+    }, 450)
+  }
+
+  function pegarVarios() {
+    const imeis = ['356000000000060', '356000000000078', '356000000000086']
+    if (estado.pestana === 'PULIDO') { imeis.forEach(picarPulido); return }
+    const cola = estado.pestana
+    const nuevos = []
+    for (const imei of imeis) {
+      if (colaDe(cola).some((e) => e.imei === imei)) continue
+      const e = { seq: ++estado.seq, imei, tipo: cola, modelo: ERP[imei] || null, buscando: false, noNsys: undefined,
+        tecnicos: [...estado.defTec[cola]], asignada: false, comentario: '' }
+      colaDe(cola).push(e)
+      nuevos.push(e)
+    }
+    estado.msg = { texto: `${nuevos.length} IMEIs añadidos.`, tono: 'ok' }
+    pintar()
+    // Una sola consulta para todo lo pegado (en la app sería la de «Comprobar una lista de IMEIs»).
+    setTimeout(() => { nuevos.forEach((e) => { e.noNsys = comprobar(e.imei) }); pintar() }, 600)
+  }
+
+  function cargar(seq) {
+    const e = entrada(seq)
+    estado.actual = seq
+    if (!e.asignada && e.modelo == null && !e.buscando && !e.buscado) {
+      e.buscando = true
+      e.buscado = true
+      pintar()
+      setTimeout(() => { e.modelo = ERP[e.imei] || (ESPEJO[e.imei] && ESPEJO[e.imei].modelo) || null; e.buscando = false; pintar() }, 450)
+    }
+    pintar()
+  }
+
+  function quitar(seq, ev) {
+    ev.stopPropagation()
+    estado.rep = estado.rep.filter((e) => e.seq !== seq)
+    estado.glass = estado.glass.filter((e) => e.seq !== seq)
+    if (estado.actual === seq) estado.actual = null
+    pintar()
+  }
+
+  function marcarTec(id, marcado) {
+    const e = entrada(estado.actual)
+    if (!e) return
+    e.tecnicos = marcado ? [...new Set([...e.tecnicos, id])] : e.tecnicos.filter((t) => t !== id)
+    estado.defTec[e.tipo] = [...e.tecnicos]
+    pintar()
+  }
+
+  function elegirModelo(v) {
+    const e = entrada(estado.actual)
+    const clave = Object.keys(NOMBRE).find((k) => NOMBRE[k].toLowerCase() === v.trim().toLowerCase())
+    if (e && clave) { e.modelo = clave; pintar() }
+  }
+
+  function asignar() {
+    const e = entrada(estado.actual)
+    if (!e || !e.modelo || e.tecnicos.length === 0) return
+    const editando = e.asignada
+    e.asignada = true
+    const rojas = colaDe(e.tipo).filter((x) => !x.asignada)
+    estado.actual = editando || rojas.length === 0 ? null : Math.max(...rojas.map((x) => x.seq))
+    if (estado.actual != null) cargar(estado.actual)
+    pintar()
+  }
+
+  function cambiarPestana(p) { estado.pestana = p; estado.actual = null; pintar() }
+  function elegirVariante(el) {
+    if (window.toggleSelect) window.toggleSelect(el)
+    else { document.querySelectorAll('#variantes .option').forEach((o) => o.classList.remove('selected')); el.classList.add('selected') }
+    estado.variante = el.dataset.choice
+    if (estado.variante !== 'C') { if (estado.msg && estado.msg.tono === 'nsys') estado.msg = null; if (estado.msgPulido && estado.msgPulido.tono === 'nsys') estado.msgPulido = null }
+    pintar()
+  }
+
+  function guardar() {
+    const todos = [...estado.rep.filter((e) => e.asignada), ...estado.pulido.filter((f) => f.idTec != null)]
+    const sin = todos.filter((x) => x.noNsys === true).length
+    const t = document.getElementById('tostada')
+    t.textContent = `Prototipo: se guardarían ${todos.length + estado.glass.filter((e) => e.asignada).length} trabajos.` +
+      (sin > 0 ? ` ${sin} saldrían en «No está en NSYS» hasta que NSYS los tenga.` : '')
+    t.style.display = 'block'
+    clearTimeout(window._t)
+    window._t = setTimeout(() => { t.style.display = 'none' }, 4200)
+  }
+
+  // ---------------------------------------------------------------- pintado
+  const marcaFila = (noNsys) => (estado.variante === 'A' && noNsys === true ? `<span class="nsys" title="${AYUDA}">no está en NSYS</span>` : '')
+  const sep = '<span class="tecs">·</span>'
+  const notaDetalle = (noNsys) => ((estado.variante === 'A' || estado.variante === 'B') && noNsys === true
+    ? `<span class="nota-nsys" title="${AYUDA}">No está en NSYS · último Items: ${ULTIMO_ITEMS}</span>` : '')
+
+  function fila(e) {
+    const nombres = TECNICOS.filter((t) => e.tecnicos.includes(t.id)).map((t) => t.nombre).join(', ')
+    const modelo = e.modelo ? `<span class="pildora modelo">${NOMBRE[e.modelo]}</span>`
+      : e.buscando ? '<span class="pildora buscando">Buscando…</span>' : '<span class="pildora aviso">⚠ falta modelo</span>'
+    return `<div class="fila ${e.seq === estado.actual ? 'sel' : ''}" onclick="cargar(${e.seq})">
+      <div class="cuerpo">
+        <div class="linea"><span class="imei">${e.imei}</span><span class="tipo ${e.tipo === 'GLASS' ? 'glass' : 'rep'}">${e.tipo === 'GLASS' ? 'Glass' : 'Rep'}</span>${modelo}</div>
+        ${(e.asignada && nombres) || marcaFila(e.noNsys) ? `<div class="linea" style="gap:6px">${e.asignada && nombres ? `<span class="tecs">${nombres}</span>` : ''}${e.asignada && nombres && marcaFila(e.noNsys) ? sep : ''}${marcaFila(e.noNsys)}</div>` : ''}
+      </div>
+      <button class="quitar" onclick="quitar(${e.seq}, event)" aria-label="Quitar">✕</button>
+    </div>`
+  }
+
+  function mensaje(m) { return `<p class="mensaje ${m ? m.tono : ''}">${m ? m.texto : ''}</p>` }
+
+  function panelRico() {
+    const cola = colaDe(estado.pestana)
+    const rojas = cola.filter((e) => !e.asignada).sort((a, b) => b.seq - a.seq)
+    const verdes = cola.filter((e) => e.asignada)
+    const e = entrada(estado.actual)
+    const lista = e ? `<datalist id="modelos">${Object.values(NOMBRE).map((n) => `<option value="${n}">`).join('')}</datalist>` : ''
+    const prompt = !e ? 'Escribe modelo...' : e.buscando ? 'Buscando…' : 'No encontrado — selecciona manualmente'
+    const listo = e && e.modelo && e.tecnicos.length > 0
+    return `
+      <label class="campo"><span class="etq">Escanear IMEI → pendiente de asignar</span>
+        <input id="escaneo" placeholder="Escanea o escribe el IMEI (15 dígitos)..." oninput="teclear(this)"></label>
+      ${mensaje(estado.msg)}
+      <hr>
+      <div class="fila-colas">
+        <div class="colas">
+          <span class="cab-roja">Pendiente de asignar (${rojas.length})</span>
+          <div class="lista roja">${rojas.map(fila).join('')}</div>
+          <span class="cab-verde">Asignados (${verdes.length}) · sin guardar</span>
+          <div class="lista verde">${verdes.map(fila).join('')}</div>
+        </div>
+        <div class="detalle ${e ? '' : 'off'}">
+          <span style="font-size:11px;font-weight:700;color:var(--azul-gris)">IMEI en curso</span>
+          <span class="imei-curso">${e ? e.imei : '—'}</span>
+          ${e ? notaDetalle(e.noNsys) : ''}
+          <span class="etq">Modelo de iPhone</span>
+          <input class="inp" list="modelos" placeholder="${prompt}" value="${e && e.modelo ? NOMBRE[e.modelo] : ''}" onchange="elegirModelo(this.value)">${lista}
+          <div class="tecnicos">${TECNICOS.map((t) => `<label><input type="checkbox" ${e && e.tecnicos.includes(t.id) ? 'checked' : ''}
+            onchange="marcarTec(${t.id}, this.checked)"> ${t.nombre}<span class="pct">${t.pct}</span></label>`).join('')}</div>
+          <span class="etq">Cliente (opcional)</span>
+          <input class="inp" placeholder="Escribe cliente...">
+          <span class="etq">Comentario (opcional)</span>
+          <textarea class="inp" rows="2" placeholder="Instrucciones para el técnico..."></textarea>
+          ${estado.pestana === 'REPARACION' ? '<label class="chk"><input type="checkbox"> Reparación de chasis</label><label class="chk"><input type="checkbox"> Lleva glass</label>' : ''}
+          <button class="primario" ${listo ? '' : 'disabled'} onclick="asignar()">${e && e.asignada ? 'Guardar cambios' : 'Asignar →'}</button>
+        </div>
+      </div>`
+  }
+
+  function panelPulido() {
+    const sel = estado.pulido.find((f) => f.seq === estado.pulidoSel)
+    const n = estado.pulido.length
+    const nombreTec = (id) => (TECNICOS.find((t) => t.id === id) || {}).nombre
+    const opciones = (valor) => `<option value=""></option>` + TECNICOS.map((t) => `<option value="${t.id}" ${valor === t.id ? 'selected' : ''}>${t.nombre} (${t.pct})</option>`).join('')
+    return `
+      <span class="etq">Técnico (se aplica a los IMEIs que escanees)</span>
+      <select class="inp" onchange="estado.tecPulido = this.value ? Number(this.value) : null">${opciones(estado.tecPulido)}</select>
+      <hr>
+      <label class="campo"><span class="etq">Escanear IMEI → pulido</span>
+        <input id="escaneo" placeholder="Escanea o escribe el IMEI (15 dígitos)..." oninput="teclear(this)"></label>
+      ${mensaje(estado.msgPulido)}
+      <hr>
+      <span style="font-size:11.5px;font-weight:700;color:${n === 0 ? 'var(--azul-gris)' : 'var(--recibido-text)'}">${n === 0 ? 'Nada añadido aún' : `${n} en pulido`}</span>
+      <div class="fila-colas">
+        <div class="lista-pulido">${estado.pulido.map((f) => `
+          <div class="fila-p ${f.seq === estado.pulidoSel ? 'sel' : ''}" onclick="estado.pulidoSel = ${f.seq}; pintar()">
+            <div style="flex:1;display:flex;flex-direction:column;gap:1px">
+              <span class="imei">${f.imei}</span>
+              <div style="display:flex;align-items:center;gap:6px">${f.idTec == null ? '<span class="sub sin">(sin técnico) · —</span>' : `<span class="sub">${nombreTec(f.idTec)} · —</span>`}${marcaFila(f.noNsys) ? sep + marcaFila(f.noNsys) : ''}</div>
+            </div>
+            <button class="quitar" onclick="event.stopPropagation(); estado.pulido = estado.pulido.filter((x) => x.seq !== ${f.seq}); pintar()">✕</button>
+          </div>`).join('')}</div>
+        <div class="detalle ${sel ? '' : 'off'}">
+          <span style="font-size:11px;font-weight:700;color:var(--azul-gris)">IMEI en curso</span>
+          <span class="imei-curso">${sel ? sel.imei : '—'}</span>
+          ${sel ? notaDetalle(sel.noNsys) : ''}
+          <span class="etq">Técnico</span>
+          <select class="inp" onchange="const f = estado.pulido.find((x) => x.seq === estado.pulidoSel); f.idTec = this.value ? Number(this.value) : null; pintar()">${opciones(sel ? sel.idTec : null)}</select>
+          <span class="etq">Cliente (opcional)</span>
+          <input class="inp" placeholder="Escribe cliente...">
+          <span class="etq">Comentario</span>
+          <textarea class="inp" rows="2" placeholder="Instrucciones para el técnico..."></textarea>
+        </div>
+      </div>`
+  }
+
+  function teclear(input) {
+    const d = input.value.replace(/\D/g, '')
+    input.value = d
+    if (d.length === 15) { input.value = ''; picar(d) }
+  }
+
+  function pintar() {
+    const contar = (p) => {
+      if (p === 'PULIDO') return { total: estado.pulido.length, pend: estado.pulido.filter((f) => f.idTec == null).length }
+      const c = colaDe(p)
+      return { total: c.length, pend: c.filter((e) => !e.asignada).length }
+    }
+    const pest = [['REPARACION', 'Reparación'], ['GLASS', 'Glass'], ['PULIDO', 'Pulido']].map(([p, et]) => {
+      const c = contar(p)
+      return `<button class="${estado.pestana === p ? 'activa' : ''}" onclick="cambiarPestana('${p}')">${et}${c.total > 0
+        ? `<span class="contador ${c.pend > 0 ? 'pend' : 'neutro'}">${c.total}</span>` : ''}</button>`
+    }).join('')
+    const asignadas = estado.rep.filter((e) => e.asignada).length + estado.glass.filter((e) => e.asignada).length +
+      estado.pulido.filter((f) => f.idTec != null).length
+    const pendientes = estado.rep.filter((e) => !e.asignada).length + estado.glass.filter((e) => !e.asignada).length
+    const foco = document.activeElement && document.activeElement.id === 'escaneo'
+    document.getElementById('modal').innerHTML = `
+      <h1 class="titulo">Asignar trabajos</h1>
+      <p class="descr">Elige el tipo, escanea IMEIs y configúralos. Los técnicos se mantienen entre IMEIs. Se guardan todos al final.</p>
+      <div class="toggle">${pest}</div>
+      ${estado.pestana === 'PULIDO' ? panelPulido() : panelRico()}
+      <div class="pie">
+        <span class="resumen">${asignadas} listos para guardar${pendientes > 0 ? ` · ${pendientes} pendientes` : ''}</span>
+        <button class="guardar" ${asignadas > 0 ? '' : 'disabled'} onclick="guardar()">Guardar (${asignadas})</button>
+      </div>`
+    if (foco || !document.activeElement || document.activeElement === document.body) {
+      const i = document.getElementById('escaneo')
+      if (i && foco) i.focus()
+    }
+  }
+
+  pintar()
+</script>
+</body>
+</html>
