@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedidos (pieza 2)</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos: #3f9f55; --listos-bg: #d8f0dc; --listos-tx: #2f7d3b;
+    --taller: #3b82f6; --taller-bg: #dbe8ff; --taller-tx: #1d4ed8;
+    --rev: #f0a020; --rev-bg: #fdebc8; --rev-tx: #a15c07;
+    --mal-bg: #fde2e2; --mal-tx: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         height: 100vh; overflow: hidden; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; font-size: inherit; }
+  :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  .mono { font-family: Consolas, monospace; }
+  .g { color: var(--gris); }
+  .pad { padding: 14px; }
+
+  .proto { min-height: 36px; flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 4px 12px; font-size: 12px; flex-wrap: wrap; position: relative; z-index: 30; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .grupo-b { display: inline-flex; border: 1px solid #7c3aed; border-radius: 6px; overflow: hidden; }
+  .proto .grupo-b button { background: #5b21b6; color: #fff; border: 0; padding: 4px 10px; cursor: pointer; }
+  .proto .grupo-b button.on { background: #fff; color: #3b0764; font-weight: 700; }
+  .proto .pbtn { background: #5b21b6; color: #fff; border: 1px solid #7c3aed; border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+  .proto .pbtn.on { background: #fff; color: #3b0764; font-weight: 700; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+  .qp { position: absolute; top: 34px; left: 12px; width: 560px; background: #fff; color: var(--tinta); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 12px 16px; font-size: 12.5px; }
+  .qp ol { margin: 6px 0 0; padding-left: 18px; } .qp li { margin: 4px 0; }
+  .volver { position: fixed; left: 8px; bottom: 8px; z-index: 40; background: #3b0764; color: #fff; border: 0; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; opacity: .8; }
+  body.real .proto { display: none; }
+
+  header { height: 56px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 26px; height: 26px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  header .usu i { width: 28px; height: 28px; border-radius: 50%; background: #fff; display: inline-block; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 196px; flex: none; background: #fff; padding: 12px 8px; overflow: hidden; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; letter-spacing: .04em; margin: 12px 10px 6px; }
+  nav .it { padding: 8px 12px; border-radius: 10px; font-weight: 600; color: #22314f; display: flex; align-items: center; gap: 6px; }
+  nav .it.on { background: var(--navy); color: #fff; }
+  nav .it .nuevo { font-size: 10px; font-weight: 700; background: #ede9fe; color: #5b21b6; border-radius: 999px; padding: 0 6px; }
+  nav .it .antes { font-size: 10px; color: var(--gris); font-weight: 500; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 22px; }
+  .pild { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #e8ecf3; color: #2b3f63; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .fuentes { margin-left: auto; position: relative; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; cursor: default; }
+  .fuentes .fpop { display: none; position: absolute; right: 0; top: 30px; z-index: 20; width: 360px; background: #fff; color: var(--tinta); border: 1px solid #cdd4df; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 8px 12px; font-weight: 400; }
+  .fuentes:hover .fpop, .fuentes:focus .fpop { display: block; }
+  .fpop div { display: flex; gap: 8px; padding: 3px 0; } .fpop b { width: 100px; flex: none; }
+  .fila2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .buscar { width: 280px; height: 34px; border: 1px solid #cdd4df; border-radius: 8px; padding: 0 12px; font-size: 13px; background: #fff; }
+  .btn-sec { height: 32px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; white-space: nowrap; }
+  .btn-sec:hover { background: #f2f5f9; }
+  .btn-pri { height: 32px; background: var(--navy); color: #fff; border: 0; border-radius: 8px; padding: 0 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-pri:disabled { background: #c3cbd8; cursor: default; }
+  .chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chips .lab { font-size: 11px; font-weight: 700; color: #3c4a63; margin-right: 2px; }
+  .chip { border: 1px solid #cdd4df; background: #f3f5f9; border-radius: 999px; padding: 2px 10px; font-weight: 600; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .chip .c { color: var(--gris); font-weight: 500; }
+  .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); } .chip.on .c { color: #c9d3e6; }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .paneles { flex: 1; display: flex; gap: 12px; min-height: 0; }
+  .card { background: #fff; border-radius: 10px; }
+  .canal { display: inline-block; padding: 1px 8px; border-radius: 6px; font-weight: 700; font-size: 11.5px; white-space: nowrap; }
+  .skuc { font-family: Consolas, monospace; font-weight: 700; background: #eef1f6; border-radius: 5px; padding: 0 5px; white-space: nowrap; }
+  .est { padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .est.sin { background: var(--rev-bg); color: var(--rev-tx); }
+  .est.taller { background: var(--taller-bg); color: var(--taller-tx); }
+  .est.cuadra { background: var(--listos-bg); color: var(--listos-tx); }
+  .est.nocuadra { background: var(--mal-bg); color: var(--mal-tx); }
+  .est.aviso { background: #fff; color: var(--rev-tx); border: 1px solid var(--rev); }
+  .nivel { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .n1 { background: var(--listos-bg); color: var(--listos-tx); } .n2 { background: var(--taller-bg); color: var(--taller-tx); }
+  .n3 { background: #ede9fe; color: #5b21b6; } .n4 { background: #eceff3; color: #475569; }
+
+  /* A: lista + panel */
+  .lista-a { width: 52%; flex: none; overflow-y: auto; padding: 4px 0; }
+  .det-a { flex: 1; min-width: 0; overflow-y: auto; padding: 12px 14px; }
+  .ped { border-bottom: 1px solid var(--borde); padding: 7px 10px 8px; }
+  .pcab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .pcab .num { font-family: Consolas, monospace; }
+  .pcab .fec { margin-left: auto; color: var(--gris); font-size: 12px; white-space: nowrap; }
+  .ul { display: flex; align-items: center; gap: 8px; width: 100%; border: 1px solid transparent; background: none; border-radius: 7px; padding: 4px 8px; cursor: pointer; text-align: left; }
+  .ul:hover { background: #f3f6fb; } .ul.on { background: #eef3ff; border-color: #9db7f5; }
+  .ul .r { margin-left: auto; color: var(--gris); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ul.pleg { color: var(--listos-tx); font-weight: 600; font-size: 12px; }
+
+  /* B: tabla */
+  .tabla-b { flex: 1; overflow: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  th { position: sticky; top: 0; background: #f5f7fa; text-align: left; font-size: 11.5px; color: #3c4a63; padding: 7px 8px; border-bottom: 1px solid var(--borde); z-index: 2; white-space: nowrap; }
+  td { padding: 6px 8px; vertical-align: top; }
+  tr.fu { cursor: pointer; } tr.fu:hover td { background: #f6f8fc; }
+  tr.fu.pri td, tr.pleg.pri td { border-top: 1px solid var(--borde); }
+  tr.fu.abierta td { background: #eef3ff; }
+  tr.pleg { cursor: pointer; } tr.pleg td { color: var(--listos-tx); font-weight: 600; font-size: 12px; }
+  tr.det-b > td { background: #f8faff; border-bottom: 2px solid #9db7f5; padding: 4px 12px 12px; }
+  .grid-b { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .flecha { color: var(--gris); width: 20px; }
+
+  /* Detalle */
+  .dh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; }
+  .pide { margin: 8px 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .box { border: 1px solid var(--borde); border-radius: 10px; padding: 9px 12px; margin-top: 8px; background: #fff; }
+  .box.sug { border-color: #f3c46b; background: #fffaf0; }
+  .box h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; color: var(--gris); letter-spacing: .05em; }
+  .box p { margin: 0; }
+  .fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .imei { font-family: Consolas, monospace; font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .kv { display: grid; grid-template-columns: 70px 1fr; gap: 2px 10px; margin: 6px 0 0; }
+  .kv dt { color: var(--gris); } .kv dd { margin: 0; font-weight: 600; }
+  .acc { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .nota { font-size: 11.5px; color: var(--gris); margin-top: 7px; }
+  .aviso { background: #fff4dc; color: #8a4b00; border-radius: 6px; padding: 4px 8px; margin-top: 6px; font-weight: 600; font-size: 12px; }
+  .ok { background: var(--listos-bg); color: var(--listos-tx); border-radius: 6px; padding: 4px 8px; margin-top: 8px; font-weight: 600; font-size: 12px; }
+  .estl { margin-top: 8px; padding: 5px 9px; border-radius: 7px; font-weight: 600; }
+  .estl.cuadra { background: var(--listos-bg); color: var(--listos-tx); }
+  .estl.taller { background: var(--taller-bg); color: var(--taller-tx); }
+  .estl.nocuadra { background: var(--mal-bg); color: var(--mal-tx); }
+  .estl.aviso { background: #fff4dc; color: #8a4b00; }
+  .tag { background: #eef1f6; color: #3c4a63; border-radius: 5px; padding: 0 6px; font-size: 11px; font-weight: 700; border-bottom: 1px dotted #6b7a90; cursor: help; }
+  .difs { margin-top: 8px; width: 100%; font-size: 12px; }
+  .difs th { position: static; background: none; padding: 2px 6px; border: 0; color: var(--gris); }
+  .difs td { padding: 2px 6px; }
+  .difs tr.mal td { color: var(--mal-tx); font-weight: 700; }
+  .concl { margin-top: 6px; font-weight: 600; font-size: 12px; }
+  .concl.mal { color: var(--mal-tx); }
+  .otros .op { display: flex; gap: 8px; align-items: flex-start; width: 100%; text-align: left; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; background: none; }
+  .otros .op:hover { background: #f3f6fb; }
+  .otros .op.on { border-color: var(--navy); background: #eef3ff; }
+  .otros .rad { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #94a3b8; flex: none; margin-top: 2px; }
+  .otros .op.on .rad { border-color: var(--navy); background: radial-gradient(var(--navy) 45%, #fff 50%); }
+  .otros .opc { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .otros .b { font-weight: 700; }
+
+  /* Modal */
+  .ov { position: fixed; inset: 0; background: rgba(7,26,58,.45); z-index: 50; display: flex; align-items: center; justify-content: center; }
+  .ov[hidden] { display: none; }
+  .dlg { width: 760px; max-width: calc(100vw - 40px); background: #fff; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.3); display: flex; flex-direction: column; max-height: calc(100vh - 40px); }
+  .dlg-cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--borde); }
+  .dlg-cab b { font-size: 16px; }
+  .dlg-cab .x { margin-left: auto; border: 0; background: none; font-size: 20px; cursor: pointer; }
+  .dlg-tabs { display: flex; gap: 6px; padding: 8px 16px 0; }
+  .dlg-tabs span { padding: 5px 12px; border-radius: 8px 8px 0 0; background: #eef1f6; font-weight: 600; }
+  .dlg-tabs span.on { background: var(--navy); color: #fff; }
+  .dlg-cuerpo { display: flex; gap: 14px; padding: 12px 16px; border-top: 1px solid var(--borde); overflow: auto; }
+  .dlg-cola { width: 250px; flex: none; }
+  .fq { border: 1px solid #9db7f5; background: #eef3ff; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .urg { color: var(--mal-tx); font-weight: 700; font-size: 11.5px; }
+  .dlg-det { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .dlg-det label { display: flex; flex-direction: column; gap: 3px; font-weight: 600; font-size: 12px; }
+  .dlg-det input[type=text], .dlg-det select, .dlg-det textarea { font: inherit; font-weight: 400; border: 1px solid #cdd4df; border-radius: 6px; padding: 5px 8px; }
+  .dlg-det textarea { height: 52px; resize: none; }
+  .dlg-det label.chk { flex-direction: row; align-items: center; gap: 6px; font-weight: 500; }
+  .tecs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+  .tecs .lab { grid-column: 1 / -1; font-weight: 600; font-size: 12px; }
+  .proto-nota { background: #f5f3ff; color: #5b21b6; border-radius: 6px; padding: 3px 8px; font-size: 11.5px; }
+  .dlg-pie { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--borde); }
+  .dlg-pie .g { margin-right: auto; color: var(--mal-tx); }
+  .toast { position: fixed; right: 18px; bottom: 18px; z-index: 60; background: var(--navy); color: #fff; padding: 9px 14px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); max-width: 420px; }
+  .toast[hidden] { display: none; }
+  .otro { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e3c98f; }
+  .otro label { font-weight: 600; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="proto" id="proto">
+  <span class="t">Prototipo · Pedidos (pieza 2, 1ª entrega: 0.9.26 + 0.9.27) · datos inventados · elegida la A</span>
+  <span>Disposición:</span>
+  <span class="grupo-b"><button id="bA" data-choice="ver-A" onclick="setVista('A')">A · Lista + panel</button><button id="bB" data-choice="ver-B" onclick="setVista('B')">B · Tabla que se despliega</button></span>
+  <span class="sep"></span>
+  <button class="pbtn" onclick="tamReal(true)">Ver a tamaño real</button>
+  <button class="pbtn" id="bQP" onclick="toggleQP()">Qué probar ▾</button>
+  <span class="sep"></span>
+  <div id="qp" class="qp" hidden>
+    <b>Qué probar</b>
+    <ol>
+      <li>Cambia entre <b>A</b> y <b>B</b> arriba. Las dos enseñan lo mismo; cambia la forma.</li>
+      <li>Pincha en una unidad <span class="est sin">Sin móvil</span>: mira la sugerencia, su nivel y «Le falta». En «Posibles» elige otro.</li>
+      <li><b>Asignar trabajo</b>: abre el modal de hoy con el IMEI, el comentario y el chasis puestos. Elige técnico y guarda.</li>
+      <li>Los 4 pedidos de Amazon de <span class="skuc">i13128AzulA</span>: los 2 más antiguos tienen móvil de PEDIDOS 2026 «sin pedido concreto»; el 3º y el 4º, sugerencias distintas (no se sugiere el mismo IMEI dos veces).</li>
+      <li>Un <span class="est nocuadra">No cuadra</span> por color (Distribuidores #18832) y otro por modelo (Simulador 6488): qué no coincide y qué hacer.</li>
+      <li>El Simulador 6488 tiene 15 unidades: las que cuadran van plegadas. El IMEI viene del propio Simulador («Tecleado en el Simulador»).
+        El 6490 tiene una unidad todavía sin IMEI (es raro): sugerencia igual que en Amazon, pero se teclea en el Simulador.</li>
+      <li><b>Decides tú:</b> en una unidad sin móvil, escribe otro IMEI en «¿Prefieres otro?» y pulsa «Comprobar». Prueba
+        356000111222333 (otro color), 354999888777666 (ya va en otro pedido), 352111000999888 (otro modelo: no sirve) o uno inventado (no está en NSYS).</li>
+      <li>Filtra por canal y por estado, o busca un nº de pedido, cliente, SKU o IMEI.</li>
+      <li>Pasa el ratón por la píldora verde de las fuentes.</li>
+    </ol>
+    <p class="g" style="margin:8px 0 0">Niveles de la sugerencia (19/10): 1 igual que el pedido · 2 en el taller y acabará igual · 3 revisado, hay que transformarlo · 4 sin revisar.</p>
+  </div>
+</div>
+<button id="volver" class="volver" hidden onclick="tamReal(false)">Salir de tamaño real</button>
+<header><span class="logo"></span><span class="app">Fonestore <span>· Gestión de reparaciones</span></span><span class="usu">supertecnico <i></i></span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">TALLER</div>
+    <div class="it">Asignaciones</div><div class="it">Pendientes</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div>
+    <div class="it">Stock actual</div><div class="it">Compras <span class="antes">(antes Pedidos)</span></div><div class="it">Proveedores</div>
+    <div class="sec">TELÉFONOS</div>
+    <div class="it">Stock de teléfonos</div><div class="it on">Pedidos <span class="nuevo">NUEVO</span></div>
+  </nav>
+  <main>
+    <div class="titulo">
+      <h1>Pedidos</h1><span class="pild" id="cuenta"></span>
+      <span class="fuentes" tabindex="0">ShippyPro · PEDIDOS 2026 · Simulador: al día
+        <span class="fpop">
+          <div class="g" style="display:block;margin-bottom:2px"><b>Amazon y webs</b>: dos fuentes, pedido por un lado e IMEI por otro.</div>
+          <div><b>ShippyPro</b><span>12 pedidos pendientes de enviar, sin IMEI · leído a las 09:42</span></div>
+          <div><b>PEDIDOS 2026</b><span>los IMEIs tecleados para esos pedidos · leído a las 09:41</span></div>
+          <div class="g" style="display:block;margin:6px 0 2px"><b>Ventas en directo</b>: una sola fuente, pedido e IMEI juntos.</div>
+          <div><b>Simulador</b><span>2 pedidos con su IMEI en cada línea · copia de las 09:31</span></div>
+          <div class="g" style="display:block;margin:6px 0 2px"><b>Dónde está cada móvil</b></div>
+          <div><b>NSYS</b><span>Items de las 09:31</span></div>
+          <div class="g" style="display:block;margin-top:6px">Lo que NSYS da por vendido (Released) ya no sale aquí. Las ventas del Simulador con reparación también están en PEDIDOS 2026: cada IMEI cuenta una sola vez.</div>
+        </span>
+      </span>
+    </div>
+    <div class="fila2"><input class="buscar" id="q" placeholder="Nº de pedido, cliente, SKU o IMEI" oninput="render()" aria-label="Buscar"><div class="chips" id="chCanal"></div></div>
+    <div class="chips" id="chEstado"></div>
+    <div id="vista" class="paneles"></div>
+  </main>
+</div>
+<div id="modal" class="ov" hidden></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const CANALES = {
+  AMZ:  { n: 'Amazon',           c: '#c2410c', bg: '#ffedd5' },
+  AMZS: { n: 'Amazon Stockroom', c: '#9a3412', bg: '#fde2c8' },
+  B2B:  { n: 'Distribuidores',   c: '#6d28d9', bg: '#ede9fe' },
+  B2C:  { n: 'Particulares',     c: '#0f766e', bg: '#ccfbf1' },
+  BKI:  { n: 'BackiPhone',       c: '#be185d', bg: '#fce7f3' },
+  SIM:  { n: 'Simulador',        c: '#334155', bg: '#e2e8f0' },
+};
+const NIVELES = { 1: 'Igual que el pedido', 2: 'En el taller, acabará igual', 3: 'Hay que transformarlo', 4: 'Sin revisar' };
+const ESTADOS = [['sin', 'Sin móvil', 'var(--rev)'], ['nocuadra', 'No cuadra', '#dc2626'], ['aviso', 'Con aviso', '#f0a020'],
+                 ['taller', 'En el taller', 'var(--taller)'], ['cuadra', 'Cuadra', 'var(--listos)']];
+const ETQ = Object.fromEntries(ESTADOS.map(e => [e[0], e[1]]));
+const COLA = { REPARACION: 'Reparación', GLASS: 'Glass', PULIDO: 'Pulido' };
+const TECS = [{ n: 'Hugo', carga: 3 }, { n: 'Nerea', carga: 5 }, { n: 'Iván', carga: 2 }, { n: 'Sara', carga: 4 }];
+
+const PEDIDOS = [
+  { id: 'O1',  num: '402-8812345-1122334', canal: 'AMZ',  cliente: 'L. Becker',  pais: 'DE', fecha: '28/10', dias: 7 },
+  { id: 'O2',  num: '402-1290033-5566778', canal: 'AMZ',  cliente: 'M. Rossi',   pais: 'IT', fecha: '29/10', dias: 6 },
+  { id: 'O3',  num: '402-7781234-9988776', canal: 'AMZ',  cliente: 'C. Dubois',  pais: 'FR', fecha: '30/10', dias: 5 },
+  { id: 'O5',  num: '#18832',              canal: 'B2B',  cliente: 'Tienda Norte SL', pais: 'ES', fecha: '31/10', dias: 4 },
+  { id: 'O6',  num: '403-2201987-6655443', canal: 'AMZS', cliente: 'J. García',  pais: 'ES', fecha: '31/10', dias: 4 },
+  { id: 'O7',  num: '#20511',              canal: 'B2C',  cliente: 'Ana Ruiz',   pais: 'ES', fecha: '01/11', dias: 3 },
+  { id: 'O8',  num: '402-9917263-1029384', canal: 'AMZ',  cliente: 'P. Santos',  pais: 'PT', fecha: '01/11', dias: 3 },
+  { id: 'O9',  num: '6488',                canal: 'SIM',  cliente: 'Móviles Levante SL', fecha: '02/11', dias: 2 },
+  { id: 'O10', num: '#3307',               canal: 'BKI',  cliente: 'R. Torres',  pais: 'ES', fecha: '02/11', dias: 2 },
+  { id: 'O14', num: '402-6677889-0011223', canal: 'AMZ',  cliente: 'F. Weber',   pais: 'DE', fecha: '02/11', dias: 2 },
+  { id: 'O4',  num: '402-5550198-2233445', canal: 'AMZ',  cliente: 'S. Müller',  pais: 'DE', fecha: '03/11', dias: 1 },
+  { id: 'O11', num: '402-3344556-7788990', canal: 'AMZ',  cliente: 'K. Novak',   pais: 'DE', fecha: '03/11', dias: 1 },
+  { id: 'O12', num: '#20530',              canal: 'B2C',  cliente: 'Luis Pérez', pais: 'ES', fecha: '04/11', dias: 0 },
+  { id: 'O13', num: '6490',                canal: 'SIM',  cliente: 'TecnoSur Distribución', fecha: '04/11', dias: 0 },
+];
+const P = Object.fromEntries(PEDIDOS.map(p => [p.id, p]));
+const D = (modelo, cap, color, grado, esim) => ({ modelo, cap, color, grado, esim: !!esim });
+const txt = d => `iPhone ${d.modelo}${d.esim ? ' eSIM' : ''} · ${d.cap} · ${d.color} · ${d.grado}`;
+
+let semilla = 11;
+const rnd = () => (semilla = (semilla * 9301 + 49297) % 233280) / 233280;
+const imeiFalso = () => '35' + Array.from({ length: 13 }, () => Math.floor(rnd() * 10)).join('');
+
+const A13 = D('13', '128 GB', 'Azul', 'A');
+const U = [
+  { id: 'u1', ped: 'O1', sku: 'i13128AzulA', pide: A13, estado: 'taller',
+    movil: { imei: '356789012345671', fuente: 'PEDIDOS 2026', sinPedido: true, tecleado: '29/10', es: D('13', '128 GB', 'Azul', 'C'),
+             ubic: 'Taller · Glass', quien: 'Hugo', trabajo: 'Glass, desde el 31/10', acabar: 'Azul A' } },
+  { id: 'u2', ped: 'O2', sku: 'i13128AzulA', pide: A13, estado: 'cuadra',
+    movil: { imei: '353912345678904', fuente: 'PEDIDOS 2026', sinPedido: true, tecleado: '30/10', es: A13, ubic: 'Listos' } },
+  { id: 'u3', ped: 'O3', sku: 'i13128AzulA', pide: A13, estado: 'sin', cands: [
+    { imei: '359876543210985', nivel: 2, es: D('13', '128 GB', 'Azul', 'C'), ubic: 'Taller · Glass', quien: null, cola: 'GLASS',
+      falta: 'que acabe la glass', dias: 12,
+      porque: 'Ya es el SKU del pedido: el maestro cuenta el C como A (todo C se repara y sale en A). Solo le falta salir del taller.' },
+    { imei: '351234567890126', nivel: 3, es: D('13', '128 GB', 'Rojo', 'A'), ubic: 'Taller · Reparación', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'chasis Azul (hay 4 en el almacén de piezas)', dias: 20 },
+    { imei: '357700112233448', nivel: 4, es: D('13', '128 GB', 'Azul', 'n/a'), ubic: 'En revisión (sin caja)', quien: null, cola: 'REPARACION',
+      falta: 'revisarlo: todavía no se sabe', dias: 3 } ] },
+  { id: 'u5a', ped: 'O5', sku: 'i14256AzulA', pide: D('14', '256 GB', 'Azul', 'A'), estado: 'nocuadra',
+    movil: { imei: '351812345678907', fuente: 'PEDIDOS 2026', tecleado: '31/10', es: D('14', '256 GB', 'Rojo', 'A'), ubic: 'Listos',
+             difs: ['color'], falta: 'chasis Azul (hay 2 en el almacén de piezas)', cola: 'REPARACION', chasis: true } },
+  { id: 'u5b', ped: 'O5', sku: 'i14256AzulA', pide: D('14', '256 GB', 'Azul', 'A'), estado: 'cuadra',
+    movil: { imei: '352200998877665', fuente: 'PEDIDOS 2026', tecleado: '31/10', es: D('14', '256 GB', 'Azul', 'A'), ubic: 'Listos' } },
+  { id: 'u6', ped: 'O6', sku: 'i12128NegroA', pide: D('12', '128 GB', 'Negro', 'A'), estado: 'sin', cands: [
+    { imei: '352975318642097', nivel: 1, es: D('12', '128 GB', 'Negro', 'A'), ubic: 'Listos', quien: null, falta: 'nada', dias: 25,
+      porque: 'Hay 2 de nivel 1 (el A y el A+ valen igual en Amazon): va primero el que lleva más tiempo en stock.' },
+    { imei: '354433221100998', nivel: 1, es: D('12', '128 GB', 'Negro', 'A+'), ubic: 'Listos', quien: null, falta: 'nada (en Amazon un A+ vale como A)', dias: 9 },
+    { imei: '350011223344556', nivel: 2, es: D('12', '128 GB', 'Negro', 'C'), ubic: 'Taller · Reparación', quien: 'Iván', quienTrab: 'reparación, sin cambio de chasis',
+      falta: 'que Iván acabe su trabajo', dias: 15,
+      porque: 'El maestro cuenta el C como A, y su trabajo abierto no lleva cambio de chasis: acabará igual sin tocarle nada a Iván.' } ] },
+  { id: 'u7', ped: 'O7', sku: 'i11Pro256OroA', pide: D('11 Pro', '256 GB', 'Oro', 'A'), estado: 'sin', cands: [
+    { imei: '356677889900112', nivel: 3, es: D('11 Pro', '256 GB', 'Oro', 'B'), ubic: 'Listos', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'subir de B a A: chasis Oro (hay 2 en el almacén de piezas)', dias: 30,
+      porque: 'Los dos primeros necesitan lo mismo (un chasis Oro, y hay 2 en el almacén): va antes el que lleva más tiempo en stock.' },
+    { imei: '358899001122334', nivel: 3, es: D('11 Pro', '256 GB', 'Verde noche', 'A'), ubic: 'Taller · Reparación', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'chasis Oro (hay 2 en el almacén de piezas)', dias: 8 },
+    { imei: '352468013579246', nivel: 4, es: D('11 Pro', '256 GB', 'Plata', 'n/a'), ubic: 'Devolución', quien: null, cola: 'REPARACION',
+      falta: 'revisarlo (viene de una devolución)', dias: 2 } ] },
+  { id: 'u8', ped: 'O8', sku: 'i14128MedianocheA', pide: D('14', '128 GB', 'Medianoche', 'A'), estado: 'sin',
+    nota: 'No queda ningún A de este SKU: en Amazon el B va detrás de los A y con aviso.', cands: [
+    { imei: '355544332211009', nivel: 1, es: D('14', '128 GB', 'Medianoche', 'B'), ubic: 'Listos', quien: null, falta: 'nada',
+      avisos: ['B por A: en Amazon un B puede ir por A. Míralo antes de mandarlo.'], dias: 6,
+      porque: 'No hay ningún A: en Amazon el B va detrás de los A del mismo nivel, con aviso.' } ] },
+  // Simulador 6488: 15 unidades (13 cuadran, 1 en el taller, 1 no cuadra por modelo)
+  ...[
+    ['i12128NegroA', '12', '128 GB', 'Negro', 'A'], ['i12128BlancoA100', '12', '128 GB', 'Blanco', 'A100'],
+    ['i13128MedianocheA', '13', '128 GB', 'Medianoche', 'A'], ['i13128RosaA-', '13', '128 GB', 'Rosa', 'A-'],
+    ['i13Pro256GrafitoA', '13 Pro', '256 GB', 'Grafito', 'A'], ['i14128MedianocheA', '14', '128 GB', 'Medianoche', 'A'],
+    ['i14128MoradoA100', '14', '128 GB', 'Morado', 'A100'], ['i14Plus256AzulA', '14 Plus', '256 GB', 'Azul', 'A'],
+    ['i15128NegroA', '15', '128 GB', 'Negro', 'A'], ['i15128RosaA', '15', '128 GB', 'Rosa', 'A'],
+    ['i15Pro256NaturalA-', '15 Pro', '256 GB', 'Natural', 'A-'], ['i16128UltramarinoA', '16', '128 GB', 'Ultramarino', 'A'],
+    ['i11128NegroA', '11', '128 GB', 'Negro', 'A'],
+  ].map(([sku, m, c, col, g], k) => ({ id: 'u9_' + k, ped: 'O9', sku, pide: D(m, c, col, g), estado: 'cuadra',
+    movil: { imei: imeiFalso(), fuente: 'el Simulador', tecleado: '02/11', es: D(m, c, col, g), ubic: 'Listos' } })),
+  { id: 'u9t', ped: 'O9', sku: 'i15Pro128NaturalA', pide: D('15 Pro', '128 GB', 'Natural', 'A'), estado: 'taller',
+    movil: { imei: '357531598642087', fuente: 'el Simulador', tecleado: '02/11', es: D('15 Pro', '128 GB', 'Natural', 'C'),
+             ubic: 'Taller · Reparación', quien: 'Sara', trabajo: 'Reparación, desde el 02/11', acabar: 'Natural A' } },
+  { id: 'u9m', ped: 'O9', sku: 'i13128BlancoA', pide: D('13', '128 GB', 'Blanco', 'A'), estado: 'nocuadra',
+    movil: { imei: '354826173905432', fuente: 'el Simulador', tecleado: '02/11', es: D('13 mini', '128 GB', 'Blanco', 'A'), ubic: 'Listos', difs: ['modelo'] },
+    cands: [ { imei: '356420987123456', nivel: 1, es: D('13', '128 GB', 'Blanco', 'A'), ubic: 'Listos', quien: null, falta: 'nada', dias: 11 },
+             { imei: '359012345987650', nivel: 3, es: D('13', '128 GB', 'Medianoche', 'A'), ubic: 'Listos', quien: null, cola: 'REPARACION', chasis: true,
+               falta: 'chasis Blanco (hay 3 en el almacén de piezas)', dias: 18 } ] },
+  { id: 'u10', ped: 'O10', sku: 'i15128RosaA100', pide: D('15', '128 GB', 'Rosa', 'A100'), estado: 'sin', cands: [
+    { imei: '357123987654321', nivel: 2, es: D('15', '128 GB', 'Rosa', 'C100'), ubic: 'Taller · Reparación', quien: 'Nerea', quienTrab: 'reparación, sin cambio de chasis',
+      falta: 'que Nerea acabe su trabajo', dias: 5,
+      porque: 'El maestro cuenta el C100 como A100, y su trabajo abierto no lleva cambio de chasis: acabará igual sin tocarle nada a Nerea.' },
+    { imei: '353698741258963', nivel: 3, es: D('15', '128 GB', 'Rosa', 'A'), ubic: 'Listos', quien: null, cola: 'REPARACION',
+      falta: 'batería nueva para el 100 (hay 7 en el almacén de piezas)', dias: 14,
+      porque: 'Va antes que el de 40 días porque necesita menos trabajo: 1 cambio frente a 2.' },
+    { imei: '350864297531086', nivel: 3, es: D('15', '128 GB', 'Rosa', 'B'), ubic: 'Listos', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'chasis Rosa y batería nueva (2 cambios; los dos en el almacén de piezas)', dias: 40 } ] },
+  { id: 'u14', ped: 'O14', sku: 'i12mini128VerdeA', pide: D('12 mini', '128 GB', 'Verde', 'A'), estado: 'cuadra',
+    movil: { imei: '353007998877112', fuente: 'PEDIDOS 2026', sinPedido: true, tecleado: '02/11', es: D('12 mini', '128 GB', 'Verde', 'A'), ubic: 'Listos',
+             nota: 'Cuadra con lo que dejó el taller: chasis Verde el 03/11. NSYS todavía dice Rojo; ya sale en «Por pasar a NSYS».' } },
+  { id: 'u4', ped: 'O4', sku: 'i13128AzulA', pide: A13, estado: 'sin',
+    tomado: '359876543210985 (el más listo) ya va sugerido al pedido 402-7781234-9988776, que es más antiguo.', cands: [
+    { imei: '351234567890126', nivel: 3, es: D('13', '128 GB', 'Rojo', 'A'), ubic: 'Taller · Reparación', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'chasis Azul (hay 4 en el almacén de piezas)', dias: 20 },
+    { imei: '357700112233448', nivel: 4, es: D('13', '128 GB', 'Azul', 'n/a'), ubic: 'En revisión (sin caja)', quien: null, cola: 'REPARACION',
+      falta: 'revisarlo: todavía no se sabe', dias: 3 } ] },
+  { id: 'u11', ped: 'O11', sku: 'i16128UltramarinoA', pide: D('16', '128 GB', 'Ultramarino', 'A'), estado: 'aviso',
+    movil: { imei: '358120476539011', fuente: 'PEDIDOS 2026', sinPedido: true, tecleado: '03/11', es: D('16', '128 GB', 'Ultramarino', 'Ms'), ubic: 'Listos',
+             aviso: 'Es Ms (con marcas): se puede mandar a cualquier canal, pero míralo antes.' } },
+  { id: 'u12', ped: 'O12', sku: 'i15Pro256NaturalA', pide: D('15 Pro', '256 GB', 'Natural', 'A'), estado: 'sin', cands: [],
+    vacio: 'No hay ningún iPhone 15 Pro · 256 GB en stock y sin pedido. Toca esperar a que entre uno o hablar con el cliente.' },
+  ...[['i14128AzulA', '14', '128 GB', 'Azul', 'A'], ['i12mini64NegroA', '12 mini', '64 GB', 'Negro', 'A'], ['i15Plus128AmarilloA', '15 Plus', '128 GB', 'Amarillo', 'A']]
+    .map(([sku, m, c, col, g], k) => ({ id: 'u13_' + k, ped: 'O13', sku, pide: D(m, c, col, g), estado: 'cuadra',
+      movil: { imei: imeiFalso(), fuente: 'el Simulador', tecleado: '04/11', es: D(m, c, col, g), ubic: 'Listos' } })),
+  { id: 'u13s', ped: 'O13', sku: 'i12128BlancoA', pide: D('12', '128 GB', 'Blanco', 'A'), estado: 'sin',
+    nota: 'Raro en el Simulador: casi siempre se teclea el IMEI al vender (en 60 días, solo 2 móviles sin él).', cands: [
+    { imei: '358642097531864', nivel: 1, es: D('12', '128 GB', 'Blanco', 'A'), ubic: 'Listos', quien: null, falta: 'nada', dias: 7 },
+    { imei: '351357924680135', nivel: 3, es: D('12', '128 GB', 'Blanco', 'B'), ubic: 'Listos', quien: null, cola: 'REPARACION', chasis: true,
+      falta: 'subir de B a A: chasis Blanco (hay 3 en el almacén de piezas)', dias: 16 } ] },
+];
+
+let vista = 'A', selU = 'u3', abiertoB = 'u3';
+const fCanal = new Set(), fEstado = new Set(), expandido = {}, elegido = {}, asignado = {};
+
+const corto = i => i.slice(0, 4) + '…' + i.slice(-4);
+const hace = d => d === 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
+const canalHtml = p => `<span class="canal" style="background:${CANALES[p.canal].bg};color:${CANALES[p.canal].c}">${CANALES[p.canal].n}</span>`;
+const nivel = n => `<span class="nivel n${n}" title="Nivel ${n} de 4: cuanto más bajo, más listo está">Nivel ${n} · ${NIVELES[n]}</span>`;
+const dondeTeclear = p => p.canal === 'SIM' ? 'el Simulador' : 'PEDIDOS 2026';
+const elegidoOtro = {}, otroTxt = {}, otroRes = {};
+const candSel = u => elegidoOtro[u.id] || ((u.cands && u.cands.length) ? u.cands[elegido[u.id] ?? 0] : null);
+// IMEIs de prueba que no están en ninguna lista de posibles (para «¿Prefieres otro?»).
+const OTROS = {
+  '356000111222333': { es: D('13', '128 GB', 'Negro', 'A'), ubic: 'Listos', dias: 33 },
+  '354999888777666': { es: D('13', '128 GB', 'Azul', 'A'), ubic: 'Listos', dias: 4, pedido: '402-1290033-5566778' },
+  '352111000999888': { es: D('13 mini', '128 GB', 'Azul', 'A'), ubic: 'Listos', dias: 12 },
+};
+function evaluar(pide, es) {
+  const malFijo = [], cambios = [];
+  if (pide.modelo !== es.modelo) malFijo.push('el modelo (es un iPhone ' + es.modelo + ')');
+  if (pide.cap !== es.cap) malFijo.push('la capacidad (' + es.cap + ')');
+  if (pide.esim !== es.esim) malFijo.push('el eSIM');
+  const letra = g => g.replace('100', '');
+  if (pide.color !== es.color) cambios.push('chasis ' + pide.color);
+  else if (letra(pide.grado) !== letra(es.grado)) cambios.push(`subir de ${es.grado} a ${pide.grado}: chasis ${pide.color}`);
+  if (pide.grado.includes('100') && !es.grado.includes('100')) cambios.push('batería nueva');
+  return { malFijo, cambios };
+}
+function comprobar(uid) {
+  const u = U.find(x => x.id === uid);
+  const v = (otroTxt[uid] || '').replace(/\D/g, '');
+  const k = (u.cands || []).findIndex(c => c.imei === v);
+  if (k >= 0) { elegido[uid] = k; delete elegidoOtro[uid]; otroRes[uid] = '<div class="ok">✔ Está en la lista de posibles: queda elegido.</div>'; render(); return; }
+  const x = OTROS[v];
+  if (!x) { delete elegidoOtro[uid]; otroRes[uid] = `<div class="aviso">✘ ${v || '(vacío)'}: no está en NSYS. Revisa el número.</div>`; render(); return; }
+  const ev = evaluar(u.pide, x.es);
+  if (ev.malFijo.length) { delete elegidoOtro[uid];
+    otroRes[uid] = `<div class="aviso" style="background:var(--mal-bg);color:var(--mal-tx)">✘ ${v} no sirve para este pedido: no coincide ${ev.malFijo.join(', ')}, y eso no lo cambia el taller.</div>`;
+    render(); return;
+  }
+  elegidoOtro[uid] = { imei: v, nivel: ev.cambios.length ? 3 : (x.ubic === 'Listos' ? 1 : 2), es: x.es, ubic: x.ubic, quien: null, dias: x.dias,
+    falta: ev.cambios.length ? ev.cambios.join(' y ') : 'nada', cola: 'REPARACION', chasis: ev.cambios.some(t => t.includes('chasis')),
+    avisos: x.pedido ? [`Ya va en el pedido ${x.pedido}: si lo coges, ese pedido se queda sin móvil.`] : [],
+    porque: 'Lo has elegido tú. El ERP solo comprueba que sirve y qué le falta.' };
+  otroRes[uid] = null;
+  render();
+}
+function campoOtro(u) {
+  return `<div class="otro"><label for="otro-${u.id}">¿Prefieres otro? Escanea o escribe su IMEI:</label>` +
+    `<div class="fila" style="margin-top:4px"><input id="otro-${u.id}" class="buscar" style="width:200px;height:30px" placeholder="IMEI" value="${otroTxt[u.id] || ''}" ` +
+    `oninput="otroTxt['${u.id}']=this.value" onkeydown="if(event.key==='Enter')comprobar('${u.id}')">` +
+    `<button class="btn-sec" onclick="comprobar('${u.id}')">Comprobar</button>` +
+    (elegidoOtro[u.id] ? `<button class="btn-sec" onclick="volverSugerido('${u.id}')">Volver a la sugerencia</button>` : '') + '</div>' +
+    (otroRes[u.id] || '') + '</div>';
+}
+function volverSugerido(uid) { delete elegidoOtro[uid]; elegido[uid] = 0; otroRes[uid] = null; otroTxt[uid] = ''; render(); }
+const modeloMal = u => !!(u.movil && u.movil.difs && u.movil.difs.some(d => ['modelo', 'cap', 'esim'].includes(d)));
+
+function filtrar() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  return U.filter(u => {
+    const p = P[u.ped];
+    if (fCanal.size && !fCanal.has(p.canal)) return false;
+    if (fEstado.size && !fEstado.has(u.estado)) return false;
+    if (q) {
+      const hay = [p.num, p.cliente, u.sku, u.movil && u.movil.imei, ...(u.cands || []).map(c => c.imei)].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function grupos(us) {
+  const g = [];
+  for (const p of PEDIDOS) { const l = us.filter(u => u.ped === p.id); if (l.length) g.push({ p, l }); }
+  return g;
+}
+
+function lineas(p, l) {
+  const ok = l.filter(u => u.estado === 'cuadra');
+  if (ok.length >= 3 && !expandido[p.id]) return { vis: l.filter(u => u.estado !== 'cuadra'), plegadas: ok.length, plegable: true };
+  return { vis: l, plegadas: 0, plegable: ok.length >= 3 };
+}
+
+function resumenMovil(u) {
+  if (u.estado === 'sin') {
+    const c = candSel(u);
+    if (!c) return '<span class="g">ninguno en stock</span>';
+    const av = (c.avisos || []).length ? ' ⚠' : '';
+    const as = asignado[u.id] ? ` · asignado a ${asignado[u.id].tec}` : '';
+    const quien = (elegidoOtro[u.id] || (elegido[u.id] ?? 0) > 0) ? 'elegido' : 'sugerido';
+    return `${quien} <span class="mono">${corto(c.imei)}</span>${av} · ${c.ubic}${as}`;
+  }
+  const m = u.movil;
+  return `<span class="mono">${corto(m.imei)}</span> · ${u.estado === 'taller' ? 'con ' + m.quien : m.ubic}`;
+}
+
+function chip(tipo, k, texto, n, on, color) {
+  return `<button class="chip ${on ? 'on' : ''}" onclick="togg('${tipo}','${k}')">${color ? `<i style="background:${color}"></i>` : ''}${texto} <span class="c">${n}</span></button>`;
+}
+function togg(tipo, k) {
+  const s = tipo === 'canal' ? fCanal : fEstado;
+  if (!k) s.clear(); else if (s.has(k)) s.delete(k); else s.add(k);
+  render();
+}
+function renderChips() {
+  const cc = {};
+  U.forEach(u => { const c = P[u.ped].canal; cc[c] = (cc[c] || 0) + 1; });
+  let h = '<span class="lab">Canal</span>' + chip('canal', '', 'Todos', U.length, fCanal.size === 0);
+  for (const k of Object.keys(CANALES)) if (cc[k]) h += chip('canal', k, CANALES[k].n, cc[k], fCanal.has(k));
+  document.getElementById('chCanal').innerHTML = h;
+  const base = U.filter(u => !fCanal.size || fCanal.has(P[u.ped].canal));
+  let e = '<span class="lab">Estado</span>' + chip('estado', '', 'Todos', base.length, fEstado.size === 0);
+  for (const [k, t, col] of ESTADOS) e += chip('estado', k, t, base.filter(u => u.estado === k).length, fEstado.has(k), col);
+  document.getElementById('chEstado').innerHTML = e;
+}
+
+function explicaSinPedido(u) {
+  const deSku = U.filter(x => P[x.ped].canal === 'AMZ' && x.sku === u.sku);
+  const tecleados = deSku.filter(x => x.movil && x.movil.sinPedido).length;
+  return `En PEDIDOS 2026 hay ${tecleados} IMEI${tecleados > 1 ? 's' : ''} tecleado${tecleados > 1 ? 's' : ''} para <span class="skuc">${u.sku}</span> en filas «Amazon», sin número de pedido. ` +
+    `El ERP se ${tecleados > 1 ? 'los' : 'lo'} da a ${tecleados > 1 ? 'los ' + tecleados + ' pedidos más antiguos' : 'el pedido más antiguo'} de ese SKU (hay ${deSku.length} pendiente${deSku.length > 1 ? 's' : ''} en ShippyPro): ` +
+    `el móvil más avanzado va al pedido más antiguo, como hoy al preparar el envío.`;
+}
+
+function motivoNoAsignar(u, c) {
+  if (asignado[u.id]) return 'Ya asignado';
+  if (c.nivel === 1) return 'Ya es igual que el pedido: no necesita taller';
+  if (c.quien) return `Ya está en el taller con ${c.quien} y acabará igual`;
+  return null;
+}
+
+function botones(u, p, c, motivo) {
+  return `<div class="acc"><button class="btn-sec" onclick="copiar('${c.imei}','${dondeTeclear(p)}')">Copiar IMEI</button>` +
+    `<button class="btn-pri" ${motivo ? 'disabled' : ''} onclick="abrirModal('${u.id}')">Asignar trabajo</button>` +
+    `<button class="btn-sec" onclick="toast('Abre el rastro del IMEI ${c.imei} (el panel de la pieza 1).')">Ver rastro</button></div>` +
+    (motivo && motivo !== 'Ya asignado' ? `<div class="nota">«Asignar trabajo» apagado: ${motivo}.</div>` : '');
+}
+
+function listaPosibles(u, titulo) {
+  const i = elegido[u.id] ?? 0;
+  return `<div class="box otros"><h3>${titulo}: ${u.cands.length} ${u.cands.length === 1 ? "móvil sirve" : "móviles podrían servir"}</h3>` +
+    '<div class="nota" style="margin:0 0 4px">Son los que tienen el mismo modelo, capacidad y eSIM, están en stock, no tienen pedido y no van sugeridos a un pedido más antiguo. Ordenados por nivel (1 = listo, 4 = sin revisar); en el mismo nivel, el de menos trabajo, luego el que tiene la pieza en el almacén y, si empatan, el que lleva más tiempo en stock.</div>' +
+    u.cands.map((c, k) =>
+    `<button class="op ${k === i && !elegidoOtro[u.id] ? 'on' : ''}" onclick="elegir('${u.id}',${k})"><span class="rad"></span><span class="opc">` +
+    `<span class="fila"><span class="mono b">${c.imei}</span>${nivel(c.nivel)}${(c.avisos || []).length ? '<span class="g">⚠ aviso</span>' : ''}</span>` +
+    `<span class="g">${txt(c.es)} · ${c.ubic}${c.quien ? ' · con ' + c.quien : ''}</span><span class="g">Le falta: ${c.falta}</span></span></button>`).join('') + '</div>';
+}
+
+function cajaSugerido(u, p) {
+  const i = elegido[u.id] ?? 0, c = candSel(u), fuera = !!elegidoOtro[u.id];
+  const donde = c.ubic + (c.quien ? ` · en manos de ${c.quien}${c.quienTrab ? ' (' + c.quienTrab + ')' : ''}` : ' · sin asignar');
+  return `<div class="box sug"><h3>${fuera ? 'Elegido por ti (no estaba en la lista)' : i === 0 ? 'Sugerido' : 'Elegido por ti'}</h3>` +
+    `<div class="fila"><span class="imei">${c.imei}</span>${nivel(c.nivel)}</div>` +
+    `<dl class="kv"><dt>Es</dt><dd>${txt(c.es)}</dd><dt>Dónde</dt><dd>${donde}</dd><dt>Le falta</dt><dd>${c.falta}</dd><dt>En stock</dt><dd>desde hace ${c.dias} días</dd>` +
+    (c.porque ? `<dt>Por qué</dt><dd style="font-weight:500">${c.porque}</dd>` : '') + '</dl>' +
+    (c.avisos || []).map(t => `<div class="aviso">⚠ ${t}</div>`).join('') +
+    (u.nota ? `<div class="nota">${u.nota}</div>` : '') +
+    botones(u, p, c, motivoNoAsignar(u, c)) +
+    (asignado[u.id] ? `<div class="ok">✔ Trabajo asignado a ${asignado[u.id].tec} (${asignado[u.id].cola}). Falta teclear el IMEI en ${dondeTeclear(p)}.</div>` : '') +
+    campoOtro(u) +
+    `<div class="nota">Decides tú: el que teclees en ${dondeTeclear(p)}${p.canal.startsWith('AMZ') ? ' (en Amazon, en una fila «Amazon» + SKU)' : ''} es el que vale, aunque no sea el sugerido. ` +
+    `El ERP lo lee en unos minutos y la unidad pasa a «con móvil». Elegir aquí no guarda nada.</div></div>`;
+}
+
+function tablaDifs(pide, es) {
+  const filas = [['Modelo', 'iPhone ' + pide.modelo, 'iPhone ' + es.modelo, 'nunca'], ['Capacidad', pide.cap, es.cap, 'nunca'],
+                 ['eSIM', pide.esim ? 'sí' : 'no', es.esim ? 'sí' : 'no', 'nunca'], ['Color', pide.color, es.color, 'sí (chasis)'],
+                 ['Grado', pide.grado, es.grado, 'sí']];
+  return '<table class="difs"><tr><th></th><th>Pide</th><th>Es</th><th>¿Lo cambia el taller?</th></tr>' +
+    filas.map(([k, a, b, t]) => `<tr class="${a !== b ? 'mal' : ''}"><td>${k}</td><td>${a}</td><td>${b}${a !== b ? ' ✘' : ''}</td><td>${t}</td></tr>`).join('') + '</table>';
+}
+
+function cajaMovil(u, p) {
+  const m = u.movil;
+  let est = '';
+  if (u.estado === 'cuadra') est = `<div class="estl cuadra">✔ Cuadra · ${m.ubic}</div>` + (m.nota ? `<div class="nota">${m.nota}</div>` : '');
+  if (u.estado === 'taller') est = `<div class="estl taller">En el taller con ${m.quien} · ${m.trabajo} · tiene que acabar en <b>${m.acabar}</b></div>` +
+    '<div class="nota">Es lo normal: se vende mientras se repara. No es un error.</div>';
+  if (u.estado === 'aviso') est = `<div class="estl aviso">⚠ Cuadra, con aviso · ${m.ubic}</div><div class="aviso">⚠ ${m.aviso}</div>`;
+  if (u.estado === 'nocuadra') {
+    est = `<div class="estl nocuadra">✘ No cuadra · ${m.ubic} · sin trabajo abierto</div>` + tablaDifs(u.pide, m.es) +
+      (modeloMal(u)
+        ? `<div class="concl mal">El modelo, la capacidad y el eSIM no cambian nunca: hay que cambiar el IMEI en ${m.fuente}. Al lado, los que sí sirven.</div>`
+        : `<div class="concl">El color y el grado los cambia el taller: asígnale el trabajo (${m.falta}).</div>`);
+  }
+  const asignable = u.estado === 'nocuadra' && !modeloMal(u);
+  return `<div class="box"><h3>Móvil</h3><div class="fila"><span class="imei">${m.imei}</span></div>` +
+    `<div class="g">Tecleado en ${m.fuente} el ${m.tecleado}${m.sinPedido ? ' · <span class="tag" title="Fila «Amazon» + SKU de PEDIDOS 2026, sin número de pedido">sin pedido concreto</span>' : ''}</div>` +
+    `<dl class="kv"><dt>Es</dt><dd>${txt(m.es)}</dd></dl>${est}` +
+    `<div class="acc">${asignable ? `<button class="btn-pri" ${asignado[u.id] ? 'disabled' : ''} onclick="abrirModal('${u.id}')">Asignar trabajo</button>` : ''}` +
+    `<button class="btn-sec" onclick="toast('Abre el rastro del IMEI ${m.imei} (el panel de la pieza 1).')">Ver rastro</button></div>` +
+    (asignado[u.id] ? `<div class="ok">✔ Trabajo asignado a ${asignado[u.id].tec} (${asignado[u.id].cola}).</div>` : '') + '</div>';
+}
+
+function detalle(u) {
+  const p = P[u.ped];
+  const cab = `<div class="dh">${canalHtml(p)}<b>Pedido <span class="mono">${p.num}</span></b><span>${p.cliente}${p.pais && p.canal !== 'SIM' ? ' · ' + p.pais : ''}</span><span class="g">${p.fecha} · ${hace(p.dias)}</span></div>`;
+  const pide = `<div class="pide">Pide <span class="skuc">${u.sku}</span><span class="g">${txt(u.pide)}</span></div>`;
+  let a = '', b = '';
+  if (u.estado === 'sin') {
+    if (!u.cands.length && !elegidoOtro[u.id]) a = `<div class="box"><h3>Sugerido</h3><p>${u.vacio}</p>${campoOtro(u)}</div>`;
+    else if (!u.cands.length) a = cajaSugerido(u, p);
+    else { a = cajaSugerido(u, p); b = (u.cands.length > 1 ? listaPosibles(u, 'Para este pedido') : '') + (u.tomado ? `<div class="box"><h3>¿Y el más listo?</h3><p>${u.tomado}</p></div>` : ''); }
+  } else {
+    a = cajaMovil(u, p);
+    if (u.movil.sinPedido) b += `<div class="box"><h3>Por qué «sin pedido concreto»</h3><p>${explicaSinPedido(u)}</p></div>`;
+    if (modeloMal(u) && u.cands) {
+      const c = candSel(u);
+      b += listaPosibles(u, 'En su lugar') + `<div class="box">${botones(u, p, c, motivoNoAsignar(u, c))}<div class="nota">Copia el IMEI y cámbialo en ${m(u).fuente}.</div></div>`;
+    }
+  }
+  return { cab, pide, a, b };
+}
+const m = u => u.movil;
+
+function renderA(us) {
+  const gs = grupos(us);
+  if (!us.some(u => u.id === selU)) selU = us.length ? us[0].id : null;
+  const izq = gs.map(({ p, l }) => {
+    const { vis, plegadas, plegable } = lineas(p, l);
+    return `<div class="ped"><div class="pcab">${canalHtml(p)}<b class="num">${p.num}</b><span>${p.cliente}${p.pais && p.canal !== 'SIM' ? ' · ' + p.pais : ''}</span>` +
+      `<span class="fec">${p.fecha} · ${hace(p.dias)}${l.length > 1 ? ' · ' + l.length + ' uds.' : ''}</span></div>` +
+      vis.map(u => `<button class="ul ${u.id === selU ? 'on' : ''}" onclick="sel('${u.id}')"><span class="skuc">${u.sku}</span><span class="est ${u.estado}">${ETQ[u.estado]}</span><span class="r">${resumenMovil(u)}</span></button>`).join('') +
+      (plegadas ? `<button class="ul pleg" onclick="expandir('${p.id}')">✔ ${plegadas} unidades más cuadran · ver ▸</button>` : '') +
+      (!plegadas && plegable ? `<button class="ul pleg" onclick="expandir('${p.id}')">Plegar las que cuadran ▴</button>` : '') + '</div>';
+  }).join('') || '<p class="g pad">Ningún pedido con estos filtros.</p>';
+  const u = U.find(x => x.id === selU);
+  let der = '<p class="g pad">Elige una unidad.</p>';
+  if (u) { const d = detalle(u); der = d.cab + d.pide + d.a + d.b; }
+  return `<div class="card lista-a">${izq}</div><div class="card det-a" id="detA">${der}</div>`;
+}
+
+function renderB(us) {
+  const gs = grupos(us);
+  let rows = '';
+  for (const { p, l } of gs) {
+    const { vis, plegadas, plegable } = lineas(p, l);
+    const celdas = k => k === 0
+      ? `<td>${p.fecha}<div class="g">${hace(p.dias)}</div></td><td><b class="mono">${p.num}</b>${l.length > 1 ? `<div class="g">${l.length} unidades</div>` : ''}</td><td>${canalHtml(p)}</td><td>${p.cliente}${p.pais && p.canal !== 'SIM' ? ' <span class="g">' + p.pais + '</span>' : ''}</td>`
+      : '<td></td><td></td><td></td><td></td>';
+    vis.forEach((u, k) => {
+      const ab = abiertoB === u.id;
+      rows += `<tr class="fu ${k === 0 ? 'pri' : ''} ${ab ? 'abierta' : ''}" onclick="abrirB('${u.id}')">${celdas(k)}<td><span class="skuc">${u.sku}</span></td><td>${resumenMovil(u)}</td><td><span class="est ${u.estado}">${ETQ[u.estado]}</span></td><td class="flecha">${ab ? '▾' : '▸'}</td></tr>`;
+      if (ab) { const d = detalle(u); rows += `<tr class="det-b"><td colspan="8">${d.pide}<div class="grid-b"><div>${d.a}</div><div>${d.b || '<div class="box"><p class="g">Nada más que mirar.</p></div>'}</div></div></td></tr>`; }
+    });
+    if (plegadas) rows += `<tr class="pleg ${vis.length === 0 ? 'pri' : ''}" onclick="expandir('${p.id}')">${vis.length === 0 ? celdas(0) : '<td></td><td></td><td></td><td></td>'}<td colspan="4">✔ ${plegadas} unidades más cuadran · ver ▸</td></tr>`;
+    if (!plegadas && plegable) rows += `<tr class="pleg" onclick="expandir('${p.id}')"><td></td><td></td><td></td><td></td><td colspan="4">Plegar las que cuadran ▴</td></tr>`;
+  }
+  if (!rows) rows = '<tr><td colspan="8" class="g pad">Ningún pedido con estos filtros.</td></tr>';
+  return `<div class="card tabla-b"><table><thead><tr><th>Fecha</th><th>Pedido</th><th>Canal</th><th>Cliente</th><th>Pide</th><th>Móvil</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function render() {
+  renderChips();
+  const us = filtrar();
+  const pedidos = new Set(U.map(u => u.ped)).size;
+  document.getElementById('cuenta').textContent = `${U.length} unidades en ${pedidos} pedidos · los más antiguos arriba`;
+  document.getElementById('vista').innerHTML = vista === 'A' ? renderA(us) : renderB(us);
+  document.getElementById('bA').classList.toggle('on', vista === 'A');
+  document.getElementById('bB').classList.toggle('on', vista === 'B');
+}
+
+function setVista(v) { vista = v; render(); }
+function sel(id) { selU = id; render(); const d = document.getElementById('detA'); if (d) d.scrollTop = 0; }
+function abrirB(id) { abiertoB = abiertoB === id ? null : id; render(); }
+function expandir(pid) { expandido[pid] = !expandido[pid]; render(); }
+function elegir(uid, k) { elegido[uid] = k; delete elegidoOtro[uid]; otroRes[uid] = null; render(); }
+function elijo(v) {
+  document.getElementById('eA').classList.toggle('on', v === 'A');
+  document.getElementById('eB').classList.toggle('on', v === 'B');
+  toast(`Apuntado: te quedas con la ${v}. Cuéntamelo también en el terminal.`);
+}
+function tamReal(on) { document.body.classList.toggle('real', on); document.getElementById('volver').hidden = !on; document.getElementById('qp').hidden = true; }
+function toggleQP() { const q = document.getElementById('qp'); q.hidden = !q.hidden; }
+
+let tt = null;
+function toast(t) { const el = document.getElementById('toast'); el.innerHTML = t; el.hidden = false; clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 3500); }
+function copiar(imei, donde) { try { navigator.clipboard.writeText(imei); } catch (e) {} toast(`IMEI ${imei} copiado: pégalo en ${donde}.`); }
+
+function objetivo(u) {
+  if (u.estado === 'sin' || modeloMal(u)) return candSel(u);
+  const mv = u.movil;
+  return { imei: mv.imei, es: mv.es, falta: mv.falta, cola: mv.cola, chasis: mv.chasis, ubic: mv.ubic };
+}
+function abrirModal(uid) {
+  const u = U.find(x => x.id === uid), p = P[u.ped], c = objetivo(u);
+  const cola = c.cola || 'REPARACION';
+  const md = document.getElementById('modal');
+  md.innerHTML = `<div class="dlg" role="dialog" aria-label="Asignar trabajos">
+    <div class="dlg-cab"><b>Asignar trabajos</b><span class="g">el modal de hoy, abierto desde Pedidos con el IMEI puesto</span><button class="x" onclick="cerrarModal()" aria-label="Cerrar">×</button></div>
+    <div class="dlg-tabs">${Object.keys(COLA).map(t => `<span class="${t === cola ? 'on' : ''}">${COLA[t]} ${t === cola ? 1 : 0}</span>`).join('')}</div>
+    <div class="dlg-cuerpo">
+      <div class="dlg-cola"><div class="fq"><span class="mono"><b>${c.imei}</b></span><span class="g">iPhone ${c.es.modelo}</span><span class="urg">De pedido · ${p.num}</span></div>
+        <div class="nota">Puedes escanear o pegar más IMEIs, como siempre.</div></div>
+      <div class="dlg-det">
+        <label>Modelo<input type="text" value="iPhone ${c.es.modelo}" readonly></label>
+        <label>Cliente<select><option>— Sin cliente —</option><option>${CANALES[p.canal].n}</option></select></label>
+        <div class="proto-nota">Pendiente: qué cliente del ERP lleva cada canal (hoy el cliente marca el móvil como urgente).</div>
+        <label>Comentario<textarea>Pedido ${p.num} (${CANALES[p.canal].n}) · tiene que acabar en ${u.sku}${c.falta ? ' · ' + c.falta : ''}</textarea></label>
+        <label class="chk"><input type="checkbox" ${c.chasis ? 'checked' : ''}> Cambio de chasis</label>
+        <div class="tecs"><div class="lab">Técnico</div>${TECS.map(t => `<label class="chk"><input type="radio" name="tec" value="${t.n}"> ${t.n} <span class="g">· ${t.carga} abiertos</span></label>`).join('')}</div>
+      </div>
+    </div>
+    <div class="dlg-pie"><span class="g" id="dlgMsg"></span><button class="btn-sec" onclick="cerrarModal()">Cancelar</button><button class="btn-pri" onclick="guardar('${u.id}','${cola}','${c.imei}')">Guardar (1)</button></div></div>`;
+  md.hidden = false;
+}
+function cerrarModal() { document.getElementById('modal').hidden = true; }
+function guardar(uid, cola, imei) {
+  const t = document.querySelector('input[name=tec]:checked');
+  if (!t) { document.getElementById('dlgMsg').textContent = 'Elige un técnico.'; return; }
+  asignado[uid] = { tec: t.value, cola: COLA[cola], imei };
+  cerrarModal();
+  toast(`Trabajo asignado a ${t.value} (${COLA[cola]}). En el prototipo no se guarda nada.`);
+  render();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); document.getElementById('qp').hidden = true; } });
+render();
+</script>
+</body>
+</html>
