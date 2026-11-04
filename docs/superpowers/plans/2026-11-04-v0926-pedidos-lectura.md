@@ -136,6 +136,20 @@ trabajo» son de la 0.9.27: **no** entran aquí).
 12. **En la API, `pide` y `movil` de cada unidad nunca son nulos:** springdoc no tiene ningún objeto anidado nulo en el contrato y
     no se sabe cómo lo marcaría. Sin SKU conocido van vacíos (`Atributos.NINGUNO`) y sin móvil, `MovilUnidad.NINGUNO`, con
     `enNsys = false`.
+13. **Un pedido de ShippyPro sin fecha válida se salta** (decisión del usuario tras la revisión de la Task 3, 04/11): los demás se
+    leen; su número queda en el mensaje de la lectura («Pedidos sin fecha válida, saltados: …») y en el log. Una fecha
+    «1793629400.0» vale.
+14. **Amazon: se cubren todos los pedidos posibles** (decisión del usuario tras la revisión de la Task 5, 04/11): primero se
+    decide qué pedidos quedan cubiertos (emparejamiento máximo, prefiriendo los más antiguos); después, entre los repartos que
+    los cubren a todos, el móvil más avanzado va al pedido más antiguo.
+15. **Simulador: tras un abono, venta nueva** (decisión del usuario, 04/11): el abono cierra la unidad de antes; la siguiente línea
+    de ese IMEI es una unidad nueva; solo un IMEI en una unidad **abierta** del Simulador deja de usarse en PEDIDOS 2026. Las
+    líneas con un SKU que el maestro no conoce no cuentan.
+16. **Posiciones con huecos:** todas las unidades de un artículo de ShippyPro (aunque el maestro no conozca su SKU) y todas las
+    líneas no BB de un pedido del Simulador cuentan para la posición; al guardar se quitan las posiciones que no han salido.
+17. **Un fallo al cruzar o guardar se ve** (decisión del usuario tras la revisión de la Task 6, 04/11): las lecturas OK de esa
+    vuelta pasan a ERROR («No se pudo cruzar o guardar: …») y el error va al log con su traza; `podarLecturas` corre al empezar
+    cada vuelta; sin `pedidos.shippypro.canales`, ShippyPro es RECHAZADA; el freno compara con la última lectura con filas > 0.
 
 ## Mapa de ficheros
 
@@ -2204,7 +2218,10 @@ git commit -m "feat: cruce de ShippyPro, PEDIDOS 2026 y el Simulador en pedidos 
 - Test: `src/test/java/com/reparaciones/servidor/pedidos/{PedidosDAOTest,LecturaPedidosTest}.java`
 
 **Interfaces:**
-- Consumes: Tasks 2-5; `NsysDAO.porImeis(Collection<String>)`, `NsysDAO.productosPorSkuDeCanal` (Task 1), `ImportadorNsys.MADRID`.
+- Consumes: Tasks 2-5 — ojo: tras la revisión de la Task 3, `ClienteShippyPro.pendientes()` devuelve
+  `ClienteShippyPro.Leidos(List<PedidoShippyPro> pedidos, List<String> descartados)` (los pedidos sin fecha válida se saltan y
+  van en `descartados`, decisión del usuario del 04/11); `NsysDAO.porImeis(Collection<String>)`, `NsysDAO.productosPorSkuDeCanal`
+  (Task 1), `ImportadorNsys.MADRID`.
 - Produces:
   - `record PedidoGuardado(int id, Canal canal, String numero, String cliente, String pais, LocalDateTime fecha, FuentePedidos fuente)`.
   - `record UnidadGuardada(int id, int idPedido, int posicion, String sku, String imei, String imeiFuente, LocalDateTime imeiTecleadoEn,
@@ -2298,9 +2315,8 @@ class PedidosDAOTest {
         assertArrayEquals(new Object[]{5, 1, "i13128AzulA", "350000000000001", "SIMULADOR", 7, ahora, false, null, ahora, "RELEASED"},
                 unidades.getValue().get(0));
         assertArrayEquals(new Object[]{12, 1, "i13128AzulA", null, null, null, null, false, null, null, null}, unidades.getValue().get(2));
-        ArgumentCaptor<List<Object[]>> recortes = ArgumentCaptor.forClass(List.class);
-        verify(jdbc).batchUpdate(eq(PedidosDAO.SQL_RECORTAR_UNIDADES), recortes.capture());
-        assertArrayEquals(new Object[]{5, 2}, recortes.getValue().get(0));
+        verify(jdbc).update("DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION NOT IN (?, ?)", 5, 1, 2);
+        verify(jdbc).update("DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION NOT IN (?)", 12, 1);
         ArgumentCaptor<List<Object[]>> cierres = ArgumentCaptor.forClass(List.class);
         verify(jdbc).batchUpdate(eq(PedidosDAO.SQL_CERRAR_PEDIDO), cierres.capture());
         assertEquals(1, cierres.getValue().size());
@@ -2310,7 +2326,7 @@ class PedidosDAOTest {
     @Test void lasUnidadesSeGuardanPorPedidoYPosicionSinCambiarDeId() {
         assertTrue(PedidosDAO.SQL_GUARDAR_UNIDAD.startsWith("INSERT INTO Pedido_unidad"), PedidosDAO.SQL_GUARDAR_UNIDAD);
         assertTrue(PedidosDAO.SQL_GUARDAR_UNIDAD.contains("ON DUPLICATE KEY UPDATE SKU = VALUES(SKU)"), PedidosDAO.SQL_GUARDAR_UNIDAD);
-        assertEquals("DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION > ?", PedidosDAO.SQL_RECORTAR_UNIDADES);
+        assertEquals("DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION NOT IN (%s)", PedidosDAO.SQL_RECORTAR_UNIDADES);
     }
 
     @Test void losDesconocidosSeResumenEnQuinientosCaracteres() {
@@ -2361,6 +2377,9 @@ class LecturaPedidosTest {
     private final LecturaPedidos lectura = new LecturaPedidos(shippy, sheets, dao, nsys, "100:AMAZON", "hoja-p", "PEDIDOS 2026",
             "hoja-s", "Registro actividad", 4000, Clock.fixed(AHORA.atZone(MADRID).toInstant(), MADRID));
 
+    /** ShippyPro sin pendientes y sin pedidos saltados. */
+    private static final ClienteShippyPro.Leidos NINGUNO = new ClienteShippyPro.Leidos(List.of(), List.of());
+
     private static TablaHoja vacia(int total) {
         return new TablaHoja(total, Map.of(), List.of());
     }
@@ -2372,7 +2391,7 @@ class LecturaPedidosTest {
 
     @Test void conLasTresFuentesBienAplicaYApuntaCadaLectura() throws Exception {
         when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3);
-        when(shippy.pendientes()).thenReturn(List.of());
+        when(shippy.pendientes()).thenReturn(NINGUNO);
         hojasBien(100, 200);
 
         lectura.pasada();
@@ -2386,7 +2405,7 @@ class LecturaPedidosTest {
 
     @Test void recienArrancadoYConShippyProCaidoNoTocaNadaYDespuesUsaLoUltimoBueno() throws Exception {
         when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3, 4, 5, 6, 7, 8, 9);
-        when(shippy.pendientes()).thenThrow(new IOException("ShippyPro respondió 500")).thenReturn(List.of())
+        when(shippy.pendientes()).thenThrow(new IOException("ShippyPro respondió 500")).thenReturn(NINGUNO)
                 .thenThrow(new IOException("ShippyPro respondió 500"));
         hojasBien(100, 200);
 
@@ -2401,7 +2420,7 @@ class LecturaPedidosTest {
 
     @Test void unaHojaConMenosDelNoventaPorCientoEsIncompletaYNoSeUsa() throws Exception {
         when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3);
-        when(shippy.pendientes()).thenReturn(List.of());
+        when(shippy.pendientes()).thenReturn(NINGUNO);
         when(dao.ultimaLectura(eq(FuentePedidos.PEDIDOS_2026), any()))
                 .thenReturn(Optional.of(new LecturaGuardada(7, FuentePedidos.PEDIDOS_2026, AHORA, AHORA, "OK", 1000, null, null)));
         hojasBien(899, 200);
@@ -2414,7 +2433,7 @@ class LecturaPedidosTest {
 
     @Test void unaColumnaQueFaltaEsRechazada() throws Exception {
         when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3);
-        when(shippy.pendientes()).thenReturn(List.of());
+        when(shippy.pendientes()).thenReturn(NINGUNO);
         when(sheets.leer(eq("hoja-p"), any(), any(), any(), anyInt()))
                 .thenThrow(new FormatoHojaException("Falta la columna «IMEI» en «PEDIDOS 2026»"));
         when(sheets.leer(eq("hoja-s"), any(), any(), any(), anyInt())).thenReturn(vacia(10));
@@ -2429,12 +2448,24 @@ class LecturaPedidosTest {
         LecturaPedidos sinHoja = new LecturaPedidos(shippy, sheets, dao, nsys, "", "", "PEDIDOS 2026", "hoja-s", "Registro actividad",
                 4000, Clock.fixed(AHORA.atZone(MADRID).toInstant(), MADRID));
         when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3);
-        when(shippy.pendientes()).thenReturn(List.of());
+        when(shippy.pendientes()).thenReturn(NINGUNO);
 
         sinHoja.pasada();
 
         verify(dao).terminarLectura(eq(2), eq(LecturaPedidos.RECHAZADA), eq(0), eq("Falta el ajuste pedidos.pedidos2026.hoja"), any());
         verify(sheets, never()).leer(eq(""), any(), any(), any(), anyInt());
+    }
+
+    @Test void losPedidosSinFechaValidaSeApuntanEnUnaLecturaBuena() throws Exception {
+        when(dao.empezarLectura(any(), any())).thenReturn(1, 2, 3);
+        when(shippy.pendientes()).thenReturn(new ClienteShippyPro.Leidos(List.of(), List.of("402-0000000-0000008", "(sin número)")));
+        hojasBien(100, 200);
+
+        lectura.pasada();
+
+        verify(dao).terminarLectura(eq(1), eq(LecturaPedidos.OK), eq(0),
+                eq("Pedidos sin fecha válida, saltados: 402-0000000-0000008, (sin número)"), any());
+        verify(dao).aplicar(anyList(), eq(AHORA));
     }
 }
 ```
@@ -2525,7 +2556,10 @@ public class PedidosDAO {
             + " SIN_PEDIDO_CONCRETO = VALUES(SIN_PEDIDO_CONCRETO), OTRO_ORDER_ID = VALUES(OTRO_ORDER_ID),"
             + " CERRADA_EN = IF(VALUES(MOTIVO_CIERRE) IS NULL, NULL, COALESCE(CERRADA_EN, VALUES(CERRADA_EN))),"
             + " MOTIVO_CIERRE = VALUES(MOTIVO_CIERRE)";
-    static final String SQL_RECORTAR_UNIDADES = "DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION > ?";
+    /** Las posiciones pueden tener huecos (un artículo que el maestro no conoce también cuenta: arreglo de la Task 5): se borran
+     *  las que no han salido en esta lectura. */
+    static final String SQL_RECORTAR_UNIDADES = "DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ? AND POSICION NOT IN (%s)";
+    static final String SQL_BORRAR_UNIDADES = "DELETE FROM Pedido_unidad WHERE ID_PEDIDO = ?";
     static final String SQL_ABIERTOS_IDS = "SELECT ID_PEDIDO, FUENTE FROM Pedido WHERE CERRADO_EN IS NULL";
     static final String SQL_CERRAR_PEDIDO = "UPDATE Pedido SET CERRADO_EN = ?, MOTIVO_CIERRE = ? WHERE ID_PEDIDO = ?";
     static final String SQL_ABIERTOS = "SELECT ID_PEDIDO, CANAL, NUMERO, CLIENTE, PAIS, FECHA, FUENTE FROM Pedido"
@@ -2604,7 +2638,7 @@ public class PedidosDAO {
         Map<String, Integer> ids = ids(pedidos);
         Set<Integer> vistos = new HashSet<>();
         List<Object[]> unidades = new ArrayList<>();
-        List<Object[]> recortes = new ArrayList<>();
+        Map<Integer, List<Integer>> posiciones = new HashMap<>();
         for (PedidoLeido p : pedidos) {
             String motivo = motivoCierre(p);
             Timestamp cierre = motivo == null ? null : t;
@@ -2616,10 +2650,10 @@ public class PedidosDAO {
             }
             vistos.add(id);
             for (PedidoLeido.Unidad u : p.unidades()) unidades.add(argumentos(id, u, t));
-            recortes.add(new Object[]{id, p.unidades().size()});
+            posiciones.put(id, p.unidades().stream().map(PedidoLeido.Unidad::posicion).toList());
         }
         for (List<Object[]> lote : trozos(unidades)) jdbc.batchUpdate(SQL_GUARDAR_UNIDAD, lote);
-        if (!recortes.isEmpty()) jdbc.batchUpdate(SQL_RECORTAR_UNIDADES, recortes);
+        posiciones.forEach(this::recortar);
         List<Object[]> cierres = new ArrayList<>();
         jdbc.query(SQL_ABIERTOS_IDS, rs -> {
             int id = rs.getInt("ID_PEDIDO");
@@ -2627,6 +2661,18 @@ public class PedidosDAO {
                 cierres.add(new Object[]{t, "SHIPPYPRO".equals(rs.getString("FUENTE")) ? "YA_NO_PENDIENTE" : "FUERA_DE_VENTANA", id});
         });
         if (!cierres.isEmpty()) jdbc.batchUpdate(SQL_CERRAR_PEDIDO, cierres);
+    }
+
+    /** Quita las unidades del pedido cuyas posiciones no han salido en esta lectura (todas, si no ha salido ninguna). */
+    private void recortar(int idPedido, List<Integer> posiciones) {
+        if (posiciones.isEmpty()) {
+            jdbc.update(SQL_BORRAR_UNIDADES, idPedido);
+            return;
+        }
+        List<Object> args = new ArrayList<>();
+        args.add(idPedido);
+        args.addAll(posiciones);
+        jdbc.update(String.format(SQL_RECORTAR_UNIDADES, marcas(posiciones.size())), args.toArray());
     }
 
     static Object[] argumentos(int idPedido, PedidoLeido.Unidad u, Timestamp ahora) {
@@ -2854,9 +2900,12 @@ public class LecturaPedidos {
     private Leida<List<PedidoShippyPro>> leerShippyPro() {
         int id = dao.empezarLectura(FuentePedidos.SHIPPYPRO, ahora());
         try {
-            List<PedidoShippyPro> pedidos = shippyPro.pendientes();
-            dao.terminarLectura(id, OK, pedidos.size(), null, ahora());
-            return new Leida<>(id, pedidos);
+            ClienteShippyPro.Leidos leidos = shippyPro.pendientes();
+            // Un pedido sin fecha válida se salta (decisión del usuario, 04/11): la lectura es buena y lo dice.
+            String aviso = leidos.descartados().isEmpty() ? null
+                    : corta("Pedidos sin fecha válida, saltados: " + String.join(", ", leidos.descartados()));
+            dao.terminarLectura(id, OK, leidos.pedidos().size(), aviso, ahora());
+            return new Leida<>(id, leidos.pedidos());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             dao.terminarLectura(id, ERROR, 0, "Interrumpida", ahora());
@@ -3847,8 +3896,14 @@ class EnsayoPedidosTest {
     @Test void cruzaLasCopiasRealesYEscribeElResumen() throws Exception {
         Path dir = Path.of(System.getenv("ENSAYO_PEDIDOS"));
         List<PedidoShippyPro> shippy = new ArrayList<>();
-        for (JsonNode o : new ObjectMapper().readTree(dir.resolve("shippypro.json").toFile()).path("Orders"))
-            shippy.add(ClienteShippyPro.pedido(o));
+        List<String> sinFecha = new ArrayList<>();
+        for (JsonNode o : new ObjectMapper().readTree(dir.resolve("shippypro.json").toFile()).path("Orders")) {
+            try {
+                shippy.add(ClienteShippyPro.pedido(o));
+            } catch (IllegalArgumentException e) {
+                sinFecha.add(o.path("transaction_id").asText("(sin número)"));
+            }
+        }
         List<FilaPedidos2026> p2026 = LectorPedidos2026.filas(tabla(dir.resolve("pedidos2026.xlsx"), "PEDIDOS 2026", 4000));
         List<FilaSimulador> sim = LectorSimulador.filas(tabla(dir.resolve("simulador.xlsx"), "Registro actividad", 4000));
         Map<String, MovilNsys> moviles = new HashMap<>();
@@ -3880,7 +3935,8 @@ class EnsayoPedidosTest {
         }
         StringBuilder s = new StringBuilder("Ensayo de pedidos\n\nCanal · pedidos · unidades abiertas · con IMEI · sin pedido concreto\n");
         porCanal.forEach((k, c) -> s.append(String.format("%s · %d · %d · %d · %d%n", k, c[0], c[1], c[2], c[3])));
-        s.append("\nSKU desconocidos de ShippyPro: ").append(r.desconocidosShippyPro())
+        s.append("\nPedidos de ShippyPro sin fecha válida (saltados): ").append(sinFecha)
+                .append("\nSKU desconocidos de ShippyPro: ").append(r.desconocidosShippyPro())
                 .append("\nSKU desconocidos del Simulador: ").append(r.desconocidosSimulador())
                 .append("\nFilas de PEDIDOS 2026 leídas: ").append(p2026.size())
                 .append("\nLíneas del Simulador leídas: ").append(sim.size()).append('\n');

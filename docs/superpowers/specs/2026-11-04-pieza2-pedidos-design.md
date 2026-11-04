@@ -190,11 +190,12 @@ nada se queda viejo.
 - **Webs (Distribuidores, Particulares, BackiPhone):** la fila de PEDIDOS 2026 cuya Plataforma es el nombre del cliente
   (comparado sin mayúsculas, tildes ni espacios de más) y cuyo SKU es el de la unidad. Si el cliente tiene varios pedidos abiertos
   con ese SKU, las filas van a los más antiguos.
-- **Amazon y Amazon Stockroom:** las filas de PEDIDOS 2026 con Plataforma «Amazon», agrupadas por SKU. Una fila cubre una unidad
+- **Amazon y Amazon Stockroom:** las filas de PEDIDOS 2026 de su Plataforma, agrupadas por SKU: «AMZ» (y «Amazon») para Amazon,
+  «FNSK» o «FSNK» para Stockroom; cada canal solo con las suyas (ajuste 19). Una fila con «Pedido Amazon» es de su pedido o de
+  ninguno (ajuste 21). Una fila cubre una unidad
   si su SKU es el de la unidad o uno de los nuestros que encajan en él (el abanico del maestro, §6.4.1). Los IMEIs de un SKU cubren
   los **pedidos pendientes más antiguos** de ese SKU, y el **móvil más avanzado va al pedido más antiguo** (primero Listos, luego
   taller, luego sin revisar; en empate, el que lleva más tiempo en stock). Esas unidades llevan `SIN_PEDIDO_CONCRETO`.
-  Pendiente: si las filas de Stockroom también dicen «Amazon» (§13).
 - **No cuentan:**
   - una fila de PEDIDOS 2026 cuyo IMEI ya está en Released en NSYS (ese móvil ya salió);
   - un IMEI que ya está en una unidad del Simulador (las ventas con reparación también están en PEDIDOS 2026: manda el Simulador).
@@ -420,7 +421,6 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
 ## 13. Pendiente (no bloquea el plan)
 
 - Qué son las líneas **NO, R1, A1 y M** del Simulador (y confirmar X y E).
-- Si en PEDIDOS 2026 las filas de **Amazon Stockroom** también ponen «Amazon».
 - Si los **particulares** de la web (Particulares, BackiPhone) existen como clientes en el ERP.
 - **Clave de ShippyPro:** una propia del ERP o la de `devoluciones`.
 - Los nombres exactos de los campos de `GetPendingOrders` y los pedidos fusionados (`merged`).
@@ -456,3 +456,35 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
 10. **«Ver rastro»** abre el detalle del IMEI, como el stock.
 11. **`Pedido_lectura`** se poda a 30 días.
 12. **En la API, `pide` y `movil` nunca son nulos.** Sin SKU conocido o sin móvil, van vacíos, y `movil` lleva `enNsys = false`.
+13. **Un pedido de ShippyPro sin fecha válida se salta** (decisión del usuario, 04/11, tras la revisión de la Task 3): los demás se
+    leen y su número queda en el mensaje de la lectura y en el log.
+14. **Amazon: se cubren todos los pedidos posibles** (decisión del usuario, 04/11, tras la revisión de la Task 5): primero, qué
+    pedidos quedan cubiertos (los más antiguos que se pueda); después, el móvil más avanzado al más antiguo entre esos repartos.
+15. **Simulador: tras un abono, venta nueva** (decisión del usuario, 04/11): el abono cierra la venta de antes y la siguiente línea
+    del IMEI es una unidad nueva; solo un IMEI en una unidad abierta del Simulador deja de usarse en PEDIDOS 2026.
+16. **Posiciones con huecos:** cuentan todas las unidades de un artículo de ShippyPro y todas las líneas no BB de un pedido del
+    Simulador, para que el id de cada unidad no cambie.
+17. **Un fallo al cruzar o guardar se ve** (decisión del usuario, 04/11, tras la revisión de la Task 6): las lecturas de esa vuelta
+    pasan a ERROR con el motivo, así que la píldora se pone ámbar y luego roja como con una fuente caída. El registro de lecturas
+    se poda en todas las vueltas. Sin el ajuste de los marketplaces, ShippyPro se marca RECHAZADA (no se cierran sus pedidos).
+18. **«C sin reparar» mira el grado que vale** (tras la revisión de la Task 7, 04/11, con la regla del usuario «solo el chasis pone
+    la A»): un C al que el taller solo le cambió la batería (C → C100) sigue sin reparar.
+19. **Plataformas de Amazon en PEDIDOS 2026** (ensayo con datos reales y decisión del usuario, 04/11): Amazon se escribe «AMZ»
+    (y «Amazon» en unas pocas filas de junio); Amazon Stockroom, «FNSK» o «FSNK». «AMZ»/«Amazon» cubren solo los pedidos de
+    Amazon y «FNSK»/«FSNK» solo los de Stockroom; ninguna de ellas la coge un cliente de web.
+20. **La hoja se lee hasta la última fila que cuenta** (ensayo del 04/11): debajo de las ventas de PEDIDOS 2026 hay miles de filas
+    vacías y un bloque de «INCIDENCIA …» con SKU, así que la última fila no es la última con SKU. La columna clave de PEDIDOS 2026
+    es «Plataforma» y la última fila es la última venta; en el Simulador, la última con «Order id». Las 4000 filas acaban ahí.
+21. **Una fila con «Pedido Amazon» es de su pedido o de ninguno** (ensayo y decisión del usuario, 04/11): PEDIDOS 2026 tiene una
+    columna «Pedido Amazon» que se rellena al enviar. Si una fila de Amazon o Stockroom la trae y ese número es un pedido pendiente
+    de su canal, la fila lo cubre a él como pedido concreto (sin la regla de la fecha); si no, no cubre ninguno (es de un pedido ya
+    enviado cuyo móvil aún no está en Released). Las filas sin número siguen el reparto «sin pedido concreto». Con los datos del
+    04/11, ~4 de las 9 unidades de Amazon cubiertas lo estaban con móviles de pedidos ya enviados.
+22. **Amazon solo con «SKU (Amazon) con eSIM»** (revisión final y decisión del usuario, 04/11: «ahora Amazon diferencia qué es
+    eSIM y qué es físico»): en el maestro, la fila de un eSIM lleva en «SKU (Amazon)» el SKU normal, así que con las dos columnas
+    458 SKU de Amazon mezclaban eSIM y no eSIM (8 de los 18 pendientes del 04/11) y la eSIM del pedido salía al azar. El SKU de
+    canal de Amazon y Stockroom es solo «SKU (Amazon) con eSIM» (rellena en todas las filas con SKU de Amazon).
+23. **Revisión final del servidor (04/11):** el freno también mira la densidad de la cola (menos de la mitad de filas válidas →
+    INCOMPLETA); el Simulador da INCOMPLETA si las filas leídas no llegan a la ventana (§4.3); los textos de las fuentes se cortan al
+    ancho de su columna; una respuesta de ShippyPro sin lista de pedidos o con `Total` distinto falla (no cuenta como «0
+    pendientes»).
