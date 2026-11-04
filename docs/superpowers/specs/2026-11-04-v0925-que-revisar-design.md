@@ -1,6 +1,8 @@
 # 0.9.25 — «Qué revisar» en Stock de teléfonos
 
 Fecha: 2026-11-04. Estado: **diseño aprobado** (prototipo y spec, 04/11). Plan: `docs/superpowers/plans/2026-11-04-v0925-que-revisar.md`.
+**Ajustes posteriores (04/11 tarde, tras la prueba en preprod): §3.6 (buscar) y §10 (prioridad por pedidos, «3 o más» y
+Excel). Donde contradigan a lo de antes, mandan ellos. Con §10 la versión pasa a servidor + web.**
 Prototipo: `assets/2026-11-04-v0925-prototipo-que-revisar.html`.
 **Solo web**: sin cambios en el servidor ni en la base. Usa `GET /api/stock-telefonos`, que ya está en producción.
 El número 0.9.25 es provisional: si otra versión entra antes, quien mergee segundo lo cambia.
@@ -191,6 +193,31 @@ pendiente, el botón está apagado, con el título «No hay nada pendiente». Se
   el stock de teléfonos.».
 - **El número de la pestaña**: sin datos todavía, solo «Qué revisar».
 
+### 3.6 Buscar por palabras clave (añadido del 04/11, tras la primera prueba en preprod)
+
+Petición del usuario: «buscaría por IMEI y también por SKU o modelo», con **la misma caja de arriba**, sin otra nueva.
+
+- **En «Qué revisar»**, la caja de arriba («Buscar IMEI en todos los móviles…») pasa a decir **«Buscar IMEI, modelo o
+  SKU…»** (nombre accesible «Buscar IMEI, modelo o SKU en Qué revisar») y admite espacios. En «Móviles» y «Por pasar a NSYS»
+  no cambia nada: sigue quitando lo que no son letras y cifras y solo busca IMEI.
+- **Filtra las filas** de las dos tablas (la de la tarjeta elegida y la otra al cambiar): queda un modelo-color si **cada
+  palabra** encaja en alguno de estos sitios. Las palabras se comparan sin mayúsculas y sin acentos:
+  - su descripción, partida en **piezas**: cada palabra del modelo, la capacidad y el color, y los tres enteros y sin espacios
+    («iphone12pro», «128gb», «1tb», «titanionegro»). Una palabra **numérica** tiene que ser una pieza **entera** («12»
+    encuentra el iPhone 12, 12 Mini o 12 Pro, pero no «128 GB» ni «512 GB»); una palabra **con letras**, el **principio** de una
+    pieza («tit» encuentra «Titanio»). Ejemplos: «13 pro 256», «128gb», «1tb», «14 esim», «púrpura». (Ajuste del 04/11 tras la
+    prueba en preprod: antes se buscaba un trozo del texto sin espacios y «iphone 12» encontraba todos los de 128 y 512 GB.)
+  - el **principio** del SKU de alguno de sus móviles, los de esa lista o no («i13128Azul»). Un `n/a` casi nunca tiene SKU en
+    NSYS, así que un modelo-color con solo `n/a` no se encuentra por SKU;
+  - con **6 caracteres o más** (`MIN_IMEI`), el IMEI de uno de los móviles de esa lista. Ese modelo-color se abre solo y el
+    móvil sale resaltado en amarillo mientras se busca. Con menos de 6, «13» o «128» no encuentran IMEIs.
+- **Las tarjetas, el número de la pestaña y «Copiar lista»** siguen con todo lo pendiente, no solo con lo filtrado.
+- Sin nada que coincida: **«Ningún modelo-color con «…».»**
+- **Sugerencias de IMEI** (la lista de siempre para abrir la ficha): en «Qué revisar» solo salen si lo escrito son solo cifras
+  y al menos 6; con palabras o un SKU no salen.
+- Lo escrito se guarda en el estado de la página (`estadoStockTelefonos.queRevisar.buscar`): sigue igual al volver del detalle
+  de un IMEI.
+
 ## 4. Datos
 
 - **`GET /api/stock-telefonos`** (ya en producción), con `useStockTelefonos`: la página ya lo pide y lo sondea cada 60 s. La
@@ -262,6 +289,117 @@ En `src/modules/telefonos/stock/`:
   la web → gitlink en la raíz.
 - Tras la comparación (§7, punto 5), el usuario quita el activador de `pipelineCompleto` en el Apps Script.
 - Merge, push, tag y despliegues, solo con el OK del usuario.
+
+## 10. Ajuste del 04/11 tarde: prioridad por pedidos, «3 o más» y Excel (manda sobre §2-§8)
+
+**Por qué:** el usuario explicó cómo se usa hoy la hoja. Se abre el fichero del script, en «Solo n/a» se filtra «Saldo
+stock» a **3 o más** y eso es lo que se revisa, sobre papel impreso. Las otras tablas no se miran. Decisiones del usuario:
+
+| Tema | Decisión |
+|---|---|
+| Qué entra en «Revisar sin grado» | **Todos** los modelos-color con algún móvil sin grado: se quita el tope de 1 A. |
+| Orden | **Lo que más se pide primero** («Pedidos 15 d») y, a igualdad, **lo que más queda sin revisar**. |
+| «Lo que se pide» | Vendidos en los **últimos 15 días** + los que están **de pedido** ahora, en una sola columna. |
+| «3 o más» | Interruptor «Solo con 3 o más sin revisar», **encendido al entrar**. |
+| «Subir B a A» | **Como está**: tope de 1 A y orden por modelo. Es una tabla pequeña. Solo cambia lo del Excel. |
+| Texto para WhatsApp | **Fuera.** «Copiar lista» se cambia por **«⬇ Descargar Excel»** para imprimir. |
+| Excel | **Una fila por móvil**, con una columna vacía para marcar a boli. |
+| Versión | **Todo en la 0.9.25**, que pasa a servidor + web (sin migración). Se vuelve a probar en preprod. |
+
+### 10.1 «Revisar sin grado»: qué entra y en qué orden
+- Entra un modelo-color si tiene al menos un móvil sin grado (§2.3). `MAX_A` deja de aplicarse en esta lista y sigue en
+  «Subir B a A».
+- Motivo: los tres de §2.4 y uno nuevo, **«Con A»** (2 A o más), con pastilla gris (`bg-crema text-azul-gris`).
+- Orden:
+  1. «Pedidos 15 d», de más a menos;
+  2. pendientes (sin grado y sin técnico), de más a menos;
+  3. motivo (Nada con grado → Ningún A → Solo 1 A → Con A);
+  4. el orden de §2.7 (modelo, físico antes que eSIM, capacidad como número, color).
+- **Interruptor «Solo con 3 o más sin revisar»**, encima de la tabla y encendido al entrar. Deja solo los modelos-color con
+  **3 o más pendientes** (`MIN_PENDIENTES = 3`; los del técnico no cuentan). Se guarda en el estado de la página
+  (`estadoStockTelefonos.queRevisar.soloTres`, `true` al empezar). Solo se ve en «Revisar sin grado».
+- Las tarjetas y el número de la pestaña siguen con todo, como con la búsqueda (§3.6). El interruptor y la búsqueda solo
+  filtran la tabla y el Excel.
+
+### 10.2 «Pedidos 15 d»
+- Por modelo-color, con la misma clave de §2.2 (modelo con eSIM, capacidad y color):
+  - los **vendidos** con fecha de venta en los últimos 15 días (`DIAS_PEDIDOS = 15`; fecha de venta ≥ hoy − 14, hora de
+    Madrid, hoy incluido);
+  - más los que están **de pedido** ahora (estado `DE_PEDIDO`, ya en `GET /api/stock-telefonos`).
+
+  Un móvil nunca está en los dos a la vez.
+- Columna **«Pedidos 15 d»** en «Revisar sin grado», detrás de «Sin grado». Al pasar el ratón: «9 vendidos + 3 de pedido».
+- **Datos de ventas: ruta nueva `GET /api/stock-telefonos/vendidos?dias=15`** (SUPERTECNICO y ADMIN; `dias` de 1 a 90, 15 por
+  defecto). Devuelve un elemento por IMEI vendido en esos días, con su lote más reciente: `modelo`, `modeloMaestro`, `esEsim`,
+  `capacidad`, `color` (el que vale, con lo del taller) y `fechaVenta`. Lee los `VENDIDO` del espejo con `SOLD_DATE` en el
+  rango. La web los agrupa con la misma clave que el stock. Se pide una vez al abrir la pestaña y con el mismo sondeo que el
+  stock.
+- Si la ruta de ventas falla, solo cuentan los de pedido. La columna lleva una marca «sin ventas» en el título y no se bloquea
+  nada.
+
+### 10.3 «⬇ Descargar Excel» en vez de «Copiar lista»
+- Se quitan «Copiar lista», sus textos (`textoRevisar`, `textoSubir`, `avisoCopiadoLista`) y los bloques «🔍 REVISAR
+  PRIORITARIO» / «⬆️ SUBIR DE GRADO» de §3.4. Las tarjetas se quedan sin botón.
+- Encima de la tabla de la tarjeta elegida, a la derecha (en «Revisar sin grado», junto al interruptor): **«⬇ Descargar Excel
+  (N)»**. N son los móviles que irán en el Excel: lo que se ve (interruptor y búsqueda), sin los del técnico. Sin nada, va
+  apagado y con el título «No hay nada pendiente».
+- Al pulsarlo se abre «Guardar como» en el mismo clic (`elegirDestino` y `TIPO_XLSX`, como las plantillas de NSYS en la
+  0.9.22.1), con el nombre `Que_revisar_sin_grado_AAAA-MM-DD.xlsx` o `Que_revisar_subir_B_a_A_AAAA-MM-DD.xlsx`.
+- Después, la web manda las filas a **`POST /api/stock-telefonos/que-revisar/excel`** y guarda el xlsx que vuelve. Aviso
+  «Descargado: N móviles». Si se cancela, no se pide nada.
+- **Una fila por móvil**, en el orden de la tabla, móvil a móvil dentro de cada modelo-color:
+  - Revisar sin grado: Modelo · Capacidad · Color · IMEI · Ubicación · Días en stock · Pedidos 15 d · **Revisado** (vacía);
+  - Subir B a A: Modelo · Capacidad · Color · IMEI · Paso («B → A» / «B100 → A100») · Ubicación · Días en stock · **Hecho**
+    (vacía).
+- **El servidor no sabe las reglas.** Recibe `{ hoja, columnas, filas }` (textos) y escribe el xlsx con Apache POI, como
+  `PlantillaNsys`. Lo prepara para imprimir:
+  - cabecera en negrita, repetida en cada página;
+  - apaisado y ajustado a una página de ancho;
+  - bordes finos;
+  - anchos de columna según el contenido.
+
+  Límites (400 si se pasan): hasta 5000 filas, de 1 a 12 columnas, celdas de hasta 200 caracteres y el nombre de hoja de
+  hasta 31. SUPERTECNICO y ADMIN.
+
+### 10.4 Lo que no cambia
+- La búsqueda (§3.6), el desplegado, «← Volver», «Subir B a A» (salvo el Excel), los permisos y que sea de solo lectura.
+
+### 10.5 Servidor y entrega
+- Servidor 0.9.25: las dos rutas nuevas, sin migración (usa `Nsys_movil`). Su índice `idx_nsys_movil_estado` filtra los
+  `VENDIDO`. Hay que medirlo en preprod con el histórico entero, contra el límite de 15 s.
+- La web nueva necesita el servidor nuevo. Con el servidor 0.9.24:
+  - las ventas fallan y solo cuentan los de pedido (§10.2);
+  - el Excel falla con su aviso de error.
+
+  Por eso en producción va primero el servidor y después la web, o los dos a la vez. El servidor nuevo no rompe la web 0.9.24.
+- Pruebas: §7 cambia con esto. Las reglas (orden, sin tope, «Con A», interruptor, pedidos), las dos rutas del servidor (con el
+  test de contrato `OpenApiContractTest`), la web (columna, interruptor, botón, descarga) y la E2E de solo lectura (columna e
+  interruptor; descarga del Excel sin escribir nada en la base).
+
+### 10.6 Textos y aclaraciones que fija el plan (Tasks 10-16)
+- **Textos de «Revisar sin grado»:**
+  - subtítulo: «n/a en stock, lo más pedido primero»;
+  - ayuda: «Los modelos-color con móviles sin grado (n/a). Primero lo que más se pide (vendidos en los últimos 15 días y de
+    pedido ahora) y, a igualdad, lo que más queda sin revisar. Un móvil sale de la lista cuando NSYS o el taller le ponen
+    grado.»;
+  - vacío: «Nada que revisar: ningún móvil sin grado en stock.»;
+  - con el interruptor encendido y nada con 3 o más: «Ningún modelo-color con 3 o más sin revisar: apaga «Solo con 3 o más sin
+    revisar» para verlos todos.»;
+  - pie: «Solo cuenta lo que es stock. Un móvil con un trabajo abierto sale en gris y no cuenta ni va en el Excel. «A» es A+, A
+    o A-, con o sin batería nueva.»
+- **Sin ventas:**
+  - la cabecera dice «Pedidos 15 d (sin ventas)», con el título «No se pudieron leer las ventas: solo cuentan los de pedido»;
+  - la celda dice «3 de pedido (sin ventas)»;
+  - en el Excel, la cabecera también lleva «(sin ventas)».
+- **«Nunca en los dos a la vez»** lo hace cumplir la web. Un IMEI vendido que hoy está de pedido cuenta solo como de pedido.
+  Un vendido que volvió y hoy está en stock sigue contando como vendido, porque fue una venta.
+- **Cuándo se piden los vendidos:** solo con la pestaña abierta, con el mismo sondeo que el stock. El número de la pestaña no
+  depende de ellos.
+- **Qué mensaje sale:** si la búsqueda deja filas pero el interruptor las quita todas, el del interruptor. Si la búsqueda no
+  deja ninguna, el de la búsqueda.
+- **Anchos del Excel:** se calculan por caracteres, con un tope de 60, en vez de con `autoSizeColumn`, que necesita fuentes del
+  sistema que el contenedor no tiene.
+- **Servidor 0.9.24:** `GET …/vendidos` cae en `GET /{imeiSn}` y da 404. La web lo toma como «sin ventas», sin diálogo.
 
 ## 9. Pendiente
 
