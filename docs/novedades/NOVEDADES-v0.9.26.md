@@ -9,10 +9,11 @@
 - De cada uno dice **si ya tiene móvil (IMEI)** y **si ese móvil cuadra con lo que pide el pedido**.
 - **Nada cambia en cómo trabajáis:** los IMEI se siguen tecleando donde hoy, en **PEDIDOS 2026** o en el **Simulador**.
   «Pedidos» solo lee y avisa; no guarda nada.
-- Arriba, la **píldora de fuentes** (verde, ámbar o roja) dice cuándo se leyó cada hoja y si alguna falló. Si está ámbar o roja,
+- Arriba, la **píldora de fuentes** (verde, ámbar o roja; ShippyPro, PEDIDOS 2026, el Simulador y NSYS) dice cuándo se leyó cada una y
+  si alguna falló. Si está ámbar o roja,
   lo que ves puede estar desfasado.
 - Pulsa una unidad para ver lo que **pide** el pedido, el móvil, dónde lo tecleaste y, si no cuadra, qué es lo que falla.
-  **«Ver rastro»** abre la ficha del IMEI.
+  **«Ver rastro»** abre la ficha del IMEI y **«← Volver»** te deja la pantalla como estaba (filtros y unidad elegida).
 - Arriba hay buscador (nº de pedido, cliente, SKU o IMEI) y filtros por canal y por estado. Los pedidos del Simulador de más
   de 14 días solo salen con el interruptor «Ver también los del Simulador de más de 14 días».
 
@@ -26,7 +27,8 @@
 - **En el taller**: el móvil tiene un trabajo abierto; dice con quién está y **en qué SKU tiene que acabar**. No es una alarma.
 - **Cuadra**: el móvil es lo que pide el pedido.
 - **Con aviso**: cuadra, pero con una pega: es un **Ms**, o un **B para un pedido de A** (solo Amazon).
-- Además, si el mismo IMEI está en dos pedidos abiertos, ambos dicen **«IMEI repetido en dos pedidos»**.
+- Además, si el mismo IMEI está tecleado en dos pedidos abiertos, ambos llevan en la lista el aviso **«IMEI en dos pedidos»** y el
+  detalle dice **«Este IMEI está tecleado en dos pedidos.»**
 
 ## 🛒 Amazon: «sin pedido concreto»
 
@@ -35,6 +37,8 @@
   está pendiente, esa fila no cubre ningún otro.
 - Las filas **sin ese número** no dicen a qué pedido van, así que se reparten por SKU: **el móvil más avanzado va al pedido
   más antiguo**. Esas unidades llevan la etiqueta **«sin pedido concreto»**; el reparto puede cambiar si llega otro IMEI.
+- **Amazon distingue eSIM y SIM física**: un pedido de un iPhone eSIM solo se cubre con un móvil eSIM, y uno de SIM física con uno
+  de SIM física.
 
 ## 🔧 Asignaciones y Pendientes
 
