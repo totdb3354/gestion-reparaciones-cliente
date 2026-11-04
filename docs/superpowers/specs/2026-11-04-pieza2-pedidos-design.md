@@ -1,7 +1,8 @@
 # Pieza 2 del módulo de teléfonos — Pedidos (1ª entrega: leer, avisar y sugerir)
 
-Fecha: 2026-11-04. Estado: **diseño aprobado por partes** (brainstorming del 03/11 y el 04/11); pendiente de que el usuario revise
-esta spec escrita. Plan: por escribir.
+Fecha: 2026-11-04. Estado: **aprobada** (por partes en el brainstorming del 03/11 y el 04/11, y la spec escrita el 04/11).
+Plan de la 0.9.26: `docs/superpowers/plans/2026-11-04-v0926-pedidos-lectura.md`; sus ajustes están en el §15. La 0.9.27 tendrá su
+propio plan.
 Prototipo: `assets/2026-11-04-pieza2-prototipo-pedidos.html` (datos inventados; disposición A, la elegida; enseña también lo de la
 0.9.27).
 **Dos versiones**, con números provisionales porque otra sesión lleva la 0.9.25 («Qué revisar»); quien mergee segundo cambia el
@@ -433,3 +434,25 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
 - Limpiar en NSYS los «Pedidos realizados» que no se liberan.
 - Los pedidos en el rastro del teléfono (los datos quedan guardados para hacerlo después).
 - Ordenar por batería (su % no se apunta).
+
+## 15. Ajustes del plan de la 0.9.26 (04/11)
+
+1. **Numeración:** la 0.9.26 es esta primera versión y la 0.9.27, la de la sugerencia. Rama `dev_v0926_pedidos`.
+2. **ShippyPro, comprobado con una llamada de solo lectura:** la respuesta es `{Result, Total, Orders}`. De cada pedido se usan
+   `transaction_id`, `date` (Unix en segundos, como texto), `marketplace_id` (texto), `name`, `country` e
+   `items[{sku, quantity (texto)}]`. Sin un User-Agent propio, ShippyPro responde 403.
+3. **Hojas de Google:** cada lectura son tres llamadas `values.get`: la cabecera, la columna clave entera y las últimas
+   `pedidos.filas` filas. Se piden sin formato y con las fechas como número de serie. La columna clave es «SKU» en PEDIDOS 2026 y
+   «Order id» en el Simulador. La cabecera del Simulador se llama «Linea facturación».
+4. **PEDIDOS 2026:** una fila es venta con la regla de `Deduccion_IMEIs.gs` y si tiene un IMEI de 15 cifras. **Una fila solo
+   cubre un pedido del mismo día o de antes de la fila**: así no cuentan las filas viejas de pedidos enviados que NSYS no ha
+   liberado.
+5. **SKU desconocidos:** solo se apuntan los que parecen de teléfono (los que empiezan por «i» y una cifra).
+6. **Una vuelta solo se aplica** si las tres fuentes tienen datos, de esa vuelta o de una anterior desde el arranque.
+7. **Unidades estables:** una unidad es la pareja pedido + posición, así que su id no cambia entre lecturas.
+8. **La línea de pedido** sale en las filas de trabajos abiertos de las seis listas del taller (`DescripcionMovil`), también en
+   Pendientes. Con la lectura apagada no sale.
+9. **Maestro:** tras el despliegue se recarga una vez si ningún producto tiene los SKU de los canales nuevos.
+10. **«Ver rastro»** abre el detalle del IMEI, como el stock.
+11. **`Pedido_lectura`** se poda a 30 días.
+12. **En la API, `pide` y `movil` nunca son nulos.** Sin SKU conocido o sin móvil, van vacíos, y `movil` lleva `enNsys = false`.
