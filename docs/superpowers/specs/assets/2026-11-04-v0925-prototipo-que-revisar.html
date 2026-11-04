@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Qué revisar · 0.9.25</title>
+<style>
+  :root {
+    --azul-noche: #001232; --azul-medio: #2C3B54; --azul-gris: #586376; --superficie: #fff; --fondo: #DDE1E7;
+    --borde-input: #D4D8DE; --fila-sep: #C2C8D0; --texto-suave: #A0A8B4; --pill-bg: #F0F2F5; --pill-borde: #C8CDD5;
+    --texto-accion: #4A6FA5; --verde-ok: #4CAF50; --seleccion-suave: #EAF1FF; --taller-text: #6D28D9;
+    --rep-bg: #E3F2FD; --rep-tx: #1565C0; --glass-bg: #E0F2F1; --glass-tx: #00796B; --pul-bg: #EDE7F6; --pul-tx: #5E35B1;
+    --sol-bg: #FDEBC8; --sol-brd: #C07800; --urg-tx: #D97B00; --rec-bg: #C8E6C9; --rec-brd: #3A7D44; --ent-bg: #E8EAF6;
+    --ent-tx: #3949AB; --neutro-bg: #E8EAF0; --inc-brd: #B83746; --conf-bg: #FFF3E0; --conf-tx: #E65100;
+    --roja: #C0392B; --roja-bg: #FDE2E1; --ambar: #E8A825; --cabecera-tabla: #F6F7F9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--azul-noche); background: var(--fondo);
+         min-height: 100vh; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+
+  /* Barra del prototipo (no es de la app) */
+  .proto { flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .accion { background: #f1e356; color: #001232; border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+  .proto .accion.gris { background: #47536a; color: #fff; }
+  .guia { background: #f4f1fb; border-bottom: 1px solid #d9cff3; padding: 8px 16px; display: grid; grid-template-columns: 1fr 1.25fr; gap: 18px; font-size: 12px; line-height: 1.45; }
+  .guia h2 { margin: 0 0 3px; font-size: 13px; color: #3b0764; }
+  .guia ol { margin: 0; padding-left: 18px; }
+  .guia p { margin: 0 0 4px; }
+
+  /* La app */
+  header { height: 50px; flex: none; background: var(--azul-noche); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; font-weight: 600; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 190px; flex: none; background: #fff; padding: 12px 8px; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; margin: 10px 10px 6px; }
+  nav .it { padding: 7px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--azul-noche); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 16px 20px; display: flex; flex-direction: column; }
+  .titulo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .titulo h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--azul-medio); }
+  .contador { display: inline-block; border-radius: 10px; padding: 2px 10px; font-size: 11px; font-weight: 700; background: var(--pill-bg); color: var(--azul-medio); border: 1px solid var(--pill-borde); }
+  .nsys { padding: 2px 10px; border-radius: 10px; background: #e3f5e6; color: #2f7d3b; border: 1px solid #9fd8aa; font-size: 11px; font-weight: 700; }
+  .vistas { margin-left: auto; display: flex; overflow: hidden; border: 1px solid var(--borde-input); border-radius: 8px; }
+  .vistas button { cursor: pointer; border: 0; border-right: 1px solid var(--borde-input); padding: 4px 14px; font-size: 12px; font-weight: 600; background: #fff; color: var(--azul-medio); }
+  .vistas button:last-child { border-right: 0; }
+  .vistas button:hover { background: var(--seleccion-suave); }
+  .vistas button.on { background: var(--azul-noche); color: #fff; }
+  .vistas .n { color: var(--taller-text); }
+  .vistas button.on .n { color: #fff; }
+  .barra { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .buscador { height: 32px; width: 260px; border: 1px solid var(--borde-input); border-radius: 8px; background: #F3F3F3; padding: 0 10px; font-size: 12px; color: var(--azul-gris); display: flex; align-items: center; }
+  .btn { height: 30px; border: 1px solid var(--borde-input); background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; font-size: 12px; color: var(--azul-medio); cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: var(--seleccion-suave); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .interruptor { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--azul-medio); cursor: pointer; background: none; border: 0; }
+  .interruptor .pista { position: relative; width: 34px; height: 18px; border-radius: 999px; background: var(--pill-borde); }
+  .interruptor .pista i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .interruptor.on .pista { background: var(--verde-ok); } .interruptor.on .pista i { left: 18px; }
+
+  .panel { flex: 1; min-height: 0; background: #fff; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .solo-proto { color: var(--azul-gris); padding: 20px; font-size: 12px; }
+  .tarjetas { display: grid; grid-template-columns: repeat(2, minmax(0, 340px)); gap: 10px; }
+  .tarjeta { border: 1.5px solid var(--fila-sep); border-top-width: 4px; border-radius: 8px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; background: #fff; }
+  .tarjeta:hover { border-left-color: var(--borde-input); border-right-color: var(--borde-input); border-bottom-color: var(--borde-input); }
+  .tarjeta.on { border-left-color: var(--azul-noche); border-right-color: var(--azul-noche); border-bottom-color: var(--azul-noche); box-shadow: 0 0 0 2px rgba(7,26,58,.12); }
+  .tarjeta.sin { border-top-color: var(--sol-brd); } .tarjeta.b { border-top-color: var(--pul-tx); }
+  .tarjeta .nom { font-weight: 700; font-size: 13px; color: var(--azul-medio); }
+  .tarjeta .big { font-size: 26px; font-weight: 800; line-height: 1; color: var(--azul-noche); }
+  .tarjeta .big small { font-size: 12px; font-weight: 600; color: var(--azul-gris); margin-left: 4px; }
+  .tarjeta .ex { font-size: 11.5px; color: var(--azul-gris); line-height: 1.35; }
+  .ayuda { font-size: 11.5px; color: var(--azul-gris); max-width: 880px; line-height: 1.45; margin: 0; }
+
+  .tabla-w { border: 1px solid var(--borde-input); border-radius: 6px; overflow: auto; min-height: 0; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.t th { position: sticky; top: 0; background: var(--cabecera-tabla); text-align: left; padding: 7px 8px; font-weight: 700; color: var(--azul-medio); border-bottom: 1px solid var(--borde-input); white-space: nowrap; z-index: 1; }
+  table.t td { padding: 6px 8px; border-top: 1px solid #EEF0F3; vertical-align: middle; white-space: nowrap; }
+  table.t td.num, table.t th.num { text-align: right; }
+  tr.grupo { cursor: pointer; }
+  tr.grupo:hover td { background: var(--seleccion-suave); }
+  tr.grupo.abierto td { background: #F3F6FB; }
+  tr.gris td { color: var(--texto-suave); }
+  tr.gris .mot, tr.gris .pil-grado { opacity: .55; }
+  .chev { display: inline-block; width: 16px; color: var(--azul-gris); font-size: 12px; }
+  .mot { display: inline-block; border-radius: 10px; padding: 1px 9px; font-size: 11px; font-weight: 700; }
+  .mot.nada { background: var(--roja-bg); color: var(--roja); }
+  .mot.ninguno { background: var(--conf-bg); color: var(--conf-tx); }
+  .mot.uno { background: var(--sol-bg); color: var(--sol-brd); }
+  .contec { color: var(--texto-suave); font-size: 11px; margin-left: 4px; }
+  .cuales { color: var(--azul-gris); font-size: 11px; margin-left: 4px; }
+  .cero { color: var(--texto-suave); }
+  tr.det > td { background: #FAFBFD; padding: 4px 8px 10px 28px; }
+  table.sub { border-collapse: collapse; font-size: 12px; table-layout: fixed; width: 780px; }
+  table.sub th { text-align: left; font-weight: 700; color: var(--azul-gris); font-size: 11px; padding: 4px 14px 4px 0; border-bottom: 1px solid #E3E6EB; }
+  table.sub td { padding: 4px 14px 4px 0; border-top: 0; }
+  table.sub .num { text-align: right; }
+  table.sub tr.gris td { color: var(--texto-suave); }
+  .imei { color: var(--texto-accion); cursor: pointer; background: none; border: 0; padding: 0; font: 11.5px Consolas, monospace; }
+  .imei:hover { text-decoration: underline; }
+  tr.gris .imei { color: var(--texto-suave); }
+  .pil-ub { display: inline-block; border-radius: 10px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
+  .pil-grado { display: inline-block; border-radius: 999px; border: 1.5px solid; background: #fff; padding: 0 8px; font-size: 11.5px; line-height: 18px; font-weight: 700; }
+  .g-A { border-color: var(--rep-tx); color: var(--rep-tx); } .g-B { border-color: var(--pul-tx); color: var(--pul-tx); }
+  .g-C { border-color: var(--conf-tx); color: var(--conf-tx); } .g-MS { border-color: var(--glass-tx); color: var(--glass-tx); }
+  .g-ID { border-color: var(--inc-brd); color: var(--inc-brd); } .g-NA { border-style: dashed; border-color: var(--sol-brd); color: var(--sol-brd); }
+  .g-OTRO { border-color: var(--pill-borde); color: var(--azul-medio); }
+  .sube { display: inline-block; font-weight: 700; border-radius: 4px; padding: 0 6px; background: #e0ebff; color: #1d4ed8; border: 1px solid #bfd3fb; }
+  .vacio { padding: 16px 10px; color: var(--azul-gris); font-size: 12px; }
+  .pie { font-size: 11.5px; color: var(--azul-gris); margin: 0; }
+
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--azul-noche); color: #fff; padding: 9px 16px; border-radius: 8px; font-weight: 600; z-index: 60; max-width: 80vw; text-align: center; line-height: 1.4; display: none; }
+  .velo { position: fixed; inset: 0; background: rgba(0,18,50,.35); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .dialogo { background: #fff; border-radius: 10px; width: 520px; max-width: 92vw; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+  .dialogo h3 { margin: 0; font-size: 15px; color: var(--azul-medio); }
+  .dialogo pre { margin: 0; background: #F6F7F9; border: 1px solid var(--borde-input); border-radius: 6px; padding: 10px 12px; font: 12px/1.5 "Segoe UI", system-ui, sans-serif; white-space: pre-wrap; max-height: 55vh; overflow: auto; }
+  .dialogo .nota { font-size: 11.5px; color: var(--azul-gris); margin: 0; }
+  .dialogo .acc { display: flex; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">Prototipo · Qué revisar · 0.9.25 · datos inventados</span>
+  <button class="accion" id="simItems">Simular Items nuevo: NSYS pone A a dos n/a del iPhone 13 128 GB Azul</button>
+  <button class="accion gris" id="vaciar">Ver sin nada pendiente</button>
+  <button class="accion gris" id="reiniciar">Reiniciar</button>
+</div>
+
+<div class="guia">
+  <div>
+    <h2>Qué es esto</h2>
+    <p>La hoja «PriorizarRevision» del Apps Script, dentro del ERP: una pestaña más de Stock de teléfonos con dos listas.
+    <b>Revisar sin grado</b>: los modelos-color con móviles sin grado (n/a) y como mucho un A en stock. <b>Subir B a A</b>: los
+    modelos-color con B y como mucho un A. Solo se mira: un móvil se va de la lista cuando NSYS o el taller le ponen grado.</p>
+    <p>Pulsa una fila para ver sus IMEIs. «Copiar lista» copia el texto que antes iba en la hoja MENSAJES.</p>
+  </div>
+  <div>
+    <h2>Qué probar</h2>
+    <ol>
+      <li><b>Orden</b>: primero «Nada con grado», después «Ningún A» y al final «Solo 1 A»; dentro, del modelo más nuevo al más antiguo y la capacidad como número (13 Pro 256 GB antes que 1 TB).</li>
+      <li><b>15 Pro Titanio natural</b>: 4 sin grado, uno lo tiene Marta → «3 +1 con técnico». Su IMEI sale en gris y no se copia.</li>
+      <li><b>14 eSIM Medianoche</b> sale (B100 e ID, ningún A) y el <b>14 físico Medianoche</b> no (3 A): eSIM va aparte. El 14 eSIM también sale en «Subir B a A» como B100 → A100.</li>
+      <li><b>13 128 GB Azul</b>: el A+ cuenta como A → «Solo 1 A». Prueba «Simular Items nuevo»: pasa a 3 A y sale de la lista.</li>
+      <li><b>12 64 GB Blanco</b>: su MsB cuenta como grado («Ningún A»), pero no sale en «Subir B a A».</li>
+      <li><b>12 Pro Grafito</b>: su único n/a lo tiene Javi (glass): la fila entera en gris y no cuenta en la tarjeta.</li>
+      <li><b>16 Negro</b>: el grado vacío cuenta como sin grado y el F como con grado. <b>13 Pro 256 GB Grafito</b>: un código que el ERP no entiende («NR») también cuenta como sin grado.</li>
+      <li>No salen: <b>13 mini Rosa</b> (2 A) ni el <b>15 128 GB Negro de pedido</b> (no cuenta como stock).</li>
+      <li>En «Subir B a A», el <b>13 512 GB Azul</b> tiene un B en pulido con Lucía (gris) y el <b>11 Negro</b> lleva B → A y B100 → A100.</li>
+      <li>«Copiar lista» en las dos tarjetas; «Ver sin nada pendiente» enseña los textos de lista vacía.</li>
+    </ol>
+  </div>
+</div>
+
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de reparaciones</span></span><span class="usu">Supertécnico 1 · Supertécnico</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div><div class="it">Piezas</div><div class="it">Pedidos</div>
+    <div class="sec">TELÉFONOS</div><div class="it on">Stock de teléfonos</div>
+  </nav>
+  <main>
+    <div class="titulo">
+      <h1>Stock de teléfonos</h1>
+      <span class="contador" id="enStock"></span>
+      <span class="nsys">NSYS: hace 8 min</span>
+      <div class="vistas" role="group" aria-label="Vista" id="vistas"></div>
+    </div>
+    <div class="barra">
+      <span class="buscador">Buscar IMEI…</span>
+      <button class="btn" type="button">Pegar varios IMEIs</button>
+      <button class="interruptor" type="button" id="interruptor" role="switch" aria-checked="false"><span class="pista"><i></i></span>Ver también lo que no cuenta como stock</button>
+    </div>
+    <section class="panel" id="panel"></section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="velo" id="velo">
+  <div class="dialogo" role="dialog" aria-label="Texto copiado">
+    <h3>Texto copiado</h3>
+    <p class="nota" id="notaCopia"></p>
+    <pre id="textoCopiado"></pre>
+    <div class="acc"><button class="btn" type="button" id="cerrar">Cerrar</button></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- catálogo (como la web)
+const MODELOS = ['6s', '6splus', '7', '7plus', '8', '8plus', 'se2020', 'x', 'xr', 'xs', 'xsmax', '11', '11pro', '11promax',
+  '12', '12mini', '12pro', '12promax', '13', '13mini', '13pro', '13promax', '14', '14plus', '14pro', '14promax',
+  '15', '15plus', '15pro', '15promax', '16', '16e', '16plus', '16pro', '16promax', '17', 'air', '17pro', '17promax']
+const NOMBRE = { '11': 'iPhone 11', '12': 'iPhone 12', '12pro': 'iPhone 12 Pro', '13': 'iPhone 13', '13mini': 'iPhone 13 mini',
+  '13pro': 'iPhone 13 Pro', '14': 'iPhone 14', '15': 'iPhone 15', '15pro': 'iPhone 15 Pro', '16': 'iPhone 16' }
+const CATEGORIA = { REPARACION: 'reparación', GLASS: 'glass', PULIDO: 'pulido' }
+const UBICACION = {
+  'En revisión': 'background:#FDEBC8;color:#C07800', 'Devolución': 'background:#FDEBC8;color:#D97B00',
+  'Taller · Pulir': 'background:#EDE7F6;color:#5E35B1', 'Taller · Glass': 'background:#E0F2F1;color:#00796B',
+  'Taller · Reparación': 'background:#E3F2FD;color:#1565C0', 'Listos': 'background:#C8E6C9;color:#3A7D44',
+}
+
+// ---------------------------------------------------------------- datos inventados
+let n = 0
+const imei = () => '3500000000' + String(1001 + (n++) * 7).padStart(5, '0')
+const mv = (modelo, cap, color, grado, ubic, dias, extra = {}) =>
+  ({ imei: imei(), modelo, esim: false, cap, color, grado, bat: false, ubic, estado: 'STOCK', dias, tec: null, ...extra })
+const MARTA = { tecnico: 'Marta', categoria: 'REPARACION' }, JAVI = { tecnico: 'Javi', categoria: 'GLASS' }, LUCIA = { tecnico: 'Lucía', categoria: 'PULIDO' }
+
+function datosIniciales() {
+  n = 0
+  return [
+    // 1. 15 Pro 256 Titanio natural: 4 n/a, uno con Marta
+    mv('15pro', '256GB', 'Titanio natural', 'n/a', 'En revisión', 41),
+    mv('15pro', '256GB', 'Titanio natural', 'n/a', 'Taller · Reparación', 23, { tec: MARTA }),
+    mv('15pro', '256GB', 'Titanio natural', 'n/a', 'En revisión', 12),
+    mv('15pro', '256GB', 'Titanio natural', 'n/a', 'En revisión', 5),
+    // 2. 14 eSIM 128 Medianoche: 2 n/a, B100, ID
+    mv('14', '128GB', 'Medianoche', 'n/a', 'En revisión', 30, { esim: true }),
+    mv('14', '128GB', 'Medianoche', 'n/a', 'En revisión', 9, { esim: true }),
+    mv('14', '128GB', 'Medianoche', 'B', 'Listos', 18, { esim: true, bat: true }),
+    mv('14', '128GB', 'Medianoche', 'ID', 'Listos', 60, { esim: true }),
+    // 3. 14 físico 128 Medianoche: 3 A
+    mv('14', '128GB', 'Medianoche', 'A', 'Listos', 3), mv('14', '128GB', 'Medianoche', 'A', 'Listos', 7, { bat: true }),
+    mv('14', '128GB', 'Medianoche', 'A-', 'Listos', 15),
+    // 4. 13 128 Azul: 5 n/a y 1 A+
+    mv('13', '128GB', 'Azul', 'n/a', 'En revisión', 52), mv('13', '128GB', 'Azul', 'n/a', 'Devolución', 33),
+    mv('13', '128GB', 'Azul', 'n/a', 'En revisión', 21), mv('13', '128GB', 'Azul', 'n/a', 'Listos', 14),
+    mv('13', '128GB', 'Azul', 'n/a', 'En revisión', 2), mv('13', '128GB', 'Azul', 'A+', 'Listos', 8),
+    // 5. 13 512 Azul: 1 B y otro B en pulido con Lucía
+    mv('13', '512GB', 'Azul', 'B', 'Listos', 19), mv('13', '512GB', 'Azul', 'B', 'Taller · Pulir', 10, { tec: LUCIA }),
+    // 6. 12 64 Blanco: n/a y MsB
+    mv('12', '64GB', 'Blanco', 'n/a', 'En revisión', 44), mv('12', '64GB', 'Blanco', 'MsB', 'Listos', 27),
+    // 7. 13 mini 128 Rosa: 2 n/a y 2 A
+    mv('13mini', '128GB', 'Rosa', 'n/a', 'En revisión', 20), mv('13mini', '128GB', 'Rosa', 'n/a', 'En revisión', 6),
+    mv('13mini', '128GB', 'Rosa', 'A', 'Listos', 12), mv('13mini', '128GB', 'Rosa', 'A', 'Listos', 4, { bat: true }),
+    // 8. 12 Pro 128 Grafito: 1 n/a con Javi (glass)
+    mv('12pro', '128GB', 'Grafito', 'n/a', 'Taller · Glass', 16, { tec: JAVI }),
+    // 9. 11 64 Negro: 2 n/a, 1 A, B y B100
+    mv('11', '64GB', 'Negro', 'n/a', 'En revisión', 70), mv('11', '64GB', 'Negro', 'n/a', 'Devolución', 38),
+    mv('11', '64GB', 'Negro', 'A', 'Listos', 5), mv('11', '64GB', 'Negro', 'B', 'Listos', 25),
+    mv('11', '64GB', 'Negro', 'B', 'Listos', 11, { bat: true }),
+    // 10. 16 128 Negro: vacío, n/a y F
+    mv('16', '128GB', 'Negro', '', 'En revisión', 6), mv('16', '128GB', 'Negro', 'n/a', 'En revisión', 4),
+    mv('16', '128GB', 'Negro', 'F', 'Devolución', 90),
+    // 11. 13 Pro 256 Grafito (con un código raro) y 13 Pro 1 TB Plata
+    mv('13pro', '256GB', 'Grafito', 'n/a', 'En revisión', 27), mv('13pro', '256GB', 'Grafito', 'n/a', 'Listos', 13),
+    mv('13pro', '256GB', 'Grafito', 'NR', 'En revisión', 9),
+    mv('13pro', '1TB', 'Plata', 'n/a', 'En revisión', 35),
+    // 12. de pedido: no cuenta como stock y no sale
+    mv('15', '128GB', 'Negro', 'n/a', 'Listos', 3, { estado: 'DE_PEDIDO' }),
+  ]
+}
+
+// ---------------------------------------------------------------- reglas (las de la web)
+const IGNORADOS = ['F', 'FD', 'RMA']
+function familia(g) {
+  if (!g) return 'OTRO'
+  if (g === 'n/a') return 'NA'
+  if (g === 'ID') return 'ID'
+  if (g.startsWith('Ms')) return 'MS'
+  const l = g.charAt(0)
+  return l === 'A' || l === 'B' || l === 'C' ? l : 'OTRO'
+}
+/** Sin grado: vacío, «n/a» o un código que no es de ninguna familia (A…, B…, C…, Ms…, ID) ni F, FD o RMA. */
+const sinGrado = (g) => !g || g === 'n/a' || (familia(g) === 'OTRO' && !IGNORADOS.includes(g.toUpperCase()))
+const esA = (g) => g === 'A+' || g === 'A' || g === 'A-'
+const esB = (g) => g === 'B'
+const nombreModelo = (g) => NOMBRE[g.modelo] + (g.esim ? ' eSIM' : '')
+const textoCap = (c) => c.replace(/^(\d+)(GB|TB)$/, '$1 $2')
+const capGb = (c) => { const r = /^(\d+)(GB|TB)$/.exec(c); return r ? Number(r[1]) * (r[2] === 'TB' ? 1024 : 1) : 99999 }
+const RANGO = { nada: 0, ninguno: 1, uno: 2 }
+const MOTIVO = { nada: 'Nada con grado', ninguno: 'Ningún A', uno: 'Solo 1 A' }
+const porDias = (a, b) => b.dias - a.dias
+
+function comparar(a, b) {
+  return (MODELOS.indexOf(b.modelo) - MODELOS.indexOf(a.modelo)) || (capGb(a.cap) - capGb(b.cap))
+    || a.color.localeCompare(b.color, 'es') || (Number(a.esim) - Number(b.esim))
+}
+
+function calcular(moviles) {
+  const grupos = new Map()
+  for (const m of moviles) {
+    if (m.estado !== 'STOCK') continue
+    const k = `${m.modelo}|${m.esim}|${m.cap}|${m.color}`
+    if (!grupos.has(k)) grupos.set(k, { k, modelo: m.modelo, esim: m.esim, cap: m.cap, color: m.color, moviles: [] })
+    grupos.get(k).moviles.push(m)
+  }
+  const sin = [], b = []
+  for (const g of grupos.values()) {
+    const as = g.moviles.filter((m) => esA(m.grado))
+    const sinG = g.moviles.filter((m) => sinGrado(m.grado)).sort(porDias)
+    const conGrado = g.moviles.length - sinG.length
+    if (sinG.length > 0 && as.length <= 1) {
+      const pend = sinG.filter((m) => !m.tec)
+      sin.push({ ...g, motivo: conGrado === 0 ? 'nada' : as.length === 0 ? 'ninguno' : 'uno', lista: sinG, pend, conTec: sinG.length - pend.length,
+        nA: as.length, gradoA: as[0]?.grado ?? null, conGrado })
+    }
+    const bs = g.moviles.filter((m) => esB(m.grado)).sort(porDias)
+    if (bs.length > 0 && as.length <= 1) {
+      const pend = bs.filter((m) => !m.tec)
+      b.push({ ...g, lista: bs, pend, conTec: bs.length - pend.length, nA: as.length, gradoA: as[0]?.grado ?? null,
+        nB: pend.filter((m) => !m.bat).length, nB100: pend.filter((m) => m.bat).length,
+        tB: bs.filter((m) => !m.bat).length, tB100: bs.filter((m) => m.bat).length })
+    }
+  }
+  sin.sort((x, y) => (RANGO[x.motivo] - RANGO[y.motivo]) || comparar(x, y))
+  b.sort(comparar)
+  return { sin, b }
+}
+
+// ---------------------------------------------------------------- texto de «Copiar lista» (lo que era MENSAJES)
+const titulo = (g) => `${nombreModelo(g)} ${textoCap(g.cap)} ${g.color}`
+function textoSin(lista) {
+  return lista.filter((g) => g.pend.length > 0)
+    .map((g) => `🔍 REVISAR PRIORITARIO\n${titulo(g)}\nSin grado: ${g.pend.length} · ${MOTIVO[g.motivo]}`).join('\n\n')
+}
+function textoB(lista) {
+  return lista.filter((g) => g.pend.length > 0).map((g) => {
+    const partes = []
+    if (g.nB > 0) partes.push(`B → A: ${g.nB}`)
+    if (g.nB100 > 0) partes.push(`B100 → A100: ${g.nB100}`)
+    return `⬆️ SUBIR DE GRADO\n${titulo(g)}\n${partes.join(' · ')}`
+  }).join('\n\n')
+}
+
+// ---------------------------------------------------------------- estado y pintado
+let moviles = datosIniciales()
+let vista = 'que-revisar', elegida = 'sin', verNoCuenta = false
+const abiertos = { sin: new Set(), b: new Set() }
+const $ = (id) => document.getElementById(id)
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+let tToast = null
+function avisar(texto) {
+  const t = $('toast'); t.textContent = texto; t.style.display = 'block'
+  clearTimeout(tToast); tToast = setTimeout(() => { t.style.display = 'none' }, 3200)
+}
+
+function cifras(r) {
+  const s = r.sin.filter((g) => g.pend.length > 0), b = r.b.filter((g) => g.pend.length > 0)
+  return { sin: s.length, sinMoviles: s.reduce((a, g) => a + g.pend.length, 0), b: b.length, bMoviles: b.reduce((a, g) => a + g.pend.length, 0) }
+}
+
+function pintar() {
+  const r = calcular(moviles)
+  const c = cifras(r)
+  const enStock = moviles.filter((m) => m.estado === 'STOCK').length
+  $('enStock').textContent = `${enStock} móviles en stock`
+  const V = [['moviles', 'Móviles', null], ['por-pasar', 'Por pasar a NSYS', 7], ['que-revisar', 'Qué revisar', c.sin + c.b]]
+  $('vistas').innerHTML = V.map(([v, t, num]) => `<button type="button" data-vista="${v}" aria-pressed="${vista === v}" class="${vista === v ? 'on' : ''}">${t}${num === null ? '' : ` <span class="n">(${num})</span>`}</button>`).join('')
+  $('interruptor').className = 'interruptor' + (verNoCuenta ? ' on' : '')
+  $('interruptor').setAttribute('aria-checked', String(verNoCuenta))
+  if (vista !== 'que-revisar') {
+    $('panel').innerHTML = '<p class="solo-proto">En el prototipo solo funciona «Qué revisar».</p>'
+    return
+  }
+  const tarjeta = (cual, nombre, num, movs, ex, n) => `
+    <article class="tarjeta ${cual} ${elegida === cual ? 'on' : ''}" data-tarjeta="${cual}" aria-label="${nombre}">
+      <span class="nom">${nombre}</span>
+      <span class="big">${num}<small>${num === 1 ? 'modelo-color' : 'modelos-color'} · ${movs} ${movs === 1 ? 'móvil' : 'móviles'}</small></span>
+      <span class="ex">${ex}</span>
+      <span><button class="btn" type="button" data-copiar="${cual}" ${n === 0 ? 'disabled title="No hay nada pendiente"' : ''}>Copiar lista${n > 0 ? ` (${n})` : ''}</button></span>
+    </article>`
+  const AYUDA = {
+    sin: 'Los modelos-color con móviles sin grado (n/a) y como mucho un A en stock. Primero los que no tienen nada con grado, después los que no tienen ningún A y al final los que solo tienen uno. Un móvil sale de la lista cuando NSYS o el taller le ponen grado.',
+    b: 'Los modelos-color con móviles B y como mucho un A en stock: candidatos a chasis (B → A; con batería nueva, B100 → A100). Un móvil sale de la lista cuando su grado pasa a A.',
+  }
+  $('panel').innerHTML = `
+    <div class="tarjetas">
+      ${tarjeta('sin', 'Revisar sin grado', c.sin, c.sinMoviles, 'n/a de modelos con 0 o 1 A', c.sin)}
+      ${tarjeta('b', 'Subir B a A', c.b, c.bMoviles, 'B y B100 de modelos con 0 o 1 A', c.b)}
+    </div>
+    <p class="ayuda">${AYUDA[elegida]}</p>
+    <div class="tabla-w" role="region" aria-label="Lista">${elegida === 'sin' ? tablaSin(r.sin) : tablaB(r.b)}</div>
+    <p class="pie">Solo cuenta lo que es stock. Un móvil con un trabajo abierto sale en gris y no cuenta ni se copia. «A» es A+, A o A-, con o sin batería nueva.</p>`
+}
+
+const pilGrado = (g) => `<span class="pil-grado g-${familia(g)}">${esc(g || '—')}</span>`
+const pilUb = (u) => `<span class="pil-ub" style="${UBICACION[u] ?? 'background:#E8EAF0;color:#586376'}">${esc(u)}</span>`
+const quien = (m) => (m.tec ? `lo tiene ${m.tec.tecnico} (${CATEGORIA[m.tec.categoria]})` : '—')
+const celdaA = (g) => (g.nA === 0 ? '<span class="cero">0</span>' : `1<span class="cuales">${esc(g.gradoA)}</span>`)
+const conTec = (n) => (n > 0 ? `<span class="contec">+${n} con técnico</span>` : '')
+
+function subtabla(g, gradoCelda) {
+  return `<tr class="det"><td colspan="9"><table class="sub">
+    <colgroup><col style="width:150px"><col style="width:120px"><col style="width:170px"><col style="width:110px"><col></colgroup>
+    <thead><tr><th>IMEI</th><th>Grado</th><th>Ubicación</th><th class="num">Días en stock</th><th style="padding-left:18px">Quién lo tiene</th></tr></thead>
+    <tbody>${g.lista.map((m) => `<tr class="${m.tec ? 'gris' : ''}">
+      <td><button class="imei" type="button" data-imei="${m.imei}">${m.imei}</button></td>
+      <td>${gradoCelda(m)}</td><td>${pilUb(m.ubic)}</td><td class="num">${m.dias}</td><td style="padding-left:18px">${quien(m)}</td></tr>`).join('')}</tbody>
+  </table></td></tr>`
+}
+
+function tablaSin(lista) {
+  if (lista.filter((g) => g.pend.length > 0).length === 0 && lista.length === 0)
+    return '<p class="vacio">Nada que revisar: todos los modelos-color con móviles sin grado tienen 2 A o más.</p>'
+  return `<table class="t"><thead><tr><th>Motivo</th><th>Modelo</th><th>Cap.</th><th>Color</th><th class="num">Sin grado</th><th class="num">A en stock</th><th class="num">Con grado</th></tr></thead><tbody>
+    ${lista.map((g) => {
+      const ab = abiertos.sin.has(g.k)
+      return `<tr class="grupo ${g.pend.length === 0 ? 'gris' : ''} ${ab ? 'abierto' : ''}" data-grupo="${g.k}" data-lista="sin" aria-expanded="${ab}">
+        <td><span class="chev">${ab ? '▾' : '▸'}</span><span class="mot ${g.motivo}">${MOTIVO[g.motivo]}</span></td>
+        <td>${esc(nombreModelo(g))}</td><td>${textoCap(g.cap)}</td><td>${esc(g.color)}</td>
+        <td class="num">${g.pend.length}${conTec(g.conTec)}</td>
+        <td class="num" title="${g.nA === 0 ? 'Ningún A en stock' : `1 ${g.gradoA}`}">${celdaA(g)}</td>
+        <td class="num">${g.conGrado === 0 ? '<span class="cero">0</span>' : g.conGrado}</td></tr>
+        ${ab ? subtabla(g, (m) => pilGrado(m.grado)) : ''}`
+    }).join('')}</tbody></table>`
+}
+
+function tablaB(lista) {
+  if (lista.length === 0) return '<p class="vacio">Ningún B que subir.</p>'
+  return `<table class="t"><thead><tr><th>Modelo</th><th>Cap.</th><th>Color</th><th class="num">A en stock</th><th class="num">B</th><th class="num">B100</th></tr></thead><tbody>
+    ${lista.map((g) => {
+      const ab = abiertos.b.has(g.k)
+      const tecB = g.tB - g.nB, tecB100 = g.tB100 - g.nB100
+      return `<tr class="grupo ${g.pend.length === 0 ? 'gris' : ''} ${ab ? 'abierto' : ''}" data-grupo="${g.k}" data-lista="b" aria-expanded="${ab}">
+        <td><span class="chev">${ab ? '▾' : '▸'}</span>${esc(nombreModelo(g))}</td><td>${textoCap(g.cap)}</td><td>${esc(g.color)}</td>
+        <td class="num" title="${g.nA === 0 ? 'Ningún A en stock' : `1 ${g.gradoA}`}">${celdaA(g)}</td>
+        <td class="num">${g.nB === 0 ? '<span class="cero">0</span>' : g.nB}${conTec(tecB)}</td>
+        <td class="num">${g.nB100 === 0 ? '<span class="cero">0</span>' : g.nB100}${conTec(tecB100)}</td></tr>
+        ${ab ? subtabla(g, (m) => `<span class="sube">${m.bat ? 'B100 → A100' : 'B → A'}</span>`) : ''}`
+    }).join('')}</tbody></table>`
+}
+
+// ---------------------------------------------------------------- eventos
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-vista]')
+  if (v) { vista = v.dataset.vista; pintar(); return }
+  const cop = e.target.closest('[data-copiar]')
+  if (cop) {
+    e.stopPropagation()
+    const r = calcular(moviles)
+    const cual = cop.dataset.copiar
+    const texto = cual === 'sin' ? textoSin(r.sin) : textoB(r.b)
+    const nGrupos = (cual === 'sin' ? r.sin : r.b).filter((g) => g.pend.length > 0).length
+    // El portapapeles puede no tener permiso al abrir el fichero en local: el texto se enseña igual en el diálogo.
+    try { navigator.clipboard?.writeText(texto)?.catch(() => {}) } catch (err) { /* sin portapapeles */ }
+    $('notaCopia').textContent = `${nGrupos} modelos-color, en el orden de la tabla y solo lo pendiente. Se pega tal cual en WhatsApp.`
+    $('textoCopiado').textContent = texto
+    $('velo').style.display = 'flex'
+    avisar(`Copiada la lista: ${nGrupos} modelos-color`)
+    return
+  }
+  const t = e.target.closest('[data-tarjeta]')
+  if (t) { elegida = t.dataset.tarjeta; pintar(); return }
+  const im = e.target.closest('[data-imei]')
+  if (im) { e.stopPropagation(); avisar(`Abriría el detalle del IMEI ${im.dataset.imei}`); return }
+  const fila = e.target.closest('tr.grupo')
+  if (fila) {
+    const s = abiertos[fila.dataset.lista]
+    s.has(fila.dataset.grupo) ? s.delete(fila.dataset.grupo) : s.add(fila.dataset.grupo)
+    pintar()
+  }
+})
+$('interruptor').addEventListener('click', () => { verNoCuenta = !verNoCuenta; pintar() })
+$('cerrar').addEventListener('click', () => { $('velo').style.display = 'none' })
+$('velo').addEventListener('click', (e) => { if (e.target === $('velo')) $('velo').style.display = 'none' })
+$('simItems').addEventListener('click', () => {
+  const azules = moviles.filter((m) => m.modelo === '13' && m.cap === '128GB' && m.color === 'Azul' && m.grado === 'n/a').slice(0, 2)
+  if (azules.length === 0) { avisar('Ya se simuló: reinicia para volver a probarlo'); return }
+  azules.forEach((m) => { m.grado = 'A'; m.ubic = 'Listos' })
+  pintar()
+  avisar('Llegó un Items nuevo: el iPhone 13 128 GB Azul ya tiene 3 A y sale de «Revisar sin grado»')
+})
+$('vaciar').addEventListener('click', () => { moviles = moviles.filter((m) => !sinGrado(m.grado) && !esB(m.grado)); pintar() })
+$('reiniciar').addEventListener('click', () => { moviles = datosIniciales(); abiertos.sin.clear(); abiertos.b.clear(); elegida = 'sin'; vista = 'que-revisar'; pintar() })
+pintar()
+</script>
+</body>
+</html>
