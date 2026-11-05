@@ -3,7 +3,8 @@
 Fecha: 2026-11-04. Estado: **diseño aprobado** (prototipo y spec, 04/11). Plan: `docs/superpowers/plans/2026-11-04-v0925-que-revisar.md`.
 **Ajustes posteriores (04/11 tarde, tras la prueba en preprod): §3.6 (buscar) y §10 (prioridad por pedidos, «3 o más» y
 Excel). Donde contradigan a lo de antes, mandan ellos. Con §10 la versión pasa a servidor + web. El 05/11, §10.10 («Revisar
-sin grado» como la hoja, sin «Pedidos 15 d») manda sobre §10.1, §10.2, §10.6 y §10.9.**
+sin grado» como la hoja, sin «Pedidos 15 d») manda sobre §10.1, §10.2, §10.6 y §10.9, y §10.11 («Subir B a A» con ningún
+A) sobre §2.5.**
 Prototipo: `assets/2026-11-04-v0925-prototipo-que-revisar.html`.
 **Solo web**: sin cambios en el servidor ni en la base. Usa `GET /api/stock-telefonos`, que ya está en producción.
 El número 0.9.25 es provisional: si otra versión entra antes, quien mergee segundo lo cambia.
@@ -484,6 +485,27 @@ el Excel falla con su aviso y lo demás funciona.
 
 **Web:** fuera `useVendidos`, el tipo de los vendidos, «sin ventas» y sus textos, `DIAS_PEDIDOS` y la cuenta de pedidos.
 «Subir B a A», la búsqueda, el Excel de «Subir B a A», las tarjetas y el número de la pestaña no cambian.
+
+### 10.11 «Subir B a A» con ningún A, como la hoja (05/11; manda sobre §2.5 y el «Pocos A» de §1)
+**Por qué:** el usuario, al ver cómo decide: «faltan A» en un modelo-color es lo que dispara subir sus B. La hoja lo pide con
+**0 A**; el ERP lo pedía con 0 o 1 A, para adelantarse. El usuario eligió **solo 0 A, como la hoja**. Los B100 se quedan
+(«B100 → A100»): la hoja ya los avisaba por MENSAJES. Con los datos de preprod del 05/11 salen 6 modelos-color, en vez de 9.
+Dejan de salir el 13 mini 128 Blanco, el 15 Plus eSIM 512 Azul y el 14 Plus eSIM 512 Azul, que tienen 1 A.
+
+**Reglas:** sale un modelo-color si tiene algún B o B100 (exactamente B, sin Ms) y **ningún A** (A+, A o A-, con o sin batería
+nueva; cuentan también los del técnico). `MAX_A = 0`. El orden (§2.7), el paso de cada móvil, los del técnico y el Excel no
+cambian. Un modelo-color sale de la lista en cuanto tiene un A.
+
+**Pantalla:** fuera la columna «A en stock» (siempre 0). Columnas: Modelo · Cap. · Color · B · B100.
+
+**Textos:**
+- subtítulo: «B y B100 de modelos sin ningún A»;
+- ayuda: «Los modelos-color con móviles B y ningún A en stock: candidatos a chasis (B → A; con batería nueva, B100 → A100). Un
+  modelo-color sale de la lista en cuanto tiene un A.»;
+- vacío y pie: no cambian.
+
+**Diferencias con la hoja que quedan:** el B100 sale en la tabla; el A+ cuenta como A (en la hoja no cuenta: un modelo-color con
+un A+ y un B sale en la hoja y no en el ERP); lo del técnico y lo corregido en el taller, como en §2.8.
 
 ## 9. Pendiente
 
