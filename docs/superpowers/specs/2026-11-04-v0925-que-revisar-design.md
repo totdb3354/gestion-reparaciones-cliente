@@ -507,6 +507,22 @@ cambian. Un modelo-color sale de la lista en cuanto tiene un A.
 **Diferencias con la hoja que quedan:** el B100 sale en la tabla; el A+ cuenta como A (en la hoja no cuenta: un modelo-color con
 un A+ y un B sale en la hoja y no en el ERP); lo del técnico y lo corregido en el taller, como en §2.8.
 
+### 10.12 Los Excel, una fila por modelo-color, como las tablas de la hoja (05/11; manda sobre la «una fila por móvil» de §10.3)
+**Por qué:** comparado con la hoja (las 93 filas de «Solo n/a» salen iguales), el usuario: «lo que ven ellos del ERP es mucho; la
+primera tabla en la hoja se diferencia claramente, en el ERP no». El Excel de «Revisar sin grado» llevaba 273 filas, una por
+móvil. Decisión: los dos Excel, **una fila por modelo-color**, como «Solo n/a» y «B para subir a grado A». Los IMEI se ven en
+pantalla al desplegar.
+
+- **Revisar sin grado:** Modelo · Capacidad · Color · Sin grado · Revisado (vacía). «Sin grado» son los pendientes (sin los del
+  técnico), el «Saldo stock» de la hoja.
+- **Subir B a A:** Modelo · Capacidad · Color · B · B100 · Hecho (vacía). B y B100, sin los del técnico.
+- En las dos: las filas de lo que se ve (con la búsqueda), en el orden de la tabla; un modelo-color sin nada pendiente (todo con
+  técnico) no va. Modelo, capacidad y color escritos como hoy en el Excel.
+- El botón dice cuántas filas lleva: «⬇ Descargar Excel (N)», con N modelos-color; apagado y con el título «No hay nada
+  pendiente» si no hay ninguno. El aviso al terminar: «Descargado: N modelos-color» («1 modelo-color» en singular).
+- Lo demás de §10.3 no cambia: «Guardar como» en el mismo clic, los nombres de fichero, la ruta del servidor y su formato para
+  imprimir. El servidor no cambia.
+
 ## 9. Pendiente
 
 - **Al plan maestro** (backlog, `Apuntes/plan-futuro.md`):
