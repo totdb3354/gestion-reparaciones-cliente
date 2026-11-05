@@ -8,7 +8,8 @@
   stock al momento y con los IMEI de cada móvil.
 - **Revisar sin grado**: los modelos-color en los que todo está sin grado (`n/a`), como la tabla «Solo n/a» de la hoja. Primero
   **lo que más queda sin revisar**. En cuanto NSYS o el taller le ponen grado a uno de sus móviles, el modelo-color sale de la
-  lista; F, FD y RMA no cuentan como grado.
+  lista; F, FD y RMA no cuentan como grado. La tabla se parte en dos bloques, **«3 o más sin revisar»** y **«Menos de 3 sin
+  revisar»**, y es más compacta: «Sin grado» queda pegado al color.
 - **Subir B a A**: los modelos-color con B o B100 y ningún A (como la hoja): candidatos a cambiarles el chasis (B pasa a A y
   B100 a A100). En cuanto el modelo-color tiene un A, sale de la lista.
 - Pulsa una fila para ver sus móviles: dónde están, cuántos días llevan y quién los tiene. Un móvil que ya tiene un técnico
