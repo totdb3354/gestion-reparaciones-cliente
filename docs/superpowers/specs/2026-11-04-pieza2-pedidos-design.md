@@ -184,7 +184,9 @@ nada se queda viejo.
     cierra la unidad de ese IMEI (`ABONO`) y no es pedido (ajuste 24).
   - Las líneas **X, E, NO, R1, A1 y M** son ventas (confirmado por el usuario el 05/11): el código solo dice cómo se factura, y
     eso no cambia el pedido. Cuando un móvil sale primero en X (o NO) y días después en E, es el mismo móvil y la misma venta: el
-    pedido es el de la primera línea, como arriba.
+    pedido es el de la primera línea, como arriba. Pero si con la venta aún abierta sale en **otra línea que no es E y de otro
+    pedido** (X, NO, R1…), es una **venta nueva** aunque no haya abono entre medias: la vieja se cierra (`REVENDIDO`) y la nueva
+    es la pendiente (ajuste 25).
   - Un pedido es un Order id (el de la primera línea de cada IMEI); las líneas sin IMEI todavía son unidades sin móvil.
 
 ### 6.2 El IMEI de cada unidad
@@ -497,3 +499,8 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
     seguía abierto; ahora una BB o cualquier línea con cantidad negativa cierra la unidad de su IMEI (`ABONO`) y no es pedido.
     Comprobado también: en el orden de la hoja la X o el NO van antes que su E (1585 X→E y 151 NO→E en 4 meses; 3 E→X), así
     que el pedido de la primera línea es el de la venta.
+25. **Una venta que no es E con el móvil aún vendido es una venta nueva** (comprobación del 05/11): 26 casos en 4 meses en que el
+    mismo móvil sale otra vez en X, NO o R1 de otro pedido sin abono entre medias (de 13 a 113 días después, casi siempre al mismo
+    cliente): el móvil volvió y ha vuelto a salir. Antes contaba como otra línea de la venta vieja y «Pedidos» enseñaba el pedido
+    viejo; ahora la vieja se cierra con `REVENDIDO` y la pendiente es la nueva. Una E, o una línea del mismo pedido, sigue siendo
+    otro apunte de la misma venta. Si fuera una corrección y no una reventa, el pedido nuevo sigue siendo el bueno.
