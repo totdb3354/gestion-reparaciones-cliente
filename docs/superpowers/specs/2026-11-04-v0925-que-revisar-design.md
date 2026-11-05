@@ -523,6 +523,24 @@ pantalla al desplegar.
 - Lo demás de §10.3 no cambia: «Guardar como» en el mismo clic, los nombres de fichero, la ruta del servidor y su formato para
   imprimir. El servidor no cambia.
 
+### 10.13 La pantalla de «Revisar sin grado», compacta y en dos bloques (05/11)
+**Por qué:** con la captura de preprod delante, la tabla iba a todo el ancho, con «Sin grado» en el borde derecho, lejos del
+modelo, y los de 3 o más seguían a los de 1 o 2 sin ninguna marca. En la hoja se filtra «Saldo stock ≥ 3» y queda separado.
+El usuario eligió las dos cosas.
+
+- **Compacta:** la tabla ocupa lo que necesitan sus columnas, no todo el ancho, con «Sin grado» pegado al color. El número de
+  pendientes va en negrita; «+N con técnico» sigue en gris. «Subir B a A» va igual de compacta (sin bloques).
+- **Dos bloques**, cada uno con una fila de título en la tabla, que ocupa todas las columnas:
+  - «3 o más sin revisar · N modelos-color · M móviles»: los modelos-color con 3 o más pendientes (`MIN_BLOQUE = 3`);
+  - «Menos de 3 sin revisar · N modelos-color · M móviles»: los demás (1 o 2 pendientes y, al final y en gris, los que lo tienen
+    todo con técnico).
+
+  N y M son los modelos-color y los pendientes del bloque (lo que se ve, con la búsqueda), con «modelo-color» y «móvil» en
+  singular cuando toca. Un bloque sin filas no sale. Dentro de cada bloque, el orden de §10.10.
+- La cabecera de columnas (Modelo · Cap. · Color · Sin grado), el desplegable, el resaltado del IMEI buscado y los mensajes
+  (vacío, sin coincidencias) no cambian.
+- **El Excel no cambia** (§10.12): una sola tabla en el mismo orden, con los de 3 o más arriba.
+
 ## 9. Pendiente
 
 - **Al plan maestro** (backlog, `Apuntes/plan-futuro.md`):
