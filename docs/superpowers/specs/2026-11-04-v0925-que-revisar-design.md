@@ -2,7 +2,8 @@
 
 Fecha: 2026-11-04. Estado: **diseño aprobado** (prototipo y spec, 04/11). Plan: `docs/superpowers/plans/2026-11-04-v0925-que-revisar.md`.
 **Ajustes posteriores (04/11 tarde, tras la prueba en preprod): §3.6 (buscar) y §10 (prioridad por pedidos, «3 o más» y
-Excel). Donde contradigan a lo de antes, mandan ellos. Con §10 la versión pasa a servidor + web.**
+Excel). Donde contradigan a lo de antes, mandan ellos. Con §10 la versión pasa a servidor + web. El 05/11, §10.10 («Revisar
+sin grado» como la hoja, sin «Pedidos 15 d») manda sobre §10.1, §10.2, §10.6 y §10.9.**
 Prototipo: `assets/2026-11-04-v0925-prototipo-que-revisar.html`.
 **Solo web**: sin cambios en el servidor ni en la base. Usa `GET /api/stock-telefonos`, que ya está en producción.
 El número 0.9.25 es provisional: si otra versión entra antes, quien mergee segundo lo cambia.
@@ -447,6 +448,42 @@ modelo-color con `n/a` y solo F/FD/RMA es «Nada con grado».
 - **Anchos del Excel:** se calculan por caracteres, con un tope de 60, en vez de con `autoSizeColumn`, que necesita fuentes del
   sistema que el contenedor no tiene.
 - **Servidor 0.9.24:** `GET …/vendidos` cae en `GET /{imeiSn}` y da 404. La web lo toma como «sin ventas», sin diálogo.
+
+### 10.10 «Revisar sin grado» como la hoja (05/11; manda sobre §10.1, §10.2, §10.6 y §10.9)
+**Por qué:** tras ver los «de pedido» en preprod, el usuario: «vamos a dejarlo simple, como lo hacemos en el Google Sheet,
+usamos la misma forma de calcular y a ver si sale lo mismo; soy consciente de que perderíamos la mejora de lo que más se
+vende». Los datos de ventas no son fiables hoy: hay de pedido de hace años, y los vendidos dependen de cuándo NSYS los pasa a
+Released. La prioridad por lo que más se pide vuelve con los pedidos de la pieza 2 (0.9.26), al backlog. Con los datos de
+preprod del 05/11: 66 modelos-color con 126 móviles salen como en «Solo n/a», 11 de ellos con 3 o más. Quedan fuera 472 `n/a`
+de 144 modelos-color que ya tienen algún grado; la hoja tampoco los saca. El usuario eligió **solo como la hoja**.
+
+**Reglas de «Revisar sin grado»:**
+- Entra un modelo-color si tiene **algún móvil sin grado** (§2.3) y **ningún grado vendible** (§10.8: F, FD y RMA no cuentan).
+  Es la tabla «Solo n/a» de la hoja. En cuanto NSYS o el taller le ponen un grado vendible a un móvil, el modelo-color entero
+  sale de la lista, como en la hoja.
+- **Orden:** primero lo que más queda sin revisar (pendientes: sin grado y sin técnico; es el «Saldo stock» de la hoja); a
+  igualdad, el orden de §2.7. Los de 3 o más quedan arriba sin interruptor (§10.7).
+- **Fuera:** el motivo (todos serían «Nada con grado»), «Pedidos 15 d», «A en stock» y «Con grado» (siempre 0). También
+  `MAX_A` deja de aplicarse aquí; sigue en «Subir B a A».
+- **Columnas:** Modelo (con el desplegable delante, como en «Subir B a A») · Cap. · Color · Sin grado (con «+N con técnico»).
+
+**Textos:**
+- subtítulo: «Solo n/a, lo que más queda primero»;
+- ayuda: «Los modelos-color en los que nada tiene grado, solo n/a (la tabla «Solo n/a» de la hoja). Primero lo que más queda sin
+  revisar. Un modelo-color sale de la lista en cuanto NSYS o el taller le ponen grado a uno de sus móviles; F, FD y RMA no
+  cuentan.»;
+- vacío: «Nada que revisar: ningún modelo-color con todo sin grado en stock.»;
+- el pie no cambia.
+
+**Excel de «Revisar sin grado»:** Modelo · Capacidad · Color · IMEI · Ubicación · Días en stock · Revisado (vacía). Sin
+«Pedidos 15 d».
+
+**Servidor:** se quita `GET /api/stock-telefonos/vendidos` (ruta, DAO, tests, contrato). La ruta de «de pedido» de §10.9 no se
+hace. Queda solo `POST /api/stock-telefonos/que-revisar/excel`. La 0.9.25 sigue siendo servidor + web. Con el servidor 0.9.24,
+el Excel falla con su aviso y lo demás funciona.
+
+**Web:** fuera `useVendidos`, el tipo de los vendidos, «sin ventas» y sus textos, `DIAS_PEDIDOS` y la cuenta de pedidos.
+«Subir B a A», la búsqueda, el Excel de «Subir B a A», las tarjetas y el número de la pestaña no cambian.
 
 ## 9. Pendiente
 
