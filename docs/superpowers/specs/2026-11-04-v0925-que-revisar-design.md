@@ -376,6 +376,43 @@ stock» a **3 o más** y eso es lo que se revisa, sobre papel impreso. Las otras
   test de contrato `OpenApiContractTest`), la web (columna, interruptor, botón, descarga) y la E2E de solo lectura (columna e
   interruptor; descarga del Excel sin escribir nada en la base).
 
+### 10.7 Fuera el interruptor «3 o más» (05/11, prueba en preprod)
+El usuario, al probarlo: «lo de solo tres o más no hace falta». El orden ya pone arriba lo que más se pide y, a igualdad, lo que
+más queda sin revisar, así que se ve **todo** y el Excel lo lleva **todo**. Se quitan `MIN_PENDIENTES`, `soloTres` (función y
+estado), el interruptor y el mensaje «Ningún modelo-color con 3 o más sin revisar…». Lo que queda de §10.1-§10.3 no cambia. El
+servidor no cambia.
+
+### 10.9 «De pedido» solo lo que entró en «Pedidos realizados» en los últimos 15 días (05/11)
+**Lo que se vio en preprod:** «de pedido» contaba todo lo que hay en «Pedidos realizados» (1061 móviles). Entre ellos había restos
+de hace años que nadie liberó en NSYS. Ejemplo: el grupo «Sin modelo en el maestro» sumaba 68 pedidos, 8 vendidos y 60 de pedido
+con una mediana de 988 días en stock. El usuario preguntó por ShippyPro. Cubre solo Amazon y las webs y da los pedidos pendientes;
+el Simulador va aparte. La fuente buena son los pedidos de la **pieza 2** (0.9.26: ShippyPro + Simulador + PEDIDOS 2026 en el
+ERP).
+
+**Decisión:**
+- **Ahora**, NSYS limpio: «Pedidos 15 d» = vendidos (`Released`) en 15 días + los móviles de pedido **que entraron** en una caja de
+  pedido (`Nsys_ubicacion.ES_PEDIDO`, p. ej. «Pedidos realizados») en los últimos 15 días. La fecha es la del cambio de caja en los
+  eventos del espejo (`Nsys_evento`).
+- **Después**, con la 0.9.26 en producción, pasar a los pedidos de la pieza 2 (al backlog).
+
+**Cómo:**
+- **Servidor:** ruta nueva `GET /api/stock-telefonos/de-pedido?dias=15` (1-90, 15 por defecto, SUPERTECNICO y ADMIN). Devuelve un
+  elemento por IMEI de pedido (estado `DE_PEDIDO`, su lote más reciente) cuya última entrada en una caja de pedido cae en el
+  rango, con los mismos campos que `vendidos` más `pedidoDesde`.
+- **Web:**
+  - deja de contar como de pedido los `DE_PEDIDO` del stock y usa esa ruta;
+  - un IMEI que esté en las dos cuenta una vez, como de pedido;
+  - si la ruta falla, la marca «sin ventas» vale para las dos.
+- **Sin modelo:** el grupo «Sin modelo en el maestro» no lleva pedidos («—», cuenta como 0). Junta productos distintos que no se
+  sabe qué modelo son.
+
+### 10.8 F, FD y RMA no cuentan para el motivo (05/11, comparación con el script)
+Al comparar en preprod la tabla principal del script con «Nada con grado», coincidían las 63 filas salvo, entre otras, dos
+modelos-color con un **F** o un **RMA** además de sus `n/a`. La lista pública no lleva esos grados, así que la hoja los sacaba
+como «solo n/a», y el ERP como «Ningún A». Decisión del usuario: F, FD y RMA siguen siendo «revisados» (§2.3: no son pendientes),
+pero **para el motivo y la columna «Con grado» solo cuenta un grado vendible**: A±, B±, C con o sin Ms, Ms solo e ID. Un
+modelo-color con `n/a` y solo F/FD/RMA es «Nada con grado».
+
 ### 10.6 Textos y aclaraciones que fija el plan (Tasks 10-16)
 - **Textos de «Revisar sin grado»:**
   - subtítulo: «n/a en stock, lo más pedido primero»;
