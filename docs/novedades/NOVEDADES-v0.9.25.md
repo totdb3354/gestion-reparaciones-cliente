@@ -9,7 +9,8 @@
 - **Revisar sin grado**: los modelos-color en los que todo está sin grado (`n/a`), como la tabla «Solo n/a» de la hoja. Primero
   **lo que más queda sin revisar**. En cuanto NSYS o el taller le ponen grado a uno de sus móviles, el modelo-color sale de la
   lista; F, FD y RMA no cuentan como grado.
-- **Subir B a A**: los B y B100 de modelos con como mucho un A: candidatos a cambiarles el chasis.
+- **Subir B a A**: los modelos-color con B o B100 y ningún A (como la hoja): candidatos a cambiarles el chasis (B pasa a A y
+  B100 a A100). En cuanto el modelo-color tiene un A, sale de la lista.
 - Pulsa una fila para ver sus móviles: dónde están, cuántos días llevan y quién los tiene. Un móvil que ya tiene un técnico
   sale en gris y no cuenta ni va en el Excel.
 - La caja de arriba, en esta pestaña, **busca por palabras**: el modelo («13 pro 256», «14 esim»), un color, un SKU o un trozo
