@@ -181,7 +181,9 @@ nada se queda viejo.
   - **Cada IMEI cuenta una sola vez:** si sale en varias líneas (una X que reaparece como E con otro Order id), el pedido es el
     de la primera línea; el otro Order id se guarda en `OTRO_ORDER_ID`.
   - Una línea **BB** (abono) cierra la unidad de ese IMEI (`ABONO`).
-  - Las líneas **NO, R1, A1 y M** se tratan como ventas hasta que el usuario diga qué son (§13).
+  - Las líneas **X, E, NO, R1, A1 y M** son ventas (confirmado por el usuario el 05/11): el código solo dice cómo se factura, y
+    eso no cambia el pedido. Cuando un móvil sale primero en X (o NO) y días después en E, es el mismo móvil y la misma venta: el
+    pedido es el de la primera línea, como arriba.
   - Un pedido es un Order id (el de la primera línea de cada IMEI); las líneas sin IMEI todavía son unidades sin móvil.
 
 ### 6.2 El IMEI de cada unidad
@@ -420,7 +422,8 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
 
 ## 13. Pendiente (no bloquea el plan)
 
-- Qué son las líneas **NO, R1, A1 y M** del Simulador (y confirmar X y E).
+- ~~Qué son las líneas **NO, R1, A1 y M** del Simulador (y confirmar X y E).~~ **Resuelto el 05/11:** todas son ventas salvo
+  BB (abono), como ya hace §6.1.
 - Si los **particulares** de la web (Particulares, BackiPhone) existen como clientes en el ERP.
 - **Clave de ShippyPro:** una propia del ERP o la de `devoluciones`.
 - Los nombres exactos de los campos de `GetPendingOrders` y los pedidos fusionados (`merged`).
