@@ -180,7 +180,8 @@ nada se queda viejo.
 - **Simulador:** cada línea es una unidad, solo si su SKU es de teléfono (fuera portes como `GLS24`, cajas, regalos, piezas).
   - **Cada IMEI cuenta una sola vez:** si sale en varias líneas (una X que reaparece como E con otro Order id), el pedido es el
     de la primera línea; el otro Order id se guarda en `OTRO_ORDER_ID`.
-  - Una línea **BB** (abono) cierra la unidad de ese IMEI (`ABONO`).
+  - Una línea **BB** (abono), o cualquier línea con **cantidad negativa** (una devolución de una venta NO va como NO con -1),
+    cierra la unidad de ese IMEI (`ABONO`) y no es pedido (ajuste 24).
   - Las líneas **X, E, NO, R1, A1 y M** son ventas (confirmado por el usuario el 05/11): el código solo dice cómo se factura, y
     eso no cambia el pedido. Cuando un móvil sale primero en X (o NO) y días después en E, es el mismo móvil y la misma venta: el
     pedido es el de la primera línea, como arriba.
@@ -491,3 +492,8 @@ Desde ahí funciona como siempre (se pueden escanear más IMEIs; nada se escribe
     INCOMPLETA); el Simulador da INCOMPLETA si las filas leídas no llegan a la ventana (§4.3); los textos de las fuentes se cortan al
     ancho de su columna; una respuesta de ShippyPro sin lista de pedidos o con `Total` distinto falla (no cuenta como «0
     pendientes»).
+24. **Una cantidad negativa en el Simulador es un abono** (comprobación del 05/11 con la copia): una venta NO no se devuelve con
+    una BB sino con otra línea NO de cantidad -1 (18 en un año). Antes contaba como otra línea de la misma venta y el pedido
+    seguía abierto; ahora una BB o cualquier línea con cantidad negativa cierra la unidad de su IMEI (`ABONO`) y no es pedido.
+    Comprobado también: en el orden de la hoja la X o el NO van antes que su E (1585 X→E y 151 NO→E en 4 meses; 3 E→X), así
+    que el pedido de la primera línea es el de la venta.
