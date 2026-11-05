@@ -546,7 +546,11 @@ El usuario eligió las dos cosas.
 derecha.
 
 - **Dos columnas** en las dos tarjetas: a la izquierda, la tabla de modelos-color (con sus bloques en «Revisar sin grado»); a la
-  derecha, el **panel del modelo-color elegido**. En pantallas estrechas (menos de 1024 px), el panel va debajo de la tabla.
+  derecha, el **panel del modelo-color elegido**. Por debajo de 1280 px de ventana, el panel va debajo de la tabla. Con 1024 px y
+  la columna lateral abierta no caben las dos sin que la página se desplace hacia los lados. La vista nunca ensancha la página:
+  si algo no cabe, se desplaza dentro de su caja.
+- **Accesible:** la fila elegida lleva `aria-current`, porque se elige una y no se desmarca. El título del panel se anuncia
+  al cambiar (`aria-live="polite"`).
 - **Elegir:** pulsar una fila (o su botón, con el teclado) la elige: queda resaltada y su panel sale a la derecha. Solo hay una
   elegida por tarjeta. Pulsar otra la cambia. **Ya no se despliega dentro de la tabla**, así que la lista no se mueve.
 - **Al entrar** no hay ninguna elegida; el panel dice «Pulsa un modelo-color para ver sus móviles.»
