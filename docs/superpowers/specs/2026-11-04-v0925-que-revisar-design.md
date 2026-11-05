@@ -6,7 +6,8 @@ Excel). Donde contradigan a lo de antes, mandan ellos. Con §10 la versión pasa
 sin grado» como la hoja, sin «Pedidos 15 d») manda sobre §10.1, §10.2, §10.6 y §10.9, y §10.11 («Subir B a A» con ningún
 A) sobre §2.5.**
 Prototipo: `assets/2026-11-04-v0925-prototipo-que-revisar.html`.
-**Solo web**: sin cambios en el servidor ni en la base. Usa `GET /api/stock-telefonos`, que ya está en producción.
+~~**Solo web**~~ Desde §10.3 y hasta la versión final (§10.10-§10.15), **servidor + web, sin base**: el servidor solo añade
+`POST /api/stock-telefonos/que-revisar/excel`. Las listas salen de `GET /api/stock-telefonos`, que ya está en producción.
 El número 0.9.25 es provisional: si otra versión entra antes, quien mergee segundo lo cambia.
 
 ## 1. Qué cambia
@@ -535,8 +536,9 @@ El usuario eligió las dos cosas.
   - «Menos de 3 sin revisar · N modelos-color · M móviles»: los demás (1 o 2 pendientes y, al final y en gris, los que lo tienen
     todo con técnico).
 
-  N y M son los modelos-color y los pendientes del bloque (lo que se ve, con la búsqueda), con «modelo-color» y «móvil» en
-  singular cuando toca. Un bloque sin filas no sale. Dentro de cada bloque, el orden de §10.10.
+  N son los modelos-color del bloque **con algo pendiente** (los grises, todo con técnico, salen en la lista pero no cuentan;
+  así las cifras casan con la tarjeta y con el botón del Excel) y M sus pendientes; lo que se ve, con la búsqueda. «modelo-color»
+  y «móvil» van en singular cuando toca. Un bloque sin filas no sale. Dentro de cada bloque, el orden de §10.10.
 - La cabecera de columnas (Modelo · Cap. · Color · Sin grado), el desplegable, el resaltado del IMEI buscado y los mensajes
   (vacío, sin coincidencias) no cambian.
 - **El Excel no cambia** (§10.12): una sola tabla en el mismo orden, con los de 3 o más arriba.
