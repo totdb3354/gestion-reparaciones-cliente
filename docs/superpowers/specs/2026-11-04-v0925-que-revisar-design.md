@@ -541,6 +541,38 @@ El usuario eligió las dos cosas.
   (vacío, sin coincidencias) no cambian.
 - **El Excel no cambia** (§10.12): una sola tabla en el mismo orden, con los de 3 o más arriba.
 
+### 10.14 Los móviles del modelo-color, en un panel a la derecha (05/11; manda sobre el desplegado de §3)
+**Por qué:** con la tabla compacta quedaba un hueco blanco a la derecha. El usuario propuso aprovecharlo y eligió el detalle a la
+derecha.
+
+- **Dos columnas** en las dos tarjetas: a la izquierda, la tabla de modelos-color (con sus bloques en «Revisar sin grado»); a la
+  derecha, el **panel del modelo-color elegido**. En pantallas estrechas (menos de 1024 px), el panel va debajo de la tabla.
+- **Elegir:** pulsar una fila (o su botón, con el teclado) la elige: queda resaltada y su panel sale a la derecha. Solo hay una
+  elegida por tarjeta. Pulsar otra la cambia. **Ya no se despliega dentro de la tabla**, así que la lista no se mueve.
+- **Al entrar** no hay ninguna elegida; el panel dice «Pulsa un modelo-color para ver sus móviles.»
+- **El panel:** el título es la descripción del modelo-color con su cuenta. En «Revisar sin grado», por ejemplo, «iPhone 14 128 GB
+  Medianoche · 20 sin grado», con « · +2 con técnico» si los hay. En «Subir B a A», «… · 1 B · 2 B100». Debajo, sus móviles con
+  las mismas columnas y el mismo orden que tenía el desplegado (IMEI con el enlace que abre su ficha, ubicación, días en stock,
+  quién lo tiene, y el paso en «Subir B a A»). Los del técnico salen en gris.
+- El panel se queda a la vista al bajar por la lista (pegado arriba, con su propio desplazamiento si es largo).
+- **Buscar un IMEI** elige su modelo-color y resalta ese móvil en el panel, como antes lo abría y lo resaltaba en la tabla.
+- **Lo elegido se guarda** en el estado de la página, como antes lo desplegado: sobrevive a «← Volver» y a cambiar de
+  tarjeta. Si el modelo-color elegido deja de estar en la lista (un Items nuevo, o la búsqueda lo quita), el panel vuelve al
+  texto de «Pulsa…».
+- Los bloques, los textos, el Excel, las tarjetas y la búsqueda por palabras no cambian.
+
+### 10.15 El Excel, con números y en vertical (05/11; manda sobre el «apaisado» de §10.3)
+**Por qué:** en el primer Excel por modelo-color, «Sin grado» salía como texto. Excel lo marca con el triángulo verde de «número
+almacenado como texto» y no deja filtrar «≥ 3» como se hace en la hoja. Además, con 5 o 6 columnas estrechas, el apaisado
+desperdicia papel.
+
+- **Números:** el servidor (`HojaImprimible`) escribe como número una celda cuyo texto es un entero de 1 a 9 cifras, sin signo ni
+  espacios. Lo demás va como texto: un IMEI tiene 15 cifras y no se toca.
+- **Orientación:** vertical si la suma de los anchos de las columnas (los que ya calcula, en caracteres) es 90 o menos;
+  apaisado si pasa. Los dos Excel de «Qué revisar» salen en vertical. Sigue ajustado a una página de ancho, con la cabecera
+  repetida.
+- La ruta y su contrato (`{ hoja, columnas, filas }` de textos) no cambian. La web no cambia por esto.
+
 ## 9. Pendiente
 
 - **Al plan maestro** (backlog, `Apuntes/plan-futuro.md`):
