@@ -402,9 +402,19 @@ ERP).
 - **Web:**
   - deja de contar como de pedido los `DE_PEDIDO` del stock y usa esa ruta;
   - un IMEI que esté en las dos cuenta una vez, como de pedido;
-  - si la ruta falla, la marca «sin ventas» vale para las dos.
+  - si falla una de las dos lecturas, la columna lo dice como hoy con las ventas (cabecera, su título y el de cada celda):
+
+    | Falla | Cabecera | Título de la cabecera | Título de la celda |
+    |---|---|---|---|
+    | ventas | «Pedidos 15 d (sin ventas)» | «No se pudieron leer las ventas: solo cuentan los de pedido» | «3 de pedido (sin ventas)» |
+    | de pedido | «Pedidos 15 d (sin de pedido)» | «No se pudieron leer los de pedido: solo cuentan las ventas» | «9 vendidos (sin de pedido)» |
+    | las dos | «Pedidos 15 d (sin datos)» | «No se pudieron leer ni las ventas ni los de pedido» | «Sin datos de pedidos» |
+
+    La cabecera del Excel es la misma que la de la tabla.
+  - la ayuda dice «vendidos y pasados a pedido en los últimos 15 días» donde decía «vendidos en los últimos 15 días y de pedido
+    ahora».
 - **Sin modelo:** el grupo «Sin modelo en el maestro» no lleva pedidos («—», cuenta como 0). Junta productos distintos que no se
-  sabe qué modelo son.
+  sabe qué modelo son. En la tabla y en el Excel sale «—»; el título de la celda dice «Sin modelo: no se sabe qué se pide».
 
 ### 10.8 F, FD y RMA no cuentan para el motivo (05/11, comparación con el script)
 Al comparar en preprod la tabla principal del script con «Nada con grado», coincidían las 63 filas salvo, entre otras, dos
