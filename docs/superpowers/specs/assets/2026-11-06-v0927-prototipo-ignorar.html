@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · «ignorar» en los vendidos y de baja que salen en ámbar</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos-tx: #2f7d3b; --tal: #7c3aed; --crema: #f5efd6; --amarillo: #f1e356; --ambar: #b26a00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         min-height: 100vh; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+
+  .proto { flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+  .proto .accion { background: #f1e356; color: #001232; border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+  .proto .accion.gris { background: #47536a; color: #fff; }
+
+  .guia { background: #f4f1fb; border-bottom: 1px solid #d9cff3; padding: 8px 16px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; font-size: 12px; line-height: 1.45; }
+  .guia h2 { margin: 0 0 3px; font-size: 13px; color: #3b0764; }
+  .guia ol { margin: 0; padding-left: 18px; }
+  .guia p { margin: 0 0 4px; }
+
+  header { height: 50px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; font-weight: 600; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 190px; flex: none; background: #fff; padding: 12px 8px; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; margin: 10px 10px 6px; }
+  nav .it { padding: 7px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--navy); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 21px; }
+  .nsys { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; }
+  .card { background: #fff; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  .tabs { display: flex; border: 1px solid #cdd4df; border-radius: 8px; overflow: hidden; width: max-content; background: #fff; }
+  .tabs button { border: 0; border-right: 1px solid #cdd4df; background: #fff; padding: 6px 14px; font-weight: 600; cursor: default; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--navy); color: #fff; }
+  .num { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--tal); color: #fff; font-size: 11px; text-align: center; }
+  .num.cero { background: #c3cad6; }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .tile { border: 1.5px solid var(--borde); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; background: #fbfcfe; border-top-width: 4px; }
+  .tile:hover { border-color: #b8c2d3; }
+  .tile.on { border-color: var(--navy); background: #fff; box-shadow: 0 0 0 2px rgba(7,26,58,.12); }
+  .tile.color { border-top-color: #7c3aed; } .tile.grado { border-top-color: #2563eb; } .tile.noesta { border-top-color: #dc2626; } .tile.revisar { border-top-color: #d97706; }
+  .tile .tt { font-weight: 700; font-size: 13px; }
+  .tile .big { font-size: 26px; font-weight: 800; line-height: 1; }
+  .tile .big small { font-size: 12px; font-weight: 600; color: var(--gris); margin-left: 4px; }
+  .tile .ex { font-size: 11.5px; color: var(--gris); min-height: 46px; line-height: 1.35; }
+  .tile .pie { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  .ayuda { font-size: 11.5px; color: var(--gris); max-width: 900px; line-height: 1.45; margin: 0; }
+  .ayuda b { color: #4b5870; }
+  .btn { height: 32px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: #f2f5f9; }
+  .btn.pri { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .btn.pri:hover:not(:disabled) { background: #102a55; }
+  .btn:disabled { opacity: .42; cursor: not-allowed; }
+  .btn.peq { height: 26px; padding: 0 9px; font-size: 12px; }
+
+  .tabla-w { border: 1px solid var(--borde); border-radius: 8px; overflow: auto; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.t th { background: #fbf6ea; text-align: left; padding: 7px 8px; font-weight: 700; color: #2b3a55; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  table.t td { padding: 6px 8px; border-top: 1px solid #eef1f5; vertical-align: top; }
+  table.t td.nw { white-space: nowrap; }
+  .mono { font-family: Consolas, monospace; font-size: 11.5px; }
+  .link { color: var(--navy); cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+  .link:hover { text-decoration: underline; }
+  .gr { display: block; font-size: 11px; color: var(--gris); }
+  .vacio { padding: 14px 10px; color: var(--gris); font-size: 12px; }
+  tr.hecho td { background: #f6f8f6; color: #8a97a8; }
+  .marca-h { display: inline-block; font-size: 11px; font-weight: 700; color: #2f7d3b; background: #e3f5e6; border: 1px solid #9fd8aa; border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+  .pc { display: inline-block; border-radius: 4px; padding: 0 6px; font-weight: 700; background: #efe6ff; color: #6d28d9; }
+  .pg { display: inline-block; border-radius: 4px; padding: 0 6px; font-weight: 700; background: #e0ecff; color: #1d4ed8; }
+  .etq { display: inline-block; border-radius: 4px; padding: 0 6px; font-size: 10.5px; font-weight: 700; margin-bottom: 2px; }
+  .etq.sg { background: #fff1d6; color: #a15c07; } .etq.av { background: #fde8e8; color: #b91c1c; }
+  .resalta { background: #efe6ff; color: #6d28d9; border-radius: 3px; padding: 0 3px; }
+
+  /* La línea ámbar de hoy y, nuevo, el enlace «ignorar» al final. */
+  .vuelta { display: block; margin-top: 3px; font-size: 11px; color: var(--ambar); max-width: 270px; white-space: normal; line-height: 1.35; }
+  .vuelta.otra { font-weight: 700; }
+  /* Igual que «descartar» en la app: gris y rojo al pasar el ratón. */
+  .ign { color: #8a97a8; font-size: 11px; margin-left: 8px; }
+  .ign:hover { color: #b91c1c; text-decoration: none; }
+
+  .pie-ign { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .pie-ign .link { color: #6b7a90; }
+  table.ignt td { background: #f6f7f9; color: #6b7a90; }
+
+  .aviso { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 10px;
+           min-width: 320px; max-width: min(600px, 92vw); background: var(--navy); color: var(--crema); border-radius: 10px; padding: 12px 10px 15px 14px;
+           font-size: 13px; font-weight: 600; box-shadow: 0 8px 22px rgba(0,0,0,.25); overflow: hidden; }
+  .aviso .ico { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #2f9e44; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .aviso .txt { flex: 1; line-height: 1.35; }
+  .aviso .x { flex: none; width: 24px; height: 24px; border: 0; background: transparent; color: var(--crema); opacity: .7; font-size: 16px; line-height: 1; cursor: pointer; border-radius: 6px; }
+  .aviso .x:hover { opacity: 1; background: rgba(255,255,255,.12); }
+  .aviso .barra { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.1); }
+  .aviso .barra i { display: block; height: 100%; background: var(--amarillo); transform-origin: left; animation: consume linear forwards; }
+  @keyframes consume { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">Prototipo · «ignorar» en los vendidos y de baja que salen en ámbar (datos inventados)</span>
+  <span class="sep"></span>
+  <button class="accion" id="simTrabajo">Simular trabajo nuevo del taller en un ignorado</button>
+  <button class="accion" id="simDevolucion">Simular devolución apuntada en NSYS (In process)</button>
+  <button class="accion gris" id="reiniciar">Reiniciar</button>
+</div>
+
+<div class="guia">
+  <div>
+    <h2>Qué cambia</h2>
+    <p><b>v3:</b> las filas ámbar (vendido o de baja en NSYS con trabajo del taller después) ganan un enlace <b>«ignorar»</b>
+    <b>al lado de «Hecho»</b>, igual que «descartar» (gris y rojo al pasar el ratón) (en «Revisar a mano», al lado de «Corregir…»), <b>sin ventana</b>. Ignorar quita el <b>móvil entero</b> de «Cambio de color», «Cambio de grado» y «Revisar a mano»
+    (y de sus números). Al pie de cada tabla, <b>«Ver ignorados (n)»</b> con quién, cuándo y «deshacer».</p>
+    <p>Vuelve a salir: <b>sin ámbar</b> si NSYS lo tiene otra vez en la empresa (devolución → In process), o <b>en ámbar</b> con
+    «Salió otra vez…» si el taller le hace un trabajo nuevo.</p>
+  </div>
+  <div>
+    <h2>Qué probar</h2>
+    <ol>
+      <li>«Cambio de color»: en el iPhone 15 (vendido) pulsa «ignorar». Se va de color y de grado; bajan los dos números.</li>
+      <li>«Ver ignorados (2)» al pie: está con el iPhone 14 que ya venía ignorado. «deshacer» lo devuelve a las listas.</li>
+      <li>El iPhone 12 (de baja) sale en color y en «Revisar a mano»: ignóralo en una y mira la otra.</li>
+      <li>«Simular trabajo nuevo…»: el ignorado más reciente vuelve en ámbar con «Salió otra vez…»; se puede ignorar otra vez.</li>
+      <li>«Simular devolución…»: el iPhone 14 (o el ignorado que quede) sale como fila normal, sin ámbar, y entra en la plantilla.</li>
+    </ol>
+  </div>
+</div>
+
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de Stock y Reparaciones (prototipo)</span></span><span class="usu">Supertécnico 1 · Supertécnico</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div><div class="it">Stock actual</div><div class="it">Pedidos</div><div class="it">Proveedores</div>
+    <div class="sec">TELÉFONOS</div><div class="it on">Stock de teléfonos</div>
+  </nav>
+  <main>
+    <div class="titulo"><h1>Stock de teléfonos</h1><span class="nsys">NSYS: hace 8 min</span></div>
+    <div id="arriba"></div>
+    <div class="card" id="contenido"></div>
+  </main>
+</div>
+<div id="aviso"></div>
+
+<script>
+const AVISO_MS = 4000
+const HOY = '06/11/2026'
+const NO_ESTA = 9
+
+// Los móviles (datos inventados). nsys: null = en la empresa; si no, vendido o de baja con trabajo del taller después.
+const MOVILES0 = {
+  '350000000000123': { modelo: 'iPhone 15 eSIM 256GB', nsys: { tipo: 'vendido', dia: '26/10/2026' }, taller: '28/10/2026' },
+  '350000000000131': { modelo: 'iPhone 13 128GB', nsys: null },
+  '350000000000149': { modelo: 'iPhone 12 64GB', nsys: { tipo: 'baja', dia: '15/10/2026' }, taller: '20/10/2026' },
+  '350000000000157': { modelo: 'iPhone 14 128GB', nsys: { tipo: 'vendido', dia: '02/10/2026' }, taller: '09/10/2026' },
+  '350000000000165': { modelo: 'iPhone 13 Pro 256GB', nsys: null },
+  '350000000000173': { modelo: 'iPhone 11 64GB', nsys: { tipo: 'vendido', dia: '30/10/2026' }, taller: '03/11/2026' },
+  '350000000000181': { modelo: 'iPhone 14 Pro 128GB', nsys: null },
+}
+const COLOR = [
+  { imei: '350000000000123', de: 'Pink', a: 'Yellow', hoy: 'Apple iPhone 15 eSIM 256GB Pink', poner: 'Apple iPhone 15 eSIM 256GB Yellow', grado: 'n/a', tambienGrado: true,
+    porQue: 'Color: reparación R20261028_82 · Técnico 2 · chasis chai15yellowesim nuevo', desde: '28/10/2026 12:25' },
+  { imei: '350000000000131', de: 'Midnight', a: 'Blue', hoy: 'Apple iPhone 13 128GB Midnight', poner: 'Apple iPhone 13 128GB Blue', grado: 'C', tambienGrado: true,
+    porQue: 'Color: reparación R20261106_73 · Técnico 4 · chasis chai13blue nuevo', desde: '06/11/2026 12:24' },
+  { imei: '350000000000149', de: 'Black', a: 'White', hoy: 'Apple iPhone 12 64GB Black', poner: 'Apple iPhone 12 64GB White', grado: 'B', tambienGrado: false,
+    porQue: 'Color: reparación R20261020_15 · Técnico 1 · chasis chai12white nuevo', desde: '20/10/2026 10:02' },
+  { imei: '350000000000157', de: 'Starlight', a: 'Purple', hoy: 'Apple iPhone 14 128GB Starlight', poner: 'Apple iPhone 14 128GB Purple', grado: 'A', tambienGrado: true,
+    porQue: 'Color: reparación R20261009_40 · Técnico 3 · chasis chai14purple nuevo', desde: '09/10/2026 16:10' },
+]
+const GRADO = [
+  { imei: '350000000000123', de: 'n/a', a: 'A100', producto: 'Apple iPhone 15 eSIM 256GB Pink', conColor: true,
+    porQue: 'Grado: reparación R20261028_82 · Técnico 2 · chasis nuevo; R20261028_81 · batería nueva', desde: '28/10/2026 12:25' },
+  { imei: '350000000000131', de: 'C', a: 'A', producto: 'Apple iPhone 13 128GB Midnight', conColor: true,
+    porQue: 'Grado: reparación R20261106_73 · Técnico 4 · chasis chai13blue nuevo', desde: '06/11/2026 12:24' },
+  { imei: '350000000000165', de: 'A-', a: 'A100', producto: 'Apple iPhone 13 Pro 256GB Graphite', conColor: false,
+    porQue: 'Grado: reparación R20261105_12 · Técnico 2 · batería bati13pro nueva', desde: '05/11/2026 09:40' },
+  { imei: '350000000000157', de: 'A', a: 'A100', producto: 'Apple iPhone 14 128GB Starlight', conColor: true,
+    porQue: 'Grado: reparación R20261009_41 · Técnico 3 · batería bati14 nueva', desde: '09/10/2026 16:12' },
+]
+const REVISAR = [
+  { imei: '350000000000173', tipo: 'sg', etq: 'Sin grado en NSYS', que: 'NSYS: n/a', hacer: 'Ponle grado en NSYS: la fila se va sola al importarlo (o «Corregir…» si ya lo sabes)', rep: 'Último trabajo: 03/11/2026 · Reparación (R20261103_22)' },
+  { imei: '350000000000181', tipo: 'sg', etq: 'Sin grado en NSYS', que: 'NSYS: —', hacer: 'Ponle grado en NSYS: la fila se va sola al importarlo (o «Corregir…» si ya lo sabes)', rep: 'Último trabajo: 04/11/2026 · Glass (G20261104_08)' },
+  { imei: '350000000000149', tipo: 'av', etq: 'Color sin deducir', que: 'La reparación R20261020_16 puso un chasis sin color conocido', hacer: 'Mira el móvil: si ya estaba bien, «Revisado»; si no, corrígelo en su ficha', rep: 'R20261020_16 · Técnico 1 · 20/10/2026 10:05' },
+]
+const NOMBRE = { color: 'Cambio de color', grado: 'Cambio de grado', noesta: 'No está en NSYS', revisar: 'Revisar a mano' }
+const EX = {
+  color: 'Cambia el producto: en NSYS, bórralo y súbelo otra vez con la plantilla (con el grado que tiene hoy en NSYS).',
+  grado: 'Cambia el grado: se corrige aparte en NSYS, uno a uno. Si el móvil también cambia de color, primero el color.',
+  noesta: 'NSYS no lo conoce: dalo de alta con la plantilla (rellena lo que falta).',
+  revisar: 'Sin grado en NSYS o lo que el ERP no supo calcular: corrígelo en su ficha.',
+}
+const NUEVO = ' <b>Nuevo:</b> un vendido o de baja con trabajo del taller después sale en ámbar: si es una devolución, apúntala en NSYS; si no ha vuelto, «ignorar» lo quita de las tres listas hasta que NSYS lo tenga otra vez en la empresa o el taller le haga un trabajo nuevo.'
+const AYUDA = {
+  color: 'Móviles a los que el taller ha cambiado el color. En NSYS: bórralos y súbelos otra vez con la plantilla, que lleva el grado que tienen hoy en NSYS (el grado nuevo, si lo hay, va por «Cambio de grado», después). Cada fila se va sola cuando la importación (cada 30 min) ve el color nuevo en NSYS. Los ámbar no van en la plantilla.' + NUEVO,
+  grado: 'Móviles a los que el taller ha cambiado el grado. En NSYS se corrige a mano, uno a uno (si también cambia de color, primero el color). Cada fila se va sola cuando la importación ve el grado nuevo en NSYS.' + NUEVO,
+  revisar: 'Sin grado en NSYS: móviles sin grado que han pasado por el taller desde el 22/10; se van solos cuando NSYS los gradúa o con «Corregir…». Los avisos de color y de deshacer se van con «Revisado» o al corregirlos.' + NUEVO,
+}
+
+const S = {}
+let reloj = 31
+const hora = () => `12:${String(reloj++).padStart(2, '0')}`
+function reiniciar() {
+  S.sub = 'color'; S.m = JSON.parse(JSON.stringify(MOVILES0)); S.marca = {}; S.ver = {}
+  S.ign = { '350000000000157': { por: 'Supertécnico 1', en: '30/10/2026 17:05', orden: 0, superado: false } }
+  S.salio = {}; S.orden = 1; reloj = 31
+}
+reiniciar()
+
+const $ = (id) => document.getElementById(id)
+const fuera = (imei) => S.m[imei].nsys !== null                          // vendido o de baja (sale en ámbar)
+const ignorado = (imei) => fuera(imei) && S.ign[imei] && !S.ign[imei].superado
+const visible = (f) => !ignorado(f.imei)
+const filas = (v) => ({ color: COLOR, grado: GRADO, revisar: REVISAR })[v]
+const visibles = (v) => filas(v).filter(visible)
+const ignoradosDe = (v) => [...new Set(filas(v).filter((f) => ignorado(f.imei)).map((f) => f.imei))]
+const hecho = (v, imei) => S.marca[`${v}|${imei}`]
+const pendientes = (v) => visibles(v).filter((f) => v === 'revisar' || !hecho(v, f.imei))
+const enPlantilla = () => pendientes('color').filter((f) => !fuera(f.imei))
+const N = { color: () => pendientes('color').length, grado: () => pendientes('grado').length, noesta: () => NO_ESTA, revisar: () => pendientes('revisar').length }
+const total = () => N.color() + N.grado() + N.noesta() + N.revisar()
+const num = (n) => `<span class="num ${n === 0 ? 'cero' : ''}">${n}</span>`
+const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`
+
+function avisar(texto) {
+  clearTimeout(avisar.h)
+  $('aviso').innerHTML = `<div class="aviso" role="status"><span class="ico">✓</span><span class="txt">${texto}</span>
+    <button class="x" id="avisoX" aria-label="Cerrar aviso" title="Cerrar">×</button><div class="barra"><i style="animation-duration:${AVISO_MS}ms"></i></div></div>`
+  avisar.h = setTimeout(cerrarAviso, AVISO_MS)
+}
+function cerrarAviso() { clearTimeout(avisar.h); $('aviso').innerHTML = '' }
+
+function textoNsys(imei) {
+  const n = S.m[imei].nsys
+  return n.tipo === 'vendido' ? `Vendido en NSYS el ${n.dia}` : `De baja en NSYS desde el ${n.dia}`
+}
+/** La celda del IMEI: el IMEI y, si es un vendido o de baja, la línea ámbar de hoy con «ignorar» al final. */
+function celdaImei(imei) {
+  let html = `<button class="link mono" data-abrir="${imei}">${imei}</button>`
+  if (!fuera(imei)) return html
+  const m = S.m[imei]
+  const final = m.nsys.tipo === 'vendido' ? 'haz antes la devolución en NSYS' : 'míralo antes en NSYS'
+  html += `<span class="vuelta">${textoNsys(imei)} · el taller lo tiene desde el ${m.taller}: ${final}</span>`
+  if (S.salio[imei]) html += `<span class="vuelta otra">${S.salio[imei]}</span>`
+  return html
+}
+/** «ignorar», en rojo, solo en un vendido o de baja (la fila ámbar); como «descartar» en «No está en NSYS». */
+const botonIgnorar = (imei) => !fuera(imei) ? '' : `<button class="link ign" data-ignorar="${imei}"
+    title="No ha vuelto: quitarlo de las listas hasta que NSYS lo tenga otra vez en la empresa (o el taller le haga un trabajo nuevo)" aria-label="Ignorar ${imei}">ignorar</button>`
+function celdaHecho(v, imei) {
+  const h = hecho(v, imei)
+  if (h) return `<span class="marca-h" title="Marcado por Supertécnico 1 a las ${h}">✓ Hecho ${h}</span><br><button class="link" style="font-size:11px" data-deshacer="${v}|${imei}">deshacer</button>`
+  return `<button class="btn peq" data-hecho="${v}|${imei}">Hecho</button>${botonIgnorar(imei)}`
+}
+const resaltar = (texto, parte) => texto.replace(parte, `<span class="resalta">${parte}</span>`)
+
+function tablaColor() {
+  const fs = visibles('color')
+  const n = pendientes('color').length
+  const cuerpo = fs.map((f) => `<tr class="${hecho('color', f.imei) ? 'hecho' : ''}"><td>${celdaImei(f.imei)}</td><td class="nw">${S.m[f.imei].modelo}</td>
+      <td class="nw"><span class="pc">${f.de} → ${f.a}</span>${f.tambienGrado ? '<span class="gr">también en «Cambio de grado» (después)</span>' : ''}</td>
+      <td>${f.hoy}</td><td><b>${resaltar(f.poner, f.a)}</b><span class="gr">grado ${f.grado} (el de NSYS hoy)</span></td>
+      <td style="min-width:220px">${f.porQue}</td><td class="nw">${f.desde}</td><td class="nw">${celdaHecho('color', f.imei)}</td></tr>`).join('')
+  return tabla(['IMEI', 'Modelo', 'Color', 'En NSYS hoy', 'Poner en NSYS', 'Por qué', 'Desde'], cuerpo, n, 'color', 'No hay móviles con el color por cambiar en NSYS.')
+}
+function tablaGrado() {
+  const fs = visibles('grado')
+  const n = pendientes('grado').length
+  const cuerpo = fs.map((f) => `<tr class="${hecho('grado', f.imei) ? 'hecho' : ''}"><td>${celdaImei(f.imei)}</td><td class="nw">${S.m[f.imei].modelo}</td>
+      <td class="nw"><span class="pg">${f.de} → ${f.a}</span>${f.conColor ? '<span class="gr">primero su cambio de color</span>' : ''}</td>
+      <td>${f.producto}</td><td style="min-width:220px">${f.porQue}</td><td class="nw">${f.desde}</td><td class="nw">${celdaHecho('grado', f.imei)}</td></tr>`).join('')
+  return tabla(['IMEI', 'Modelo', 'Grado', 'Producto en NSYS hoy', 'Por qué', 'Desde'], cuerpo, n, 'grado', 'No hay móviles con el grado por cambiar en NSYS.')
+}
+function tablaRevisar() {
+  const fs = visibles('revisar')
+  const cuerpo = fs.map((f) => `<tr><td>${celdaImei(f.imei)}</td><td class="nw">${S.m[f.imei].modelo}</td>
+      <td style="min-width:280px"><span class="etq ${f.tipo}">${f.etq}</span><span style="display:block">${f.que}</span></td>
+      <td style="min-width:220px;font-size:12px">${f.hacer}</td><td class="nw">${f.rep}</td>
+      <td class="nw">${f.tipo === 'av' ? '<button class="btn peq">✓ Revisado</button> ' : ''}<button class="btn peq" data-abrir="${f.imei}">Corregir…</button>${botonIgnorar(f.imei)}</td></tr>`).join('')
+  return tabla(['IMEI', 'Modelo', 'Qué pasa', 'Qué hacer', 'Reparación', ''], cuerpo, null, 'revisar', 'No hay nada que revisar a mano.')
+}
+function tabla(columnas, cuerpo, n, v, vacio) {
+  const cab = columnas.map((c) => `<th>${c}</th>`).join('') + (n === null ? '' : `<th><button class="btn peq" data-todo="${v}" ${n ? '' : 'disabled'}>✓ Marcar todo (${n})</button></th>`)
+  const cols = columnas.length + (n === null ? 0 : 1)
+  return `<div class="tabla-w"><table class="t" aria-label="${NOMBRE[v]}"><thead><tr>${cab}</tr></thead>
+    <tbody>${cuerpo || `<tr><td colspan="${cols}" class="vacio">${vacio}</td></tr>`}</tbody></table></div>${pieIgnorados(v)}`
+}
+/** «Ver ignorados (n)» al pie: los ignorados que saldrían en esta tarjeta; «deshacer» los devuelve a las tres. */
+function pieIgnorados(v) {
+  const imeis = ignoradosDe(v)
+  if (imeis.length === 0) { S.ver[v] = false; return '' }
+  const abierto = S.ver[v]
+  const boton = `<div class="pie-ign"><button class="link" data-ver="${v}">${abierto ? 'Ocultar ignorados' : `Ver ignorados (${imeis.length})`}</button></div>`
+  if (!abierto) return boton
+  const ordenados = imeis.sort((a, b) => S.ign[b].orden - S.ign[a].orden)
+  return boton + `<div class="tabla-w"><table class="t ignt" aria-label="Ignorados de ${NOMBRE[v]}"><thead><tr><th>IMEI</th><th>Modelo</th><th>En NSYS</th><th>Ignorado</th><th></th></tr></thead><tbody>${ordenados.map((i) =>
+    `<tr><td class="nw mono">${i}</td><td class="nw">${S.m[i].modelo}</td><td class="nw">${textoNsys(i)}</td><td class="nw">${S.ign[i].por} · ${S.ign[i].en}</td>
+     <td class="nw"><button class="link" style="font-size:11px" data-recuperar="${i}" aria-label="Deshacer ignorar ${i}">deshacer</button></td></tr>`).join('')}</tbody></table></div>`
+}
+
+function pintar() {
+  $('arriba').innerHTML = `<div class="tabs"><button>Móviles</button><button class="on">Por pasar a NSYS${num(total())}</button><button>Qué revisar</button></div>`
+  const tiles = ['color', 'grado', 'noesta', 'revisar'].map((v) => {
+    const big = v === 'noesta' ? NO_ESTA : visibles(v).length
+    const h = v === 'color' || v === 'grado' ? visibles(v).filter((f) => hecho(v, f.imei)).length : 0
+    const extra = h ? ` · ${h} hecho${h === 1 ? '' : 's'}` : ''
+    const p = enPlantilla().length
+    const pie = v === 'color' ? `<button class="btn pri peq" data-plantilla="1" ${p ? '' : 'disabled'}>⬇ Descargar plantilla${p ? ` (${p})` : ''}</button>`
+      : v === 'grado' ? `<button class="btn peq">Copiar lista (${N.grado()})</button>`
+      : v === 'noesta' ? `<button class="btn pri peq">⬇ Descargar plantilla (${NO_ESTA})</button>` : '<button class="btn peq">Ver</button>'
+    return `<div class="tile ${v} ${S.sub === v ? 'on' : ''}" data-sub="${v}"><div class="tt">${NOMBRE[v]}</div>
+      <div class="big">${big}<small>móvil${big === 1 ? '' : 'es'}${extra}</small></div><div class="ex">${EX[v]}</div><div class="pie">${pie}</div></div>`
+  }).join('')
+  const cuerpo = S.sub === 'color' ? tablaColor() : S.sub === 'grado' ? tablaGrado() : S.sub === 'revisar' ? tablaRevisar()
+    : '<div class="vacio" style="padding:24px">«No está en NSYS» no cambia en este prototipo.</div>'
+  const ayuda = AYUDA[S.sub] ? `<p class="ayuda">${AYUDA[S.sub]}</p>` : ''
+  $('contenido').innerHTML = `<div class="tiles">${tiles}</div>${ayuda}${cuerpo}`
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'avisoX') { cerrarAviso(); return }
+  const b = e.target.closest('button, .tile'); if (!b) return
+  if (b.id === 'reiniciar') { reiniciar(); pintar(); avisar('Datos de ejemplo de nuevo'); return }
+  if (b.dataset.ignorar) {
+    e.stopPropagation()
+    const i = b.dataset.ignorar
+    S.ign[i] = { por: 'Supertécnico 1', en: `${HOY} ${hora()}`, orden: S.orden++, superado: false }
+    delete S.salio[i]
+    avisar(`Ignorado «${i}»: sale en «Ver ignorados» hasta que vuelva`); pintar(); return
+  }
+  if (b.dataset.recuperar) { const i = b.dataset.recuperar; delete S.ign[i]; avisar(`«${i}» vuelve a las listas`); pintar(); return }
+  if (b.dataset.ver) { S.ver[b.dataset.ver] = !S.ver[b.dataset.ver]; pintar(); return }
+  if (b.id === 'simTrabajo') {
+    const activos = Object.keys(S.ign).filter(ignorado).sort((a, c) => S.ign[c].orden - S.ign[a].orden)
+    if (activos.length === 0) { avisar('Ignora algún móvil primero'); return }
+    const i = activos[0]; const x = S.ign[i]
+    x.superado = true
+    S.salio[i] = `Salió otra vez: trabajo nuevo A20261106_31 después de que ${x.por} lo ignorara el ${x.en}`
+    avisar(`«${i}» vuelve en ámbar: tiene un trabajo nuevo del taller`); pintar(); return
+  }
+  if (b.id === 'simDevolucion') {
+    const activos = Object.keys(S.ign).filter(ignorado)
+    const ambar = Object.keys(S.m).filter((i) => fuera(i))
+    const i = activos.includes('350000000000157') ? '350000000000157' : activos[0] || ambar[0]
+    if (!i) { avisar('No queda ningún vendido o de baja'); return }
+    S.m[i].nsys = null; delete S.ign[i]; delete S.salio[i]
+    avisar(`Importación: NSYS tiene otra vez «${i}» en la empresa (In process). Sale sin ámbar y entra en la plantilla`); pintar(); return
+  }
+  if (b.dataset.plantilla) {
+    e.stopPropagation()
+    const p = enPlantilla().length
+    const ambar = pendientes('color').filter((f) => fuera(f.imei)).length
+    avisar(`Descargado «NSYS_color_2026-11-06.xlsx» · ${plural(p, 'móvil', 'móviles')}${ambar ? `. ${ambar} ${ambar === 1 ? 'ha vuelto y no va' : 'han vuelto y no van'}: haz antes la devolución en NSYS` : ''}`)
+    return
+  }
+  if (b.dataset.hecho) { S.marca[b.dataset.hecho] = hora(); pintar(); return }
+  if (b.dataset.deshacer) { delete S.marca[b.dataset.deshacer]; pintar(); return }
+  if (b.dataset.todo) { e.stopPropagation(); const v = b.dataset.todo; const h = hora(); pendientes(v).forEach((f) => { S.marca[`${v}|${f.imei}`] = h }); pintar(); return }
+  if (b.dataset.abrir) { e.stopPropagation(); avisar(`En la app: abre el detalle de ${b.dataset.abrir}`); return }
+  if (b.dataset.sub) { S.sub = b.dataset.sub; pintar(); return }
+})
+pintar()
+</script>
+</body>
+</html>
