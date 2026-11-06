@@ -55,8 +55,8 @@ Los móviles que ya han pasado por esto se arreglan aparte, antes de esta versi�
 - Al pulsarlo, se abre «Guardar como» con el nombre ya puesto, `Cajas_color_AAAA-MM-DD.xlsx` (fecha de Madrid), y después se
   pide el Excel, como en «Qué revisar» (0.9.22.1: si se esperara al servidor, el navegador perdería la descarga). Cancelar no
   pide nada.
-- Al guardarlo sale un aviso: «Descargado Cajas_color_2026-11-06.xlsx: 12 móviles en 3 cajas» (en singular, «1 móvil en 1
-  caja»). «sin caja» cuenta como una caja más. Un error sale en el diálogo de siempre.
+- Al guardarlo sale un aviso con el formato de los de la plantilla: «Descargado «Cajas_color_2026-11-06.xlsx» · 12 móviles en
+  3 cajas» (en singular, «1 móvil en 1 caja»). «sin caja» cuenta como una caja más. Un error sale en el diálogo de siempre.
 
 ### 3.3 El Excel
 
