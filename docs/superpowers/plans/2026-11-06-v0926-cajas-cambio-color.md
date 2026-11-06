@@ -890,8 +890,10 @@ cd /c/Users/dev/Documents/wt/web-0926-cajas && set -a && . ~/.env.e2e && set +a 
   CHANGELOG; gitlinks del servidor y de la web en la raíz. Los tags `v0.9.26` (servidor y web), cuando el usuario lo diga. Los
   worktrees y las ramas se borran después, también con su OK.
 - [ ] **Step 6: Avisar de los pedidos:** ya pueden traer `main` a sus ramas (`dev_v0926_pedidos`, ahora 0.9.27) y renumerarse
-  (CHANGELOG, `package.json`, spec, plan y memoria). En el servidor chocarán `FilaColorNsys`/`TarjetasNsys` solo si los pedidos
-  los tocan; en la web, `CHANGELOG.md`, `package.json`/lock y quizá `porPasar.ts`.
+  (CHANGELOG, `package.json`, spec, plan y memoria; y la última línea de `docs/novedades/NOVEDADES-v0.9.27.md` de la raíz, que
+  aún dice «eso llegará en la 0.9.27»: pasa a «en una versión posterior» o a la 0.9.28). En el servidor chocarán
+  `FilaColorNsys`/`TarjetasNsys` solo si los pedidos los tocan; en la web, `CHANGELOG.md`, `package.json`/lock y quizá
+  `porPasar.ts`.
 - [ ] **Step 7: Registro:** el resultado en `Apuntes/despliegue_preprod.md` y `Apuntes/despliegue_vdc_produccion.md`; en
   `Apuntes/plan-futuro.md`, la entrada de la frase de la ayuda de «Cambio de color» (pendiente de la 0.9.22) como hecha; y la
   memoria del proyecto al día.
