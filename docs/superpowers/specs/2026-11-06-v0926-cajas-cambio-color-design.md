@@ -1,7 +1,8 @@
-# 0.9.25.1 — «Descargar cajas» en «Cambio de color»
+# 0.9.26 — «Descargar cajas» en «Cambio de color»
 
-Fecha: 2026-11-06. Estado: **diseño aprobado** en el brainstorming del 06/11, pendiente de que el usuario revise esta spec y del
-plan. Número de versión propuesto: 0.9.25.1 (la 0.9.26 de pedidos sigue a la espera y no se renumera).
+Fecha: 2026-11-06. Estado: **spec aprobada** por el usuario el 06/11, pendiente del plan.
+**Versión 0.9.26** (decisión del usuario, 06/11). Los pedidos, terminados y a la espera, pasan a ser la 0.9.27 y se renumeran al
+traer `main` a sus ramas.
 **Servidor + web, sin migración.** Se apoya en la 0.9.22 (tarjeta «Cambio de color» y su plantilla, spec
 `2026-10-25-v0922-plantillas-nsys-design.md` §3.2 y §4) y en la 0.9.25 (el Excel para imprimir de «Qué revisar»,
 `POST /api/stock-telefonos/que-revisar/excel` con `HojaImprimible`, spec `2026-11-04-v0925-que-revisar-design.md` §10.3).
@@ -116,7 +117,7 @@ pueden borrar todos de una vez, que estaba pendiente desde la 0.9.22:
 - **`ListasPorPasar.tsx`:** la columna «Caja» de `ListaColor`.
 - **`PorPasarNsys.tsx`:** en la tarjeta de color, `boton('color')` devuelve los dos botones. «Descargar cajas» usa
   `elegirDestino` y `useDescargarExcel`, como «Qué revisar».
-- **Versión 0.9.25.1:** `package.json` y su lock, `CHANGELOG.md`, y `NOVEDADES-v0.9.25.1.md` en la raíz.
+- **Versión 0.9.26:** `package.json` y su lock, `CHANGELOG.md`, y `NOVEDADES-v0.9.26.md` en la raíz.
 
 ### 5.3 Compatibilidad
 
