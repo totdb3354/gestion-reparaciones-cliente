@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · «Fuera de su caja» (F, FD y RMA)</title>
+<style>
+  :root {
+    --navy: #071a3a; --fondo: #dfe3ea; --tinta: #14213d; --gris: #6b7a90; --borde: #e3e7ee;
+    --listos-tx: #2f7d3b; --tal: #7c3aed; --crema: #f5efd6; --amarillo: #f1e356; --caja: #0d9488;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; color: var(--tinta); background: var(--fondo);
+         min-height: 100vh; display: flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; color: inherit; }
+
+  .proto { flex: none; background: #3b0764; color: #fff; display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; flex-wrap: wrap; }
+  .proto .t { font-weight: 700; margin-right: 6px; }
+  .proto .sep { width: 1px; height: 18px; background: #7c3aed; margin: 0 4px; }
+  .proto .accion { background: #f1e356; color: #001232; border: 0; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; font-size: 12px; }
+  .proto .accion.gris { background: #47536a; color: #fff; }
+
+  .guia { background: #f4f1fb; border-bottom: 1px solid #d9cff3; padding: 8px 16px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; font-size: 12px; line-height: 1.45; }
+  .guia h2 { margin: 0 0 3px; font-size: 13px; color: #3b0764; }
+  .guia ol { margin: 0; padding-left: 18px; }
+  .guia p { margin: 0 0 4px; }
+
+  header { height: 50px; flex: none; background: var(--navy); color: #fff; display: flex; align-items: center; padding: 0 20px; gap: 14px; }
+  header .logo { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50% 50% 50% 0; }
+  header .app { font-weight: 700; } header .app span { font-weight: 400; }
+  header .usu { margin-left: auto; font-weight: 600; }
+  .cuerpo { flex: 1; display: flex; min-height: 0; }
+  nav { width: 190px; flex: none; background: #fff; padding: 12px 8px; }
+  nav .sec { font-size: 11px; font-weight: 700; color: #3c4a63; margin: 10px 10px 6px; }
+  nav .it { padding: 7px 12px; border-radius: 10px; font-weight: 600; color: #22314f; }
+  nav .it.on { background: var(--navy); color: #fff; }
+
+  main { flex: 1; min-width: 0; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .titulo { display: flex; align-items: center; gap: 12px; }
+  .titulo h1 { margin: 0; font-size: 21px; }
+  .nsys { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: #e3f5e6; color: var(--listos-tx); border: 1px solid #9fd8aa; font-size: 12px; font-weight: 600; }
+  .card { background: #fff; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  .tabs { display: flex; border: 1px solid #cdd4df; border-radius: 8px; overflow: hidden; width: max-content; background: #fff; }
+  .tabs button { border: 0; border-right: 1px solid #cdd4df; background: #fff; padding: 6px 14px; font-weight: 600; cursor: default; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on { background: var(--navy); color: #fff; }
+  .num { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; background: var(--tal); color: #fff; font-size: 11px; text-align: center; }
+  .num.cero { background: #c3cad6; }
+
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .tile { border: 1.5px solid var(--borde); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; background: #fbfcfe; border-top-width: 4px; }
+  .tile:hover { border-color: #b8c2d3; }
+  .tile.on { border-color: var(--navy); background: #fff; box-shadow: 0 0 0 2px rgba(7,26,58,.12); }
+  .tile.color { border-top-color: #7c3aed; } .tile.grado { border-top-color: #2563eb; } .tile.noesta { border-top-color: #dc2626; }
+  .tile.revisar { border-top-color: #d97706; } .tile.cajas { border-top-color: var(--caja); }
+  .tile .tt { font-weight: 700; font-size: 13px; }
+  .tile .nuevo { font-size: 10px; font-weight: 700; background: #ccfbf1; color: #0f766e; border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+  .tile .big { font-size: 26px; font-weight: 800; line-height: 1; }
+  .tile .big small { font-size: 12px; font-weight: 600; color: var(--gris); margin-left: 4px; }
+  .tile .ex { font-size: 11.5px; color: var(--gris); min-height: 62px; line-height: 1.35; }
+  .tile .pie { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+  .ayuda { font-size: 11.5px; color: var(--gris); max-width: 900px; line-height: 1.45; margin: 0; }
+  .btn { height: 32px; border: 1px solid #b8c2d3; background: #fff; border-radius: 8px; padding: 0 12px; font-weight: 600; color: #22314f; cursor: pointer; white-space: nowrap; }
+  .btn:hover:not(:disabled) { background: #f2f5f9; }
+  .btn.pri { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .btn:disabled { opacity: .42; cursor: not-allowed; }
+  .btn.peq { height: 26px; padding: 0 9px; font-size: 12px; }
+
+  .tabla-w { border: 1px solid var(--borde); border-radius: 8px; overflow: auto; }
+  table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.t th { background: #fbf6ea; text-align: left; padding: 7px 8px; font-weight: 700; color: #2b3a55; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  table.t td { padding: 6px 8px; border-top: 1px solid #eef1f5; vertical-align: top; }
+  table.t td.nw { white-space: nowrap; }
+  .mono { font-family: Consolas, monospace; font-size: 11.5px; }
+  .link { color: var(--navy); cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+  .link:hover { text-decoration: underline; }
+  .gr { display: block; font-size: 11px; color: var(--gris); }
+  .vacio { padding: 14px 10px; color: var(--gris); font-size: 12px; }
+
+  /* La cabecera de cada grupo: la caja que toca, cuántos y «Copiar IMEIs». */
+  tr.grupo td { background: #f0fdfa; border-top: 1px solid #99f6e4; padding: 7px 8px; }
+  tr.grupo .linea { display: flex; align-items: center; gap: 10px; }
+  tr.grupo .caja { font-weight: 700; font-size: 13px; }
+  tr.grupo .cuantos { color: var(--gris); font-size: 12px; }
+  tr.grupo .btn { margin-left: auto; }
+  .pgr { display: inline-block; border-radius: 4px; padding: 0 6px; font-weight: 700; background: #e5e7eb; color: #374151; }
+  .sincaja { color: #b26a00; font-weight: 600; }
+
+  .aviso { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 10px;
+           min-width: 320px; max-width: min(600px, 92vw); background: var(--navy); color: var(--crema); border-radius: 10px; padding: 12px 10px 15px 14px;
+           font-size: 13px; font-weight: 600; box-shadow: 0 8px 22px rgba(0,0,0,.25); overflow: hidden; }
+  .aviso .ico { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #2f9e44; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .aviso .txt { flex: 1; line-height: 1.35; }
+  .aviso .x { flex: none; width: 24px; height: 24px; border: 0; background: transparent; color: var(--crema); opacity: .7; font-size: 16px; line-height: 1; cursor: pointer; border-radius: 6px; }
+  .aviso .barra { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.1); }
+  .aviso .barra i { display: block; height: 100%; background: var(--amarillo); transform-origin: left; animation: consume linear forwards; }
+  @keyframes consume { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+</style>
+</head>
+<body>
+
+<div class="proto">
+  <span class="t">Prototipo · tarjeta «Fuera de su caja» para los F, FD y RMA (datos inventados)</span>
+  <span class="sep"></span>
+  <button class="accion" id="simImportacion">Simular importación: los de «CF021» ya están recolocados</button>
+  <button class="accion" id="simTrabajo">Simular: el taller abre un trabajo a uno</button>
+  <button class="accion gris" id="reiniciar">Reiniciar</button>
+</div>
+
+<div class="guia">
+  <div>
+    <h2>Qué cambia</h2>
+    <p>«Por pasar a NSYS» gana una <b>quinta tarjeta, «Fuera de su caja»</b>: los móviles con grado F, FD o RMA que NSYS tiene en
+    una caja que no es la de su grado (F → «CF021», FD → «Desguace», RMA → «Funcionalidad pendiente»).</p>
+    <p>La lista va <b>agrupada por la caja que toca</b> y cada grupo tiene <b>«Copiar IMEIs»</b>, para pegarlos en NSYS y cambiarles
+    la «Location» de una vez. No lleva «Hecho»: cada fila se va sola.</p>
+  </div>
+  <div>
+    <h2>Qué probar</h2>
+    <ol>
+      <li>La tarjeta nueva es la última; su número suma en el de la pestaña.</li>
+      <li>«Copiar IMEIs (3)» del grupo «CF021»: copia de verdad los tres IMEIs, uno por línea (pégalos en un bloc de notas).</li>
+      <li>Mira las filas: la caja de hoy como la escribe NSYS (y cómo la llama el ERP), un «sin caja» y un F que el taller ha puesto y NSYS aún no sabe.</li>
+      <li>«Simular importación…»: el grupo «CF021» desaparece y bajan los números.</li>
+      <li>«Simular: el taller abre un trabajo…»: ese móvil deja de salir mientras el taller lo tenga.</li>
+    </ol>
+  </div>
+</div>
+
+<header><span class="logo"></span><span class="app">FSGR: <span>Gestión de Stock y Reparaciones (prototipo)</span></span><span class="usu">Supertécnico 1 · Supertécnico</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">REPARACIONES</div><div class="it">Asignaciones</div><div class="it">Historial</div><div class="it">IMEIs</div>
+    <div class="sec">STOCK</div><div class="it">Stock actual</div><div class="it">Pedidos</div><div class="it">Proveedores</div>
+    <div class="sec">TELÉFONOS</div><div class="it on">Stock de teléfonos</div>
+  </nav>
+  <main>
+    <div class="titulo"><h1>Stock de teléfonos</h1><span class="nsys">NSYS: hace 8 min</span></div>
+    <div id="arriba"></div>
+    <div class="card" id="contenido"></div>
+  </main>
+</div>
+<div id="aviso"></div>
+
+<script>
+const AVISO_MS = 5000
+const OTRAS = { color: 3, grado: 4, noesta: 9, revisar: 2 }
+// La caja de cada grado, en el orden en que salen los grupos.
+const GRUPOS = [
+  { caja: 'CF021', grado: 'F' },
+  { caja: 'Desguace', grado: 'FD' },
+  { caja: 'Funcionalidad pendiente', grado: 'RMA' },
+]
+// Datos inventados. caja: la de NSYS hoy ('' = sin caja); erp: cómo la enseña el ERP; nsys: el grado de NSYS si el taller lo ha cambiado.
+const FILAS0 = [
+  { imei: '350000000000214', modelo: 'iPhone 12 64GB', color: 'Black', grado: 'F', caja: 'CAJA REP. OFICINA', erp: 'Taller · Reparación' },
+  { imei: '350000000000222', modelo: 'iPhone 13 128GB', color: 'Midnight', grado: 'F', nsys: 'B', caja: 'CAJA REP. OFICINA', erp: 'Taller · Reparación' },
+  { imei: '350000000000230', modelo: 'iPhone 11 64GB', color: 'White', grado: 'F', caja: '', erp: 'En revisión' },
+  { imei: '350000000000248', modelo: 'iPhone XR 64GB', color: 'Red', grado: 'FD', caja: 'Funcionalidad pendiente', erp: 'Devolución' },
+  { imei: '350000000000255', modelo: 'iPhone 14 eSIM 128GB', color: 'Purple', grado: 'RMA', caja: 'CAJA REP. OFICINA', erp: 'Taller · Reparación' },
+  { imei: '350000000000263', modelo: 'iPhone 13 Pro 256GB', color: 'Graphite', grado: 'RMA', caja: '', erp: 'En revisión' },
+]
+const NOMBRE = { color: 'Cambio de color', grado: 'Cambio de grado', noesta: 'No está en NSYS', revisar: 'Revisar a mano', cajas: 'Fuera de su caja' }
+const EX = {
+  color: 'Cambia el producto: en NSYS, bórralo y súbelo otra vez con la plantilla (con el grado que tiene hoy en NSYS).',
+  grado: 'Cambia el grado: se corrige aparte en NSYS, uno a uno. Si el móvil también cambia de color, primero el color.',
+  noesta: 'NSYS no lo conoce: dalo de alta con la plantilla (rellena lo que falta).',
+  revisar: 'Sin grado en NSYS o lo que el ERP no supo calcular: corrígelo en su ficha.',
+  cajas: 'F, FD o RMA en una caja que no es la de su grado: llévalo a su caja y cámbiale la «Location» en NSYS.',
+}
+const AYUDA = 'Móviles con grado F, FD o RMA que NSYS tiene en la empresa y fuera de la caja de su grado: los F van en «CF021», los FD en «Desguace» y los RMA en «Funcionalidad pendiente». Copia los IMEIs de cada caja, búscalos en NSYS y cámbiales la «Location». Cada fila se va sola cuando la importación (cada 30 min) ve la caja nueva. No salen los que tienen un trabajo abierto del taller ni los de pedido.'
+
+const S = {}
+function reiniciar() { S.sub = 'cajas'; S.filas = FILAS0.map((f) => ({ ...f })) }
+reiniciar()
+
+const $ = (id) => document.getElementById(id)
+const deGrupo = (g) => S.filas.filter((f) => f.grado === g.grado)
+const palabra = (n) => (n === 1 ? 'móvil' : 'móviles')
+const total = () => OTRAS.color + OTRAS.grado + OTRAS.noesta + OTRAS.revisar + S.filas.length
+const num = (n) => `<span class="num ${n === 0 ? 'cero' : ''}">${n}</span>`
+
+function avisar(texto) {
+  clearTimeout(avisar.h)
+  $('aviso').innerHTML = `<div class="aviso" role="status"><span class="ico">✓</span><span class="txt">${texto}</span>
+    <button class="x" id="avisoX" aria-label="Cerrar aviso" title="Cerrar">×</button><div class="barra"><i style="animation-duration:${AVISO_MS}ms"></i></div></div>`
+  avisar.h = setTimeout(cerrarAviso, AVISO_MS)
+}
+function cerrarAviso() { clearTimeout(avisar.h); $('aviso').innerHTML = '' }
+
+function tablaCajas() {
+  if (S.filas.length === 0) return `<div class="tabla-w"><div class="vacio">No hay móviles F, FD o RMA fuera de su caja.</div></div>`
+  const cuerpo = GRUPOS.map((g) => {
+    const fs = deGrupo(g)
+    if (fs.length === 0) return ''
+    const cab = `<tr class="grupo"><td colspan="5"><div class="linea"><span class="caja">Llevar a «${g.caja}»</span>
+      <span class="cuantos">grado ${g.grado} · ${fs.length} ${palabra(fs.length)}</span>
+      <button class="btn peq" data-copiar="${g.grado}" aria-label="Copiar IMEIs para ${g.caja}">Copiar IMEIs (${fs.length})</button></div></td></tr>`
+    return cab + fs.map((f) => `<tr><td class="nw"><button class="link mono" data-abrir="${f.imei}">${f.imei}</button></td>
+      <td class="nw">${f.modelo}</td><td class="nw">${f.color}</td>
+      <td class="nw"><span class="pgr">${f.grado}</span>${f.nsys ? `<span class="gr">en NSYS aún ${f.nsys}: también en «Cambio de grado»</span>` : ''}</td>
+      <td class="nw">${f.caja ? f.caja : '<span class="sincaja">sin caja</span>'}<span class="gr">${f.erp}</span></td></tr>`).join('')
+  }).join('')
+  return `<div class="tabla-w"><table class="t" aria-label="Fuera de su caja"><thead><tr><th>IMEI</th><th>Modelo</th><th>Color</th><th>Grado</th><th>Caja de hoy en NSYS</th></tr></thead>
+    <tbody>${cuerpo}</tbody></table></div>`
+}
+
+function pintar() {
+  $('arriba').innerHTML = `<div class="tabs"><button>Móviles</button><button class="on">Por pasar a NSYS${num(total())}</button><button>Qué revisar</button></div>`
+  const tiles = ['color', 'grado', 'noesta', 'revisar', 'cajas'].map((v) => {
+    const big = v === 'cajas' ? S.filas.length : OTRAS[v]
+    const pie = v === 'color' ? `<button class="btn pri peq">⬇ Descargar plantilla (${big})</button>`
+      : v === 'grado' ? `<button class="btn peq">Copiar lista (${big})</button>`
+      : v === 'noesta' ? `<button class="btn pri peq">⬇ Descargar plantilla (${big})</button>` : '<button class="btn peq">Ver</button>'
+    return `<div class="tile ${v} ${S.sub === v ? 'on' : ''}" data-sub="${v}"><div class="tt">${NOMBRE[v]}${v === 'cajas' ? '<span class="nuevo">NUEVA</span>' : ''}</div>
+      <div class="big">${big}<small>${palabra(big)}</small></div><div class="ex">${EX[v]}</div><div class="pie">${pie}</div></div>`
+  }).join('')
+  const cuerpo = S.sub === 'cajas' ? `<p class="ayuda">${AYUDA}</p>${tablaCajas()}`
+    : `<div class="vacio" style="padding:24px">«${NOMBRE[S.sub]}» no cambia en este prototipo.</div>`
+  $('contenido').innerHTML = `<div class="tiles">${tiles}</div>${cuerpo}`
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'avisoX') { cerrarAviso(); return }
+  const b = e.target.closest('button, .tile'); if (!b) return
+  if (b.id === 'reiniciar') { reiniciar(); pintar(); avisar('Datos de ejemplo de nuevo'); return }
+  if (b.dataset.copiar) {
+    const g = GRUPOS.find((x) => x.grado === b.dataset.copiar)
+    const imeis = deGrupo(g).map((f) => f.imei)
+    const texto = imeis.join('\n')
+    window.ultimoCopiado = texto
+    if (navigator.clipboard) navigator.clipboard.writeText(texto).catch(() => {})
+    avisar(`Copiado: ${imeis.length} ${imeis.length === 1 ? 'IMEI' : 'IMEIs'} para «${g.caja}». Búscalos en NSYS y cámbiales la «Location»`)
+    return
+  }
+  if (b.id === 'simImportacion') {
+    const n = S.filas.filter((f) => f.grado === 'F').length
+    if (n === 0) { avisar('Ya no queda ninguno para «CF021»'); return }
+    S.filas = S.filas.filter((f) => f.grado !== 'F')
+    avisar(`Importación: NSYS tiene ${n} ${palabra(n)} más en «CF021». Salen de la lista`); pintar(); return
+  }
+  if (b.id === 'simTrabajo') {
+    const f = S.filas.find((x) => x.grado === 'RMA') || S.filas[0]
+    if (!f) { avisar('No queda ninguno en la lista'); return }
+    S.filas = S.filas.filter((x) => x !== f)
+    avisar(`El taller ha abierto un trabajo a «${f.imei}»: no sale mientras lo tenga`); pintar(); return
+  }
+  if (b.dataset.abrir) { e.stopPropagation(); avisar(`En la app: abre el detalle de ${b.dataset.abrir}`); return }
+  if (b.dataset.sub) { S.sub = b.dataset.sub; pintar(); return }
+})
+pintar()
+</script>
+</body>
+</html>
