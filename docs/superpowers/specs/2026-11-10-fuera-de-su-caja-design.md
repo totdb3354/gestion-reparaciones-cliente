@@ -4,7 +4,7 @@ Spec de diseño. Aprobada por el usuario en el brainstorming del 10/11/2026, con
 (`assets/2026-11-10-prototipo-fuera-de-su-caja.html`). **Servidor y web, sin base de datos.** Es la mejora que la 0.9.30
 dejó apuntada (§7 de `2026-11-10-v0930-grados-no-vendibles-design.md`).
 
-Número de versión: el siguiente libre al sacarla (hoy sería la 0.9.31). Lo decide el usuario al prepararla.
+Número de versión: **0.9.31** (decisión del usuario el 11/11: sale antes que los pedidos, que pasan a la 0.9.32).
 
 ## 1. El problema
 
@@ -62,7 +62,8 @@ La fila se va sola cuando la importación ve la caja buena, cuando el grado que 
 taller le abre un trabajo. Si el trabajo se cierra y sigue con ese grado fuera de su caja, vuelve a salir.
 
 **Un caso a saber.** Si el taller pone F a un móvil que NSYS sigue teniendo con B, sale en «Cambio de grado» y aquí. Las dos
-son verdad y son dos tareas distintas en NSYS. La fila lo dice (§5).
+son verdad y son dos tareas distintas en NSYS. La fila lo dice (§5). Con las reglas de hoy no puede pasar: «Corregir…» solo
+deja poner A, A-, B o C y ninguna pieza escribe F, FD ni RMA (revisión final, 11/11). Se deja preparado por si eso cambia.
 
 ## 4. Servidor
 
