@@ -1,4 +1,4 @@
-# 0.9.29 — ordenar por columna en «Stock de teléfonos»
+# 0.9.28 — ordenar por columna en «Stock de teléfonos»
 
 Spec de diseño. Aprobada por el usuario en el brainstorming del 10/11/2026. Sin prototipo (el cambio visual es una flecha en la
 cabecera). **Solo web**: sin servidor ni base de datos.
@@ -21,7 +21,7 @@ mayor a menor y de menor a mayor.
 | Bloques de «Revisar sin grado» | Se ordena **dentro de cada bloque**: «3 o más» y «Menos de 3» siguen en su sitio, con sus títulos y cifras. |
 | Excel de «Qué revisar» | Sale **en el orden de la pantalla**. |
 | Se recuerda | Al volver del detalle de un IMEI y al cambiar de modelo, de pestaña de capacidad, de vista o de tarjeta. Se pierde al cerrar sesión, como los filtros. |
-| Número | **0.9.29**, detrás de los pedidos (0.9.28). Si sale antes que los pedidos, se renumera. |
+| Número | **0.9.28** (decisión del usuario): sale antes que los pedidos, que esperaban como 0.9.28 y pasan a la **0.9.29**. |
 
 Descartado: pasar «Qué revisar» a la tabla compartida (`DataTable`) para tener una sola forma de ordenar (rehace una pantalla
 recién estrenada: bloques, fila elegida y panel), y ordenar a mano también en móviles (duplica lo que `DataTable` ya hace).
@@ -128,5 +128,5 @@ uno por tarjeta (las columnas no son las mismas), los dos `null` al empezar.
 
 ## 9. Entrega
 
-Una rama de la web (`dev_v0929_ordenar_columnas`). Novedades de la 0.9.29 en `docs/novedades/`. Despliegue de solo web, sin
+Una rama de la web (`dev_v0928_ordenar_columnas`). Novedades de la 0.9.28 en `docs/novedades/`. Despliegue de solo web, sin
 corte: se puede subir en horario.
