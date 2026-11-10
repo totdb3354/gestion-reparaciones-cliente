@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Pedidos como la hoja · v1</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --sel:#EAF1FF; --cab:#F6F7F9; --naranja:#FFE0B2; --naranja-tx:#B45309;
+          --ambar:#FFF6D6; --ambar-tx:#8A6100; --verde:#2f7d3b; --gris-fila:#8b93a1; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; }
+  button, input { font-family:inherit; color:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .proto button { background:#f1e356; color:#001232; border:0; border-radius:6px; padding:4px 10px; font-weight:700; cursor:pointer; font-size:12px; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:8px 16px; font-size:12px; line-height:1.5; }
+  .guia b { color:#3b0764; }
+  header { height:46px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; gap:14px; font-weight:700; }
+  header .usu { margin-left:auto; font-weight:600; }
+  .cuerpo { flex:1; display:flex; min-height:0; }
+  nav { width:170px; flex:none; background:#fff; padding:12px 8px; }
+  nav .sec { font-size:11px; font-weight:700; color:#3c4a63; margin:10px 10px 6px; }
+  nav .it { padding:7px 12px; border-radius:10px; font-weight:600; color:#22314f; }
+  nav .it.on { background:var(--azul-noche); color:#fff; }
+  main { flex:1; min-width:0; padding:14px 18px; display:flex; flex-direction:column; }
+  .titulo { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  h1 { margin:0; font-size:24px; color:var(--azul-medio); }
+  .pill { border-radius:10px; padding:2px 10px; font-size:11px; font-weight:700; background:var(--pill-bg); color:var(--azul-medio); border:1px solid var(--pill-borde); }
+  .pill.ok { background:#e3f5e6; color:var(--verde); border-color:#9fd8aa; margin-left:auto; }
+  .barra { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .barra input[type=text] { height:32px; width:280px; border:1px solid var(--borde); border-radius:8px; background:#fff; padding:0 10px; font-size:12px; }
+  .chip { height:30px; border:1px solid var(--borde); background:#fff; border-radius:16px; padding:0 14px; font-weight:600; font-size:12px; color:var(--azul-medio); cursor:pointer; }
+  .chip.on { background:var(--azul-noche); color:#fff; border-color:var(--azul-noche); }
+  .hoja { flex:1; min-height:0; overflow:auto; background:#fff; border-radius:10px; border:1px solid var(--borde); max-height:62vh; }
+  table { border-collapse:collapse; width:100%; }
+  th { position:sticky; top:0; background:var(--cab); text-align:left; padding:7px 10px; font-size:12px; border-bottom:1px solid var(--sep); border-right:1px solid #e3e6eb; z-index:2; }
+  th .letra { display:block; font-size:10px; color:#8b93a1; font-weight:600; }
+  td { padding:5px 10px; border-bottom:1px solid #e6e9ee; border-right:1px solid #eef0f3; white-space:nowrap; height:32px; }
+  td.n { color:#9aa2af; font-size:11px; text-align:right; width:44px; background:var(--cab); }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  tr.enviada td { color:var(--gris-fila); background:#fafbfc; }
+  tr.nueva td { animation:entra 2.5s; }
+  @keyframes entra { from { background:#d9f2dd; } to { background:#fff; } }
+  td.imei { padding:0; min-width:290px; position:relative; }
+  td.imei .celda { display:flex; align-items:center; gap:8px; padding:5px 10px; min-height:32px; cursor:pointer; font-family:Consolas,monospace; font-size:12.5px; }
+  td.imei .celda:hover { outline:2px solid #9db8e8; outline-offset:-2px; }
+  td.imei.vacia .celda { color:#9aa2af; font-family:inherit; font-style:italic; }
+  td.imei.mal { background:var(--naranja); }
+  td.imei.aviso { background:var(--ambar); }
+  tr.enviada td.imei .celda { cursor:default; }
+  .motivo { font-family:"Segoe UI",sans-serif; font-size:11px; font-weight:700; color:var(--naranja-tx); }
+  td.imei.aviso .motivo { color:var(--ambar-tx); }
+  .caja { font-family:"Segoe UI",sans-serif; font-size:11px; color:#6b7482; }
+  .desplegable { position:absolute; left:0; top:100%; z-index:5; width:470px; background:#fff; border:1px solid var(--azul-medio); border-radius:8px; box-shadow:0 8px 24px rgba(0,18,50,.25); padding:8px; white-space:normal; }
+  .desplegable input { width:100%; height:32px; border:1px solid var(--borde); border-radius:6px; padding:0 8px; font-family:Consolas,monospace; font-size:13px; margin-bottom:6px; }
+  .desplegable .tit { font-size:11px; font-weight:700; color:#6b7482; margin:6px 2px 4px; text-transform:uppercase; letter-spacing:.03em; }
+  .cand { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:12px; }
+  .cand:hover { background:var(--sel); }
+  .cand .im { font-family:Consolas,monospace; font-size:12.5px; font-weight:700; }
+  .cand .niv { margin-left:auto; font-size:11px; font-weight:700; border-radius:8px; padding:1px 8px; }
+  .niv.n1 { background:#e3f5e6; color:var(--verde); } .niv.n2 { background:#E0F2F1; color:#00796B; } .niv.n3 { background:var(--naranja); color:var(--naranja-tx); }
+  .desplegable .pie { display:flex; gap:8px; margin-top:6px; }
+  .desplegable .pie button { height:28px; border:1px solid var(--borde); background:#fff; border-radius:6px; padding:0 10px; font-weight:600; font-size:12px; cursor:pointer; }
+  .leyenda { display:flex; gap:16px; margin-top:8px; font-size:11.5px; color:#3c4a63; flex-wrap:wrap; align-items:center; }
+  .leyenda i { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-3px; margin-right:5px; border:1px solid #cfd4db; }
+</style>
+</head>
+<body>
+<div class="proto"><span class="t">PROTOTIPO · datos inventados</span>
+  <button onclick="llegaPedido()">Simular: llega un pedido nuevo de Amazon</button>
+  <button onclick="enviar()">Simular: se envía el pedido más antiguo</button>
+</div>
+<div class="guia">
+  <b>Qué probar:</b> 1) pulsa una celda de IMEI vacía: salen los recomendados; elige uno. 2) En otra, escribe a mano
+  <b>350000000000999</b> (un móvil de otro color) y pulsa Enter: se guarda en naranja con el motivo. 3) Pulsa una celda con IMEI para cambiarlo o quitarlo.
+  4) Usa los botones morados de arriba: la fila nueva entra sola por abajo; la enviada se queda en gris. 5) Prueba «Solo sin IMEI» y el buscador.
+</div>
+<header><span>FSGR: Gestión de reparaciones</span><span class="usu">Supertécnico 1</span></header>
+<div class="cuerpo">
+  <nav>
+    <div class="sec">TELÉFONOS</div>
+    <div class="it">Stock de teléfonos</div>
+    <div class="it on">Pedidos</div>
+    <div class="sec">TALLER</div>
+    <div class="it">Asignaciones</div>
+    <div class="it">Pendientes</div>
+  </nav>
+  <main>
+    <div class="titulo"><h1>Pedidos</h1><span class="pill" id="cuenta"></span><span class="pill ok">● ShippyPro · NSYS: al día (hace 2 min)</span></div>
+    <div class="barra">
+      <input type="text" id="buscar" placeholder="Pedido, plataforma, SKU o IMEI" oninput="pintar()">
+      <button class="chip" id="chipSin" onclick="alternar()">Solo sin IMEI</button>
+    </div>
+    <div class="hoja" id="hoja"><table>
+      <thead><tr><th></th>
+        <th><span class="letra">A</span>Fecha</th><th><span class="letra">C</span>Plataforma</th><th><span class="letra">D</span>SKU</th>
+        <th><span class="letra">E</span>IMEI</th><th><span class="letra">F</span>Pedido</th><th><span class="letra">H</span>Fecha compra</th></tr></thead>
+      <tbody id="filas"></tbody></table></div>
+    <div class="leyenda">
+      <span><i style="background:#fff"></i>cuadra</span>
+      <span><i style="background:var(--ambar)"></i>vale con aviso (Ms, B por A, en el taller)</span>
+      <span><i style="background:var(--naranja)"></i>no cuadra: mirar el motivo</span>
+      <span><i style="background:#fafbfc"></i><span style="color:var(--gris-fila)">en gris: ya enviado</span></span>
+      <span>Las filas las crea el ERP desde ShippyPro. Solo se teclea el IMEI.</span>
+    </div>
+  </main>
+</div>
+<script>
+// Datos inventados. stock: móviles de la empresa con su SKU que vale y su caja.
+const stock = [
+  { imei:'350000000000101', sku:'i14eSIM128AzulA', caja:'Listos' }, { imei:'350000000000102', sku:'i14eSIM128AzulA', caja:'Listos' },
+  { imei:'350000000000103', sku:'i14eSIM128AzulA', caja:'Taller · Glass', taller:'Técnico 2' }, { imei:'350000000000104', sku:'i14eSIM128AzulB', caja:'Listos' },
+  { imei:'350000000000105', sku:'i14eSIM128MedianocheA', caja:'Listos' },
+  { imei:'350000000000201', sku:'i13128RosaA', caja:'Listos' }, { imei:'350000000000202', sku:'i13128RosaMs', caja:'Listos' },
+  { imei:'350000000000203', sku:'i13128AzulA', caja:'Reparación' },
+  { imei:'350000000000301', sku:'i15PROeSIM256NegroA100', caja:'Listos' }, { imei:'350000000000302', sku:'i15PROeSIM256NegroA', caja:'Listos' },
+  { imei:'350000000000401', sku:'i16eSIM128AzulA', caja:'Listos' }, { imei:'350000000000402', sku:'i16eSIM128VerdeA', caja:'Listos' },
+  { imei:'350000000000999', sku:'i14eSIM128RojoA', caja:'Listos' },
+]
+let filas = [
+  { fecha:'06/11/2026', plat:'AMZ', sku:'i13128RosaA', imei:'350000000000210', pedido:'402-0000000-0000011', compra:'05/11/2026', enviada:true },
+  { fecha:'06/11/2026', plat:'Cliente Web A', sku:'i15PROeSIM256NegroA100', imei:'350000000000310', pedido:'W-10231', compra:'06/11/2026', enviada:true },
+  { fecha:'09/11/2026', plat:'AMZ', sku:'i14eSIM128AzulA', imei:'350000000000101', pedido:'402-0000000-0000012', compra:'08/11/2026' },
+  { fecha:'09/11/2026', plat:'AMZ', sku:'i14eSIM128AzulA', imei:'', pedido:'402-0000000-0000013', compra:'08/11/2026' },
+  { fecha:'10/11/2026', plat:'FNSK', sku:'i13128RosaA', imei:'350000000000202', pedido:'171-0000000-0000021', compra:'09/11/2026' },
+  { fecha:'10/11/2026', plat:'Cliente Web B', sku:'i15PROeSIM256NegroA100', imei:'', pedido:'W-10240', compra:'10/11/2026' },
+  { fecha:'10/11/2026', plat:'Cliente Web B', sku:'i15PROeSIM256NegroA100', imei:'', pedido:'W-10240', compra:'10/11/2026' },
+  { fecha:'10/11/2026', plat:'AMZ', sku:'i16eSIM128AzulA', imei:'', pedido:'402-0000000-0000014', compra:'09/11/2026' },
+  { fecha:'10/11/2026', plat:'AMZ', sku:'i13128RosaA', imei:'', pedido:'402-0000000-0000015', compra:'10/11/2026' },
+]
+let abierta = -1, soloSin = false, n = 16
+const base = s => s.replace(/(A|B|Ms)(100)?$/, '')
+const esAmazon = p => p === 'AMZ' || p === 'FNSK'
+function usado(imei, salvo) { return filas.findIndex((f, i) => i !== salvo && !f.enviada && f.imei === imei) }
+// Qué dice el ERP de un IMEI puesto en una fila
+function juzgar(f, i) {
+  if (!f.imei) return { clase:'vacia' }
+  if (f.enviada) return { clase:'' }
+  const m = stock.find(s => s.imei === f.imei)
+  if (!m) return { clase:'mal', motivo:'no está en NSYS' }
+  if (usado(f.imei, i) >= 0) return { clase:'mal', motivo:'ya está en otro pedido', caja:m.caja }
+  if (m.sku === f.sku) return m.taller ? { clase:'aviso', motivo:'en el taller con ' + m.taller, caja:m.caja } : { clase:'', caja:m.caja }
+  if (base(m.sku) !== base(f.sku)) return { clase:'mal', motivo:'otro modelo o color: es ' + m.sku, caja:m.caja }
+  if (m.sku.endsWith('Ms')) return { clase:'aviso', motivo:'es un Ms', caja:m.caja }
+  if (m.sku.endsWith('B') && esAmazon(f.plat)) return { clase:'aviso', motivo:'B por A', caja:m.caja }
+  return { clase:'mal', motivo:'otro grado o batería: es ' + m.sku, caja:m.caja }
+}
+function candidatos(f, i) {
+  return stock.filter(s => base(s.sku) === base(f.sku) && usado(s.imei, i) < 0).map(s => {
+    const igual = s.sku === f.sku
+    const nivel = igual && !s.taller ? 1 : igual ? 2 : 3
+    return { ...s, nivel, texto: nivel === 1 ? 'igual que el pedido' : nivel === 2 ? 'en el taller, acabará igual' : 'hay que transformarlo' }
+  }).sort((a, b) => a.nivel - b.nivel).slice(0, 5)
+}
+function pintar() {
+  const q = document.getElementById('buscar').value.trim().toLowerCase()
+  const cuerpo = document.getElementById('filas'); cuerpo.innerHTML = ''
+  filas.forEach((f, i) => {
+    if (soloSin && (f.imei || f.enviada)) return
+    if (q && ![f.plat, f.sku, f.imei, f.pedido].some(x => x.toLowerCase().includes(q))) return
+    const j = juzgar(f, i), tr = document.createElement('tr')
+    tr.className = (f.enviada ? 'enviada ' : '') + (f.nueva ? 'nueva' : ''); f.nueva = false
+    let celda = `<div class="celda" onclick="abrir(${i}, event)">${f.imei || 'pulsa para poner el IMEI…'}` +
+      (j.motivo ? `<span class="motivo">${j.motivo}</span>` : '') + (j.caja && !j.motivo ? `<span class="caja">${j.caja}</span>` : '') + '</div>'
+    if (abierta === i) {
+      const c = candidatos(f, i)
+      celda += `<div class="desplegable" onclick="event.stopPropagation()">
+        <input id="escribir" placeholder="Escribe o lee el IMEI y pulsa Enter" value="" onkeydown="if(event.key==='Enter')poner(${i},this.value.trim())">
+        <div class="tit">Recomendados para ${f.sku}</div>` +
+        (c.length ? c.map(x => `<div class="cand" onclick="poner(${i},'${x.imei}')"><span class="im">${x.imei}</span><span>${x.caja}</span>` +
+          (x.nivel === 3 ? `<span style="color:#6b7482">es ${x.sku}</span>` : '') + `<span class="niv n${x.nivel}">${x.texto}</span></div>`).join('')
+          : '<div style="padding:6px 8px;color:#6b7482">No hay ningún móvil de ese modelo, capacidad y color libre en stock.</div>') +
+        `<div class="pie">${f.imei ? `<button onclick="poner(${i},'')">Quitar el IMEI</button>` : ''}<button onclick="cerrar()">Cerrar</button></div></div>`
+    }
+    tr.innerHTML = `<td class="n">${n + i}</td><td>${f.fecha}</td><td>${f.plat}</td><td class="sku">${f.sku}</td>` +
+      `<td class="imei ${j.clase}">${celda}</td><td>${f.pedido}</td><td>${f.compra}</td>`
+    cuerpo.appendChild(tr)
+  })
+  const pend = filas.filter(f => !f.enviada), sin = pend.filter(f => !f.imei).length
+  document.getElementById('cuenta').textContent = `${filas.length} filas · ${pend.length} sin enviar · ${sin} sin IMEI`
+  const e = document.getElementById('escribir'); if (e) e.focus()
+}
+function abrir(i, ev) { ev.stopPropagation(); if (filas[i].enviada) return; abierta = abierta === i ? -1 : i; pintar() }
+function cerrar() { abierta = -1; pintar() }
+function poner(i, imei) { if (imei && !/^\d{15}$/.test(imei)) { alert('Un IMEI son 15 cifras'); return } filas[i].imei = imei; abierta = -1; pintar() }
+function alternar() { soloSin = !soloSin; document.getElementById('chipSin').classList.toggle('on', soloSin); pintar() }
+let serie = 16
+function llegaPedido() {
+  filas.push({ fecha:'10/11/2026', plat:'AMZ', sku: serie % 2 ? 'i14eSIM128AzulA' : 'i13128RosaA', imei:'', pedido:'402-0000000-00000' + serie++, compra:'10/11/2026', nueva:true })
+  pintar(); const h = document.getElementById('hoja'); h.scrollTop = h.scrollHeight
+}
+function enviar() { const f = filas.find(x => !x.enviada); if (f) { f.enviada = true; abierta = -1; pintar() } }
+document.addEventListener('click', () => { if (abierta >= 0) cerrar() })
+pintar(); document.getElementById('hoja').scrollTop = 1e6
+</script>
+</body>
+</html>
