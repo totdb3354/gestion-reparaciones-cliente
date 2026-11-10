@@ -47,10 +47,17 @@ el corte. Lo que hoy depende de la hoja fuera del ERP (§9) se diseña después 
 | Fecha compra | La fecha del pedido en el canal | no |
 
 - **Una fila por móvil:** un artículo con cantidad 3 son tres filas iguales.
-- **Orden:** como la hoja, lo más antiguo arriba y lo nuevo abajo; la pantalla se abre al final.
+- **Orden:** como la hoja, lo más antiguo arriba y lo nuevo abajo; la pantalla se abre al final. Sin páginas.
 - **Filas enviadas:** en gris, sin edición. No se borran.
-- **Arriba:** el título con el recuento (filas, sin enviar, sin IMEI), la píldora de las fuentes (ShippyPro y NSYS: cuándo se
-  leyeron y si fallaron), un buscador (pedido, plataforma, SKU o IMEI) y el filtro «Solo sin IMEI».
+- **Arriba:** el título con el recuento (filas, sin enviar, sin IMEI) y la píldora de las fuentes (ShippyPro y NSYS: cuándo se
+  leyeron y si fallaron).
+- **Filtro de fechas** (decisión del 10/11, en vez de páginas como las de NSYS): «Último mes» por defecto, «Últimos 3 meses»,
+  «Este año», «Todo» o un rango a mano. La tabla enseña todas las filas del periodo, seguidas. **Las filas sin enviar salen
+  siempre**, aunque sean anteriores al periodo.
+- **Buscador** (pedido, plataforma, SKU o IMEI): busca en **todo** el histórico, con el filtro de fechas puesto o no; es el
+  Control+F de la hoja. Si hay más de 500 resultados enseña los 500 más recientes y lo dice.
+- **Filtros por columna**, como los de la hoja: en la cabecera de Plataforma y de SKU se eligen los valores que se quieren ver;
+  en la de IMEI, «Solo sin IMEI». Se aplican sobre lo que el filtro de fechas o el buscador han traído.
 - **Refresco:** la tabla se sondea como las demás vistas; una fila nueva entra sola por abajo.
 
 ### 3.1 La celda del IMEI
@@ -136,8 +143,9 @@ desaparecen.
 
 ## 7. La API
 
-- `GET /api/pedidos/filas` — las filas con el aviso de cada IMEI. Paginada desde el final (las últimas N y «cargar anteriores»)
-  y con búsqueda en el servidor, para no pasar del límite de 15 s con el histórico entero.
+- `GET /api/pedidos/filas?desde=&hasta=&buscar=` — las filas con el aviso de cada IMEI. Sin `buscar`: las del periodo más las
+  vivas anteriores. Con `buscar`: en todo el histórico, las 500 más recientes y un indicador de que hay más. El periodo y el
+  tope mantienen cada petición dentro del límite de 15 s; los filtros por columna los hace la web sobre lo recibido.
 - `GET /api/pedidos/filas/{id}/recomendados` — los candidatos de una fila, al abrir su celda.
 - `PUT /api/pedidos/filas/{id}/imei` — `{imei}` (15 cifras o null). `409` si la fila ya está enviada; `400` si no son 15 cifras.
   Con `Idempotency-Key`, como las demás escrituras.
@@ -177,6 +185,6 @@ del maestro (con su migración). No se llevan: la lectura de las hojas, el cruce
 - **Servidor:** la tarea (pedido nuevo, repetido, cantidad N, cierre solo con lectura buena, SKU desconocido), el IMEI
   (poner, cambiar, quitar, fila enviada, registro de cambios), los avisos uno a uno, la recomendación (quién entra, orden, no
   repetir un móvil ya puesto), la carga del histórico y el traspaso de IMEI del corte, y los roles.
-- **Web:** la tabla, el desplegable, los colores y motivos, el filtro y el buscador.
+- **Web:** la tabla, el desplegable, los colores y motivos, el filtro de fechas, los filtros por columna y el buscador.
 - **E2E en preprod:** el técnico no la ve; el supertécnico pone, cambia y quita un IMEI en una fila viva y lo deja como estaba.
 - **Ensayo del corte** con una copia real de la hoja, fuera del repositorio.
