@@ -21,7 +21,7 @@ mayor a menor y de menor a mayor.
 | Bloques de «Revisar sin grado» | Se ordena **dentro de cada bloque**: «3 o más» y «Menos de 3» siguen en su sitio, con sus títulos y cifras. |
 | Excel de «Qué revisar» | Sale **en el orden de la pantalla**. |
 | Se recuerda | Al volver del detalle de un IMEI y al cambiar de modelo, de pestaña de capacidad, de vista o de tarjeta. Se pierde al cerrar sesión, como los filtros. |
-| Número | **0.9.28** (decisión del usuario): sale antes que los pedidos, que esperaban como 0.9.28 y pasan a la **0.9.29**. |
+| Número | **0.9.28** (decisión del usuario): sale antes que los pedidos, que esperaban como 0.9.28 y pasaron a la 0.9.29; después a la **0.9.30**, porque la 0.9.29 fue el SKU de los n/a. |
 
 Descartado: pasar «Qué revisar» a la tabla compartida (`DataTable`) para tener una sola forma de ordenar (rehace una pantalla
 recién estrenada: bloques, fila elegida y panel), y ordenar a mano también en móviles (duplica lo que `DataTable` ya hace).
