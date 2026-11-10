@@ -1,4 +1,4 @@
-# Novedades de la versión 0.9.30
+# Novedades de la versión 0.9.31
 
 ---
 

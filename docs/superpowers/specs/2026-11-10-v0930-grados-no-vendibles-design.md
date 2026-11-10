@@ -1,4 +1,4 @@
-# 0.9.31 — los grados F, FD y RMA no cuentan como stock
+# 0.9.30 — los grados F, FD y RMA no cuentan como stock
 
 Spec de diseño. Aprobada por el usuario en el brainstorming del 10/11/2026. Sin prototipo (no hay nada nuevo que ver: los
 móviles pasan a pintarse como lo que ya «no cuenta como stock»). **Solo servidor**: sin web ni base de datos.
@@ -40,6 +40,7 @@ El mismo día había en el espejo 29 móviles con esos grados en cajas que cuent
 | ID y n/a | Siguen contando. |
 | Cómo se ve | Como cualquier otro que no cuenta: fuera de los totales, de la tabla color × grado y de «Qué revisar»; solo con «Ver también lo que no cuenta como stock», en gris y con la marca «NO CUENTA». La píldora del grado, al lado, dice por qué. |
 | Avisos | **Fuera de esta versión** (§7). |
+| Número | **0.9.30** (decisión del usuario): sale antes que los pedidos, que esperaban como 0.9.30 y pasan a la **0.9.31**. Sus novedades pasan a `NOVEDADES-v0.9.31.md`. |
 
 Descartado:
 
@@ -82,7 +83,7 @@ El contrato de la API no cambia: `estado` sigue siendo uno de los cinco valores 
 Lo que **no** cambia: el importador, el comparador, los eventos del rastro, «Por pasar a NSYS» y sus tarjetas, y
 `NsysDAO.enEmpresa` (ya trae `STOCK`, `DE_PEDIDO` y `NO_CUENTA`).
 
-## 6. Los pedidos (0.9.30, sin fusionar)
+## 6. Los pedidos (pasan a la 0.9.31, sin fusionar)
 
 Su plan define otro conjunto `NO_VENDIBLES` (F, FD, RMA) para marcar `GRADO_NO_VENDIBLE`. Cuando esa rama traiga `main`, debe
 usar `EstadoMovil.NO_VENDIBLES` y borrar el suyo. Lo hace la sesión de los pedidos; esta versión no toca su rama.
