@@ -1,7 +1,7 @@
 # «Pedidos» como la hoja: mejoras de la pantalla (v2)
 
 - **Fecha:** 11/11/2026
-- **Estado:** diseño aprobado por el usuario en el prototipo; pendiente de plan de implementación
+- **Estado:** aprobada por el usuario el 11/11; pendiente de plan de implementación
 - **Amplía:** `2026-11-10-pedidos-tabla-design.md` (§3 la pantalla, §6 bis los estados, §7 la API)
 - **Prototipo:** `assets/2026-11-11-pedidos-pantalla-v2-prototipo.html` (datos inventados)
 
