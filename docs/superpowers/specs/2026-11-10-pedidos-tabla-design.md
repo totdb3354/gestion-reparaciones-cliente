@@ -135,8 +135,13 @@ Una tarea cada 5 minutos lee los pedidos pendientes de ShippyPro (la misma llama
 - un artículo cuyo SKU no es de teléfono (no lo conoce el maestro en la columna de su canal) no crea fila; si parece de
   teléfono, se apunta en la lectura como SKU desconocido y sale en la píldora. Al comparar, «Ultramarino» es «Azul»;
 - un pedido nuevo crea sus filas; uno ya visto no se toca (el IMEI puesto se conserva);
-- un pedido que deja de estar pendiente cierra sus filas (`ENVIADA_EN`). Solo se cierra con una lectura completa y correcta:
-  si ShippyPro falla o responde a medias, no se cierra nada y la píldora lo avisa.
+- un pedido cuyas filas ya se cerraron y **vuelve a estar pendiente** (por ejemplo, se anula la etiqueta de envío) reabre esas
+  filas con el IMEI que tenían; no se crean otras (revisión final del 11/11);
+- una fila viva se cierra (`ENVIADA_EN`) cuando su pedido falta en **dos lecturas buenas seguidas** (revisión final del 11/11:
+  una sola respuesta vacía o incompleta de ShippyPro no puede cerrar las filas vivas). Una lectura con error, sin el ajuste de
+  canales o con algún pedido descartado por el lector (sin fecha válida) no cierra nada y empieza la cuenta de nuevo; tras
+  arrancar, la primera lectura tampoco cierra. Una fila enviada tarda así hasta 5 minutos más en ponerse gris;
+- como mucho 50 unidades por línea de pedido (una cantidad mayor se corta y se avisa en el log).
 
 Ajustes: los de la pieza 2 que siguen haciendo falta (encender la tarea, la clave de ShippyPro y los canales). Los de las hojas
 desaparecen.
