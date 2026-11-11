@@ -159,7 +159,11 @@ pendiente (también deja de estarlo un pedido cancelado o cambiado a mano).
     `SEGUIMIENTO`. Del cliente no se guarda nada más (ni dirección, ni teléfono, ni correo).
   - **Ya no pendiente, sin envío:** falta en dos lecturas buenas seguidas (§6) y no figura como enviado. `ENVIADA_EN` pasa a
     llamarse `CERRADA_EN` y significa solo eso: cuándo dejó de estar pendiente.
-- Un pedido enviado que vuelve a estar pendiente se reabre como en §6 y pierde los datos del envío.
+- Un pedido enviado que vuelve a estar pendiente se reabre como en §6 y pierde los datos del envío. Un envío anterior a esa reapertura
+  ya no lo vuelve a marcar como enviado.
+- Un pedido de varios móviles: cuando deja de estar pendiente y tiene envío, **todas** sus filas llevan ese envío (con esta
+  consulta no se distingue un envío parcial). Mientras el pedido siga pendiente no se marca ninguna.
+- Un envío hecho a mano en ShippyPro (sin tienda) no se cruza con ninguna fila.
 - **Pantalla:** columna nueva **«Enviado»** entre «Pedido» y «Fecha compra»: la fecha del envío; al pasar el ratón, el
   transportista y el seguimiento. En gris, solo las enviadas. Las «ya no pendientes, sin envío» llevan en esa columna el texto
   «Ya no está pendiente» y un tono distinto.
@@ -177,7 +181,7 @@ pendiente (también deja de estarlo un pedido cancelado o cambiado a mano).
   vivas anteriores. Con `buscar`: en todo el histórico, las 500 más recientes y un indicador de que hay más. El periodo y el
   tope mantienen cada petición dentro del límite de 15 s; los filtros por columna los hace la web sobre lo recibido.
 - `GET /api/pedidos/filas/{id}/recomendados` — los candidatos de una fila, al abrir su celda.
-- `PUT /api/pedidos/filas/{id}/imei` — `{imei}` (15 cifras o null). `409` si la fila ya está enviada; `400` si no son 15 cifras.
+- `PUT /api/pedidos/filas/{id}/imei` — `{imei}` (15 cifras o null). `409` solo si la fila es del histórico (las demás se editan siempre, §6 bis); `400` si no son 15 cifras.
   Con `Idempotency-Key`, como las demás escrituras.
 - `GET /api/pedidos/fuentes` — la píldora.
 
