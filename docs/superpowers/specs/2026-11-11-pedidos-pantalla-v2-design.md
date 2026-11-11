@@ -115,13 +115,25 @@ verlas se usa el filtro de la columna «Enviado».
 
 Todo el filtrado sigue en el cliente sobre lo recibido. Ninguna petición nueva pone en riesgo el límite de 15 s.
 
-## 5. Un riesgo que el plan tiene que medir
+## 5. La tabla con muchas filas
 
-Con el histórico cargado, «Este año» y «Todo» traen decenas de miles de filas a una tabla sin páginas. «Último mes», el periodo
-por defecto, ronda las 2.000 y va bien hoy. El plan debe medir en preprod, con el histórico real, la petición (límite de 15 s) y
-la fluidez de la tabla con el periodo más largo. Si no aguanta, la salida preferida es pintar solo las filas visibles a partir
-de cierto número; su coste es que el Control+F del navegador deja de ver las filas no pintadas (el buscador de la pantalla sí
-las ve), y eso se le consulta al usuario antes de hacerlo.
+Medido en preprod el 11/11 con el histórico cargado (Chromium, PC de desarrollo): con «Último mes» (unas 2.100 filas) la tabla
+se pinta en menos de 1 s y va fluida. Con «Este año» o «Todo» (unas 26.700 filas, 240.000 nodos) tarda 11 s en pintarse, abrir
+o quitar un filtro cuesta de 7 a 9 s y el scroll va a tirones. El servidor no es el problema: responde en menos de 1,5 s.
+
+Decisión del usuario:
+
+- **Hasta 5.000 filas a la vista**, la tabla se pinta entera, como hoy, y el Control+F del navegador sirve como en la hoja.
+- **Por encima de 5.000**, la tabla pinta solo las filas que se ven y va pintando las demás según se hace scroll. Las filas
+  están todas: la barra de scroll las abarca, se llega hasta la última sin pulsar nada, y los contadores y los filtros cuentan
+  sobre todas. En este modo, Control+F lleva el cursor al buscador de la pantalla (que busca en todo el histórico) en vez de
+  abrir el del navegador, que solo vería lo pintado.
+- Lo que cuenta para el umbral son las filas a la vista tras los filtros de columna, no las recibidas.
+- Todo lo demás se comporta igual en los dos modos: cabecera fija, abrir al final, bajar sola al llegar filas nuevas, la celda
+  del IMEI, la raya azul y el panel.
+
+El umbral es un valor del código. El plan debe medir en preprod que justo por debajo de él la tabla sigue yendo bien
+(«Últimos 3 meses», unas 6.400 filas, no se ha medido) y bajarlo si no.
 
 ## 6. Fuera de esta entrega
 
@@ -140,4 +152,5 @@ las ve), y eso se le consulta al usuario antes de hacerlo.
 - El panel enseña los cambios de IMEI de una fila con varios, en orden, y se actualiza al guardar otro.
 - Tras abrir una celda y cerrarla, la raya azul sigue en esa fila al filtrar y al llegar filas nuevas.
 - El TECNICO recibe `403` en la consulta nueva.
-- En preprod, con el histórico cargado: las medidas de §5.
+- En preprod, con el histórico cargado: «Todo» se pinta y se recorre con fluidez, Control+F lleva al buscador, y justo por
+  debajo del umbral la tabla entera sigue yendo bien (§5).
