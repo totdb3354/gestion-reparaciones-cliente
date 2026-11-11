@@ -49,16 +49,24 @@ El estado de la fila deja de teñir la fila entera y pasa a ser una etiqueta de 
 
 | Estado | En la columna «Enviado» | La fila |
 |---|---|---|
-| Pendiente | etiqueta «Pendiente» (discreta, borde punteado) | texto normal |
-| Enviada | etiqueta verde «Enviado dd/mm» y, tras ella, transportista y seguimiento | texto normal |
+| Pendiente (sin etiqueta) | etiqueta «Pendiente» (discreta, borde punteado) | texto normal |
+| Etiqueta generada, sin imprimir | etiqueta «Etiqueta generada dd/mm» y, tras ella, transportista y seguimiento | texto normal |
+| Etiqueta impresa | etiqueta verde «Enviado dd/mm» y, tras ella, transportista y seguimiento | texto normal |
 | Ya no pendiente | etiqueta azul «Ya no está pendiente» | texto normal |
 | Histórico | etiqueta gris «De la hoja» | **gris** |
+
+**«Enviado» es etiqueta impresa** (aclaración del usuario del 11/11). Para la empresa un pedido sale cuando su etiqueta se
+imprime, que es cuando el repartidor se lo lleva; el canal, en cambio, lo da por enviado al generarla. Los dos momentos se ven y
+ninguno sustituye al otro: «Etiqueta generada» lleva la fecha en que se creó el envío y «Enviado», la de la impresión. Los dos
+datos salen de ShippyPro, que marca el envío como impreso cuando se imprime desde su panel. **El ERP no imprime en esta
+entrega** ni marca nada en ShippyPro: solo lee.
 
 El gris queda para una sola cosa: lo que no se puede editar (el histórico). Una fila enviada sigue siendo editable (§6 bis de la
 spec base) y por eso se lee como las demás. Los colores de la celda del IMEI (ámbar y naranja) no cambian.
 
-El filtro de la columna «Enviado» pasa a tener cuatro casillas: «Pendientes», «Enviados», «Ya no pendientes» e «Histórico de la
-hoja» (hoy el histórico cuenta como enviado).
+El filtro de la columna «Enviado» pasa a tener cinco casillas: «Pendientes», «Etiqueta generada», «Enviados», «Ya no
+pendientes» e «Histórico de la hoja» (hoy el histórico cuenta como enviado). «Etiqueta generada» es la lista de lo que el
+canal ya da por salido y sigue en el almacén.
 
 ### 3.3 Contadores pulsables
 
@@ -84,8 +92,8 @@ filtros» sigue existiendo y quita todos (y vacía el buscador). La cabecera de 
 Al pulsar una fila en cualquier celda que no sea la del IMEI se abre un panel a la derecha de la tabla (no la tapa; la tabla se
 estrecha). Pulsar otra fila lo cambia; pulsar la misma, o «Cerrar», lo cierra. La fila elegida queda señalada. Contenido:
 
-- **El pedido:** número, estado (la misma etiqueta), tienda, plataforma, SKU, fecha, fecha de compra y, si está enviado,
-  transportista y seguimiento.
+- **El pedido:** número, estado (la misma etiqueta), tienda, plataforma, SKU, fecha, fecha de compra y, si tiene etiqueta,
+  cuándo se generó, cuándo se imprimió (o «sin imprimir»), transportista y seguimiento.
 - **El móvil:** el IMEI puesto y lo que el ERP sabe de él y ya sirve la tabla (qué SKU es, su caja, el motivo del aviso).
 - **Quién ha tocado el IMEI:** del más reciente al más antiguo, quién, cuándo y qué hizo (puso, cambió uno por otro, quitó).
   En una fila del histórico: «Viene de la hoja: no hay registro de quién lo puso». Sin cambios: «Nadie ha puesto IMEI todavía».
@@ -111,7 +119,8 @@ verlas se usa el filtro de la columna «Enviado».
 |---|---|
 | §3.1 | `GET /api/pedidos/filas` añade `canal` a cada fila: el de `Pedido_fila` en las de ShippyPro; en el histórico, `AMAZON` o `AMAZON_STOCKROOM` si la plataforma es una de las dos cuentas, y `null` en las demás. Si la carga del histórico ya guarda ese canal, basta con servirlo. |
 | §3.5 | `GET /api/pedidos/filas/{id}/cambios` (SUPERTECNICO y ADMIN): los cambios de `Pedido_fila_cambio` de esa fila, del más reciente al más antiguo: usuario, fecha y hora, IMEI anterior e IMEI nuevo. En una fila del histórico, lista vacía. Se pide al abrir el panel y se vuelve a pedir tras guardar un IMEI en esa fila. |
-| §3.2, §3.3, §3.4, §3.6, §3.7 | Nada: salen de lo que la API ya sirve (`estado`, `nivel`, `editable`, `caja`, `skuMovil`, `motivo` y los datos del envío). |
+| §3.2 | Cada fila con etiqueta dice además si está impresa y cuándo (lo que ShippyPro da por envío). El estado «enviada» de la spec base se divide en dos: con etiqueta sin imprimir e impresa. |
+| §3.3, §3.4, §3.6, §3.7 | Nada: salen de lo que la API ya sirve (`estado`, `nivel`, `editable`, `caja`, `skuMovil`, `motivo` y los datos del envío). |
 
 Todo el filtrado sigue en el cliente sobre lo recibido. Ninguna petición nueva pone en riesgo el límite de 15 s.
 
@@ -142,6 +151,9 @@ El umbral es un valor del código. El plan debe medir en preprod que justo por d
   validar que haya IMEI antes de sacar la etiqueta de envío, y avisos más visibles (pintar la fila o una vista de
   notificaciones).
 - Filtros guardados por cada usuario y casillas por cliente en el filtro de Plataforma.
+- **Imprimir la etiqueta desde el ERP.** Idea del usuario para después: que el ERP pida a ShippyPro que la imprima en la
+  impresora de etiquetas ya conectada (ShippyPro la marca como impresa él solo y no reimprime sin forzarlo), exigiendo antes
+  que la fila tenga IMEI.
 - Columnas y datos nuevos (§1): otra spec.
 
 ## 7. Cómo se comprueba
