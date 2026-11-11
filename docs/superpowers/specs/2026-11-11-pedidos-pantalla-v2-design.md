@@ -98,6 +98,11 @@ estrecha). Pulsar otra fila lo cambia; pulsar la misma, o «Cerrar», lo cierra.
 - **Quién ha tocado el IMEI:** del más reciente al más antiguo, quién, cuándo y qué hizo (puso, cambió uno por otro, quitó).
   En una fila del histórico: «Viene de la hoja: no hay registro de quién lo puso». Sin cambios: «Nadie ha puesto IMEI todavía».
 
+- **«Previsualizar etiqueta»** (solo si la fila tiene etiqueta generada): abre el PDF de la etiqueta dentro del ERP, en un
+  diálogo con un aviso fijo arriba («Previsualización. Imprimir desde aquí no marca el pedido como enviado: imprime la etiqueta
+  desde ShippyPro.») y la etiqueta de estado de la fila. No imprime ni marca nada. El nombre es del usuario: «previsualizar»,
+  no «ver», para que nadie tome por envío una impresión hecha desde ahí.
+
 El panel solo enseña; el IMEI se sigue poniendo en la celda.
 
 ### 3.6 La caja delante y la fila marcada
@@ -153,7 +158,8 @@ El umbral es un valor del código. El plan debe medir en preprod que justo por d
 - Filtros guardados por cada usuario y casillas por cliente en el filtro de Plataforma.
 - **Imprimir la etiqueta desde el ERP.** Idea del usuario para después: que el ERP pida a ShippyPro que la imprima en la
   impresora de etiquetas ya conectada (ShippyPro la marca como impresa él solo y no reimprime sin forzarlo), exigiendo antes
-  que la fila tenga IMEI.
+  que la fila tenga IMEI. Comprobado el 11/11: hoy la cuenta imprime por el navegador y ShippyPro exige para esto su
+  integración de impresión por API, que no está conectada.
 - Columnas y datos nuevos (§1): otra spec.
 
 ## 7. Cómo se comprueba
