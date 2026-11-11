@@ -146,6 +146,31 @@ Una tarea cada 5 minutos lee los pedidos pendientes de ShippyPro (la misma llama
 Ajustes: los de la pieza 2 que siguen haciendo falta (encender la tarea, la clave de ShippyPro y los canales). Los de las hojas
 desaparecen.
 
+## 6 bis. Saber si un pedido se ha enviado (ampliación del 11/11)
+
+Decidida por el usuario al verlo en preprod: una fila en gris no puede significar «enviada» solo porque el pedido dejó de estar
+pendiente (también deja de estarlo un pedido cancelado o cambiado a mano).
+
+- **Fuente:** en cada lectura, además de los pendientes, el ERP pide a ShippyPro los pedidos enviados de los últimos días
+  (consulta de solo lectura, por fechas) y los cruza por canal y número de pedido con las filas.
+- **Estado de una fila** (se calcula con lo guardado):
+  - **Pendiente:** su pedido está entre los pendientes.
+  - **Enviada:** ShippyPro lo da por enviado. Se guardan `ENVIO_FECHA` (cuándo se creó el envío), `TRANSPORTISTA` y
+    `SEGUIMIENTO`. Del cliente no se guarda nada más (ni dirección, ni teléfono, ni correo).
+  - **Ya no pendiente, sin envío:** falta en dos lecturas buenas seguidas (§6) y no figura como enviado. `ENVIADA_EN` pasa a
+    llamarse `CERRADA_EN` y significa solo eso: cuándo dejó de estar pendiente.
+- Un pedido enviado que vuelve a estar pendiente se reabre como en §6 y pierde los datos del envío.
+- **Pantalla:** columna nueva **«Enviado»** entre «Pedido» y «Fecha compra»: la fecha del envío; al pasar el ratón, el
+  transportista y el seguimiento. En gris, solo las enviadas. Las «ya no pendientes, sin envío» llevan en esa columna el texto
+  «Ya no está pendiente» y un tono distinto.
+- **Todas las filas de ShippyPro se pueden editar siempre** (decisión del 11/11, como en la hoja): poner, cambiar o quitar el
+  IMEI también en las enviadas y en las que ya no están pendientes. Los avisos del IMEI se calculan en las pendientes y en las
+  no enviadas; en las enviadas, no (el móvil ya salió). Las del histórico siguen sin edición. En la celda de una fila sin IMEI
+  que no se puede editar no se enseña «pulsa para poner el IMEI…».
+- **Filtro** de la columna IMEI: «Solo sin IMEI» cuenta también las enviadas sin IMEI (son el descuido que hay que ver).
+- **Recomendación:** un móvil puesto en una fila enviada deja de contar como «ya puesto» cuando NSYS lo da por vendido; mientras
+  tanto no se recomienda para otra fila.
+
 ## 7. La API
 
 - `GET /api/pedidos/filas?desde=&hasta=&buscar=` — las filas con el aviso de cada IMEI. Sin `buscar`: las del periodo más las
