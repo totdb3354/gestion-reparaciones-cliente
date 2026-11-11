@@ -32,12 +32,12 @@ ventas directas) y que el ERP escriba en la hoja (decisión 1 de la spec base).
 |---|---|
 | `imei` | 15 cifras |
 | `sku` | El de la fila |
-| `plataforma` | El texto de la columna |
 | `canal` | El de `Pedido_fila` |
 | `pedido` | Número de pedido del canal |
 | `fechaImei` | Cuándo se puso ese IMEI en la fila (fecha y hora) |
 
-El bot solo usa `imei`; los demás campos son para diagnosticar a mano qué ha pedido mover el ERP y por qué.
+El bot solo usa `imei`; los demás campos son para diagnosticar a mano qué ha pedido mover el ERP y por qué. La plataforma no
+se sirve: en las webs es el nombre del cliente y ningún consumidor lo necesita.
 
 **Qué filas entran.** Todas las que cumplan a la vez:
 
@@ -62,7 +62,7 @@ móvil que ya está apartado no hace nada.
 No es una ruta de usuario. Se entra con una **clave de máquina** en la cabecera `X-API-Key`:
 
 - la clave está en una variable de entorno del servidor (`PEDIDOS_VENDIDOS_CLAVE`); si la variable está vacía, la ruta responde
-  `404` para todos (apagada);
+  `404` para todos (apagada). Una clave de menos de 32 caracteres cuenta como vacía;
 - sin cabecera o con otra clave, `401`; la comparación, en tiempo constante;
 - la clave solo vale para esta ruta, y un token de usuario (del rol que sea) no vale para ella;
 - la ruta queda bajo el mismo freno de peticiones que el resto de la API.
