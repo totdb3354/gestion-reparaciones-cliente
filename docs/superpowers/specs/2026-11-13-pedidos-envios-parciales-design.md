@@ -1,7 +1,15 @@
 # Pedidos: envíos parciales y móviles del mismo pedido
 
+> **SUSTITUIDA el 13/11/2026. No construir.** El mismo día, el usuario decidió y se construyó otra versión de los envíos
+> parciales, que es la que vale: marca manual «falta por enviar» en la fila (solo pedidos de web con la etiqueta generada), que
+> se quita a mano o sola cuando el plugin de la web sincroniza ese IMEI, y «1/3, 2/3, 3/3» en los pedidos de varios móviles. Se
+> descartó el estado automático de §4.1 («etiqueta impresa y fila sin IMEI»): en las webs el IMEI de una fila es provisional
+> hasta que se sincroniza. Lo que vale está en el contrato del servidor (`docs/api_contract.md`: `PUT
+> /api/pedidos/filas/{id}/falta-enviar` y `POST /api/pedidos/sincronizados`). De este documento solo queda como idea para
+> después la sección «Este pedido» del panel (§4.2) y la vista agrupada por pedido (§6). Se conserva como registro.
+
 - **Fecha:** 13/11/2026
-- **Estado:** diseño aprobado por el usuario el 13/11; para después del corte del 16/11; pendiente de plan de implementación
+- **Estado:** sustituida el 13/11 (ver el aviso de arriba)
 - **Amplía:** `2026-11-10-pedidos-tabla-design.md` (§6 bis, estados) y `2026-11-11-pedidos-pantalla-v2-design.md` (§3.2 la
   columna «Enviado», §3.5 el panel de la fila)
 
