@@ -24,8 +24,11 @@ Una fila de ShippyPro (no del histórico) puede tener **como mucho una marca** d
 - **Cancelado** existe por la cancelación de UN móvil de un pedido de varios: ShippyPro sigue dando el pedido con las unidades
   originales y no tiene estado de cancelado. Una cancelación del pedido entero no necesita marca: el pedido desaparece de los
   pendientes de ShippyPro y sus filas pasan solas a «Ya no está pendiente».
-- **Cancelado con IMEI puesto:** ese IMEI **no se sirve** en `GET /api/pedidos/vendidos` (el bot no debe dar por vendido un móvil
-  que no sale).
+- **Ninguna fila con marca va al bot ni al plugin:** con cualquiera de las cuatro marcas, aunque tenga IMEI, la fila **no se sirve**
+  en `GET /api/pedidos/vendidos`. Es lo que pasaba con la hoja: un texto en la celda del IMEI significaba que no había IMEI, y al
+  bot solo iba lo que tenía un IMEI escrito. Al quitar la marca, la fila vuelve a servirse y cuenta como recién puesta (para la
+  ventana de días de la consulta vale la fecha más reciente entre el último cambio del IMEI y la retirada de la marca), así el bot
+  la recoge aunque el IMEI se pusiera hace días.
 - **Pendiente de color** solo enseña su etiqueta y su nota hasta que se sepa qué significaba; no cambia contadores ni el lector.
 - La marca «Falta por enviar» (envío parcial) es aparte y no cambia: puede convivir con una de estas.
 
@@ -53,12 +56,13 @@ Una fila de ShippyPro (no del histórico) puede tener **como mucho una marca** d
   cambió), 409 en el histórico, 400 con una marca desconocida o una nota de más de 200. Devuelve la `FilaVista` releída.
 - Poner un IMEI en una fila con «En espera de stock» la quita en la misma transacción y lo apunta.
 - `FilaVista`: `marca`, `marcaNota`, `marcaEn`, `marcaPor` (nombre de usuario); nulos sin marca.
-- `GET /api/pedidos/vendidos` excluye las filas con `CANCELADO`.
+- `GET /api/pedidos/vendidos` excluye las filas con cualquier marca, y su `fechaImei` (y la ventana de días) pasa a ser la fecha más
+  reciente entre el último cambio de IMEI y la última retirada de marca.
 
 ## Pruebas
 
 Servidor: poner, cambiar y quitar marca; nota larga 400; histórico 409; `marcaAnterior` 409; idempotencia; IMEI que quita «En
-espera de stock» y no las demás; vendidos sin las canceladas; roles. Web: las cuatro marcas en la celda y en el panel, contadores
+espera de stock» y no las demás; vendidos sin ninguna fila marcada y con la fila de vuelta (y dentro de la ventana) al quitar la marca; roles. Web: las cuatro marcas en la celda y en el panel, contadores
 y lector según la tabla, «Cancelado» en la celda de envío, filtros, historial y ayuda; prueba en navegador real de poner una marca
 desde la celda del IMEI.
 
