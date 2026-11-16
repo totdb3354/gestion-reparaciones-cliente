@@ -78,7 +78,25 @@ Servidor: las cuatro reglas (incluido el intercambio cuando la otra fila estaba 
 «Cancelado» intocables, idempotencia, normalización del número, pedido ajeno, varias asociaciones del mismo pedido (2 de 3), ruta y
 claves, carga del histórico, vendidos con `pedido` nulo. Web: columna, panel, «1/n», filtro, píldora y lista, ayuda.
 
+## Lector de los libros (añadido 2026-11-16)
+
+Decidido: el propio ERP lee los dos libros de ventas desde Google Drive, con la cuenta de servicio que ya lee el Items de NSYS.
+
+- Ficheros por su identificador de Drive (no por nombre: hay copias viejas con nombres parecidos): ajustes
+  `PEDIDOS_LIBRO_AMAZON` (canal `AMAZON`) y `PEDIDOS_LIBRO_STOCKROOM` (canal `AMAZON_STOCKROOM`); interruptor
+  `PEDIDOS_LIBROS_ACTIVA` (apagado por defecto). Sin identificador, ese canal no se lee.
+- Solo la pestaña **«Paso 1. Meter IMEI»**, con la cabecera en la **fila 6**; las columnas se buscan por su nombre de cabecera:
+  «order id», «purchase-date» e «IMEI» en los dos libros. Una fila por móvil. El IMEI puede venir como texto o como número (sin
+  decimales ni notación científica) y con espacios; textos como «CANCELADO» o celdas vacías se descartan. Las demás pestañas
+  («Hoja1», «IMEIS SUELTO») son apuntes de logística y no se leen.
+- Cada 10 minutos mira la fecha de modificación del fichero en Drive y **solo lo descarga y lo lee si cambió** desde la última
+  pasada de ese canal (son libros de 15-26 MB: lectura en streaming, sin cargar el libro entero en memoria).
+- Manda al servicio de asociación solo las filas con «purchase-date» de los **últimos 30 días** (los pedidos antiguos no están en
+  el ERP y llenarían la lista «para revisar»).
+- Errores (Drive no responde, falta la pestaña o una cabecera, libro que no se puede leer): no se toca nada, se apunta el error en
+  la pasada de ese canal y la píldora lo enseña; se reintenta en la siguiente vuelta.
+- Los IMEI de los libros casi nunca cambian después de teclearse; si cambian, manda lo último que diga el libro (regla 2).
+
 ## Fuera de esto
 
-Cómo llegan las asociaciones al ERP (el programa de los libros o un lector propio): se decide al saber qué hace hoy ese programa
-(si escribe IMEI en los libros, también hay que sustituir su fuente, que es la hoja). Etiquetas desde el ERP. Atajo a Asignaciones.
+Etiquetas desde el ERP. Atajo a Asignaciones.
