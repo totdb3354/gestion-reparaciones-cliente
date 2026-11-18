@@ -94,6 +94,15 @@ país presente en esa tabla (orden alfabético; sin país, columna «—»); cel
 Si una tabla no tiene filas, su título y «No hay móviles que buscar». Preparada para imprimir: A4 al ancho de una página, en
 vertical. Sin cabecera repetida en cada página (con dos tablas en la hoja confundiría; revisión final, 18/11).
 
+**El de las webs es distinto (Imad, 18/11 noche, tras verlo en preprod):** en las webs se envía todo en el día, así que **no se
+divide** en «Para hoy»/«Pueden esperar» y lo que importa es el cliente. Una sola hoja con **un bloque por web**, en este orden:
+«Fonestockroom (distribuidores)» (DISTRIBUIDORES), «Fonestore (particulares)» (PARTICULARES) y «BackiPhone» (BACKIPHONE). Cada
+bloque: título; cabecera `Cliente | SKU | Uds | Entró`; una fila por cliente, SKU (sin distinguir mayúsculas, escrito como la forma
+más repetida) y día de entrada, con las unidades; «Entró» = la columna Fecha de la fila (día en que el ERP vio el pedido), como
+`dd/mm/aaaa`; orden por «Entró» (lo más antiguo primero) y después por cliente y SKU; última fila «Total» con las unidades. Sin
+número de pedido, sin país y sin envío. Un bloque sin filas: su título y «No hay móviles que buscar». Misma impresión (A4, ancho de
+una página, vertical). La columna «Enviado» de la tabla NO cambia: en las webs sigue con su plazo de 48/72 h y «Con retraso».
+
 Servidor: `GET /api/pedidos/buscar?plataforma=AMZ|FNSK|WEBS` → `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 (otra plataforma, `400`). Roles como el resto de Pedidos (SUPERTECNICO y ADMIN). La consulta es una sola y acotada (filas
 vivas o con la marca de falta), dentro del límite de 15 s.
