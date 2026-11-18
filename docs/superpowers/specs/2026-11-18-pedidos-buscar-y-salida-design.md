@@ -63,7 +63,9 @@ columna «Enviado» pasa a depender de `fechaSalida` y de hoy (hora de Madrid):
 | más tarde | Sale vie 20/11 | gris |
 | sin `fechaSalida` | Pendiente (como hoy) / Falta por enviar | como hoy |
 
-- En «Falta por enviar» el retraso se suma al texto: «Falta por enviar · con retraso». No hay «vencida»: lo que ya no se
+- En «Falta por enviar» el plazo se suma al texto cuando es hoy o ya pasó: «Envío parcial · falta por enviar · sale hoy» (color de
+  «Sale hoy») y «… · con retraso» (color de «Con retraso»); con fecha posterior, sin sufijo. Cuentan en «N salen hoy»/«M con
+  retraso» y en sus filtros (revisión final, 18/11). No hay «vencida»: lo que ya no se
   envía tiene la marca «Cancelado», que manda sobre todo (como hoy).
 - Las enviadas, como hoy (pierden el aviso).
 - El filtro de la columna gana **«Sale hoy»** y **«Con retraso»**.
@@ -89,8 +91,8 @@ blanco entre medias:
 Cada tabla: título; cabecera `SKU | <países> | Total general`; una fila por SKU (orden alfabético, sin distinguir mayúsculas:
 `i13128AzuLA` e `i13128AzulA` son el mismo y suman en una fila, que se escribe como la forma más repetida); una columna por
 país presente en esa tabla (orden alfabético; sin país, columna «—»); celdas vacías donde es 0; última fila «Total general».
-Si una tabla no tiene filas, su título y «No hay móviles que buscar». Preparada para imprimir: A4 al ancho de una página y la
-cabecera repetida en cada página (como el Excel de «Qué revisar»).
+Si una tabla no tiene filas, su título y «No hay móviles que buscar». Preparada para imprimir: A4 al ancho de una página, en
+vertical. Sin cabecera repetida en cada página (con dos tablas en la hoja confundiría; revisión final, 18/11).
 
 Servidor: `GET /api/pedidos/buscar?plataforma=AMZ|FNSK|WEBS` → `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 (otra plataforma, `400`). Roles como el resto de Pedidos (SUPERTECNICO y ADMIN). La consulta es una sola y acotada (filas
@@ -101,7 +103,9 @@ vivas o con la marca de falta), dentro del límite de 15 s.
 `PUT /api/pedidos/filas/{id}/imei`: si el IMEI ya está en **otra** fila de ShippyPro **pendiente** o en **«Falta por
 enviar»**, no se pone: `409` con «Este IMEI ya está en el pedido X (fila del dd/mm)» (en Amazon sin asociar: «… en una fila
 de AMZ del dd/mm sin asociar»). Contra filas enviadas, «ya no pendiente» o del histórico **sí** se deja (un móvil devuelto se
-vuelve a vender). La comprobación va en la transacción del DAO, con la fila bloqueada. El aviso naranja «en otra fila» se
+vuelve a vender), y tampoco bloquea una fila pendiente con la marca «Cancelado» (ese móvil no saldrá en ese pedido; revisión
+final, 18/11). Dos peticiones simultáneas con el mismo IMEI pueden pasar las dos (la comprobación no bloquea la otra fila): se
+acepta, el aviso naranja «en otra fila» lo enseña después. La comprobación va en la transacción del DAO, con la fila bloqueada. El aviso naranja «en otra fila» se
 queda para los casos que ya existan. No cambia la asociación desde los libros ni el plugin.
 
 ## 6. IMEI que no está en NSYS
