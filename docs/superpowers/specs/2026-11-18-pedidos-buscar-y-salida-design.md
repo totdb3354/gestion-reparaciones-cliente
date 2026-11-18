@@ -60,7 +60,7 @@ columna «Enviado» pasa a depender de `fechaSalida` y de hoy (hora de Madrid):
 | `fechaSalida` < hoy | **Con retraso** | rojo intenso |
 | `fechaSalida` = hoy | **Sale hoy** | rojo |
 | `fechaSalida` = mañana | Sale mañana | gris |
-| más tarde | Sale jue 20/11 | gris |
+| más tarde | Sale vie 20/11 | gris |
 | sin `fechaSalida` | Pendiente (como hoy) / Falta por enviar | como hoy |
 
 - En «Falta por enviar» el retraso se suma al texto: «Falta por enviar · con retraso». No hay «vencida»: lo que ya no se
