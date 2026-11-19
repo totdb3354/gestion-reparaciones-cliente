@@ -142,3 +142,28 @@ la guía de producción con las otras dos migraciones de Pedidos.
   contadores, botón de descarga con sus tres opciones, mensaje del `409`, scroll de la ayuda.
 - Preprod, fuera de horario: migración, lectura real (las fechas de salida cuadran con «Latest ship» de ShippyPro) y una
   prueba en Chromium con datos sintéticos (prefijo 0099) que se limpian al acabar.
+
+## 8. Pedidos web juntados en una sola etiqueta: el bot de vendidos (añadido el 19/11, antes del corte)
+
+**El caso:** en las webs, a veces dos pedidos del mismo cliente (días distintos, misma dirección) salen con **una sola etiqueta**
+para que lleguen juntos. El primero no tiene envío propio: cuando la web lo cierra, ShippyPro lo quita de pendientes y el ERP
+lo deja «Ya no está pendiente» (como un cancelado). Comprobado en preprod (19/11): 2 pedidos, 4 filas con IMEI, en 60 días.
+
+**El problema:** `GET /api/pedidos/vendidos` no sirve una fila «ya no pendiente» cuyo IMEI se puso antes del cierre (para no
+descontar de NSYS los móviles de un pedido cancelado). Así, el móvil de ese primer pedido, que SÍ salió, no se movería en NSYS a
+«Pedidos realizados» y seguiría contando como stock. Con la hoja no pasaba (el bot contaba cualquier fila con IMEI).
+
+**La regla (decisión de Imad, opción 1):** una fila de una web (DISTRIBUIDORES, PARTICULARES, BACKIPHONE) que ya no está pendiente
+y no tiene envío propio **cuenta como vendida si el plugin de la web la ha sincronizado** (`SINCRONIZADA_EN` no nulo: su IMEI está
+en la factura de ese pedido; el plugin nunca sincroniza pedidos cancelados ni reembolsados), siempre que no tenga marca (como el
+resto de vendidos). Sin sincronizar, sigue como hoy (no sale). Amazon no cambia.
+
+- La fecha que cuenta para la ventana de días es la más reciente entre el último apunte IMEI/MARCA_QUITADA y `SINCRONIZADA_EN`
+  (una sincronización tardía también entra en la ventana).
+- Nada nuevo para logística: juntan pedidos y sincronizan como siempre.
+- Con la sincronización automática de la fase 2 (solo pedidos completos) el hueco entre que el pedido desaparece y la
+  sincronización baja a minutos; la regla no cambia.
+
+Pruebas: web «ya no pendiente» sin envío con IMEI puesto ANTES del cierre: sin sincronizar no sale; sincronizada sí sale (con la
+fecha de sincronización dentro de la ventana aunque el IMEI sea anterior); con marca no sale; de Amazon en el mismo caso no sale;
+enviada y pendiente siguen como hoy. Contra MariaDB en preprod con el E2E o por la API.
