@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Juntar pedidos (fase 2)</title>
+<style>
+:root{
+  --navy:#0b1630; --bg:#eef1f6; --card:#fff; --line:#dde2ea; --txt:#1c2433; --mut:#6b7486;
+  --pill:#e6eaf1; --blue:#2f5bd3; --green:#1f9d55; --greenbg:#e5f6ec; --orange:#e8590c; --orangebg:#fff0e6;
+  --amber:#b7791f; --amberbg:#fff7e0; --red:#c53030; --redbg:#fdecec; --yellow:#ffd43b; --violet:#6d4bd8; --violetbg:#efeaff;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;color:var(--txt);background:var(--bg);font-size:14px}
+header{background:var(--navy);color:#fff;height:52px;display:flex;align-items:center;padding:0 20px;gap:14px;position:relative}
+header .badge{position:absolute;left:50%;transform:translateX(-50%);top:0;background:var(--yellow);color:#000;font-weight:700;font-size:12px;padding:3px 12px;border-radius:0 0 8px 8px}
+main{padding:18px 24px 40px;max-width:1500px}
+h1{margin:0;font-size:24px;display:inline-block;margin-right:12px}
+.pill{display:inline-block;background:var(--pill);border-radius:14px;padding:4px 11px;font-weight:600;font-size:13px;margin-right:6px}
+.guia{background:#fffbe6;border:1px solid #f3e3a0;border-radius:10px;padding:10px 16px;margin:12px 0;font-size:13px}
+.guia summary{font-weight:700;cursor:pointer}
+.guia ol{margin:8px 0 2px;padding-left:20px}
+.guia li{margin:3px 0}
+.opciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px}
+.opciones .op{border:2px solid var(--line);background:#fff;border-radius:10px;padding:7px 12px;cursor:pointer;text-align:left;max-width:300px}
+.opciones .op b{display:block}
+.opciones .op span{font-size:12px;color:var(--mut)}
+.opciones .op.on{border-color:var(--blue);background:#f2f6ff}
+.wrap{display:flex;gap:14px;align-items:flex-start}
+.tabla{flex:1;min-width:0;background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f7fa;text-align:left;padding:8px 10px;font-size:13px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid #eef0f4;vertical-align:middle;height:34px}
+tr.fila{cursor:pointer}
+tr.fila:hover td{background:#f8faff}
+tr.fila.elegida td{background:#eaf1ff}
+tr.grupo td:first-child{box-shadow:inset 4px 0 0 var(--violet)}
+tr.grupo.primera td{border-top:2px solid #d8cdfb}
+tr.grupo.ultima td{border-bottom:2px solid #d8cdfb}
+tr.cab td{background:var(--violetbg);color:#3f2a8c;font-size:12.5px;font-weight:600;height:28px;padding:4px 10px;border-top:2px solid #d8cdfb;box-shadow:inset 4px 0 0 var(--violet)}
+tr.cab button{font-size:12px;padding:1px 8px;margin-left:8px}
+.mono{font-family:Consolas,monospace;font-size:13px}
+.ph{color:#aab1bd;font-style:italic}
+.frac{display:inline-block;margin-left:6px;font-size:11.5px;color:var(--mut);font-weight:600}
+.frac.g{color:var(--violet)}
+.chip{display:inline-block;border-radius:10px;padding:1px 7px;font-size:11.5px;font-weight:600;white-space:nowrap;margin-left:6px}
+.chip.v{background:var(--violetbg);color:var(--violet);border:1px solid #d8cdfb}
+.chip.sug{background:var(--amberbg);color:var(--amber);border:1px dashed #e6c46a;cursor:pointer}
+.chip.sug:hover{background:#ffefc2}
+.tag{display:inline-block;border-radius:10px;padding:1px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.tag.pend{background:#eceef2;color:#4a5263}
+.tag.hoy{background:var(--orangebg);color:var(--orange)}
+.tag.man{background:var(--amberbg);color:var(--amber)}
+.tag.gen{background:#e3ebff;color:var(--blue)}
+.tag.env{background:var(--greenbg);color:var(--green)}
+.tag.nop{background:#f1f2f5;color:#7a8291}
+.sub{font-size:11.5px;color:var(--mut);margin-left:6px}
+.canal{font-size:11px;color:var(--mut);display:block}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:#fff;padding:6px 12px}
+button.prim{background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+button.warn{border-color:var(--orange);color:var(--orange)}
+button.v{border-color:var(--violet);color:var(--violet);font-weight:600}
+/* panel lateral */
+.panel{width:380px;flex-shrink:0;background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 16px;position:sticky;top:12px}
+.panel h2{margin:0 0 4px;font-size:17px}
+.panel h3{margin:14px 0 6px;font-size:11px;letter-spacing:.05em;color:var(--mut);text-transform:uppercase;border-top:1px solid #eef0f4;padding-top:10px}
+.panel dl{display:grid;grid-template-columns:110px 1fr;gap:4px 8px;margin:0;font-size:13px}
+.panel dt{color:var(--mut)} .panel dd{margin:0;font-weight:600}
+.caja{border:1px solid #d8cdfb;background:#faf8ff;border-radius:8px;padding:10px 12px;font-size:13px}
+.caja .t{font-weight:700;color:#3f2a8c;margin-bottom:6px}
+.caja ul{margin:4px 0 8px;padding-left:18px}
+.motivo{font-size:12.5px;color:var(--mut);margin-top:6px}
+.vacio{color:var(--mut);font-size:13px;padding:30px 10px;text-align:center}
+.sim{margin-top:10px;padding:8px 10px;border:1px dashed #c9cfda;border-radius:8px;font-size:12px;color:var(--mut)}
+.sim button{font-size:12px;padding:3px 8px;margin:4px 4px 0 0}
+/* modal */
+.velo{position:fixed;inset:0;background:rgba(10,20,40,.45);display:none;align-items:flex-start;justify-content:center;z-index:40;padding-top:60px}
+.velo.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:620px;max-height:84vh;overflow:auto;padding:18px 22px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.modal h2{margin:0 0 4px;font-size:19px}
+.cand{border:2px solid var(--line);border-radius:8px;padding:9px 12px;margin:8px 0;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.cand.on{border-color:var(--violet);background:#faf8ff}
+.cand.no{cursor:default;background:#fafbfc;color:#8b93a1}
+.cand .num{font-family:Consolas,monospace;font-weight:700}
+.efecto{background:#f5f7fa;border-radius:8px;padding:10px 12px;font-size:13px;margin-top:12px}
+.efecto li{margin:3px 0}
+.modal .ft{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.buscar{display:flex;gap:6px;margin-top:6px}
+.buscar input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:inherit}
+.radio{display:flex;gap:14px;margin:6px 0 0;font-size:13px}
+.log{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:12.5px}
+.log h3{margin:0 0 6px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.log div{padding:2px 0;border-bottom:1px dashed #eef0f4}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:60}
+</style>
+</head>
+<body>
+<header><b>Fonestore ERP</b><span style="opacity:.7">· Teléfonos › Pedidos</span><span class="badge">PROTOTIPO · datos inventados</span></header>
+<main>
+  <h1>Pedidos</h1>
+  <span class="pill" id="cPend"></span><span class="pill" id="cJuntos"></span>
+
+  <details class="guia" open>
+    <summary>Qué probar (juntar pedidos · fase 2)</summary>
+    <ol>
+      <li><b>Sugerencia (v2: solo en el panel):</b> pulsa una fila de <b>Móviles Sur</b>. En el panel sale <i>«Se puede juntar con 90108»</i> con <b>Ver</b> (salta a ese pedido, que dice lo mismo de vuelta) y <b>Juntar</b>. La tabla no lleva avisos.</li>
+      <li><b>El principal lo decide el ERP (v2):</b> la caja lleva la etiqueta del que ya la tiene; si ninguno la tiene, la del <b>más reciente</b>. Da igual si juntas desde A o desde B: el resultado es el mismo. Pruébalo con Lucía M. desde 90105 y desde 90111.</li>
+      <li><b>Juntar con otro:</b> en el panel, <i>«Juntar con otro pedido…»</i>: salen los del mismo cliente y tienda; se puede buscar otro por número.</li>
+      <li><b>Las tres situaciones de B:</b> Móviles Sur (los dos pendientes) · Tecno Levante (B ya tiene etiqueta) · Reparaciones Vega: <b>no se puede</b> (A ya no está en ShippyPro y B ya salió; si se olvidó juntar, el stock lo cubre la sincronización de la web).</li>
+      <li><b>Solo sale cuando se puede (v5):</b> en Amazon, en los que ya no están en ShippyPro y en los enviados no hay botón «Juntar». Phone Center Ruiz: cada uno tiene etiqueta, así que no se ofrecen entre ellos.</li>
+      <li><b>Cómo se ve (vista A):</b> los pedidos juntados salen <b>pegados</b>, el principal arriba; la fracción cuenta los móviles de la caja (1/3, 2/3, 3/3) y «Enviado» lleva el «Sale…» del pedido <b>más antiguo</b> del grupo.</li>
+      <li><b>Aviso de fechas (v6):</b> Lucía M., junta 90105 (sale hoy) con 90111 (sale lun 23/11): la ventana avisa de que 90105 saldrá con 90111. Decide logística.</li>
+      <li><b>Etiqueta:</b> en el panel del pedido principal, «Simular ShippyPro» → <i>Generar etiqueta</i> e <i>Imprimir</i>: las filas de A cambian a la vez que las de B.</li>
+      <li><b>Separar:</b> mientras A no haya recibido el envío. Después ya no se ofrece.</li>
+    </ol>
+  </details>
+
+  <div class="opciones" id="opciones"></div>
+
+  <div class="wrap">
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Fecha</th><th>Plataforma</th><th>SKU</th><th>IMEI</th><th>Pedido</th><th>Enviado</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside class="panel" id="panel"><div class="vacio">Pulsa una fila para ver su pedido.</div></aside>
+  </div>
+
+  <div class="log"><h3>Registro (simulado)</h3><div id="log"></div></div>
+</main>
+
+<div class="velo" id="velo"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const HOY = '20/11';
+const CANAL_TXT = {DISTRIBUIDORES:'Fonestockroom', PARTICULARES:'Fonestore', AMAZON:'Amazon'};
+// estado: PEND (pendiente) · GEN (etiqueta generada) · ENV (enviado) · NOP (ya no pendiente, sin envío)
+const filas = [
+  {id:1,  f:'13/11', cli:'Reparaciones Vega', canal:'DISTRIBUIDORES', sku:'i13128NegroA',   imei:'009912340000011', ped:'90099', est:'NOP'},
+  {id:2,  f:'14/11', cli:'Reparaciones Vega', canal:'DISTRIBUIDORES', sku:'i14128AzulA',    imei:'009912340000029', ped:'90102', est:'ENV', tr:'UPS', seg:'1Z99A0000000000001'},
+  {id:3,  f:'14/11', cli:'Móviles Sur SL',    canal:'DISTRIBUIDORES', sku:'i15128NegroA',   imei:'009912340000037', ped:'90101', est:'PEND', sale:'man'},
+  {id:4,  f:'15/11', cli:'Tecno Levante',     canal:'DISTRIBUIDORES', sku:'i12128BlancoA',  imei:'009912340000045', ped:'90103', est:'PEND', sale:'hoy'},
+  {id:5,  f:'15/11', cli:'Tecno Levante',     canal:'DISTRIBUIDORES', sku:'i12128BlancoA',  imei:'',                ped:'90103', est:'PEND', sale:'hoy'},
+  {id:6,  f:'15/11', cli:'Phone Center Ruiz', canal:'DISTRIBUIDORES', sku:'i13PRO256AzulA', imei:'009912340000052', ped:'90104', est:'GEN', tr:'GLS', seg:'GL0099000001'},
+  {id:7,  f:'16/11', cli:'Lucía M.',          canal:'PARTICULARES',   sku:'i14256MedianocheA', imei:'',             ped:'90105', est:'PEND', sale:'hoy'},
+  {id:8,  f:'17/11', cli:'Amazon DE',         canal:'AMAZON',         sku:'i13128RojoA',    imei:'009912340000060', ped:'302-0099000-0000001', est:'PEND', sale:'hoy'},
+  {id:9,  f:'17/11', cli:'Phone Center Ruiz', canal:'DISTRIBUIDORES', sku:'i11128NegroA',   imei:'009912340000078', ped:'90109', est:'GEN', tr:'GLS', seg:'GL0099000002'},
+  {id:10, f:'18/11', cli:'Móviles Sur SL',    canal:'DISTRIBUIDORES', sku:'i14128MedianocheA', imei:'009912340000086', ped:'90108', est:'PEND', sale:'man'},
+  {id:11, f:'18/11', cli:'Móviles Sur SL',    canal:'DISTRIBUIDORES', sku:'i14128MedianocheA', imei:'',             ped:'90108', est:'PEND', sale:'man'},
+  {id:12, f:'18/11', cli:'Tecno Levante',     canal:'DISTRIBUIDORES', sku:'i15256AzulA',    imei:'009912340000094', ped:'90110', est:'GEN', tr:'UPS', seg:'1Z99A0000000000002'},
+  {id:13, f:'19/11', cli:'Amazon FR',         canal:'AMAZON',         sku:'i14128BlancoA',  imei:'',                ped:'405-0099000-0000002', est:'PEND', sale:'man'},
+  {id:14, f:'19/11', cli:'Lucía M.',          canal:'PARTICULARES',   sku:'i12128NegroA',   imei:'',                ped:'90111', est:'PEND', sale:'lun'},
+];
+// juntas: clave de A -> clave del principal B (clave = canal|pedido)
+const juntas = {};
+let opcion = 'A';
+let elegida = null;
+const clave = f => f.canal + '|' + f.ped;
+const esWeb = f => f.canal !== 'AMAZON';
+const filasDe = k => filas.filter(f => clave(f) === k);
+const pedidoDe = k => k.split('|')[1];
+const principalDe = k => juntas[k] || k;
+const juntadosA = b => Object.keys(juntas).filter(a => juntas[a] === b);
+const grupoDe = k => { const b = principalDe(k); return [b, ...juntadosA(b)]; };
+const estPed = k => { const fs = filasDe(k); return fs.some(f=>f.est==='ENV')?'ENV':fs.some(f=>f.est==='GEN')?'GEN':fs.every(f=>f.est==='NOP')?'NOP':'PEND'; };
+const tieneEtiqueta = k => ['GEN','ENV'].includes(estPed(k)) && !juntas[k];
+
+function log(t){ const d=document.createElement('div'); d.textContent = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})+' · Imad · '+t; document.getElementById('log').prepend(d); }
+function toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>e.style.display='none',2600); }
+
+// ¿Se puede juntar A con B? Devuelve null si sí, o el motivo.
+function motivoNo(a, b){
+  if (a===b) return 'es el mismo pedido';
+  const fa=filasDe(a)[0], fb=filasDe(b)[0];
+  if (!esWeb(fa) || !esWeb(fb)) return 'Amazon: cada pedido lleva su propio seguimiento';
+  if (fa.canal!==fb.canal) return 'otra tienda';
+  if (juntas[b]) return 'ese pedido ya va con '+pedidoDe(juntas[b]);
+  if (juntadosA(a).length) return pedidoDe(a)+' ya es el principal de otro envío';
+  const ea=tieneEtiqueta(a), eb=tieneEtiqueta(b);
+  if (ea && eb) return 'los dos tienen su propia etiqueta: son dos envíos';
+  if (estPed(a)==='NOP' || estPed(b)==='NOP') return 'ya no está en ShippyPro: solo se juntan pedidos que siguen allí';
+  if (estPed(a)==='ENV' || estPed(b)==='ENV') return 'ya salió: esa caja ya no se puede abrir';
+  return null;
+}
+// El principal: el que ya tiene etiqueta; si ninguno, el más reciente (por la fecha de entrada).
+const diaNum = k => { const [d,m]=filasDe(k)[0].f.split('/').map(Number); return m*100+d; };
+function principalPropuesto(a,b){ if (tieneEtiqueta(a)) return a; if (tieneEtiqueta(b)) return b; return diaNum(a) > diaNum(b) ? a : b; }
+
+// Sugerencias: pedidos web del mismo cliente y tienda, juntables, alguno pendiente o «ya no pendiente» sin envío.
+function sugerencia(k){
+  if (juntas[k] || juntadosA(k).length) return null;
+  const f=filasDe(k)[0]; if(!esWeb(f)) return null;
+  const e=estPed(k); if (e!=='PEND') return null;
+  const otros=[...new Set(filas.filter(g=>g.cli===f.cli && g.canal===f.canal && clave(g)!==k).map(clave))];
+  return otros.find(o => !motivoNo(k,o) && !juntas[o]) || null;
+}
+
+// Orden: los grupos juntados se pintan pegados, en el sitio de su fila más antigua.
+function ordenadas(){
+  const vistos=new Set(), out=[];
+  for (const f of filas){
+    const k=clave(f), b=principalDe(k);
+    const g = (juntas[k]||juntadosA(k).length) ? grupoDe(k) : null;
+    if (g){ if (vistos.has(b)) continue; vistos.add(b);
+      // dentro del grupo: primero el principal (el de la etiqueta), luego los juntados
+      out.push({grupo:b, filas:[...filasDe(b), ...juntadosA(b).flatMap(filasDe)]});
+    } else out.push({grupo:null, filas:[f]});
+  }
+  return out;
+}
+
+const ORDEN_SALE = {hoy:0, man:1, lun:2};
+const textoSale = s => s==='hoy'?'<span class="tag hoy">Sale hoy</span>':s==='man'?'<span class="tag man">Sale mañana</span>':'<span class="tag pend">Sale lun 23/11</span>';
+const textoSalePlano = s => s==='hoy'?'sale hoy':s==='man'?'sale mañana':'sale el lun 23/11';
+// El «Sale…» de un grupo: el del pedido que antes tiene que salir (el más antiguo).
+const saleGrupo = b => grupoDe(b).flatMap(filasDe).map(x=>x.sale).filter(Boolean).sort((x,y)=>ORDEN_SALE[x]-ORDEN_SALE[y])[0];
+function etiquetaEnviado(f){
+  const k=clave(f), b=principalDe(k), conOtro = b!==k;
+  const est = conOtro ? estPed(b) : f.est;
+  const fb = filasDe(b)[0];
+  let t;
+  if (est==='ENV') t=`<span class="tag env">Enviado</span><span class="sub">${fb.tr} ${fb.seg.slice(-6)}</span>`;
+  else if (est==='GEN') t=`<span class="tag gen">Etiqueta generada</span><span class="sub">${fb.tr}</span>`;
+  else if (est==='NOP') t=`<span class="tag nop">Ya no está en ShippyPro</span>`;
+  else { const s = (conOtro || juntadosA(k).length) ? saleGrupo(b) : f.sale; t = textoSale(s); }
+  if (conOtro && opcion!=='C') t += `<span class="sub">con ${pedidoDe(b)}</span>`;
+  return t;
+}
+
+function pinta(){
+  document.getElementById('opciones').innerHTML = ''; if (false) [
+    ['A','A · Fracción del envío','El número cuenta los móviles de la caja entera: 1/3, 2/3, 3/3. Debajo, el pedido con el que va.'],
+    ['B','B · Fracción del pedido + etiqueta','Cada pedido sigue con su 1/2; una etiqueta morada «junto con 90108» en la columna Pedido.'],
+    ['C','C · Cabecera del envío','Una línea morada encima del grupo: «Envío juntado · 90108 + 90101 · 3 móviles» con «Separar».'],
+  ].map(([v,t,s])=>`<button class="op ${opcion===v?'on':''}" data-op="${v}"><b>${t}</b><span>${s}</span></button>`).join('');
+  document.querySelectorAll('.op').forEach(b=>b.onclick=()=>{opcion=b.dataset.op; pinta();});
+
+  const cuerpo=document.getElementById('cuerpo'); let h='';
+  const fracPedido = new Map();
+  for (const k of new Set(filas.map(clave))){ const fs=filasDe(k); if (fs.length>1) fs.forEach((f,i)=>fracPedido.set(f.id, `${i+1}/${fs.length}`)); }
+  for (const bloque of ordenadas()){
+    const g = bloque.grupo;
+    if (g && opcion==='C'){
+      const ks=grupoDe(g), n=bloque.filas.length;
+      h+=`<tr class="cab"><td colspan="6">Envío juntado · ${filasDe(g)[0].cli} · <span class="mono">${ks.map(pedidoDe).join(' + ')}</span> · ${n} móviles · etiqueta de ${pedidoDe(g)}${puedeSeparar(ks[1])?`<button data-sep="${ks[1]}">Separar</button>`:''}</td></tr>`;
+    }
+    bloque.filas.forEach((f,i)=>{
+      const k=clave(f), sug=sugerencia(k);
+      let cls='fila'+(elegida===f.id?' elegida':'');
+      if (g){ cls+=' grupo'; if(i===0&&opcion!=='C') cls+=' primera'; if(i===bloque.filas.length-1) cls+=' ultima'; }
+      let frac = '';
+      if (g && opcion==='A') frac=`<span class="frac g">${i+1}/${bloque.filas.length}</span>`;
+      else if (fracPedido.has(f.id)) frac=`<span class="frac">${fracPedido.get(f.id)}</span>`;
+      let extraPed='';
+      if (g && opcion==='A' && k!==g) extraPed=`<span class="chip v">→ ${pedidoDe(g)}</span>`;
+      if (g && opcion==='A' && k===g) extraPed=`<span class="chip v">+ ${juntadosA(g).map(pedidoDe).join(', ')}</span>`;
+      if (g && opcion==='B') extraPed = k!==g ? `<span class="chip v">junto con ${pedidoDe(g)}</span>` : `<span class="chip v">lleva ${juntadosA(g).map(pedidoDe).join(', ')}</span>`;
+      const sugTxt = '';
+      h+=`<tr class="${cls}" data-id="${f.id}">
+        <td>${f.f}</td>
+        <td>${f.cli}${sugTxt}<span class="canal">${CANAL_TXT[f.canal]}</span></td>
+        <td class="mono">${f.sku}</td>
+        <td class="mono">${f.imei||'<span class="ph">sin IMEI</span>'}</td>
+        <td class="mono">${f.ped}${frac}${extraPed}</td>
+        <td>${etiquetaEnviado(f)}</td></tr>`;
+    });
+  }
+  cuerpo.innerHTML=h;
+  cuerpo.querySelectorAll('tr.fila').forEach(tr=>tr.onclick=e=>{ if(e.target.closest('.chip.sug')) return; elegida=+tr.dataset.id; pinta(); });
+  cuerpo.querySelectorAll('.chip.sug').forEach(c=>c.onclick=e=>{ e.stopPropagation(); const [ca,pa,cb,pb]=c.dataset.sug.split('|'); abrirJuntar(ca+'|'+pa, cb+'|'+pb); });
+  cuerpo.querySelectorAll('[data-sep]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); separar(b.dataset.sep); });
+  const pend = filas.filter(f=>{ const b=principalDe(clave(f)); return estPed(b)==='PEND'; }).length;
+  document.getElementById('cPend').textContent = pend+' pendientes';
+  document.getElementById('cJuntos').textContent = Object.keys(juntas).length+' pedidos juntados';
+  pintaPanel();
+}
+
+function puedeSeparar(a){ return !!juntas[a] && !['GEN','ENV'].includes(estPed(juntas[a])) ; }
+
+function pintaPanel(){
+  const p=document.getElementById('panel');
+  const f=filas.find(x=>x.id===elegida); if(!f){ p.innerHTML='<div class="vacio">Pulsa una fila para ver su pedido.</div>'; return; }
+  const k=clave(f), b=principalDe(k), conOtro=b!==k, lleva=juntadosA(k);
+  let h=`<h2>Pedido <span class="mono">${f.ped}</span></h2><div style="color:var(--mut);font-size:13px">${f.cli} · ${CANAL_TXT[f.canal]}</div>
+    <h3>Fila</h3><dl><dt>SKU</dt><dd class="mono">${f.sku}</dd><dt>IMEI</dt><dd class="mono">${f.imei||'—'}</dd><dt>Entró</dt><dd>${f.f}</dd><dt>Enviado</dt><dd>${etiquetaEnviado(f)}</dd></dl>
+    <h3>Envío</h3>`;
+  if (conOtro){
+    h+=`<div class="caja"><div class="t">Va en la caja del pedido ${pedidoDe(b)}</div>
+      Sus filas reciben la etiqueta de ${pedidoDe(b)} al generarse y sus móviles pasan a vendidos.
+      <ul>${grupoDe(b).map(x=>`<li><span class="mono">${pedidoDe(x)}</span> · ${filasDe(x).length} móvil(es)${x===b?' · <b>principal</b> (su etiqueta)':''}</li>`).join('')}</ul>
+      ${puedeSeparar(k)?`<button class="warn" id="bSep">Separar de ${pedidoDe(b)}</button>`:`<div class="motivo">Ya tiene el envío de ${pedidoDe(b)}: no se puede separar.</div>`}</div>`;
+  } else if (lleva.length){
+    h+=`<div class="caja"><div class="t">Envío juntado: lleva también ${lleva.map(pedidoDe).join(', ')}</div>
+      La etiqueta de este pedido sirve para todos.
+      <ul>${grupoDe(k).map(x=>`<li><span class="mono">${pedidoDe(x)}</span> · ${filasDe(x).length} móvil(es)${x===k?' · <b>principal</b>':''}${x!==k&&puedeSeparar(x)?` <button data-sep2="${x}" style="font-size:12px;padding:1px 7px">Separar</button>`:''}</li>`).join('')}</ul></div>`;
+  } else {
+    const web=esWeb(f), e=estPed(k);
+    const propio = tieneEtiqueta(k);
+    let motivo=null;
+    if (!web) motivo='Amazon: cada pedido lleva su propio seguimiento.';
+    const sug = sugerencia(k) || (web ? [...new Set(filas.filter(g=>g.cli===f.cli && g.canal===f.canal && clave(g)!==k).map(clave))].find(o=>!motivoNo(k,o)) : null);
+    if (sug){ const fs=filasDe(sug)[0];
+      h+=`<div class="caja" style="border-color:#e6c46a;background:#fffbef;margin-bottom:10px"><div class="t" style="color:var(--amber)">Se puede juntar con ${pedidoDe(sug)}</div>
+        Mismo cliente y tienda · ${fs.f} · ${filasDe(sug).length} móvil(es) · ${({PEND:'pendiente',NOP:'ya no está en ShippyPro',GEN:'etiqueta generada',ENV:'enviado'})[estPed(sug)]}
+        <div style="margin-top:8px;display:flex;gap:6px"><button id="bVer">Ver ${pedidoDe(sug)}</button><button class="v" id="bJSug">Juntar</button></div></div>`; }
+    if (!motivo && e==='NOP') motivo='Ya no está en ShippyPro: ya no se puede juntar. Si salió en la caja de otro pedido, sus móviles pasan a vendidos al sincronizarlo la web.';
+    if (!motivo && e==='ENV') motivo='Ya salió: no se puede juntar.';
+    if (!motivo) h+=`<button class="v" id="bJuntar">Juntar con otro pedido…</button>`;
+    if (motivo) {}
+    else if (propio) h+=`<div class="motivo">Este pedido ya tiene etiqueta: solo puede ser el <b>principal</b> (otro pedido sin etiqueta va en su caja).</div>`;
+  }
+  // simulación de ShippyPro para el principal
+  if (!conOtro && esWeb(f)){
+    const e=estPed(k);
+    h+=`<div class="sim">Simular ShippyPro (para ver el efecto):<br>
+      <button id="sGen" ${e!=='PEND'?'disabled':''}>Generar etiqueta de ${f.ped}</button>
+      <button id="sImp" ${e!=='GEN'?'disabled':''}>Imprimir etiqueta</button></div>`;
+  }
+  p.innerHTML=h;
+  const bj=document.getElementById('bJuntar'); if(bj) bj.onclick=()=>abrirJuntar(k,null);
+  const bv=document.getElementById('bVer'); if(bv){ const s=sugerencia(k) || [...new Set(filas.filter(g=>g.cli===f.cli && g.canal===f.canal && clave(g)!==k).map(clave))].find(o=>!motivoNo(k,o));
+    bv.onclick=()=>{ elegida=filasDe(s)[0].id; pinta(); const tr=document.querySelector(`tr.fila[data-id="${elegida}"]`); if(tr) tr.scrollIntoView({block:'center',behavior:'smooth'}); };
+    document.getElementById('bJSug').onclick=()=>abrirJuntar(k,s); }
+  const bs=document.getElementById('bSep'); if(bs) bs.onclick=()=>separar(k);
+  p.querySelectorAll('[data-sep2]').forEach(x=>x.onclick=()=>separar(x.dataset.sep2));
+  const sg=document.getElementById('sGen'); if(sg) sg.onclick=()=>{ filasDe(k).forEach(x=>{x.est='GEN';x.tr='UPS';x.seg='1Z99A00000000000'+(10+x.id);}); log(`ShippyPro: etiqueta de ${pedidoDe(k)}`+(juntadosA(k).length?` (también para ${juntadosA(k).map(pedidoDe).join(', ')})`:'')); pinta(); };
+  const si=document.getElementById('sImp'); if(si) si.onclick=()=>{ filasDe(k).forEach(x=>x.est='ENV'); log(`ShippyPro: impresa la etiqueta de ${pedidoDe(k)}`); pinta(); };
+}
+
+let sel=null, prin=null;
+function abrirJuntar(a, preB){
+  const fa=filasDe(a)[0];
+  const cands=[...new Set(filas.filter(g=>g.cli===fa.cli && g.canal===fa.canal && clave(g)!==a).map(clave))];
+  sel = preB || cands.find(c=>!motivoNo(a,c)) || null; prin = sel ? principalPropuesto(a,sel) : null;
+  const m=document.getElementById('modal');
+  const pinta2=()=>{
+    const efecto = sel ? (()=>{ const A = prin===sel ? a : sel, B = prin; const eb=estPed(B);
+      return `<div class="efecto"><b>Qué pasa al juntar</b><ul>
+        <li>Los dos salen <b>pegados</b> en la tabla y con una sola etiqueta: la de <span class="mono">${pedidoDe(B)}</span>.</li>
+        ${eb==='PEND'?`<li>Cuando se genere la etiqueta de ${pedidoDe(B)}, las filas de ${pedidoDe(A)} pasan a «Etiqueta generada» con ella.</li>`:''}
+        ${eb==='GEN'?`<li>${pedidoDe(B)} ya tiene etiqueta: las filas de ${pedidoDe(A)} pasan <b>ya</b> a «Etiqueta generada» con ella.</li>`:''}
+        ${eb==='ENV'?`<li><b>Corrección:</b> ${pedidoDe(B)} ya salió. Las filas de ${pedidoDe(A)} pasan a «Enviado» con su seguimiento.</li>`:''}
+        <li>Los móviles de ${pedidoDe(A)} pasan a <b>vendidos</b> en cuanto tienen la etiqueta.</li>
+        <li>Se puede separar mientras ${pedidoDe(A)} no tenga el envío.</li></ul></div>`; })() : '';
+    const dosPend = false;
+    const porque = sel ? (tieneEtiqueta(prin) ? 'es el que ya tiene etiqueta' : 'es el más reciente') : '';
+    m.innerHTML=`<h2>Juntar el pedido <span class="mono">${pedidoDe(a)}</span> con…</h2>
+      <div style="color:var(--mut);font-size:13px">${fa.cli} · ${CANAL_TXT[fa.canal]} · ${filasDe(a).length} móvil(es) · ${({PEND:'pendiente',NOP:'ya no está en ShippyPro',GEN:'con etiqueta',ENV:'enviado'})[estPed(a)]}</div>
+      <h3 style="font-size:12px;color:var(--mut);margin:14px 0 2px">Pedidos del mismo cliente en ${CANAL_TXT[fa.canal]}</h3>
+      ${cands.length?cands.map(c=>{ const mo=motivoNo(a,c), fc=filasDe(c)[0];
+        return `<div class="cand ${mo?'no':''} ${sel===c?'on':''}" data-c="${c}"><input type="radio" ${sel===c?'checked':''} ${mo?'disabled':''}>
+          <div><span class="num">${pedidoDe(c)}</span> · ${fc.f} · ${filasDe(c).length} móvil(es) · ${({PEND:'pendiente',NOP:'ya no está en ShippyPro',GEN:'etiqueta generada',ENV:'enviado'})[estPed(c)]}
+          ${mo?`<div class="motivo">No se puede: ${mo}.</div>`:''}</div></div>`; }).join(''):'<div class="motivo">No hay otros pedidos de este cliente en esta tienda.</div>'}
+      <div class="buscar"><input id="bus" placeholder="¿Otro? Escribe el número de pedido (si el cliente sale con otro nombre)"><button id="bBus">Buscar</button></div>
+      ${dosPend?`<div style="margin-top:12px;font-size:13px"><b>¿Qué etiqueta lleva la caja?</b><div class="radio">
+        <label><input type="radio" name="pr" value="${sel}" ${prin===sel?'checked':''}> la de ${pedidoDe(sel)}</label>
+        <label><input type="radio" name="pr" value="${a}" ${prin===a?'checked':''}> la de ${pedidoDe(a)}</label></div></div>`:''}
+      ${(()=>{ if(!sel) return ''; const A = prin===sel ? a : sel, B = prin; const sa=filasDe(A)[0].sale, sb=filasDe(B)[0].sale;
+          if (estPed(B)!=='PEND' || !sa || !sb || ORDEN_SALE[sa] >= ORDEN_SALE[sb]) return '';
+          return `<div class="caja" style="border-color:#e6c46a;background:#fffbef;margin-top:12px"><div class="t" style="color:var(--amber)">${pedidoDe(A)} saldrá más tarde de lo que toca</div>
+            ${pedidoDe(A)} entró el ${filasDe(A)[0].f} y ${textoSalePlano(sa)}; ${pedidoDe(B)} entró el ${filasDe(B)[0].f} y ${textoSalePlano(sb)}.
+            Si los juntas, ${pedidoDe(A)} saldrá con ${pedidoDe(B)}.</div>`; })()}
+      ${sel?`<div style="margin-top:12px;font-size:13px">La caja lleva la etiqueta de <b class="mono">${pedidoDe(prin)}</b> (${porque}).</div>`:''}
+      ${efecto}
+      <div class="ft"><button id="mCan">Cancelar</button><button class="prim" id="mOk" ${sel?'':'disabled'}>Juntar</button></div>`;
+    m.querySelectorAll('.cand:not(.no)').forEach(d=>d.onclick=()=>{ sel=d.dataset.c; prin=principalPropuesto(a,sel); pinta2(); });
+    m.querySelectorAll('input[name=pr]').forEach(r=>r.onchange=()=>{ prin=r.value; pinta2(); });
+    document.getElementById('mCan').onclick=cerrar;
+    document.getElementById('bBus').onclick=()=>{ const v=document.getElementById('bus').value.trim(); const c=[...new Set(filas.map(clave))].find(x=>pedidoDe(x)===v);
+      if(!c){ toast('No hay ningún pedido '+v+' en el ERP'); return; } const mo=motivoNo(a,c); if(mo){ toast('No se puede juntar con '+v+': '+mo); return; }
+      if(!cands.includes(c)) cands.push(c); sel=c; prin=principalPropuesto(a,c); pinta2(); };
+    document.getElementById('mOk').onclick=()=>{ const A = prin===sel ? a : sel; juntar(A, prin); cerrar(); };
+  };
+  pinta2(); document.getElementById('velo').classList.add('open');
+}
+function cerrar(){ document.getElementById('velo').classList.remove('open'); }
+document.getElementById('velo').onclick=e=>{ if(e.target.id==='velo') cerrar(); };
+
+function juntar(a,b){
+  juntas[a]=b;
+  const eb=estPed(b), fb=filasDe(b)[0];
+  if (eb==='GEN'||eb==='ENV') filasDe(a).forEach(x=>{ x.est=eb; x.tr=fb.tr; x.seg=fb.seg; });
+  log(`juntó ${pedidoDe(a)} con ${pedidoDe(b)} (etiqueta de ${pedidoDe(b)})`+(eb==='ENV'?' · corrección: ya había salido':''));
+  toast(`${pedidoDe(a)} va ahora en la caja de ${pedidoDe(b)}`);
+  pinta();
+}
+function separar(a){
+  const b=juntas[a]; if(!b||!puedeSeparar(a)) return;
+  delete juntas[a];
+  log(`separó ${pedidoDe(a)} de ${pedidoDe(b)}`); toast(`${pedidoDe(a)} vuelve a ir por su cuenta`);
+  pinta();
+}
+pinta();
+</script>
+</body>
+</html>
