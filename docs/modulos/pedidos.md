@@ -28,7 +28,9 @@ ERP ──GET (clave)──► plugin de la web ──► factura del pedido de 
 plugin de la web ──POST /api/pedidos/sincronizados (clave)──► ERP: «ya sincronizado» y quita «Falta por enviar»
 ```
 
-El ERP **nunca escribe** en ShippyPro, en los libros ni en la hoja.
+El ERP **nunca escribe** en ShippyPro, en los libros ni en la hoja. **Las etiquetas se siguen generando e imprimiendo en
+ShippyPro**, como antes del corte; el ERP solo lee que existen y si se han impreso (y la previsualización del panel solo descarga
+el PDF). Generarlas desde el ERP es de la fase 2.
 
 ### 2.1 La lectura de ShippyPro (`LecturaFilas`, cada 5 minutos)
 
