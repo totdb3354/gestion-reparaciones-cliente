@@ -114,6 +114,10 @@ Botón «Listado»: un Excel «Listado dd-MM HHhmm.xlsx» con una pestaña por p
 
 Cuenta las filas **sin IMEI** y sin «Cancelado» que siguen pendientes o con «Falta por enviar».
 
+**CSV de lo que se ve (0.9.40).** «Descargar CSV», en el menú del usuario, baja las filas que enseña la tabla: el periodo (o «Ver»
+los pendientes de fuera, o la búsqueda), con los filtros de columna y el orden puestos. Columnas: Fecha, Plataforma, SKU, IMEI,
+Pedido, Enviado, Fecha compra, Marca y Nota marca, con los textos de la pantalla. Sin filas a la vista, la opción sale deshabilitada.
+
 ## 6. Ajustes del servidor
 
 Variables de entorno (valores fuera del repositorio):
