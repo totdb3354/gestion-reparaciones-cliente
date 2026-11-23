@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Pedidos · cancelar con botón</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --sel:#EAF1FF; --cab:#F6F7F9; --verde:#2f7d3b; --rojo:#b42318; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; }
+  button, input, select { font-family:inherit; color:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .proto .acc { background:#fff; color:#3b0764; border:0; border-radius:6px; padding:4px 10px; font-weight:700; cursor:pointer; font-size:12px; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; flex:none; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { flex:1; min-height:0; padding:12px 16px; display:flex; flex-direction:column; }
+  h1 { margin:0 0 8px; font-size:24px; color:var(--azul-medio); }
+  .aviso { background:#fdecea; color:var(--rojo); border:1px solid #f5c2bd; border-radius:6px; padding:6px 10px; margin-bottom:8px; font-weight:600; }
+  .zona { flex:1; display:flex; gap:12px; min-height:0; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); }
+  table { border-collapse:separate; border-spacing:0; width:100%; min-width:640px; table-layout:fixed; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:4px 10px; border-bottom:1px solid #e6e9ee; height:32px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:top; }
+  tr { cursor:pointer; }
+  tr.aqui td { background:var(--sel); }
+  tr.aqui td:first-child { box-shadow:inset 4px 0 0 #2f6fe0; }
+  td.imei { font-family:Consolas,monospace; font-size:12px; overflow:visible; position:relative; }
+  .vacio { color:#9aa3b2; font-family:"Segoe UI",sans-serif; font-style:italic; }
+  .est { display:inline-block; border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; }
+  .e-pend { border:1px dashed #C8CDD5; color:var(--azul-gris); background:#fff; }
+  .e-env { background:#e3f5e6; color:var(--verde); }
+  .e-falta { background:#FFF3CD; color:#8A6100; }
+  .e-canc { background:#fdecea; color:var(--rojo); }
+  .m { display:inline-block; border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; }
+  .m-ESPERA_STOCK { background:#FFF3CD; color:#8A6100; } .m-EN_REVISION { background:#e8eefc; color:#2445a8; }
+  .m-PENDIENTE_COLOR { background:#f3e8fc; color:#6b2aa8; } .m-CANCELADO { background:#fdecea; color:var(--rojo); }
+  .desp { position:absolute; left:6px; top:30px; z-index:5; width:230px; background:#fff; border:1px solid var(--borde); border-radius:6px;
+          box-shadow:0 6px 18px rgba(0,18,50,.18); padding:8px; font-family:"Segoe UI",sans-serif; cursor:default; }
+  .desp .nota { font-size:11px; color:var(--azul-gris); margin-top:6px; white-space:normal; }
+  select, input.txt { height:28px; width:100%; border:1px solid var(--borde); border-radius:6px; padding:0 6px; font-size:12px; background:#fff; }
+  input.txt { margin-top:6px; }
+  aside { width:min(380px,40vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; }
+  aside h2 { margin:0; font-size:15px; color:var(--azul-medio); }
+  aside h3 { margin:14px 0 6px; font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--azul-gris); }
+  dl { display:grid; grid-template-columns:104px minmax(0,1fr); gap:6px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; }
+  .btn { height:28px; border:1px solid var(--borde); background:#fff; border-radius:6px; padding:0 10px; font-size:12px; font-weight:600; cursor:pointer; }
+  .btn.peligro { border-color:#e7a29b; color:var(--rojo); }
+  .btn.peligro-lleno { background:var(--rojo); border-color:var(--rojo); color:#fff; }
+  .btn.prim { background:var(--azul-noche); border-color:var(--azul-noche); color:#fff; }
+  .falta { font-weight:700; color:#8A6100; margin:8px 0 6px; font-size:12.5px; }
+  .peq { font-size:11px; color:var(--azul-gris); margin:2px 0 0; }
+  .caja-canc { margin-top:10px; border-top:1px solid #eef0f3; padding-top:10px; }
+  .velo { position:fixed; inset:0; background:rgba(0,18,50,.35); display:flex; align-items:center; justify-content:center; z-index:20; }
+  .dialogo { width:min(420px,92vw); background:#fff; border-radius:8px; padding:16px 18px; box-shadow:0 12px 40px rgba(0,18,50,.3); }
+  .dialogo h2 { margin:0 0 8px; font-size:16px; color:var(--azul-medio); }
+  .dialogo p { margin:0 0 8px; line-height:1.45; }
+  .dialogo .acciones { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+  .log { margin-top:10px; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:6px 10px; font-size:11.5px; color:var(--azul-gris); max-height:120px; overflow:auto; }
+  .log div { padding:1px 0; }
+  .hist div { font-size:11.5px; padding:2px 0; border-bottom:1px dashed #eef0f3; }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos · cancelar con botón y confirmación (0.9.42)</span>
+  <button class="acc" id="reiniciar">Reiniciar datos</button>
+</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados):
+  <ol>
+    <li>Pulsa en la celda IMEI de cualquier fila: el desplegable de marca ya <b>no tiene «Cancelado»</b> (solo 3 marcas).</li>
+    <li>Fila <b>WEB-1002</b> (envío parcial, «Falta por enviar»): abre el panel → «Cancelar móvil» → confirma. La falta desaparece y el historial lo apunta.</li>
+    <li>En una fila cancelada: no hay desplegable de marca ni botón «Falta por enviar»; solo «Quitar cancelación» (con confirmación).</li>
+    <li>Fila <b>AMZ-2003</b> (cancelada, su IMEI ya se picó en AMZ-2004): «Quitar cancelación» → sale el aviso de duplicado y sigue cancelada.</li>
+    <li>Fila <b>AMZ-2001</b> (sin cancelar, con marca «En revisión»): al cancelarla, la marca anterior se sustituye por «Cancelado».</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Pedidos</header>
+<main>
+  <h1>Pedidos</h1>
+  <div class="aviso" id="aviso" hidden></div>
+  <div class="zona">
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:110px"><col style="width:90px"><col style="width:170px"><col style="width:190px"><col></colgroup>
+        <thead><tr><th>Pedido</th><th>Canal</th><th>SKU</th><th>IMEI</th><th>Estado / marca</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel" hidden></aside>
+  </div>
+  <div class="log" id="log"><b>Registro (lo que mandaría al servidor)</b></div>
+</main>
+<div class="velo" id="velo" hidden><div class="dialogo" role="dialog" aria-modal="true" id="dialogo"></div></div>
+
+<script>
+const MARCAS = [['ESPERA_STOCK','En espera de stock'],['EN_REVISION','En revisión'],['PENDIENTE_COLOR','Pendiente de color']];
+const TEXTO = Object.fromEntries([...MARCAS, ['CANCELADO','Cancelado']]);
+function datos() { return [
+  { id:1, pedido:'AMZ-2001', canal:'AMAZON', sku:'IP13-128-NE-A', imei:'350000000000011', estado:'PEND', marca:'EN_REVISION', nota:'Pantalla con marca', marcaPor:'Laura', marcaEn:'23/11 09:12', falta:null, hist:['23/11 09:12 Laura: marca En revisión — Pantalla con marca'] },
+  { id:2, pedido:'WEB-1002', canal:'WEB', sku:'IP14-256-AZ-B', imei:'350000000000022', estado:'ENV', marca:null, nota:null, falta:'23/11 10:05', hist:['22/11 18:40 ShippyPro: etiqueta generada','23/11 10:05 Marta: falta por enviar'] },
+  { id:3, pedido:'AMZ-2003', canal:'AMAZON', sku:'IP12-64-BL-A', imei:'350000000000033', estado:'PEND', marca:'CANCELADO', nota:'Cliente lo anuló', marcaPor:'Pablo', marcaEn:'22/11 17:30', falta:null, hist:['22/11 17:30 Pablo: cancelado — Cliente lo anuló'] },
+  { id:4, pedido:'AMZ-2004', canal:'AMAZON', sku:'IP12-64-BL-A', imei:'350000000000033', estado:'PEND', marca:null, nota:null, falta:null, hist:['23/11 08:50 Laura: IMEI 350000000000033'] },
+  { id:5, pedido:'WEB-1005', canal:'WEB', sku:'IP15-128-RO-A', imei:null, estado:'PEND', marca:null, nota:null, falta:null, hist:[] },
+]; }
+let filas = datos(), sel = null, desplegado = null;
+const $ = (id) => document.getElementById(id);
+const ahora = () => '23/11 ' + new Date().toTimeString().slice(0,5);
+function log(t) { const d = document.createElement('div'); d.textContent = t; $('log').appendChild(d); }
+function aviso(t) { $('aviso').textContent = t; $('aviso').hidden = !t; }
+function estadoHtml(f) {
+  if (f.marca === 'CANCELADO') return '<span class="est e-canc">Cancelado</span>';
+  let s = f.falta ? '<span class="est e-falta">Falta por enviar</span>' : f.estado === 'ENV' ? '<span class="est e-env">Etiqueta generada</span>' : '<span class="est e-pend">Pendiente</span>';
+  if (f.marca) s += ' <span class="m m-' + f.marca + '">' + TEXTO[f.marca] + '</span>';
+  return s;
+}
+function pintar() {
+  $('cuerpo').innerHTML = filas.map(f => `<tr data-id="${f.id}" class="${sel===f.id?'aqui':''}">
+    <td>${f.pedido}</td><td>${f.canal}</td><td>${f.sku}</td>
+    <td class="imei" data-imei="${f.id}">${f.imei ?? '<span class="vacio">sin IMEI</span>'}${desplegado===f.id ? despHtml(f) : ''}</td>
+    <td>${estadoHtml(f)}</td></tr>`).join('');
+  pintarPanel();
+}
+function despHtml(f) {
+  if (f.marca === 'CANCELADO') return `<div class="desp" data-desp>Fila cancelada: la marca se cambia desde el panel («Quitar cancelación»).</div>`;
+  return `<div class="desp" data-desp><select data-sel="${f.id}" aria-label="Marca"><option value="">Sin marca</option>${MARCAS.map(([v,t]) => `<option value="${v}" ${f.marca===v?'selected':''}>${t}</option>`).join('')}</select>
+    <div class="nota">Para cancelar el móvil, abre el panel de la fila.</div></div>`;
+}
+function pintarPanel() {
+  const f = filas.find(x => x.id === sel);
+  const p = $('panel');
+  if (!f) { p.hidden = true; return; }
+  p.hidden = false;
+  const canc = f.marca === 'CANCELADO';
+  const puedeFalta = !canc && f.canal === 'WEB' && f.estado === 'ENV';
+  p.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><h2>Detalle del pedido</h2><button class="btn" style="margin-left:auto" id="cerrar">Cerrar</button></div>
+    <h3>El pedido</h3>
+    <dl><dt>Pedido</dt><dd>${f.pedido}</dd><dt>Estado</dt><dd>${estadoHtml(f)}</dd><dt>Canal</dt><dd>${f.canal}</dd><dt>SKU</dt><dd style="font-family:Consolas,monospace">${f.sku}</dd></dl>
+    ${f.falta ? `<p class="falta">Envío parcial: falta por enviar desde ${f.falta}</p>` : ''}
+    ${puedeFalta ? `<button class="btn" id="bfalta" style="margin-top:8px">${f.falta ? 'Ya ha salido' : 'Falta por enviar'}</button>` : ''}
+    <h3>Marca</h3>
+    ${canc ? '' : (f.marca ? `<p style="margin:0"><span class="m m-${f.marca}">${TEXTO[f.marca]}</span> <b>${f.nota ?? ''}</b></p><p class="peq">Puesta por ${f.marcaPor} el ${f.marcaEn}</p>` : '<p class="peq" style="margin:0">Sin marca.</p>')}
+    ${canc ? '' : `<select data-sel="${f.id}" aria-label="Marca" style="margin-top:8px"><option value="">Sin marca</option>${MARCAS.map(([v,t]) => `<option value="${v}" ${f.marca===v?'selected':''}>${t}</option>`).join('')}</select>`}
+    <div class="caja-canc">
+      ${canc
+        ? `<p style="margin:0"><span class="m m-CANCELADO">Cancelado</span> <b>${f.nota ?? ''}</b></p><p class="peq">Cancelado por ${f.marcaPor} el ${f.marcaEn}. Este móvil no sale en este pedido y su IMEI está libre.</p>
+           <button class="btn" id="bquitar" style="margin-top:8px">Quitar cancelación</button>`
+        : `<button class="btn peligro" id="bcanc">Cancelar móvil</button>`}
+    </div>
+    <h3>El móvil</h3>
+    ${f.imei ? `<dl><dt>IMEI</dt><dd style="font-family:Consolas,monospace">${f.imei}</dd></dl>` : '<p class="peq">Sin IMEI todavía.</p>'}
+    <h3>Historial</h3><div class="hist">${f.hist.length ? f.hist.map(h => `<div>${h}</div>`).join('') : '<div>—</div>'}</div>`;
+  $('cerrar').onclick = () => { sel = null; pintar(); };
+  if ($('bfalta')) $('bfalta').onclick = () => { f.falta = f.falta ? null : ahora(); f.hist.push(ahora() + ' Tú: ' + (f.falta ? 'falta por enviar' : 'ya ha salido')); log('PUT /filas/' + f.id + '/falta-enviar ' + !!f.falta); pintar(); };
+  if ($('bcanc')) $('bcanc').onclick = () => dialogoCancelar(f);
+  if ($('bquitar')) $('bquitar').onclick = () => dialogoQuitar(f);
+}
+function cerrarDialogo() { $('velo').hidden = true; }
+function dialogoCancelar(f) {
+  $('dialogo').innerHTML = `<h2>¿Cancelar este móvil?</h2>
+    <p>Pedido <b>${f.pedido}</b>${f.imei ? ', IMEI <b style="font-family:Consolas,monospace">' + f.imei + '</b>' : ''}.</p>
+    <p>No saldrá en este pedido${f.imei ? ' y su IMEI quedará libre para otro pedido' : ''}.</p>
+    ${f.falta ? '<p style="color:#8A6100;font-weight:600">Se quitará también «Falta por enviar».</p>' : ''}
+    ${f.marca ? `<p style="color:var(--azul-gris)">Sustituye a la marca «${TEXTO[f.marca]}».</p>` : ''}
+    <input class="txt" id="dnota" maxlength="200" placeholder="Nota (opcional): motivo de la cancelación">
+    <div class="acciones"><button class="btn" id="dvolver">Volver</button><button class="btn peligro-lleno" id="dok">Cancelar el móvil</button></div>`;
+  $('velo').hidden = false; $('dnota').focus();
+  $('dvolver').onclick = cerrarDialogo;
+  $('dok').onclick = () => {
+    const nota = $('dnota').value.trim() || null;
+    if (f.falta) { f.hist.push(ahora() + ' Tú: quitada «falta por enviar» (al cancelar)'); f.falta = null; }
+    f.marca = 'CANCELADO'; f.nota = nota; f.marcaPor = 'Tú'; f.marcaEn = ahora();
+    f.hist.push(ahora() + ' Tú: cancelado' + (nota ? ' — ' + nota : ''));
+    log('PUT /filas/' + f.id + '/marca {marca:CANCELADO, nota:' + JSON.stringify(nota) + '} → el servidor borra FALTA_ENVIAR_EN en la misma transacción');
+    cerrarDialogo(); aviso(''); pintar();
+  };
+}
+function dialogoQuitar(f) {
+  $('dialogo').innerHTML = `<h2>¿Quitar la cancelación?</h2>
+    <p>Pedido <b>${f.pedido}</b>. La fila vuelve a estar pendiente${f.imei ? ' y su IMEI vuelve a contar como ocupado' : ''}.</p>
+    <p style="color:var(--azul-gris)">«Falta por enviar» no vuelve: si hace falta, márcala otra vez.</p>
+    <div class="acciones"><button class="btn" id="dvolver">Volver</button><button class="btn prim" id="dok">Quitar cancelación</button></div>`;
+  $('velo').hidden = false;
+  $('dvolver').onclick = cerrarDialogo;
+  $('dok').onclick = () => {
+    cerrarDialogo();
+    const otra = f.imei && filas.find(x => x.id !== f.id && x.imei === f.imei && x.marca !== 'CANCELADO');
+    log('PUT /filas/' + f.id + '/marca {marca:null, marcaAnterior:CANCELADO}' + (otra ? ' → 409' : ' → 200'));
+    if (otra) { aviso(`Pedido ${f.pedido}: no se puede quitar la cancelación. Este IMEI ya está en el pedido ${otra.pedido}.`); return; }
+    f.hist.push(ahora() + ' Tú: quitada la marca Cancelado');
+    f.marca = null; f.nota = null; aviso(''); pintar();
+  };
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-desp]') || e.target.closest('#velo')) return;
+  const celda = e.target.closest('td.imei');
+  const tr = e.target.closest('tr[data-id]');
+  if (celda) { const id = +celda.dataset.imei; desplegado = desplegado === id ? null : id; sel = id; pintar(); return; }
+  if (tr) { sel = +tr.dataset.id; desplegado = null; pintar(); return; }
+  if (!e.target.closest('aside') && desplegado !== null) { desplegado = null; pintar(); }
+});
+document.addEventListener('change', (e) => {
+  const s = e.target.closest('select[data-sel]'); if (!s) return;
+  const f = filas.find(x => x.id === +s.dataset.sel);
+  f.marca = s.value || null; f.nota = null; f.marcaPor = 'Tú'; f.marcaEn = ahora();
+  f.hist.push(ahora() + ' Tú: ' + (f.marca ? 'marca ' + TEXTO[f.marca] : 'marca quitada'));
+  log('PUT /filas/' + f.id + '/marca {marca:' + f.marca + '}'); desplegado = null; pintar();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('velo').hidden) cerrarDialogo(); });
+$('reiniciar').onclick = () => { filas = datos(); sel = null; desplegado = null; aviso(''); $('log').innerHTML = '<b>Registro (lo que mandaría al servidor)</b>'; pintar(); };
+pintar();
+</script>
+</body>
+</html>
