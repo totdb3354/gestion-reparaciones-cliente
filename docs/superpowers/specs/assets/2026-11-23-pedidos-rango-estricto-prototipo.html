@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Pedidos · rango estricto</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --pill-bg:#F0F2F5; --pill-borde:#C8CDD5; --cab:#F6F7F9; --verde:#2f7d3b; --gris-fila:#8b93a1; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; }
+  button, input, select { font-family:inherit; color:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .proto .seg { display:inline-flex; border-radius:7px; overflow:hidden; border:1px solid #f1e356; }
+  .proto .seg button { background:transparent; color:#fff; border:0; padding:4px 12px; font-weight:700; cursor:pointer; font-size:12px; }
+  .proto .seg button.on { background:#f1e356; color:#001232; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; flex:none; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { flex:1; padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .titulo { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  h1 { margin:0 6px 0 0; font-size:24px; color:var(--azul-medio); }
+  .barra { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .chip { height:28px; border:1px solid var(--borde); background:#fff; border-radius:14px; padding:0 12px; font-weight:600; font-size:12px; color:var(--azul-medio); cursor:pointer; }
+  .chip.on { background:var(--azul-noche); color:#fff; border-color:var(--azul-noche); }
+  .chip.rojo { color:#a12a2a; border-color:#e3b4b4; }
+  .chip.rojo.on { background:#a12a2a; color:#fff; }
+  label { font-size:12px; color:var(--azul-medio); }
+  .ctl { height:32px; border:1px solid var(--borde); border-radius:6px; background:#fff; padding:0 8px; font-size:12px; color:var(--azul-medio); }
+  .etq { display:inline-flex; align-items:center; gap:6px; height:26px; border-radius:13px; padding:0 4px 0 10px; background:#e8eefb; color:#1d3a78; font-size:12px; font-weight:600; border:1px solid #b9cbee; }
+  .etq button { border:0; background:transparent; cursor:pointer; font-weight:700; color:#1d3a78; padding:0 6px; }
+  .aviso { display:flex; align-items:center; gap:10px; border:1px solid #f0d58a; background:#fff8e1; color:#6b4e00; border-radius:6px; padding:6px 12px; font-size:12.5px; }
+  .aviso b { color:#5a3f00; }
+  .aviso .ret { color:#a12a2a; font-weight:700; }
+  .aviso button { margin-left:auto; height:26px; border-radius:6px; border:1px solid #d9b44a; background:#fff; color:#6b4e00; font-weight:700; padding:0 12px; cursor:pointer; }
+  .hoja { background:#fff; border-radius:6px; border:1px solid var(--borde); overflow:auto; }
+  table { border-collapse:separate; border-spacing:0; width:100%; min-width:820px; }
+  th { position:sticky; top:0; background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:4px 10px; border-bottom:1px solid #e6e9ee; white-space:nowrap; height:30px; }
+  td.mono { font-family:Consolas,monospace; font-size:12px; }
+  td .vacio { color:#9aa3b2; font-style:italic; font-family:"Segoe UI",sans-serif; }
+  tr.gris td { color:var(--gris-fila); }
+  tr.fuera td:first-child { box-shadow:inset 4px 0 0 #e0a800; }
+  .est { display:inline-block; border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; }
+  .e-pend { border:1px dashed #C8CDD5; color:var(--azul-gris); background:#fff; }
+  .e-hoy { background:#e8eefb; color:#1d3a78; }
+  .e-ret { background:#fde8e8; color:#a12a2a; }
+  .e-env { background:#e3f5e6; color:var(--verde); }
+  .e-gen { background:#FFF3CD; color:#8A6100; }
+  .e-can { background:#eee; color:#666; text-decoration:line-through; }
+  .vacia { padding:24px; text-align:center; color:var(--azul-gris); }
+  .nota { font-size:11.5px; color:var(--azul-gris); }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos · rango estricto (0.9.38)</span>
+  <span class="seg"><button id="bAntes">Antes (0.9.37)</button><button id="bDespues" class="on">Después</button></span>
+  <span>Hoy es lunes 23/11/2026 · datos inventados</span>
+</div>
+<div class="guia">
+  <b>Qué probar:</b>
+  <ol>
+    <li>Pon «Rango…» del <b>20/11 al 23/11</b>. En «Antes» salen también filas del 02/11 al 16/11 (pendientes y un cancelado que siguen abiertos). En «Después» solo salen las del rango, y arriba aparece el aviso amarillo.</li>
+    <li>Pulsa <b>«Ver»</b> en el aviso: la tabla enseña solo esos pendientes de fuera (raya amarilla a la izquierda) y sale la etiqueta «Pendientes fuera del periodo ✕». Quítala o cambia el periodo para volver.</li>
+    <li>Mira los contadores: en «Después» cuentan lo que hay en la tabla. El aviso dice cuántos de fuera van con retraso.</li>
+    <li>Con «Último mes» casi nunca hay aviso (pendientes de más de un mes son raros). Pon un rango del pasado (01/11 al 10/11): el aviso también cuenta los pendientes de después del rango.</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Teléfonos › Pedidos</header>
+<main>
+  <div class="titulo"><h1>Pedidos</h1><span class="barra" id="contadores"></span></div>
+  <div class="barra">
+    <label for="periodo">Periodo:</label>
+    <select id="periodo" class="ctl">
+      <option value="mes">Último mes</option><option value="tres">Últimos 3 meses</option><option value="anio">Este año</option>
+      <option value="todo">Todo</option><option value="rango">Rango…</option>
+    </select>
+    <span id="fechas" hidden>
+      <label for="desde">Desde:</label> <input id="desde" type="date" class="ctl" value="2026-11-20">
+      <label for="hasta">Hasta:</label> <input id="hasta" type="date" class="ctl" value="2026-11-23">
+    </span>
+    <span id="etiquetas"></span>
+    <input class="ctl" style="width:22rem" placeholder="Buscar en todo el historial…" disabled title="No cambia: sigue buscando en todo el historial">
+  </div>
+  <div id="aviso" class="aviso" hidden></div>
+  <div class="hoja"><table>
+    <thead><tr><th>Fecha</th><th>Plataforma</th><th>SKU</th><th>IMEI</th><th>Pedido</th><th>Enviado</th><th>Fecha compra</th></tr></thead>
+    <tbody id="cuerpo"></tbody>
+  </table><div id="vacia" class="vacia" hidden></div></div>
+  <p class="nota">«Antes» = lo que hace hoy la 0.9.37: el servidor manda las filas del periodo y, además, todas las que siguen abiertas, sean del día que sean.</p>
+</main>
+<script>
+const HOY = '2026-11-23'
+// e: pend | ret | hoy | gen | env | can | hist ; viva = sigue abierta en el servidor (CERRADA_EN nulo)
+const F = [
+  ['2026-10-28','Cliente Ejemplo SL','IP13-128-NEG-A','35 111111 111111 1','#4410','hist',''],
+  ['2026-11-02','AMZ','IP12-64-BLA-B','','402-0000000-0000001','ret','Con retraso',1],
+  ['2026-11-05','Fonestore','IP11-64-ROJ-B','','FS-1201','ret','Con retraso',1],
+  ['2026-11-12','AMZ','IP14-128-AZU-A','','402-0000000-0000002','ret','Con retraso',1],
+  ['2026-11-14','BackiPhone','IP13-256-VER-A','35 222222 222222 2','BK-310','can','Cancelado',1],
+  ['2026-11-16','FNSK','IP12-128-NEG-A','','sin asociar','pend','Sale mar 24/11',1],
+  ['2026-11-18','Fonestore','IP13-128-BLA-A','35 333333 333333 3','FS-1240','env','Enviado'],
+  ['2026-11-19','AMZ','IP14-256-NEG-B','35 444444 444444 4','402-0000000-0000003','env','Enviado'],
+  ['2026-11-20','Fonestockroom','IP12-64-NEG-A','35 555555 555555 5','FK-88','gen','Etiqueta generada'],
+  ['2026-11-20','AMZ','IP13-128-AZU-B','35 666666 666666 6','402-0000000-0000004','env','Enviado'],
+  ['2026-11-21','AMZ','IP14-128-BLA-A','','402-0000000-0000005','hoy','Sale hoy',1],
+  ['2026-11-21','Fonestore','IP11-128-NEG-B','','FS-1251','hoy','Sale hoy',1],
+  ['2026-11-22','FNSK','IP13-256-AZU-A','','sin asociar','pend','Sale mar 24/11',1],
+  ['2026-11-23','AMZ','IP15-128-NEG-A','','402-0000000-0000006','pend','Sale mié 25/11',1],
+  ['2026-11-23','BackiPhone','IP12-128-BLA-B','','BK-322','pend','Sale jue 26/11',1],
+].map(([fecha,plat,sku,imei,ped,e,txt,viva]) => ({fecha,plat,sku,imei,ped,e,txt,viva:!!viva}))
+
+let modo = 'despues', verFuera = false
+const $ = (id) => document.getElementById(id)
+const menosMeses = (n) => { const d = new Date(HOY); d.setMonth(d.getMonth() - n); return d.toISOString().slice(0,10) }
+function rango() {
+  switch ($('periodo').value) {
+    case 'tres': return [menosMeses(3), HOY]
+    case 'anio': return ['2026-01-01', HOY]
+    case 'todo': return ['2000-01-01', HOY]
+    case 'rango': { const d = $('desde').value, h = $('hasta').value; return d && h && d <= h ? [d, h] : [menosMeses(1), HOY] }
+    default: return [menosMeses(1), HOY]
+  }
+}
+const esPendiente = (f) => ['pend','ret','hoy'].includes(f.e)
+const dm = (s) => s.slice(8,10) + '/' + s.slice(5,7)
+
+function pintar() {
+  $('fechas').hidden = $('periodo').value !== 'rango'
+  const [d, h] = rango()
+  const dentro = (f) => f.fecha >= d && f.fecha <= h
+  const recibidas = F.filter((f) => dentro(f) || f.viva)       // lo que manda el servidor (no cambia)
+  const delPeriodo = recibidas.filter(dentro)
+  const fuera = recibidas.filter((f) => !dentro(f) && esPendiente(f))
+  const filas = modo === 'antes' ? recibidas : (verFuera ? fuera : delPeriodo)
+
+  const pend = filas.filter(esPendiente).length, sin = filas.filter((f) => !f.imei && f.e !== 'hist' && f.e !== 'can').length
+  const hoy = filas.filter((f) => f.e === 'hoy').length, ret = filas.filter((f) => f.e === 'ret').length
+  $('contadores').innerHTML = [`${filas.length} filas`, `${pend} pendientes`, `${sin} sin IMEI`, `${hoy} salen hoy`]
+    .map((t, i) => `<button class="chip${i === 0 ? ' on' : ''}">${t}</button>`).join('') + (ret ? `<button class="chip rojo">${ret} con retraso</button>` : '')
+
+  const av = $('aviso')
+  if (modo === 'despues' && !verFuera && fuera.length) {
+    const r = fuera.filter((f) => f.e === 'ret').length
+    const antes = fuera.some((f) => f.fecha < d), despues = fuera.some((f) => f.fecha > h)
+    const donde = antes && despues ? 'fuera de estas fechas' : antes ? `de antes del ${dm(d)}` : `de después del ${dm(h)}`
+    av.innerHTML = `<span>⚠ Hay <b>${fuera.length} ${fuera.length === 1 ? 'pendiente' : 'pendientes'} ${donde}</b>`
+      + (r ? ` <span class="ret">(${r} con retraso)</span>` : '') + '.</span><button id="ver">Ver</button>'
+    av.hidden = false
+    $('ver').onclick = () => { verFuera = true; pintar() }
+  } else av.hidden = true
+
+  $('etiquetas').innerHTML = modo === 'despues' && verFuera
+    ? '<span class="etq">Pendientes fuera del periodo <button id="quitar" aria-label="Quitar">✕</button></span>' : ''
+  if ($('quitar')) $('quitar').onclick = () => { verFuera = false; pintar() }
+
+  $('cuerpo').innerHTML = filas.map((f) => `<tr class="${f.e === 'hist' ? 'gris' : ''} ${!dentro(f) ? 'fuera' : ''}">
+    <td>${dm(f.fecha)}/2026</td><td>${f.plat}</td><td class="mono">${f.sku}</td>
+    <td class="mono">${f.imei || '<span class="vacio">sin IMEI</span>'}</td><td class="mono">${f.ped}</td>
+    <td>${f.e === 'hist' ? '' : `<span class="est e-${f.e}">${f.txt}</span>`}</td><td>${f.e === 'hist' ? '20/10/2026' : ''}</td></tr>`).join('')
+  $('vacia').hidden = filas.length > 0
+  $('vacia').textContent = 'No hay pedidos en estas fechas.'
+}
+$('periodo').onchange = () => { verFuera = false; pintar() }
+$('desde').onchange = $('hasta').onchange = () => { verFuera = false; pintar() }
+$('bAntes').onclick = () => { modo = 'antes'; verFuera = false; $('bAntes').classList.add('on'); $('bDespues').classList.remove('on'); pintar() }
+$('bDespues').onclick = () => { modo = 'despues'; $('bDespues').classList.add('on'); $('bAntes').classList.remove('on'); pintar() }
+pintar()
+</script>
+</body>
+</html>
