@@ -61,8 +61,8 @@ texto que el PUT del IMEI) y la fila sigue cancelada.
 
 Antes de la migración, en preprod y en producción (solo lectura):
 `SELECT COUNT(*) FROM Pedido_fila WHERE MARCA = 'CANCELADO' AND FALTA_ENVIAR_EN IS NOT NULL;`
-Si hay alguna, `migracion-0.9.42.sql` les pone `FALTA_ENVIAR_EN = NULL, FALTA_ENVIAR_USU = NULL` (sin apunte en el historial; se
-anota en la doc del módulo). Si no hay ninguna, la migración no hace falta y no se crea.
+`sql/migracion-cancelado-sin-falta.sql` (servidor) les pone `FALTA_ENVIAR_EN = NULL, FALTA_ENVIAR_USU = NULL` (sin apunte en el
+historial; se anota en la doc del módulo). Se ejecuta siempre en el despliegue: es idempotente y con 0 filas no cambia nada.
 
 ## Lo que no cambia
 
