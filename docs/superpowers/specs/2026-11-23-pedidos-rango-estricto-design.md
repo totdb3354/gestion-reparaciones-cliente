@@ -21,8 +21,9 @@ filas del 2/11. Logística viene del Excel, donde un filtro de fechas enseña so
      sin «Cancelado»). Los cancelados abiertos de fuera no se cuentan ni se enseñan.
    - Con retraso = las que el contador «con retraso» ya da por retrasadas (`nivelSalida(f, hoy) === 'RETRASO'`).
 3. **«Ver»** cambia la tabla a **solo esos pendientes de fuera**, con:
-   - una etiqueta «Pendientes fuera del periodo ✕» junto a las de los filtros de columna;
-   - una raya amarilla a la izquierda de cada fila (son de fuera del periodo).
+   - una etiqueta «Pendientes fuera del periodo ✕» junto a las de los filtros de columna.
+   (La raya amarilla del prototipo se quitó al implementar: la raya azul ya marca la fila seleccionada y, con «Ver», todas las
+   filas son de fuera.)
    Se vuelve al periodo quitando la etiqueta, cambiando el periodo o las fechas, o con «Quitar filtros». Los filtros de columna
    y los contadores siguen funcionando encima.
 4. **Contadores** (filas, pendientes, sin IMEI, salen hoy, con retraso) y las listas de los filtros de columna (tiendas, SKU,
@@ -45,7 +46,6 @@ filas del 2/11. Logística viene del Excel, donde un filtro de fechas enseña so
 - **`PedidosPage.tsx`**: sin búsqueda, `base = verFuera ? fuera : delPeriodo`. Con búsqueda, `base` = lo recibido. Todo lo que hoy
   usa `filas` para contar, para las listas de filtros y para `filtrarColumnas` pasa a usar `base`. El panel de la fila sigue
   buscando la fila elegida entre lo recibido. Aviso nuevo (componente pequeño `AvisoFuera`) entre la barra y la tabla.
-- **`TablaFilas.tsx`**: marca la fila con la raya amarilla cuando se ve «fuera» (prop `fuera`).
 - **`AyudaPedidos.tsx`**: una línea en la ayuda: «El periodo enseña solo las filas de esas fechas; si quedan pendientes de otros
   días, lo dice el aviso amarillo».
 - Si `verFuera` está puesto y ya no queda ningún pendiente fuera (se enviaron), la tabla queda vacía con el texto de siempre y la
@@ -53,6 +53,8 @@ filas del 2/11. Logística viene del Excel, donde un filtro de fechas enseña so
 
 ## Pruebas
 
+- Los tests de pantalla de Pedidos fijan «hoy» en el 23/11/2026 (`test/hoy.ts`, `congelarHoy`): con el periodo estricto, las filas de
+  prueba (con fechas fijas) dejarían de verse con «Último mes» al pasar un mes.
 - `filas.test.ts`: separación (dentro, fuera antes, fuera después, cancelado de fuera excluido, «Falta por enviar» de fuera
   incluido, límites `desde`/`hasta` incluidos), texto del aviso (antes, después, ambos; con y sin retraso).
 - Test de pantalla (`PedidosRango.test.tsx`): con un rango, la tabla no enseña los pendientes de fuera y sale el aviso; «Ver» enseña

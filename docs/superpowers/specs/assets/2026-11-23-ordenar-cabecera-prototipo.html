@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · ordenar por cabecera</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0; --cab:#EEF2F8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo); font-variant-numeric:tabular-nums; }
+  .proto { background:#3b0764; color:#fff; padding:6px 12px; font-size:12px; font-weight:700; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  main { padding:12px 16px; display:grid; gap:18px; }
+  h2 { margin:0 0 6px; font-size:15px; color:var(--azul-medio); }
+  .hoja { background:#fff; border-radius:6px; border:1px solid var(--borde); overflow:auto; }
+  table { border-collapse:separate; border-spacing:0; width:100%; min-width:640px; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); border-right:1px solid #e3e6eb; white-space:nowrap; }
+  td { padding:4px 10px; border-bottom:1px solid #e6e9ee; white-space:nowrap; height:30px; }
+  td.mono { font-family:Consolas,monospace; font-size:12px; }
+  /* La cabecera que se puede ordenar */
+  .orden { all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:4px; font-weight:700; border-radius:4px; padding:1px 4px; margin:-1px -4px; }
+  .orden:hover { background:#dbe6fb; }
+  .orden:focus-visible { outline:2px solid #2f6fe0; }
+  .flechas { display:inline-flex; color:#8f99a8; }
+  .flechas svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .orden:hover .flechas { color:var(--azul-medio); }
+  .orden[data-on] .flechas { color:#2f6fe0; }
+  .orden[data-on] { color:#1d3a78; }
+  .filtro { display:inline-flex; width:18px; height:18px; align-items:center; justify-content:center; border-radius:4px; margin-left:6px; font-size:11px; color:var(--azul-gris); border:1px solid transparent; }
+  .tip { position:fixed; background:#001232; color:#fff; font-size:11.5px; padding:4px 8px; border-radius:5px; pointer-events:none; opacity:0; transition:opacity .12s; z-index:5; }
+  .nota { font-size:11.5px; color:var(--azul-gris); margin:6px 0 0; }
+</style>
+</head>
+<body>
+<div class="proto">PROTOTIPO · ordenar haciendo clic en la cabecera (Pedidos y Stock de teléfonos) · datos inventados</div>
+<div class="guia">
+  <b>Qué probar:</b>
+  <ol>
+    <li>Sin tocar nada: las columnas que se pueden ordenar llevan unas <b>flechas grises ↑↓</b> junto al nombre. Las que no, no.</li>
+    <li>Pasa el ratón por encima: la cabecera se resalta y sale «<b>Ordenar por SKU</b>» (o «de Z a A» / «Quitar el orden», según toque).</li>
+    <li>Clic en <b>SKU</b>: de A a Z (el icono pasa a «A-Z», en azul). Otro clic: de Z a A («Z-A»). El tercero vuelve al orden de siempre (por fecha). A igual SKU, se mantiene el orden por fecha.</li>
+    <li>En Pedidos solo SKU se ordena; el embudo del filtro sigue a su lado y funciona aparte.</li>
+  </ol>
+</div>
+<main>
+  <section>
+    <h2>Pedidos</h2>
+    <div class="hoja"><table id="ped"></table></div>
+    <p class="nota">Ordenado, el lector salta a la siguiente fila vacía en el orden que se ve (así los del mismo SKU van seguidos). «↓ Al final» baja a la última fila de la tabla tal como esté ordenada.</p>
+  </section>
+  <section>
+    <h2>Stock de teléfonos (ya ordenaba; ahora se ve que se puede)</h2>
+    <div class="hoja"><table id="stock"></table></div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<script>
+const PED = {
+  cols: [['Fecha'],['Plataforma'],['SKU','sku'],['IMEI'],['Pedido'],['Enviado']],
+  filtro: ['Plataforma','SKU','IMEI','Enviado'],
+  filas: [
+    ['20/11/2026','AMZ','IP14-128-BLA-A','','402-0000000-0000005','Sale hoy'],
+    ['20/11/2026','Fonestore','IP11-128-NEG-B','','FS-1251','Sale hoy'],
+    ['21/11/2026','FNSK','IP13-256-AZU-A','35 111111 111111 1','sin asociar','Enviado'],
+    ['21/11/2026','AMZ','IP12-64-NEG-A','','402-0000000-0000007','Sale mar 24/11'],
+    ['22/11/2026','BackiPhone','IP14-128-BLA-A','','BK-322','Sale mar 24/11'],
+    ['23/11/2026','AMZ','IP13-256-AZU-A','','402-0000000-0000008','Sale mié 25/11'],
+    ['23/11/2026','Fonestockroom','IP11-128-NEG-B','35 222222 222222 2','FK-90','Etiqueta generada'],
+  ],
+}
+const STOCK = {
+  cols: [['IMEI','imei'],['Lote','lote'],['Color','color'],['Grado','grado'],['Ubicación','ubi'],['Días','dias']],
+  filtro: [],
+  filas: [
+    ['350000000000011','BT-9001','Azul','A','Listos','6'],
+    ['350000000000012','BT-9003','Negro','B','Taller','14'],
+    ['350000000000013','BT-9002','Blanco','A','Listos','2'],
+    ['350000000000014','BT-9001','Azul','C','Revisión','30'],
+  ],
+}
+// Los iconos de la web (lucide): ArrowUpDown sin ordenar; ArrowDownAZ / ArrowDownZA ordenado.
+const svg = (d) => `<svg viewBox="0 0 24 24">${d.map((x) => `<path d="${x}"/>`).join('')}</svg>`
+const ICONO = {
+  ambos: svg(['m21 16-4 4-4-4', 'M17 20V4', 'm3 8 4-4 4 4', 'M7 4v16']),
+  az: svg(['m3 16 4 4 4-4', 'M7 20V4', 'M20 8h-5', 'M15 10V6.5a2.5 2.5 0 0 1 5 0V10', 'M15 14h5l-5 6h5']),
+  za: svg(['m3 16 4 4 4-4', 'M7 4v16', 'M15 4h5l-5 6h5', 'M15 20v-3.5a2.5 2.5 0 0 1 5 0V20', 'M20 18h-5']),
+}
+const tip = document.getElementById('tip')
+function montar(id, datos) {
+  const t = document.getElementById(id)
+  let col = null, dir = null
+  const pintar = () => {
+    const orden = datos.filas.map((f, i) => [f, i])
+    if (col !== null) orden.sort((a, b) => {
+      const x = a[0][col], y = b[0][col]
+      const c = /^\d+$/.test(x) && /^\d+$/.test(y) ? x - y : x.localeCompare(y, 'es')
+      return (dir === 'asc' ? c : -c) || a[1] - b[1]
+    })
+    t.innerHTML = '<thead><tr>' + datos.cols.map(([n, k], i) => {
+      const fil = datos.filtro.includes(n) ? '<span class="filtro" title="Filtrar">⏷</span>' : ''
+      if (!k) return `<th>${n}${fil}</th>`
+      const on = col === i
+      const sig = !on ? `Ordenar por ${n} (de A a Z)` : dir === 'asc' ? `Ordenar por ${n} de Z a A` : 'Quitar el orden (vuelve al de siempre)'
+      return `<th aria-sort="${on ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}"><button class="orden" data-i="${i}" data-tip="${sig}" ${on ? 'data-on' : ''}>${n}`
+        + `<span class="flechas" aria-hidden="true">${!on ? ICONO.ambos : dir === 'asc' ? ICONO.az : ICONO.za}</span></button>${fil}</th>`
+    }).join('') + '</tr></thead><tbody>' + orden.map(([f]) => '<tr>' + f.map((v, i) => `<td class="${(id === "ped" ? i === 2 || i === 3 : i === 0) ? "mono" : ""}">${v || '<i style="color:#9aa3b2">sin IMEI</i>'}</td>`).join('') + '</tr>').join('') + '</tbody>'
+    t.querySelectorAll('.orden').forEach((b) => {
+      b.onclick = () => {
+        const i = +b.dataset.i
+        if (col !== i) { col = i; dir = 'asc' } else if (dir === 'asc') dir = 'desc'; else { col = null; dir = null }
+        pintar(); const nb = t.querySelector(`.orden[data-i="${i}"]`); nb.focus(); mostrar(nb)
+      }
+      b.onmouseenter = () => mostrar(b); b.onmouseleave = () => { tip.style.opacity = 0 }
+    })
+  }
+  pintar()
+}
+function mostrar(b) { const r = b.getBoundingClientRect(); tip.textContent = b.dataset.tip; tip.style.left = r.left + 'px'; tip.style.top = (r.bottom + 6) + 'px'; tip.style.opacity = 1 }
+montar('ped', PED); montar('stock', STOCK)
+</script>
+</body>
+</html>

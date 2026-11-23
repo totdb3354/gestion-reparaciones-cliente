@@ -62,6 +62,11 @@ filas recientes) y carga el resto como **histórico** (filas grises, no editable
 
 Columnas: Fecha · Plataforma (cliente) · SKU · IMEI · Pedido · Enviado · Fecha compra. Lo nuevo abajo; la tabla abre al final.
 
+**Periodo** (por defecto, el último mes): la tabla enseña solo las filas con fecha dentro, como un filtro del Excel (desde la 0.9.38).
+El servidor manda además las filas abiertas de otras fechas; con las pendientes (no las canceladas) la web monta un aviso amarillo
+(«Hay 4 pendientes de antes del 20/11 (3 con retraso)») y «Ver» las enseña solas. Los contadores cuentan lo que se ve. El buscador no
+mira el periodo: busca en todo el historial.
+
 **Columna «Enviado»** (estado de la fila):
 
 | Estado | Qué es |
