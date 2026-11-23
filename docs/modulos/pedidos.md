@@ -76,20 +76,20 @@ mira el periodo: busca en todo el historial.
 | Etiqueta generada | ShippyPro tiene la etiqueta; el móvil sigue en el almacén |
 | Enviado | La etiqueta se imprimió |
 | Ya no está en ShippyPro | El pedido desapareció de ShippyPro sin que se viera su envío |
-| Cancelado | Marca puesta a mano: ese móvil no sale |
+| Cancelado | Puesto a mano con «Cancelar móvil» del panel: ese móvil no sale |
 | (gris) | Histórico de la hoja |
 
 **Celda del IMEI:** vacía, verde (cuadra), ámbar (aviso) o naranja (no cuadra: no está en NSYS, ya está en otro pedido, otro
 modelo/capacidad/eSIM, otro color o grado, grado no vendible, SKU desconocido, en el taller…). Un aviso de SKU se puede dar por
 bueno con **«Validar SKU»**. La pistola guarda y salta a la siguiente fila vacía.
 
-**Marcas de la fila** (una como mucho, con nota): En espera de stock · En revisión · Pendiente de color · Cancelado.
+**Marcas de la fila** (una como mucho, con nota): En espera de stock · En revisión · Pendiente de color, en el desplegable de la celda del IMEI y del panel. **Cancelado** va aparte: botón «Cancelar móvil» del panel, con confirmación y nota opcional; se deshace con «Quitar cancelación» (también con confirmación). Una fila cancelada no lleva otra marca ni «Falta por enviar».
 
 **Amazon «sin asociar»:** la fila de Amazon no enseña su número de pedido hasta que el libro la asocia (§2.2); el IMEI se puede
 poner igual en cualquier fila de ese SKU.
 
 **Panel de la fila:** datos del pedido, envío, historial de la fila (quién puso o cambió el IMEI, marcas, etiqueta, sincronización),
-previsualizar la etiqueta, marcar «Falta por enviar».
+previsualizar la etiqueta, marcar «Falta por enviar», «Cancelar móvil / Quitar cancelación».
 
 **Botones flotantes:** «↓ Al final» y «Fila seleccionada».
 
@@ -99,12 +99,12 @@ previsualizar la etiqueta, marcar «Falta por enviar».
   el envío es de 24/48 h, o 3 si es de 24/72 h. Laborable = de lunes a viernes y que no esté en la tabla `Calendario_festivo`
   (festivos de la Comunidad de Madrid; **hay que cargar los de cada año nuevo**, se publican en septiembre).
 - **IMEI duplicado.** No se puede poner un IMEI que ya está en otra fila viva o con «Falta por enviar» (409 «Este IMEI ya está en el
-  pedido X»). Sí si la otra fila está cancelada o ya se envió (un móvil devuelto puede volver a salir).
+  pedido X»). Sí si la otra fila está cancelada o ya se envió (un móvil devuelto puede volver a salir). Quitar la cancelación pasa la misma comprobación: si el IMEI ya está en otra fila que cuenta, 409 y la fila sigue cancelada.
 - **Lo que cuenta como vendido** (lista del bot, `GET /api/pedidos/vendidos`): las filas con IMEI puesto en los últimos días, salvo
   las canceladas y las que ya no están en ShippyPro sin envío (pedido anulado con el IMEI ya puesto: ese móvil no salió). Excepción:
   una fila web así **cuenta si la web la ha sincronizado** (pedidos juntados en una sola caja: el móvil sí salió).
 - **Envío parcial (webs).** Con la etiqueta generada, el móvil que no entra en la caja se marca «Falta por enviar»; la marca se quita
-  al sincronizar la web o a mano con «Ya ha salido».
+  al sincronizar la web o a mano con «Ya ha salido». Cancelar la fila quita «Falta por enviar» (apunte «al cancelar» en el historial) y no se puede marcar en una cancelada (409). En el despliegue de la 0.9.42 la migración sql/migracion-cancelado-sin-falta.sql limpió las filas viejas que tenían las dos (sin apunte).
 
 ## 5. El Listado
 
