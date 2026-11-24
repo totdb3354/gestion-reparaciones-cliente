@@ -7,7 +7,7 @@ Fecha: 24/11/2026. Afecta al servidor (`gestion-reparaciones-servidor`) y al bot
 
 Hoy el bot solo descuenta: junta los vendidos del Panel y los del ERP (`GET /api/pedidos/vendidos`) y los mueve a
 «Pedidos realizados». Cuando el IMEI de una fila de Pedidos se cambia después de que el bot lo descontara (a mano, la
-asociación con el libro de Amazon, el traspaso del corte o el «libro manda» de la 0.9.45), el teléfono de antes se queda en
+asociación con el libro de Amazon, el traspaso del corte o el «libro manda» de la 0.9.46), el teléfono de antes se queda en
 NSYS como vendido pero sigue físicamente en la estantería: stock que no vemos.
 
 Este trabajo:
@@ -110,7 +110,7 @@ el IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` (una vez).
 
 **Apuntes:** el ERP escribe `DEVUELTO` / `NO_DEVUELTO` al recibir el `POST` del bot (§6.2); `SIN_DESTINO` al calcular la lista.
 
-**Coordinación con «libro manda» (0.9.45):** no se toca su código. Solo se cuenta con que un IMEI retirado de una fila
+**Coordinación con «libro manda» (0.9.46):** no se toca su código. Solo se cuenta con que un IMEI retirado de una fila
 quede en `Pedido_fila_cambio` como `IMEI_ANTERIOR`, que es lo que ya hace la asociación.
 
 ## 6. Contrato ERP ↔ bot
@@ -157,7 +157,7 @@ la marca `NO_VENDIBLE` con el motivo en la nota (apunte `MARCA` en el historial)
 poner otro IMEI, el ERP quita la marca («al poner el IMEI»), como ya hace con otras. Si el libro tenía razón y el móvil
 salió de verdad, una persona lo mueve a mano en NSYS.
 
-**Ojo con «libro manda» (0.9.45):** esa sesión cambia `AsociacionAmazon`. La marca de §7.2 se engancha después de que esté
+**Ojo con «libro manda» (0.9.46):** esa sesión cambia `AsociacionAmazon`. La marca de §7.2 se engancha después de que esté
 en `main`, sobre su código.
 
 ## 8. El bot
@@ -224,7 +224,7 @@ queda corta, la lista lo dice y esa condición solo cubre esos días.
 ### 10.1 Orden
 
 1. **Saneamiento.** Solo lectura, sin desplegar. Imad lo revisa con los móviles delante; después se decide cómo devolverlos.
-2. **ERP**, siguiente versión libre después de la 0.9.45: migración que solo añade (`Bot_movimiento`), las dos rutas, la regla
+2. **ERP**, versión 0.9.47 (orden acordado: 0.9.46 libro manda, 0.9.47 esta, 0.9.48 reserva de IMEI): migración que solo añade (`Bot_movimiento`), las dos rutas, la regla
    de la lista, los apuntes, la pieza «no vendible»; sube el número de la web. Al desplegar, la lista sale vacía (no hay
    `DESCONTADO` informados).
 3. **Bot, fase «informar»:** `POST` de lo que descuenta, sin devolver, más los dos pendientes. `Bot_movimiento` se llena y
@@ -257,3 +257,8 @@ cambió para guardarlo en el repo. Un fallo de login del bot no se debe al cambi
   maestro con la pregunta «¿cuántas devoluciones fallan al mes?».
 - Cómo se devuelven los del saneamiento: después de revisar la lista.
 - La reserva de IMEI: solo añadirá filas con `motivo = RESERVA_LIBERADA` a §6.1.
+
+**Nota (24/11, tras la 0.9.45 «celda del IMEI y cajas»):** la migración de la 0.9.45 renombró en BD las ubicaciones del ERP
+«Taller · Pulir/Glass/Reparación/Pantalla rota» → «Caja · …» y «Listos» → «Caja · Listos» (`Nsys_ubicacion`, `Nsys_movil`,
+`Nsys_evento`.`DE`/`A`). La regla de destino usa `A_NSYS` (caja de NSYS tal cual, no cambia) y las marcas de
+`Nsys_ubicacion`; nunca compara con nombres de ubicación del ERP.

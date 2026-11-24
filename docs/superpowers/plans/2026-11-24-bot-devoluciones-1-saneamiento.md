@@ -705,5 +705,5 @@ Claude abre el Excel y revisa con Imad unas cuantas filas contra el ERP (histori
 ## Lo que sigue
 
 - **Plan 2 (ERP):** `Bot_movimiento`, `POST /api/bot/movimientos`, `GET /api/bot/devoluciones`, apuntes del historial y la
-  pieza «no vendible». La marca `NO_VENDIBLE` del libro va encima de la 0.9.45.
+  pieza «no vendible». La marca `NO_VENDIBLE` del libro va encima de la 0.9.46 (libro manda). Versión del ERP: 0.9.47.
 - **Plan 3 (bot):** informar, devolver con interruptor, los dos pendientes, ensayo y prompt de instalación.
