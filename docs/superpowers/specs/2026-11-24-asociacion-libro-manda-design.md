@@ -24,9 +24,14 @@ con comprobaciones que paran los errores del propio libro.
 
 ### 1. Antes de aplicar: el libro no puede contradecirse
 
-- Un IMEI que el libro pone en **dos pedidos distintos** (entre las líneas válidas de la pasada): todas sus líneas van a «para revisar»
-  con el motivo nuevo `REPETIDO_EN_LIBRO` y no se aplica ninguna. Sustituye a la regla de hoy «si un IMEI sale varias veces, vale la
-  última» **solo cuando los pedidos son distintos**; el mismo par repetido sigue contando una vez (las repeticiones, descartadas).
+- Un IMEI que el libro pone en **varios pedidos distintos** (entre las líneas válidas de la pasada). Decidido con Imad en preprod el
+  24/11 (salieron 21 IMEI así en 30 días, casi todos devueltos y vueltos a vender):
+  - los pedidos que **ya lo tienen confirmado** en el ERP se quedan como están (su línea cuenta como «ya estaba»);
+  - si queda **un solo pedido sin confirmar**, es una **reventa**: ese se aplica como cualquier línea y los confirmados no pierden el
+    IMEI (los dos pedidos quedan con él, que es lo que pasó);
+  - si quedan **dos o más sin confirmar** (o ninguno lo tenía confirmado), esos van a «para revisar» con el motivo nuevo
+    `REPETIDO_EN_LIBRO` y no se aplican.
+  El mismo par repetido sigue contando una vez (las repeticiones, descartadas).
 - Las líneas sin pedido o sin IMEI de 15 cifras se descartan, como hoy.
 
 ### 2. Reglas para cada línea «IMEI X → pedido B»
