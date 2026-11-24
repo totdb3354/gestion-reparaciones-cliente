@@ -56,8 +56,13 @@ con comprobaciones que paran los errores del propio libro.
        palabra del libro, o de antes de la ventana de 30 días, contra esta).
      - O sin confirmar **con etiqueta** y **O está en el libro de esta pasada** → O se queda **sin IMEI y sin asociar** (el ERP no
        inventa qué fue en O; su línea del libro lo pondrá).
-     - O sin confirmar con etiqueta y **O no está en el libro de esta pasada** (p. ej. un pedido de hace más de 30 días: móvil
-       devuelto y revendido) → `YA_SALIO` y no se toca nada (decisión de Imad, 24/11: su línea no llegaría nunca y O perdería el IMEI).
+     - O sin confirmar con etiqueta **impresa** y **O no está en el libro de esta pasada** (p. ej. un pedido de hace más de 30 días:
+       móvil devuelto y revendido) → `YA_SALIO` y no se toca nada (decisión de Imad, 24/11: su línea no llegaría nunca y O perdería
+       el IMEI).
+     - O sin confirmar con etiqueta **sin imprimir** (aún no empaquetado) y fuera del libro de esta pasada → como un pendiente: O
+       recibe el IMEI que tenía la fila de B, con el apunte «IMEI intercambiado con la fila N · por el libro: comprobar el móvil»
+       (petición de Imad, 24/11: 8 pedidos del 23/11 en los que logística no encontraba el móvil, porque ya había salido en otro
+       pedido). Las cadenas (X de O salió en B, el de B salió en C…) se resuelven en la misma pasada.
      - O sin confirmar **sin etiqueta** (pendiente) → intercambio como hoy: O recibe el IMEI que tenía la fila de B.
    - **Se escribe:** la fila de B recibe X y queda confirmada (`ASOCIADA_EN`, origen `LIBRO`). Se quita «En espera de stock» como hoy.
 4. **No cambia:** nunca se toca una fila cancelada ni el histórico; una fila cancelada no se confirma.
