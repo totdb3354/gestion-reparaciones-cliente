@@ -48,7 +48,7 @@ Amazon: igual que hoy (límite = «Latest ship»; «Sale hoy» solo el día del 
    - nuevo `desde(Canal canal, LocalDate entrada, festivos)`: webs → `primerLaborable(entrada)`; Amazon u otro → `null`.
    - Javadoc al día.
 3. `FilaVista`: campo nuevo **`salidaDesde`** (`LocalDate`, nullable), al final, después de `pais`. Se calcula al servir en
-   `VistaFilas` con la fecha de entrada de la fila (`fecha`) y los festivos (`CalendarioLaboral.festivos()`, inyectado en
+   `VistaFilas` con la fecha del pedido en ShippyPro (`fechaCompra`, la misma de la que sale el límite; `fecha` solo si falta) y los festivos (`CalendarioLaboral.festivos()`, inyectado en
    `VistaFilas`); nulo en Amazon, en el histórico y en las filas sin fecha de salida. Javadoc de `fechaSalida` al día
    («webs: el laborable siguiente al primer laborable desde la entrada»).
 4. No se guarda: **sin migración**. La lectura de ShippyPro recalcula `FECHA_SALIDA` de las filas vivas en cada vuelta
