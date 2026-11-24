@@ -95,8 +95,9 @@ previsualizar la etiqueta, marcar «Falta por enviar», «Cancelar móvil / Quit
 
 ## 4. Reglas
 
-- **Fecha de salida.** Amazon: la fecha «Latest ship» que da ShippyPro. Webs: el día en que entró el pedido más 2 días laborables si
-  el envío es de 24/48 h, o 3 si es de 24/72 h. Laborable = de lunes a viernes y que no esté en la tabla `Calendario_festivo`
+- **Fecha de salida.** Amazon: la fecha «Latest ship» que da ShippyPro. Webs (desde la 0.9.44): salen **«Sale hoy»** desde el día en
+  que entra el pedido (o el primer laborable, si entra en fin de semana o festivo) y hasta el laborable siguiente, que es su fecha de
+  salida; después, «Con retraso». No se mira el tipo de envío. En sábado o domingo nunca sale «Sale hoy» (dice «Sale lun»). Laborable = de lunes a viernes y que no esté en la tabla `Calendario_festivo`
   (festivos de la Comunidad de Madrid; **hay que cargar los de cada año nuevo**, se publican en septiembre).
 - **IMEI duplicado.** No se puede poner un IMEI que ya está en otra fila viva o con «Falta por enviar» (409 «Este IMEI ya está en el
   pedido X»). Sí si la otra fila está cancelada o ya se envió (un móvil devuelto puede volver a salir). Quitar la cancelación pasa la misma comprobación: si el IMEI ya está en otra fila que cuenta, 409 y la fila sigue cancelada.
