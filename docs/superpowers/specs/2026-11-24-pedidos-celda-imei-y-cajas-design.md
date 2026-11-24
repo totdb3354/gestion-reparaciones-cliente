@@ -31,7 +31,8 @@ En revisión, Devolución, Esperando pieza y No vendible no cambian.
 **Migración** `sql/renombrar-cajas-nsys.sql` (una transacción, cliente utf8mb4):
 - `Nsys_ubicacion.UBICACION` de las cinco filas.
 - `Nsys_movil.UBICACION` y `Nsys_movil.UBICACION_ULTIMA`.
-- `Nsys_evento.DE` y `Nsys_evento.A` **solo con `TIPO = 'UBICACION'`** (en otros tipos DE y A son grados o productos).
+- `Nsys_evento.DE` con `TIPO = 'UBICACION'` y `Nsys_evento.A` con `TIPO IN ('UBICACION','ENTRADA')` (en los demás tipos DE y A son
+  grados o productos).
 - Al final, la comprobación por `HEX(UBICACION)` como la de `migracion-nsys-espejo.sql`, con los nombres nuevos: debe dar 7.
 - Vuelta atrás: el mismo fichero con los nombres al revés (`renombrar-cajas-nsys-atras.sql`).
 - Antes de producción se mide en preprod cuánto tarda el UPDATE de `Nsys_evento`. Si pasa de unos 30 s, se hace fuera de horario.
@@ -44,7 +45,7 @@ En revisión, Devolución, Esperando pieza y No vendible no cambian.
   `=== 'Caja · Listos'`; el aviso «NSYS dice "Listos"…» → «NSYS dice "Caja · Listos"…».
 - `stock/modelo.ts:101-102`: igual que `quien.ts` (listos y taller).
 - `taller/imeis/rastro.ts:44-45` y la leyenda de `PanelRastro.tsx` («Taller» → «Cajas del taller», «Listos» → «Caja · Listos»).
-- Tests y fábricas de los dos repos con los nombres nuevos.
+- Tests y fábricas de la web con los nombres nuevos (los del servidor no comparan nombres: se quedan).
 
 ### 2. Celda del IMEI en Pedidos: piezas, color de texto y fondo
 
@@ -89,16 +90,17 @@ Lo que **no** cambia: no se pone ninguna marca automática (tampoco «En revisi�
 
 ### 3. Servidor: lo que sale con cada fila
 
-`AvisoImei` y `FilaVista` ganan campos **aditivos** (la web vieja los ignora):
+`FilaVista` gana un campo **aditivo** `detalle` (objeto `DetalleAviso`; nulo sin aviso o sin nada que decir). La web vieja lo ignora:
 
 | Campo | Valores | Qué es |
 |---|---|---|
 | `sim` | null, `ESIM`, `SIM_FISICA` | El móvil es eSIM y el pedido no (`ESIM`), o al revés (`SIM_FISICA`). |
 | `na` | boolean | El grado que cuenta es n/a. |
+| `ms` | boolean | Es un Ms (deja de ser motivo: así sale «MS · color: Rojo»). |
 | `dato` | texto o null | Lo que tiene el móvil para el motivo: el color, el grado, el modelo, la capacidad o el grado no vendible. |
-| `trabajos` | lista de {categoria, tecnico} | Las asignaciones abiertas, solo con motivo `EN_TALLER`. |
+| `trabajos` | lista `TrabajoAbierto` | Las asignaciones abiertas, solo con motivo `EN_TALLER` (el mismo tipo que usa Stock). |
 
-`motivo` sigue siendo uno (el principal) y gana valores: `COLOR`, `GRADO`, `CAPACIDAD`. `COLOR_O_GRADO` queda solo para la
+`motivo` sigue siendo uno (el principal) y gana valores: `COLOR`, `GRADO`, `CAPACIDAD`; `MS` ya no sale (va en `ms`). `COLOR_O_GRADO` queda solo para la
 combinación que no existe; `MODELO` queda solo para el modelo. `MOTIVOS_SKU` = MODELO, CAPACIDAD, COLOR, GRADO, COLOR_O_GRADO,
 GRADO_NO_VENDIBLE, SKU_DESCONOCIDO. Las validaciones ya guardadas siguen valiendo: se comprueban por IMEI y `esDeSku()`, no por el
 motivo.
@@ -113,12 +115,12 @@ motivo.
 7. Grado n/a: se apunta `na`; solo se comprueba el color (algún producto aceptado con ese color). Falla → `COLOR`.
 8. Resto: como hoy (SKU aceptado, Ms, B por A). Si no:
    - color aceptado por algún producto y grado aceptado por alguno → `COLOR_O_GRADO`;
-   - si no, `COLOR` si falla el color, `GRADO` si falla el grado (si fallan los dos, `COLOR`; el tooltip dice los dos).
+   - si no, `COLOR` si falla el color, `GRADO` si falla el grado (si fallan los dos, `COLOR`).
 
 `Aceptacion` gana `aceptaColor(color)` y `aceptaGrado(grado)` (sobre los mismos productos que `aceptaColorYGrado`).
 
-**Nivel:** MAL si el motivo es de la tabla con «sí» en «no cuadran»; AVISO si hay `sim`, `na` o motivo EN_TALLER, MS o B_POR_A;
-OK si nada. Una fila validada queda OK sin motivo, pero conserva `sim` y `na` (se ven, en su color, y no cuentan).
+**Nivel:** MAL si el motivo es de la tabla con «sí» en «no cuadran»; AVISO si hay `sim`, `na`, `ms` o motivo EN_TALLER o B_POR_A;
+OK si nada. Una fila validada queda OK sin motivo, pero conserva `sim`, `na` y `ms` (se ven, en su color, y no cuentan).
 
 **Recomendador:** sin cambios de comportamiento. Un móvil con `sim` distinta no se propone (hoy es MODELO); un n/a sigue en el nivel
 3 («hay que transformarlo»).
