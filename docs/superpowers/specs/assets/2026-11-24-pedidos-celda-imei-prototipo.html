@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Celda del IMEI y cajas</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6;
+          --aviso-bg:#FFF8E0; --aviso-text:#7A5C00; --mal-bg:#FFE0B2; --mal-text:#B45309; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; font-variant-numeric:tabular-nums; }
+  button { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .seg { display:inline-flex; background:#fff; border-radius:6px; padding:2px; gap:2px; }
+  .seg button { border:0; background:transparent; color:#3b0764; font-weight:700; font-size:12px; padding:4px 12px; border-radius:4px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#3b0764; color:#fff; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:12px 16px 24px; display:flex; flex-direction:column; gap:14px; }
+  h1 { margin:0; font-size:22px; color:var(--azul-medio); }
+  h2 { margin:0 0 6px; font-size:15px; color:var(--azul-medio); }
+  .contadores { display:flex; gap:8px; flex-wrap:wrap; }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12px; font-weight:600; color:var(--azul-gris); }
+  .cont b { color:var(--azul-noche); }
+  .cont.naranja b { color:var(--mal-text); }
+  .zona { display:flex; gap:12px; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); }
+  table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:0 10px; border-right:1px solid var(--fila-brd); border-bottom:1px solid var(--fila-brd); height:34px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td:last-child { border-right:0; }
+  tr { cursor:pointer; }
+  tr.grupo td { background:#eef0f4; color:var(--azul-medio); font-weight:700; font-size:11.5px; height:26px; cursor:default; letter-spacing:.02em; }
+  tr.aqui td:not(.imei) { background:#EAF1FF; }
+  td.caso { font-size:11.5px; color:var(--azul-gris); white-space:normal; line-height:1.25; }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  td.imei { padding:0; }
+  .celda { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 10px; font-family:Consolas,monospace; font-size:12.5px; }
+  .celda .num { flex:none; }
+  .mot { flex:none; font-family:"Segoe UI",sans-serif; font-size:11px; font-weight:700; }
+  .mot.aviso { color:var(--aviso-text); }
+  .mot.mal { color:var(--mal-text); }
+  .mot.gris { color:var(--azul-gris); font-weight:400; }
+  .sepm { color:#b9a27a; font-family:"Segoe UI",sans-serif; font-size:11px; margin:0 -4px; }
+  .vacia { font-family:"Segoe UI",sans-serif; font-style:italic; color:var(--texto-sub); }
+  .bg-aviso { background:var(--aviso-bg); }
+  .bg-mal { background:var(--mal-bg); }
+  .validar { margin-left:auto; flex:none; font-family:"Segoe UI",sans-serif; font-size:10.5px; font-weight:700; border:1px solid #e0a96d; color:var(--mal-text); background:#fff; border-radius:6px; padding:1px 6px; }
+  .cambia { display:inline-block; font-size:10px; font-weight:700; color:#3b0764; background:#efe7fb; border-radius:6px; padding:0 5px; margin-left:4px; vertical-align:1px; }
+  aside { width:min(340px,38vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; position:sticky; top:8px; }
+  dl { display:grid; grid-template-columns:70px minmax(0,1fr); gap:6px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  .titulo { font-size:11.5px; color:var(--azul-gris); background:#f6f7f9; border:1px dashed var(--borde); border-radius:6px; padding:6px 8px; margin-top:8px; white-space:pre-line; }
+  .pill { display:inline-block; border-radius:10px; padding:1px 9px; font-size:11.5px; font-weight:600; }
+  .u-pulir { background:#EDE7F6; color:#5E35B1; } .u-glass { background:#E0F2F1; color:#00796B; }
+  .u-rep { background:#E3F2FD; color:#1565C0; } .u-rota { background:#E8EAF6; color:#3949AB; }
+  .u-listos { background:#C8E6C9; color:#3A7D44; } .u-neutro { background:#E8EAF0; color:var(--azul-gris); }
+  .quien-aviso { color:var(--aviso-text); font-weight:700; }
+  .leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--azul-gris); }
+  .leyenda span i { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-3px; margin-right:5px; border:1px solid var(--borde); }
+  @media (max-width: 800px) { .zona { flex-direction:column; } aside { width:100%; position:static; } }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos: celda del IMEI · Stock: nombres de las cajas</span>
+  <span class="seg" role="group" aria-label="Versión">
+    <button id="bAntes" aria-pressed="false">Antes (hoy)</button>
+    <button id="bDespues" aria-pressed="true">Después</button>
+  </span>
+</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados):
+  <ol>
+    <li>Cambia entre <b>Antes</b> y <b>Después</b>: las filas que cambian llevan la etiqueta morada «cambia».</li>
+    <li>Pulsa una fila: el panel de la derecha enseña qué pide el pedido, qué es el móvil y el texto que sale al pasar el ratón.</li>
+    <li>Bloque <b>Avisos naranjas</b>: color y grado van por separado («color: Rosa», «grado: B»), igual que modelo y capacidad.</li>
+    <li>Bloque <b>Varias condiciones a la vez</b>: salen todas, separadas por «·»; el fondo es el del peor aviso (naranja &gt; amarillo &gt; ninguno).</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Pedidos</header>
+<main>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1>Pedidos</h1>
+    <div class="contadores" id="contadores"></div>
+  </div>
+  <div class="leyenda">
+    <span><i style="background:#fff"></i>sin color: cuadra, o aviso que no bloquea</span>
+    <span><i style="background:var(--aviso-bg)"></i>amarillo: N/A (todavía sin grado)</span>
+    <span><i style="background:var(--mal-bg)"></i>naranja: no cuadra (cuenta en «no cuadran»)</span>
+  </div>
+  <div class="zona">
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:190px"><col style="width:60px"><col style="width:150px"><col></colgroup>
+        <thead><tr><th>Caso</th><th>Tienda</th><th>SKU del pedido</th><th>IMEI</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel"></aside>
+  </div>
+
+  <section>
+    <h2>Stock de teléfonos · Ubicación y Quién lo tiene</h2>
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:170px"><col style="width:200px"><col style="width:190px"><col></colgroup>
+        <thead><tr><th>IMEI</th><th>Caja en NSYS</th><th>Ubicación (ERP)</th><th>Quién lo tiene</th></tr></thead>
+        <tbody id="stock"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+// Partes del aviso de «Después»: [texto, clase]. sim y mal en naranja; aviso y na en ámbar.
+// Fondo de la celda: naranja si alguna parte es «mal»; si no, amarillo si hay N/A; si no, ninguno. eSIM/SIM física no pintan fondo.
+const S = (t) => [t, 'sim'], M = (t) => [t, 'mal'], A = (t) => [t, 'aviso'], NA = ['N/A', 'na'];
+let n = 0; const id = () => ++n;
+const CASOS = [
+  { grupo:'Sin aviso y avisos que no bloquean' },
+  { id:id(), caso:'Cuadra', plat:'Web', sku:'i13128AzulA', imei:'350000000000011', pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · A',
+    antes:{ nivel:'ok', motivo:'Listos' }, despues:{ partes:[], caja:'Caja · Listos' } },
+  { id:id(), caso:'Lo tiene un técnico', plat:'AMZ', sku:'i14256NegroA', imei:'350000000000022', cambia:true, pide:'14 · 256GB · Negro · A', es:'14 · 256GB · Negro · C (reparándose)',
+    antes:{ nivel:'aviso', motivo:'en el taller' }, despues:{ partes:[A('reparándose · Juan')], caja:'Caja · Reparación' } },
+  { id:id(), caso:'Reparación y glass de dos técnicos', plat:'Web', sku:'i15128RosaB', imei:'350000000000033', cambia:true, pide:'15 · 128GB · Rosa · B', es:'15 · 128GB · Rosa · B',
+    antes:{ nivel:'aviso', motivo:'en el taller' }, despues:{ partes:[A('reparándose · Juan · glass Ana')], caja:'Caja · Reparación' } },
+  { id:id(), caso:'Grado Ms', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000044', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · MsA',
+    antes:{ nivel:'aviso', motivo:'es un Ms' }, despues:{ partes:[A('MS')], caja:'Caja · Listos' } },
+  { id:id(), caso:'B por A (solo Amazon)', plat:'AMZ', sku:'i14128MoradoA', imei:'350000000000055', cambia:true, pide:'14 · 128GB · Morado · A', es:'14 · 128GB · Morado · B de Amazon',
+    antes:{ nivel:'aviso', motivo:'B por A' }, despues:{ partes:[A('B por A')], caja:'Caja · Listos' } },
+  { id:id(), caso:'Pide SIM física y es eSIM', plat:'Web', sku:'i15128NegroA', imei:'350000000000066', cambia:true, pide:'15 · 128GB · SIM física · Negro · A', es:'15 · 128GB · eSIM · Negro · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i15eSIM128NegroA', validar:true }, despues:{ partes:[S('eSIM')], caja:'Caja · Listos' } },
+  { id:id(), caso:'Pide eSIM y es SIM física', plat:'Web', sku:'i15eSIM128NegroA', imei:'350000000000077', cambia:true, pide:'15 · 128GB · eSIM · Negro · A', es:'15 · 128GB · SIM física · Negro · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i15128NegroA', validar:true }, despues:{ partes:[S('SIM física')], caja:'Caja · Listos' } },
+  { id:id(), caso:'Grado N/A (sin revisar)', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000088', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · n/a',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128AzulNA', validar:true }, despues:{ partes:[NA], caja:'En revisión' } },
+
+  { grupo:'Avisos naranjas (no cuadra)' },
+  { id:id(), caso:'Otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000111', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rosa · A',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128RosaA', validar:true }, despues:{ partes:[M('color: Rosa')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Otro grado', plat:'Web', sku:'i13128AzulA', imei:'350000000000122', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · B',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128AzulB', validar:true }, despues:{ partes:[M('grado: B')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Un C sin reparar', plat:'Web', sku:'i13128AzulA', imei:'350000000000133', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · C',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128AzulC', validar:true }, despues:{ partes:[M('grado: C')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Otro color y otro grado', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000144', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · B',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128RojoB', validar:true }, despues:{ partes:[M('color: Rojo'), M('grado: B')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Otro modelo', plat:'Web', sku:'i13128AzulA', imei:'350000000000155', cambia:true, pide:'13 · 128GB · Azul · A', es:'14 · 128GB · Azul · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i14128AzulA', validar:true }, despues:{ partes:[M('modelo: 14')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Otra capacidad', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000166', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 256GB · Azul · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i13256AzulA', validar:true }, despues:{ partes:[M('capacidad: 256GB')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Grado que no se vende', plat:'Web', sku:'i12064NegroA', imei:'350000000000177', cambia:true, pide:'12 · 64GB · Negro · A', es:'12 · 64GB · Negro · F',
+    antes:{ nivel:'mal', motivo:'ese grado no se vende', validar:true }, despues:{ partes:[M('no se vende: F')], validar:true, caja:'No vendible' } },
+  { id:id(), caso:'El maestro no conoce el SKU', plat:'Web', sku:'i13128VerdeX', imei:'350000000000188', pide:'(SKU desconocido)', es:'13 · 128GB · Verde · A',
+    antes:{ nivel:'mal', motivo:'el maestro no conoce este SKU', validar:true }, despues:{ partes:[M('SKU desconocido')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'No está en NSYS', plat:'AMZ', sku:'i12064NegroA', imei:'350000000000199', pide:'12 · 64GB · Negro · A', es:'—',
+    antes:{ nivel:'mal', motivo:'no está en NSYS' }, despues:{ partes:[M('no está en NSYS')] } },
+  { id:id(), caso:'Ya está en otro pedido', plat:'Web', sku:'i13128AzulA', imei:'350000000000200', pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · A',
+    antes:{ nivel:'mal', motivo:'ya está en otro pedido' }, despues:{ partes:[M('en otro pedido')], caja:'Caja · Listos' } },
+
+  { grupo:'Varias condiciones a la vez' },
+  { id:id(), caso:'eSIM + otro color', plat:'AMZ', sku:'i15128NegroA', imei:'350000000000211', cambia:true, pide:'15 · 128GB · SIM física · Negro · A', es:'15 · 128GB · eSIM · Rosa · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i15eSIM128RosaA', validar:true }, despues:{ partes:[S('eSIM'), M('color: Rosa')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'eSIM + N/A', plat:'Web', sku:'i15128NegroA', imei:'350000000000222', cambia:true, pide:'15 · 128GB · SIM física · Negro · A', es:'15 · 128GB · eSIM · Negro · n/a',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i15eSIM128NegroNA', validar:true }, despues:{ partes:[S('eSIM'), NA], caja:'En revisión' } },
+  { id:id(), caso:'N/A + otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000233', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rosa · n/a',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128RosaNA', validar:true }, despues:{ partes:[NA, M('color: Rosa')], validar:true, caja:'En revisión' } },
+  { id:id(), caso:'MS + otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000244', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · MsA',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128RojoMsA', validar:true }, despues:{ partes:[A('MS'), M('color: Rojo')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'MS + otro grado', plat:'Web', sku:'i13128AzulA', imei:'350000000000255', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · MsB',
+    antes:{ nivel:'mal', motivo:'otro color o grado: es i13128AzulMsB', validar:true }, despues:{ partes:[A('MS'), M('grado: B')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'SIM física + otra capacidad', plat:'Web', sku:'i15eSIM256NegroA', imei:'350000000000266', cambia:true, pide:'15 · 256GB · eSIM · Negro · A', es:'15 · 128GB · SIM física · Negro · A',
+    antes:{ nivel:'mal', motivo:'otro modelo, capacidad o eSIM: es i15128NegroA', validar:true }, despues:{ partes:[S('SIM física'), M('capacidad: 128GB')], validar:true, caja:'Caja · Listos' } },
+  { id:id(), caso:'Reparándose con otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000277', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · C (reparándose)',
+    antes:{ nivel:'aviso', motivo:'en el taller' }, despues:{ partes:[A('reparándose · Juan')], caja:'Caja · Reparación',
+    nota:'Mientras lo repara un técnico no se comparan color ni grado, porque el trabajo los puede cambiar (como hoy). Al cerrar el trabajo, la celda se recalcula.' } },
+  { id:id(), caso:'Sin IMEI', plat:'Web', sku:'i16128BlancoA', imei:null, pide:'16 · 128GB · Blanco · A', es:'—', antes:{ nivel:'ok' }, despues:{ partes:[] } },
+];
+
+const STOCK = [
+  { imei:'350000000000301', nsys:'CAJA PULIR', antes:['Taller · Pulir','u-pulir'], despues:['Caja · Pulir','u-pulir'], quien:'Marta (pulido)' },
+  { imei:'350000000000302', nsys:'CAJA GLASS', antes:['Taller · Glass','u-glass'], despues:['Caja · Glass','u-glass'], quien:'Ana (glass) llegó 09:40' },
+  { imei:'350000000000303', nsys:'CAJA REP. OFICINA', antes:['Taller · Reparación','u-rep'], despues:['Caja · Reparación','u-rep'], quien:'Juan' },
+  { imei:'350000000000304', nsys:'CAJA REP. OFICINA', antes:['Taller · Reparación','u-rep'], despues:['Caja · Reparación','u-rep'], quien:null },
+  { imei:'350000000000305', nsys:'C.R. Pantalla Rota', antes:['Taller · Pantalla rota','u-rota'], despues:['Caja · Pantalla rota','u-rota'], quien:null },
+  { imei:'350000000000306', nsys:'CAJA LISTOS', antes:['Listos','u-listos'], despues:['Caja · Listos','u-listos'], quien:'—' },
+  { imei:'350000000000307', nsys:'(sin caja)', antes:['En revisión','u-neutro'], despues:['En revisión','u-neutro'], quien:'—' },
+];
+
+const TITULO = { 'eSIM':'eSIM: el pedido pide SIM física', 'SIM física':'SIM física: el pedido pide eSIM', 'N/A':'N/A: todavía sin grado en NSYS',
+                 'MS':'MS: grado Ms', 'B por A':'B por A: el pedido pide A y el móvil es el B de Amazon' };
+let version = 'despues', sel = 2;
+const $ = (x) => document.getElementById(x);
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const filas = CASOS.filter(c => !c.grupo);
+
+function nivelDespues(c) {
+  const p = c.despues.partes;
+  if (p.some(x => x[1] === 'mal')) return 'mal';
+  if (p.some(x => x[1] === 'na')) return 'aviso';
+  return 'ok';
+}
+function nivel(c) { return version === 'antes' ? c.antes.nivel : nivelDespues(c); }
+function titulo(c) {
+  if (!c.imei) return 'pulsa para poner el IMEI…';
+  if (version === 'antes') return [c.imei, c.antes.motivo].filter(Boolean).join(' · ');
+  const p = c.despues.partes;
+  return [c.imei, ...(p.length ? p.map(x => TITULO[x[0]] ?? x[0]) : [c.despues.caja])].filter(Boolean).join('\n');
+}
+function celda(c) {
+  if (!c.imei) return '<div class="celda"><span class="vacia">pulsa para poner el IMEI…</span></div>';
+  let h = `<span class="num">${c.imei}</span>`;
+  if (version === 'antes') {
+    const a = c.antes;
+    if (a.motivo) h += `<span class="mot ${a.nivel === 'ok' ? 'gris' : a.nivel}">${esc(a.motivo)}</span>`;
+    if (a.validar) h += '<span class="validar">Validar SKU</span>';
+  } else {
+    const d = c.despues;
+    if (!d.partes.length && d.caja) h += `<span class="mot gris">${esc(d.caja)}</span>`;
+    d.partes.forEach((x, i) => {
+      if (i > 0) h += '<span class="sepm">·</span>';
+      const cl = x[1] === 'sim' || x[1] === 'mal' ? 'mal' : 'aviso';
+      h += `<span class="mot ${cl}">${esc(x[0])}</span>`;
+    });
+    if (d.validar) h += '<span class="validar">Validar SKU</span>';
+  }
+  return `<div class="celda" title="${esc(titulo(c))}">${h}</div>`;
+}
+function pintar() {
+  $('bAntes').setAttribute('aria-pressed', version === 'antes');
+  $('bDespues').setAttribute('aria-pressed', version === 'despues');
+  const noCuadran = filas.filter(c => c.imei && nivel(c) === 'mal').length;
+  $('contadores').innerHTML = `<span class="cont"><b>${filas.length}</b> filas</span><span class="cont"><b>${filas.filter(c => !c.imei).length}</b> sin IMEI</span>`
+    + `<span class="cont naranja" data-nocuadran><b>${noCuadran}</b> no cuadran</span>`;
+  $('cuerpo').innerHTML = CASOS.map(c => {
+    if (c.grupo) return `<tr class="grupo"><td colspan="4">${esc(c.grupo)}</td></tr>`;
+    const nv = nivel(c);
+    const fondo = nv === 'aviso' ? 'bg-aviso' : nv === 'mal' ? 'bg-mal' : '';
+    return `<tr data-id="${c.id}" class="${sel === c.id ? 'aqui' : ''}">
+      <td class="caso">${esc(c.caso)}${c.cambia ? '<span class="cambia">cambia</span>' : ''}</td>
+      <td>${c.plat}</td><td class="sku">${c.sku}</td>
+      <td class="imei ${fondo}" data-caso="${c.id}">${celda(c)}</td></tr>`;
+  }).join('');
+  pintarPanel();
+  $('stock').innerHTML = STOCK.map(s => {
+    const [u, cl] = s[version];
+    const enCaja = u.startsWith(version === 'antes' ? 'Taller' : 'Caja · ') && u !== 'Caja · Listos' && !s.quien;
+    const quien = enCaja ? '<span class="quien-aviso">⚠ En caja, sin asignar</span>' : esc(s.quien ?? '—');
+    return `<tr><td class="sku">${s.imei}</td><td class="sku">${esc(s.nsys)}</td><td><span class="pill ${cl}">${esc(u)}</span></td><td>${quien}</td></tr>`;
+  }).join('');
+}
+function pintarPanel() {
+  const c = filas.find(x => x.id === sel);
+  if (!c) { $('panel').innerHTML = '<p style="margin:0;color:var(--azul-gris)">Pulsa una fila.</p>'; return; }
+  const nv = nivel(c);
+  const caja = version === 'antes' ? null : c.despues.caja;
+  const nota = version === 'despues' && c.despues.nota ? `<p style="font-size:11.5px;color:var(--azul-gris);margin:8px 0 0">${esc(c.despues.nota)}</p>` : '';
+  $('panel').innerHTML = `<h2>Detalle de la fila</h2>
+    <dl><dt>Caso</dt><dd>${esc(c.caso)}</dd>
+      <dt>Pide</dt><dd>${esc(c.pide)}</dd>
+      <dt>Es</dt><dd>${esc(c.es)}</dd>
+      ${caja ? `<dt>Caja</dt><dd>${esc(caja)}</dd>` : ''}
+      <dt>Celda</dt><dd>${nv === 'mal' ? 'naranja · cuenta en «no cuadran»' : nv === 'aviso' ? 'amarilla' : 'sin color'}</dd></dl>
+    <div class="titulo"><b>Al pasar el ratón:</b>\n${esc(titulo(c))}</div>${nota}`;
+}
+document.addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) { sel = +tr.dataset.id; pintar(); }
+});
+$('bAntes').onclick = () => { version = 'antes'; pintar(); };
+$('bDespues').onclick = () => { version = 'despues'; pintar(); };
+pintar();
+</script>
+</body>
+</html>
