@@ -262,3 +262,9 @@ cambió para guardarlo en el repo. Un fallo de login del bot no se debe al cambi
 «Taller · Pulir/Glass/Reparación/Pantalla rota» → «Caja · …» y «Listos» → «Caja · Listos» (`Nsys_ubicacion`, `Nsys_movil`,
 `Nsys_evento`.`DE`/`A`). La regla de destino usa `A_NSYS` (caja de NSYS tal cual, no cambia) y las marcas de
 `Nsys_ubicacion`; nunca compara con nombres de ubicación del ERP.
+
+**Nota (24/11 tarde, tras la 0.9.46 «libro manda», en prod 18:05):** los descuadres ERP≠libro de Amazon ya los corrigió la
+0.9.46; cada IMEI quitado queda en `Pedido_fila_cambio` TIPO `IMEI` con `IMEI_ANTERIOR` y `DETALLE` «LIBRO», o sea que
+entra en la regla de §5 sin cambios. Lo acumulado se recoge con una 2.ª pasada del saneamiento (§9); no hace falta una carga
+aparte de `movimientos.csv` para ellos. La reserva de IMEI (0.9.48) está implementada con `pedidos.reserva.al-bot=false`
+hasta que exista esta lista: añadirá filas con motivo `RESERVA_LIBERADA` (§6), sin cambiar el contrato.
