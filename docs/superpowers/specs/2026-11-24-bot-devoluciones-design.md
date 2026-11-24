@@ -268,3 +268,12 @@ cambió para guardarlo en el repo. Un fallo de login del bot no se debe al cambi
 entra en la regla de §5 sin cambios. Lo acumulado se recoge con una 2.ª pasada del saneamiento (§9); no hace falta una carga
 aparte de `movimientos.csv` para ellos. La reserva de IMEI (0.9.48) está implementada con `pedidos.reserva.al-bot=false`
 hasta que exista esta lista: añadirá filas con motivo `RESERVA_LIBERADA` (§6), sin cambiar el contrato.
+
+**Nota (24/11 noche, 0.9.46.2 en prod, servidor 43e85fb / web 61ad299):** el libro manda siempre (pone el IMEI aunque no
+cuadre o esté en otro pedido, y corrige pedidos ya asociados si cambia el libro); cada IMEI quitado sigue quedando como TIPO
+`IMEI` + `DETALLE` «LIBRO». Habrá más IMEI retirados, pero el contrato no cambia. Revisar en el plan 2 si la marca `NO_VENDIBLE`
+de §7 sigue teniendo sentido para el libro (ya no rechaza nada) o se queda solo para el traspaso.
+
+**Pendiente de decidir (24/11, caso 404-4440823):** los tres móviles retirados se repararon para el pedido DESPUÉS de que el bot
+los descontara (chasis, tapa, batería). La «caja de antes» ya no vale. Propuesta: con una reparación posterior a la entrada en
+«Pedidos realizados», sin devolución automática (`SIN_DESTINO`, «reparado después»), y columna «Reparado después» en el saneamiento.
