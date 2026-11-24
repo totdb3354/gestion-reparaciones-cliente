@@ -51,6 +51,12 @@ desde Drive cuando cambian (pedidos de los últimos 30 días) y:
 - si el IMEI estaba puesto en otra fila del mismo SKU, los **intercambia**;
 - lo que no puede resolver va a la lista **«para revisar»** (el pedido no tiene hueco, el móvil ya salió en otro pedido, el pedido
   no está en el ERP, solo quedan filas canceladas).
+- **El libro manda también en pedidos con etiqueta** (0.9.45). Si el pedido no tiene ninguna fila pendiente libre y sí filas con la
+  etiqueta hecha (impresa o no), el ERP pone el IMEI del libro en la fila cuyo IMEI el libro no reconoce y la confirma, siempre que el
+  móvil cuadre con el pedido (lo mismo que cuenta en «no cuadran» de la celda; la eSIM no cuenta). Si ese IMEI estaba en otro pedido
+  con etiqueta, ese otro pedido se queda sin IMEI y sin asociar hasta que llegue su línea del libro; si estaba en uno pendiente, se
+  intercambian como siempre. El IMEI quitado queda en el historial de la fila («libro»), para la futura devolución automática a stock.
+- Van a «para revisar»: el libro pone el IMEI en dos pedidos; el IMEI no está en NSYS; el móvil no cuadra (con qué móvil es).
 
 ### 2.3 La carga del histórico (una vez, en el corte)
 
