@@ -51,13 +51,18 @@ desde Drive cuando cambian (pedidos de los últimos 30 días) y:
 - si el IMEI estaba puesto en otra fila del mismo SKU, los **intercambia**;
 - lo que no puede resolver va a la lista **«para revisar»** (el pedido no tiene hueco, el móvil ya salió en otro pedido, el pedido
   no está en el ERP, solo quedan filas canceladas).
-- **El libro manda también en pedidos con etiqueta** (versión prevista 0.9.46, aún no en producción). Si el pedido no tiene ninguna fila pendiente (sin etiqueta, sin confirmar y sin cancelar) y sí filas con la
+- **El libro manda también en pedidos con etiqueta** (desde la 0.9.46). Si el pedido no tiene ninguna fila pendiente (sin etiqueta, sin confirmar y sin cancelar) y sí filas con la
   etiqueta hecha (impresa o no), el ERP pone el IMEI del libro en la fila cuyo IMEI el libro no reconoce y la confirma, siempre que el
-  móvil cuadre con el pedido (lo mismo que cuenta en «no cuadran» de la celda; la eSIM no cuenta). Si ese IMEI estaba en otro pedido
-  con etiqueta que también está en el libro, ese otro pedido se queda sin IMEI y sin asociar hasta que llegue su línea del libro; si ese
-  pedido no está en el libro, va a «para revisar» (ya salió) y no se toca nada; si estaba en uno pendiente, se
-  intercambian como siempre. El IMEI quitado queda en el historial de la fila («libro»), para la futura devolución automática a stock.
-- Van a «para revisar»: el libro pone el IMEI en dos pedidos; el IMEI no está en NSYS; el móvil no cuadra (con qué móvil es).
+  móvil cuadre con el pedido (lo mismo que cuenta en «no cuadran» de la celda, con los cambios del taller; la eSIM no cuenta). Si ese
+  IMEI estaba en otro pedido:
+  - con etiqueta y también en el libro: ese otro pedido se queda sin IMEI y sin asociar hasta que llegue su línea del libro;
+  - con la etiqueta **impresa** y fuera del libro: va a «para revisar» (ya salió) y no se toca nada;
+  - con la etiqueta **sin imprimir** (aún no empaquetado) y fuera del libro, o pendiente: se intercambian (el otro pedido recibe el
+    IMEI que tenía este); si tenía etiqueta, su historial dice «por el libro: comprobar el móvil».
+  El IMEI quitado queda en el historial de la fila («libro»), para la futura devolución automática a stock.
+- Un IMEI que el libro pone en varios pedidos: solo cuentan los que tiene el ERP; si uno ya lo tenía confirmado y solo hay otro nuevo,
+  es un móvil devuelto y revendido (el nuevo se asocia y el viejo lo conserva); con dos o más nuevos, a «para revisar».
+- Van a «para revisar»: el libro pone el IMEI en varios pedidos nuevos; el IMEI no está en NSYS; el móvil no cuadra (con qué móvil es).
 
 ### 2.3 La carga del histórico (una vez, en el corte)
 
