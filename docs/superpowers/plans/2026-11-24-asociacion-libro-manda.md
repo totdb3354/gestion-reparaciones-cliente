@@ -890,9 +890,9 @@ cd /c/Users/dev/Documents/ProgramaReparaciones && git add docs/modulos/pedidos.m
 
 ### Task 8: Preprod (con el usuario)
 
-**Files:** guion en `C:/Users/dev/Documents/Apuntes/preprod/v0945-preprod.md` (fuera del repo: puede llevar datos reales).
+**Files:** guion en `C:/Users/dev/Documents/Apuntes/preprod/v0946-preprod.md` (fuera del repo: puede llevar datos reales).
 
-- [ ] **Step 0: Traer la versión de la celda** (cuando esté en `origin/main`): `git fetch` y rebase (o merge) de `dev_asociacion_libro` sobre `origin/main` en servidor y web; resolver conflictos de `AvisoImei` en `ComprobadorLibro` (firma y motivos nuevos; la regla sigue siendo nivel `MAL`); añadir a `ComprobadorLibroTest` que un eSIM en un pedido sin eSIM (y al revés) **no** se rechaza; suite completa. Renumerar la versión (web `package.json`, `CHANGELOG.md`, raíz `docs/modulos/pedidos.md`, que hoy dice «versión prevista 0.9.45, aún no en producción»).
+- [x] **Step 0: Traer la versión de la celda** (cuando esté en `origin/main`): `git fetch` y rebase (o merge) de `dev_asociacion_libro` sobre `origin/main` en servidor y web; resolver conflictos de `AvisoImei` en `ComprobadorLibro` (firma y motivos nuevos; la regla sigue siendo nivel `MAL`); añadir a `ComprobadorLibroTest` que un eSIM en un pedido sin eSIM (y al revés) **no** se rechaza; suite completa. Renumerar la versión a **0.9.46** (la 0.9.45 fue la de la celda) (web `package.json`, `CHANGELOG.md`, raíz `docs/modulos/pedidos.md`, que hoy dice «versión prevista 0.9.45, aún no en producción»).
 - [ ] **Step 1: Pedir OK para subir las ramas** (push de `dev_asociacion_libro` en servidor y web). Sin OK, parar.
 - [ ] **Step 2: Escribir el guion de preprod** con el formato de siempre (cada bloque empieza con `hostname` y `ls /usr/local/sbin/backup-erp.sh`, que en preprod debe NO existir; los bloques que escriben llevan el seguro `if [ ! -x /usr/local/sbin/backup-erp.sh ]`): 1) solo lectura: lista «para revisar» actual (la consulta de simulación del 24/11); 2) migración `migracion-asociacion-detalle.sql` con `docker exec -i … < fichero`; 3) build y arranque del servidor con la rama (build en primer plano, avisando de que no saca salida un rato); 4) `UPDATE Pedido_asociacion_pasada SET LIBRO_MODIFICADO = NULL;` y esperar a la siguiente vuelta del lector; 5) lectura: la lista nueva, recuentos de la pasada y los apuntes `DETALLE = 'LIBRO'` de hoy; 6) web con la rama.
 - [ ] **Step 3: El usuario lo ejecuta y pega las salidas.** Comparar con la simulación del 24/11 (spec §4): casi todos corregidos; en revisión solo los que no cuadran, con su detalle.
@@ -900,7 +900,7 @@ cd /c/Users/dev/Documents/ProgramaReparaciones && git add docs/modulos/pedidos.m
 
 ### Task 9: Producción (solo con OK explícito)
 
-- [ ] **Step 1: OK del usuario** para merge `--no-ff` a `main` en servidor y web, push y tag `v0.9.45` en los dos.
-- [ ] **Step 2: Guion de producción** en `C:/Users/dev/Documents/Apuntes/prod-v0945.md` (copia de seguridad con `/usr/local/sbin/backup-erp.sh` primero; seguro `if [ -x … ]`; migración → servidor → web; forzar la pasada; lectura de la lista y de los recuentos; vuelta atrás: imágenes anteriores y la migración se puede dejar, es aditiva).
+- [ ] **Step 1: OK del usuario** para merge `--no-ff` a `main` en servidor y web, push y tag `v0.9.46` en los dos.
+- [ ] **Step 2: Guion de producción** en `C:/Users/dev/Documents/Apuntes/prod-v0946.md` (copia de seguridad con `/usr/local/sbin/backup-erp.sh` primero; seguro `if [ -x … ]`; migración → servidor → web; forzar la pasada; lectura de la lista y de los recuentos; vuelta atrás: imágenes anteriores y la migración se puede dejar, es aditiva).
 - [ ] **Step 3: Tras la pasada**, comprobar con el usuario los pedidos del 23/11 (la consulta del 24/11 de «enviados sin asociar» por día) y apuntar en la memoria del proyecto el resultado.
-- [ ] **Step 4: Gitlinks** en la raíz (`chore: gitlinks de la 0.9.45 en produccion (servidor …, web …)`), con OK para el push.
+- [ ] **Step 4: Gitlinks** en la raíz (`chore: gitlinks de la 0.9.46 en produccion (servidor …, web …)`), con OK para el push.

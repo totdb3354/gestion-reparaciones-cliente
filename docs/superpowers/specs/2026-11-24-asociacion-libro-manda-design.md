@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-24. Estado: aprobado en conversación, pendiente de revisar este texto.
 Versión: la siguiente libre **después** de la de «textos y colores de la celda del IMEI» (`2026-11-24-pedidos-celda-imei-y-cajas-design.md`),
-porque usa su comparación del móvil con el pedido. Prevista 0.9.45; el número se pone al sacarla. Servidor + web (solo los textos
+porque usa su comparación del móvil con el pedido. Prevista 0.9.46 (la 0.9.45 fue la de la celda); el número se pone al sacarla. Servidor + web (solo los textos
 de la lista «para revisar») + migración aditiva (columna `DETALLE` en `Pedido_asociacion_revisar`, para decir qué es el móvil).
 Base: asociación IMEI → pedido de Amazon (`2026-11-13-pedidos-amazon-asociacion-design.md`, `AsociacionAmazon`), «lo que vale»
 (`LoQueVale`), aviso del IMEI (`AvisoImei`).
