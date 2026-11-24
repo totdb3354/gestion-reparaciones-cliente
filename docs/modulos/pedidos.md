@@ -101,7 +101,7 @@ modelo o capacidad, N/A, MS y el resto). Al pasar el ratón, una frase larga por
 | `N/A` (grado n/a; si el pedido acepta n/a, cuadra) | ámbar | amarillo claro | no |
 | `MS`, `B por A`, `reparándose · Juan · glass Ana` | ámbar | ninguno | no |
 
-Ejemplo: «eSIM · color: Rosa» (fondo naranja). Mientras un técnico lo tiene no se miran color ni grado. Un aviso de SKU (los
+Ejemplo: «eSIM · color: Rosa» (fondo naranja). Si un técnico lo tiene, se mira todo igual y además sale quién lo tiene («color: Rojo · reparándose · Juan»; desde la 0.9.46.1). Un aviso de SKU (los
 naranjas salvo «no está en NSYS» y «en otro pedido») se puede dar por bueno con **«Validar SKU»**; la fila validada conserva
 «eSIM», «N/A» y «MS». La pistola guarda y salta a la siguiente fila vacía.
 

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Celda del IMEI con técnico</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6;
+          --aviso-bg:#FFF8E0; --aviso-text:#7A5C00; --mal-bg:#FFE0B2; --mal-text:#B45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; font-variant-numeric:tabular-nums; }
+  button { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .seg { display:inline-flex; background:#fff; border-radius:6px; padding:2px; gap:2px; }
+  .seg button { border:0; background:transparent; color:#3b0764; font-weight:700; font-size:12px; padding:4px 12px; border-radius:4px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#3b0764; color:#fff; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:12px 16px 24px; display:flex; flex-direction:column; gap:14px; }
+  h1 { margin:0; font-size:22px; color:var(--azul-medio); }
+  h2 { margin:0 0 6px; font-size:15px; color:var(--azul-medio); }
+  .contadores { display:flex; gap:8px; flex-wrap:wrap; }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12px; font-weight:600; color:var(--azul-gris); }
+  .cont b { color:var(--azul-noche); }
+  .cont.naranja b { color:var(--mal-text); }
+  .zona { display:flex; gap:12px; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); }
+  table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:0 10px; border-right:1px solid var(--fila-brd); border-bottom:1px solid var(--fila-brd); height:34px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td:last-child { border-right:0; }
+  tr { cursor:pointer; }
+  tr.grupo td { background:#eef0f4; color:var(--azul-medio); font-weight:700; font-size:11.5px; height:26px; cursor:default; }
+  tr.aqui td:not(.imei) { background:#EAF1FF; }
+  td.caso { font-size:11.5px; color:var(--azul-gris); white-space:normal; line-height:1.25; }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  td.imei { padding:0; }
+  .celda { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 10px; font-family:Consolas,monospace; font-size:12.5px; }
+  .celda .num { flex:none; }
+  .mot { flex:none; font-family:"Segoe UI",sans-serif; font-size:11px; font-weight:700; }
+  .mot.aviso { color:var(--aviso-text); }
+  .mot.mal { color:var(--mal-text); }
+  .sepm { color:#b9a27a; font-family:"Segoe UI",sans-serif; font-size:11px; margin:0 -4px; }
+  .bg-aviso { background:var(--aviso-bg); }
+  .bg-mal { background:var(--mal-bg); }
+  .validar { margin-left:auto; flex:none; font-family:"Segoe UI",sans-serif; font-size:10.5px; font-weight:700; border:1px solid #e0a96d; color:var(--mal-text); background:#fff; border-radius:6px; padding:1px 6px; }
+  .cambia { display:inline-block; font-size:10px; font-weight:700; color:#3b0764; background:#efe7fb; border-radius:6px; padding:0 5px; margin-left:4px; vertical-align:1px; }
+  aside { width:min(360px,40vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; position:sticky; top:8px; }
+  dl { display:grid; grid-template-columns:84px minmax(0,1fr); gap:6px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  .titulo { font-size:11.5px; color:var(--azul-gris); background:#f6f7f9; border:1px dashed var(--borde); border-radius:6px; padding:6px 8px; margin-top:8px; white-space:pre-line; }
+  .leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--azul-gris); }
+  .leyenda span i { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-3px; margin-right:5px; border:1px solid var(--borde); }
+  .opcion { background:#fff; border:1px solid var(--borde); border-radius:6px; padding:8px 12px; font-size:12px; line-height:1.5; }
+  .opcion b { color:#3b0764; }
+  @media (max-width: 800px) { .zona { flex-direction:column; } aside { width:100%; position:static; } }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos: la celda del IMEI cuando lo tiene un técnico</span>
+  <span class="seg" role="group" aria-label="Versión">
+    <button id="bHoy" aria-pressed="false">Hoy (0.9.45)</button>
+    <button id="bA" aria-pressed="true">Opción A: cuenta como no cuadra</button>
+    <button id="bB" aria-pressed="false">Opción B: solo aviso</button>
+  </span>
+</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados):
+  <ol>
+    <li><b>Hoy</b>: con un técnico solo sale «reparándose · Juan»; el color o el grado que no cuadra no se ve. Y si es otro modelo, sale el modelo pero no quién lo tiene.</li>
+    <li><b>Opción A</b>: salen siempre las dos cosas. Lo que no cuadra va en naranja y cuenta en «no cuadran», aunque el técnico lo vaya a cambiar.</li>
+    <li><b>Opción B</b>: salen siempre las dos cosas. Si lo tiene un técnico, el color y el grado salen en ámbar y no cuentan en «no cuadran» hasta que cierre el trabajo; el modelo, la capacidad y lo que no se vende siguen en naranja.</li>
+    <li>Pulsa una fila: el panel dice también qué haría el <b>libro de ventas</b> con ese móvil.</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Pedidos</header>
+<main>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1>Pedidos</h1>
+    <div class="contadores" id="contadores"></div>
+  </div>
+  <div class="opcion" id="explica"></div>
+  <div class="leyenda">
+    <span><i style="background:#fff"></i>sin color: cuadra, o aviso que no bloquea</span>
+    <span><i style="background:var(--aviso-bg)"></i>amarillo: N/A</span>
+    <span><i style="background:var(--mal-bg)"></i>naranja: no cuadra (cuenta en «no cuadran»)</span>
+  </div>
+  <div class="zona">
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:210px"><col style="width:60px"><col style="width:150px"><col></colgroup>
+        <thead><tr><th>Caso</th><th>Tienda</th><th>SKU del pedido</th><th>IMEI</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel"></aside>
+  </div>
+</main>
+
+<script>
+// Piezas: [texto, tipo]. tipo: sim (naranja sin fondo), mal (naranja, no cuadra), cg (color o grado: naranja en A, ámbar en B si hay
+// técnico), aviso (ámbar), na (ámbar + fondo amarillo), tec (el técnico, ámbar).
+const S = (t) => [t, 'sim'], M = (t) => [t, 'mal'], CG = (t) => [t, 'cg'], A = (t) => [t, 'aviso'], NA = ['N/A', 'na'], T = (t) => [t, 'tec'];
+let n = 0; const id = () => ++n;
+const CASOS = [
+  { grupo:'Lo tiene un técnico y cuadra' },
+  { id:id(), caso:'Cuadra, lo repara Juan', plat:'AMZ', sku:'i14256NegroA', imei:'350000000000022', pide:'14 · 256GB · Negro · A', es:'14 · 256GB · Negro · A',
+    hoy:[T('reparándose · Juan')], nuevo:[T('reparándose · Juan')] },
+  { id:id(), caso:'El taller ya apuntó el cambio al color del pedido', plat:'AMZ', sku:'i14128BlancoA', imei:'350000000000033', pide:'14 · 128GB · Blanco · A',
+    es:'14 · 128GB · Azul → Blanco (cambio del taller) · A', hoy:[T('reparándose · Juan')], nuevo:[T('reparándose · Juan')],
+    nota:'«Lo que vale» ya lleva el cambio de chasis apuntado por el taller: el color cuadra.' },
+
+  { grupo:'Lo tiene un técnico y NO cuadra el color o el grado' },
+  { id:id(), caso:'Otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000111', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · A',
+    hoy:[T('reparándose · Juan')], nuevo:[CG('color: Rojo'), T('reparándose · Juan')] },
+  { id:id(), caso:'Grado C que está reparando (aún sin cambio apuntado)', plat:'Web', sku:'i13128AzulA', imei:'350000000000122', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · C',
+    hoy:[T('reparándose · Juan')], nuevo:[CG('grado: C'), T('reparándose · Juan')] },
+  { id:id(), caso:'Otro color y otro grado, dos técnicos', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000133', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · B',
+    hoy:[T('reparándose · Juan · glass Ana')], nuevo:[CG('color: Rojo'), CG('grado: B'), T('reparándose · Juan · glass Ana')] },
+
+  { grupo:'Lo tiene un técnico y no cuadra otra cosa' },
+  { id:id(), caso:'Otro modelo', plat:'Web', sku:'i13128AzulA', imei:'350000000000155', cambia:true, pide:'13 · 128GB · Azul · A', es:'14 · 128GB · Azul · A',
+    hoy:[M('modelo: 14')], nuevo:[M('modelo: 14'), T('reparándose · Juan')] },
+  { id:id(), caso:'Otra capacidad', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000166', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 256GB · Azul · A',
+    hoy:[M('capacidad: 256GB')], nuevo:[M('capacidad: 256GB'), T('reparándose · Juan')] },
+  { id:id(), caso:'Grado que no se vende', plat:'Web', sku:'i12064NegroA', imei:'350000000000177', cambia:true, pide:'12 · 64GB · Negro · A', es:'12 · 64GB · Negro · F',
+    hoy:[M('no se vende: F')], nuevo:[M('no se vende: F'), T('reparándose · Juan')] },
+
+  { grupo:'Lo tiene un técnico y hay más avisos' },
+  { id:id(), caso:'eSIM en pedido de SIM física', plat:'AMZ', sku:'i15128NegroA', imei:'350000000000211', pide:'15 · 128GB · SIM física · Negro · A', es:'15 · 128GB · eSIM · Negro · A',
+    hoy:[S('eSIM'), T('reparándose · Juan')], nuevo:[S('eSIM'), T('reparándose · Juan')] },
+  { id:id(), caso:'eSIM y otro color', plat:'AMZ', sku:'i15128NegroA', imei:'350000000000222', cambia:true, pide:'15 · 128GB · SIM física · Negro · A', es:'15 · 128GB · eSIM · Rosa · A',
+    hoy:[S('eSIM'), T('reparándose · Juan')], nuevo:[S('eSIM'), CG('color: Rosa'), T('reparándose · Juan')] },
+  { id:id(), caso:'N/A (sin grado en NSYS)', plat:'Web', sku:'i13128AzulA', imei:'350000000000233', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Azul · n/a',
+    hoy:[T('reparándose · Juan')], nuevo:[NA, T('reparándose · Juan')] },
+  { id:id(), caso:'Ms y otro color', plat:'AMZ', sku:'i13128AzulA', imei:'350000000000244', cambia:true, pide:'13 · 128GB · Azul · A', es:'13 · 128GB · Rojo · MsA',
+    hoy:[T('reparándose · Juan')], nuevo:[A('MS'), CG('color: Rojo'), T('reparándose · Juan')] },
+];
+
+const TITULO = { 'eSIM':'eSIM: el pedido pide SIM física', 'N/A':'N/A: todavía sin grado en NSYS', 'MS':'MS: grado Ms' };
+let version = 'A', sel = 3;
+const $ = (x) => document.getElementById(x);
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const filas = CASOS.filter(c => !c.grupo);
+
+const piezas = (c) => version === 'hoy' ? c.hoy : c.nuevo;
+// Color de cada pieza: cg es naranja en A y ámbar en B (con técnico siempre hay técnico en estos casos).
+const tono = (x) => x[1] === 'sim' || x[1] === 'mal' || (x[1] === 'cg' && version === 'A') ? 'mal' : 'aviso';
+function nivel(c) {
+  const p = piezas(c);
+  if (p.some(x => x[1] === 'mal' || (x[1] === 'cg' && version === 'A'))) return 'mal';
+  if (p.some(x => x[1] === 'na')) return 'aviso';
+  return 'ok';
+}
+function libro(c) {
+  // El libro rechaza lo que cuenta en «no cuadran» (la SIM no cuenta).
+  return nivel(c) === 'mal' ? 'a «para revisar» (no cuadra)' : 'lo acepta y corrige el pedido';
+}
+function titulo(c) {
+  const p = piezas(c);
+  const frase = (x) => x[1] === 'tec' ? `se está reparando (${x[0].replace('reparándose · ', '')})`
+    : x[1] === 'cg' && version === 'B' ? `${x[0]} (lo está reparando un técnico: puede cambiar)` : (TITULO[x[0]] ?? x[0]);
+  return [c.imei, ...p.map(frase)].join('\n');
+}
+function celda(c) {
+  let h = `<span class="num">${c.imei}</span>`;
+  piezas(c).forEach((x, i) => {
+    if (i > 0) h += '<span class="sepm">·</span>';
+    h += `<span class="mot ${tono(x)}">${esc(x[0])}</span>`;
+  });
+  if (nivel(c) === 'mal') h += '<span class="validar">Validar SKU</span>';
+  return `<div class="celda" title="${esc(titulo(c))}">${h}</div>`;
+}
+const EXPLICA = {
+  hoy: '<b>Hoy (0.9.45):</b> si lo tiene un técnico, la celda solo dice «reparándose · quién» y no compara ni el color ni el grado. Si es otro modelo, otra capacidad o no se vende, sale eso y <b>no</b> sale el técnico.',
+  A: '<b>Opción A:</b> salen siempre las dos cosas. Lo que no cuadra va en <b>naranja</b> y cuenta en «no cuadran» aunque lo tenga un técnico. El libro de ventas lo manda a revisión.',
+  B: '<b>Opción B:</b> salen siempre las dos cosas. Con un técnico, el color y el grado salen en <b>ámbar</b> (puede cambiarlos) y no cuentan en «no cuadran» hasta que cierre el trabajo; modelo, capacidad y «no se vende» siguen en naranja. El libro de ventas acepta el móvil si solo falla el color o el grado.',
+};
+function pintar() {
+  $('bHoy').setAttribute('aria-pressed', version === 'hoy');
+  $('bA').setAttribute('aria-pressed', version === 'A');
+  $('bB').setAttribute('aria-pressed', version === 'B');
+  $('explica').innerHTML = EXPLICA[version];
+  const noCuadran = filas.filter(c => nivel(c) === 'mal').length;
+  $('contadores').innerHTML = `<span class="cont"><b>${filas.length}</b> filas</span><span class="cont naranja" data-nocuadran><b>${noCuadran}</b> no cuadran</span>`;
+  $('cuerpo').innerHTML = CASOS.map(c => {
+    if (c.grupo) return `<tr class="grupo"><td colspan="4">${esc(c.grupo)}</td></tr>`;
+    const nv = nivel(c);
+    const fondo = nv === 'aviso' ? 'bg-aviso' : nv === 'mal' ? 'bg-mal' : '';
+    return `<tr data-id="${c.id}" class="${sel === c.id ? 'aqui' : ''}">
+      <td class="caso">${esc(c.caso)}${c.cambia && version !== 'hoy' ? '<span class="cambia">cambia</span>' : ''}</td>
+      <td>${c.plat}</td><td class="sku">${c.sku}</td>
+      <td class="imei ${fondo}" data-caso="${c.id}">${celda(c)}</td></tr>`;
+  }).join('');
+  const c = filas.find(x => x.id === sel);
+  const nv = nivel(c);
+  $('panel').innerHTML = `<h2>Detalle de la fila</h2>
+    <dl><dt>Caso</dt><dd>${esc(c.caso)}</dd>
+      <dt>Pide</dt><dd>${esc(c.pide)}</dd>
+      <dt>Es</dt><dd>${esc(c.es)}</dd>
+      <dt>Celda</dt><dd>${nv === 'mal' ? 'naranja · cuenta en «no cuadran»' : nv === 'aviso' ? 'amarilla' : 'sin color'}</dd>
+      <dt>Libro de ventas</dt><dd>${libro(c)}</dd></dl>
+    <div class="titulo"><b>Al pasar el ratón:</b>\n${esc(titulo(c))}</div>
+    ${c.nota ? `<p style="font-size:11.5px;color:var(--azul-gris);margin:8px 0 0">${esc(c.nota)}</p>` : ''}`;
+}
+document.addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) { sel = +tr.dataset.id; pintar(); }
+});
+$('bHoy').onclick = () => { version = 'hoy'; pintar(); };
+$('bA').onclick = () => { version = 'A'; pintar(); };
+$('bB').onclick = () => { version = 'B'; pintar(); };
+pintar();
+</script>
+</body>
+</html>
