@@ -95,8 +95,12 @@ falla, la vuelta sigue OK con un aviso. En este orden:
    - `NO_ENCONTRADO`: el teléfono está en «Pendiente revisar si hay error de inventario» o en la «MV …» (lo movió una persona en
      NSYS porque no lo encuentra);
    - `NO_DISPONIBLE`: el teléfono ya no está en la empresa o su estado no es STOCK ni «de pedido» (vendido, baja, otra caja que no
-     cuenta), o está puesto en otra fila.
-   Un teléfono en «Pedidos realizados» con reserva es lo esperado cuando el bot ya lo descontó: **no** se suelta.
+     cuenta);
+   - `PUESTO_EN_OTRA`: el IMEI reservado se ha puesto en otra fila (no es candidato a devolución: se vende por esa fila).
+   - `ENVIADA_SIN_IMEI`: la fila se cerró **con** envío pero sin IMEI. Seguramente salió el reservado sin picarlo: se suelta, pero
+     **no** es candidato a devolución.
+   Un teléfono en «Pedidos realizados» con reserva es lo esperado cuando el bot ya lo descontó: **no** se suelta. Todo se vuelve a
+   comprobar con la fila bloqueada: si una persona acaba de poner el IMEI, no se suelta (la pasada siguiente lo resuelve).
 3. **Reservar** las filas que no tienen (orden §2, teléfono §4). Cada reserva apunta `RESERVADO` con `IMEI_NUEVO` = el reservado y
    `DETALLE` = el porqué («Puesto 1 · Caja · Listos · A-»). Si no hay teléfono, apunta **una sola vez** `SIN_STOCK` (columna
    `SIN_STOCK_EN`; se borra al reservar).
@@ -113,7 +117,7 @@ persona que esté poniendo el IMEI a la vez.
   no toca NSYS.
 - **Contrato con las devoluciones** (para la otra sesión): una reserva soltada deja en `Pedido_fila_cambio` un apunte
   `RESERVA_SUSTITUIDA` o `RESERVA_QUITADA` con `IMEI_ANTERIOR` = el reservado. La condición 1 de las devoluciones («estuvo en una
-  fila») cuenta también los `RESERVADO`. Lo que no se devuelve: `NO_ENCONTRADO` (el teléfono está en revisar a propósito).
+  fila») cuenta también los `RESERVADO`. Lo que no se devuelve: `NO_ENCONTRADO` (el teléfono está en revisar a propósito), `ENVIADA_SIN_IMEI` (seguramente salió) y `PUESTO_EN_OTRA` (sale por otra fila).
 
 ## 7. Poner el IMEI en una fila reservada
 
@@ -136,7 +140,8 @@ persona que esté poniendo el IMEI a la vez.
 
 ## 9. Servidor
 
-- **`Reparto`** (nuevo, puro): `de(filas, stock, vale, aceptaciones, trabajos, ocupados)` → reservas y «sin stock», con §2-§4.
+- **`Reparto`** (nuevo, puro): `de(filas, stock, vale, trabajos, ocupados)` (cada `Fila` lleva su `Aceptacion`) → reservas y «sin
+  stock», con §2-§4.
   `Recomendador` **no cambia** (lo toca la sesión de la celda); comparten `EstadoMovil`, `LoQueVale` y `Aceptacion`.
 - **`Reservas`** (nuevo, `@Service`): la pasada de §5 con `FilasDAO`, `NsysDAO` y `TallerNsys`. La llama `LecturaFilas` al final de
   la vuelta.
