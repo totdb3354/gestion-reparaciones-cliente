@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Celda roja y libro que manda</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6;
+          --aviso-bg:#FFF8E0; --aviso-text:#7A5C00; --mal-bg:#FFE0B2; --mal-text:#B45309; --rojo-bg:#FFD9D9; --rojo-text:#B42318; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo); min-height:100vh; }
+  button { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .seg { display:inline-flex; background:#fff; border-radius:6px; padding:2px; gap:2px; }
+  .seg button { border:0; background:transparent; color:#3b0764; font-weight:700; font-size:12px; padding:4px 12px; border-radius:4px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#3b0764; color:#fff; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; } .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:12px 16px 24px; display:flex; flex-direction:column; gap:14px; }
+  h1 { margin:0; font-size:22px; color:var(--azul-medio); }
+  h2 { margin:0 0 6px; font-size:15px; color:var(--azul-medio); }
+  .contadores { display:flex; gap:8px; flex-wrap:wrap; }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12px; font-weight:600; color:var(--azul-gris); }
+  .cont b { color:var(--azul-noche); } .cont.naranja b { color:var(--mal-text); }
+  .pildora { background:#FFF8E0; border:1px solid #e8c766; color:#7A5C00; border-radius:14px; padding:3px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .zona { display:flex; gap:12px; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); }
+  table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:0 10px; border-right:1px solid var(--fila-brd); border-bottom:1px solid var(--fila-brd); height:34px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td:last-child { border-right:0; }
+  tr { cursor:pointer; }
+  tr.grupo td { background:#eef0f4; color:var(--azul-medio); font-weight:700; font-size:11.5px; height:26px; cursor:default; }
+  tr.aqui td:not(.imei) { background:#EAF1FF; }
+  td.caso { font-size:11.5px; color:var(--azul-gris); white-space:normal; line-height:1.25; }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  td.imei { padding:0; }
+  .celda { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 10px; font-family:Consolas,monospace; font-size:12.5px; }
+  .vacia { font-family:"Segoe UI",sans-serif; font-style:italic; color:var(--texto-sub); }
+  .mot { flex:none; font-family:"Segoe UI",sans-serif; font-size:11px; font-weight:700; }
+  .mot.aviso { color:var(--aviso-text); } .mot.mal { color:var(--mal-text); } .mot.rojo { color:var(--rojo-text); }
+  .sepm { color:#b9a27a; font-family:"Segoe UI",sans-serif; font-size:11px; margin:0 -4px; }
+  .bg-aviso { background:var(--aviso-bg); } .bg-mal { background:var(--mal-bg); } .bg-rojo { background:var(--rojo-bg); }
+  .validar { margin-left:auto; flex:none; font-family:"Segoe UI",sans-serif; font-size:10.5px; font-weight:700; border:1px solid #e0a96d; color:var(--mal-text); background:#fff; border-radius:6px; padding:1px 6px; }
+  .validar.rojo { border-color:#e9a3a3; color:var(--rojo-text); }
+  .cambia { display:inline-block; font-size:10px; font-weight:700; color:#3b0764; background:#efe7fb; border-radius:6px; padding:0 5px; margin-left:4px; vertical-align:1px; }
+  aside { width:min(380px,40vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; position:sticky; top:8px; }
+  dl { display:grid; grid-template-columns:92px minmax(0,1fr); gap:6px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  .titulo { font-size:11.5px; color:var(--azul-gris); background:#f6f7f9; border:1px dashed var(--borde); border-radius:6px; padding:6px 8px; margin-top:8px; white-space:pre-line; }
+  .leyenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--azul-gris); }
+  .leyenda span i { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:-3px; margin-right:5px; border:1px solid var(--borde); }
+  .lista { background:#fff; border:1px solid var(--borde); border-radius:6px; padding:8px 12px; }
+  .lista li { margin:2px 0; font-size:12px; }
+  .lista .m { color:var(--azul-gris); }
+  @media (max-width: 800px) { .zona { flex-direction:column; } aside { width:100%; position:static; } }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos: el libro manda siempre y la celda avisa en rojo o naranja</span>
+  <span class="seg" role="group" aria-label="Versión">
+    <button id="bHoy" aria-pressed="false">Hoy (0.9.46.1)</button>
+    <button id="bNuevo" aria-pressed="true">Después (0.9.46.2)</button>
+  </span>
+</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados; todas las filas son pedidos de Amazon con etiqueta y una línea en el libro de ventas):
+  <ol>
+    <li><b>Hoy</b>: si el móvil del libro no cuadra, el ERP no lo pone; la fila se queda con el IMEI de la pistola (o vacía) y el motivo va a la píldora «Asociación Amazon».</li>
+    <li><b>Después</b>: el ERP pone siempre el IMEI del libro y la celda avisa. <b>Rojo</b> = es otro móvil o no se puede vender (el taller no lo arregla). <b>Naranja</b> = el taller lo puede dejar como pide el pedido. «No cuadran» cuenta los dos.</li>
+    <li>Bloque <b>«El libro corrige un IMEI»</b>: hoy el ERP se queda con el primero; después cambia al nuevo.</li>
+    <li>En la píldora solo queda lo imposible de reflejar: pedido cancelado y sin fila libre.</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Pedidos</header>
+<main>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1>Pedidos</h1>
+    <div class="contadores" id="contadores"></div>
+    <span class="pildora" id="pildora"></span>
+  </div>
+  <div class="leyenda">
+    <span><i style="background:#fff"></i>sin color: cuadra, o aviso que no bloquea</span>
+    <span><i style="background:var(--aviso-bg)"></i>amarillo: N/A</span>
+    <span><i style="background:var(--mal-bg)"></i>naranja: lo arregla el taller (cuenta en «no cuadran»)</span>
+    <span><i style="background:var(--rojo-bg)"></i>rojo: otro móvil o no se vende (cuenta en «no cuadran»)</span>
+  </div>
+  <div class="zona">
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:220px"><col style="width:150px"><col style="width:150px"><col></colgroup>
+        <thead><tr><th>Caso</th><th>Libro de ventas</th><th>SKU del pedido</th><th>IMEI</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel"></aside>
+  </div>
+  <div class="lista"><h2>Píldora «Asociación Amazon» · para revisar</h2><ul id="revisar"></ul></div>
+</main>
+
+<script>
+// Piezas: [texto, tono]: rojo, mal (naranja), sim (naranja sin fondo), aviso (ámbar), na (ámbar + fondo amarillo).
+const R = (t) => [t, 'rojo'], M = (t) => [t, 'mal'], S = (t) => [t, 'sim'], A = (t) => [t, 'aviso'], NA = ['N/A', 'na'];
+let n = 0; const id = () => ++n;
+// pistola: IMEI que leyó el ERP; libro: el del libro. hoy: {imei, partes, revisar}; nuevo: {imei, partes, revisar}.
+const CASOS = [
+  { grupo:'Cuadra: igual hoy y después' },
+  { id:id(), caso:'El libro y el ERP dicen lo mismo', libro:'350000000000011', sku:'i13128AzulA', es:'13 · 128GB · Azul · A',
+    hoy:{ imei:'350000000000011', partes:[] }, nuevo:{ imei:'350000000000011', partes:[] } },
+  { id:id(), caso:'Se cambió al empaquetar y cuadra', libro:'350000000000022', sku:'i13128AzulA', es:'13 · 128GB · Azul · A',
+    hoy:{ imei:'350000000000022', partes:[] }, nuevo:{ imei:'350000000000022', partes:[] }, nota:'Ya lo hace la 0.9.46: el libro manda si cuadra.' },
+
+  { grupo:'Naranja: lo arregla el taller (hoy se rechaza)' },
+  { id:id(), caso:'C sin reparar', libro:'350000000000111', sku:'i14128MedianocheA', es:'14 · 128GB · Medianoche · C100 · en Esperando pieza', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: grado C100 · … · en Esperando pieza' }, nuevo:{ imei:'350000000000111', partes:[M('grado: C100')] } },
+  { id:id(), caso:'Otro color', libro:'350000000000122', sku:'i14128BlancoA', es:'14 · 128GB · Azul · A', cambia:true,
+    hoy:{ imei:'350000000000199', partes:[], revisar:'no cuadra: color Azul · …' }, nuevo:{ imei:'350000000000122', partes:[M('color: Azul')] },
+    nota:'Hoy la fila se queda con el IMEI de la pistola (350000000000199), que no fue el que salió.' },
+  { id:id(), caso:'Otro grado (B en pedido A)', libro:'350000000000133', sku:'i13128AzulA', es:'13 · 128GB · Azul · B', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: grado B · …' }, nuevo:{ imei:'350000000000133', partes:[M('grado: B')] } },
+  { id:id(), caso:'eSIM y otro color', libro:'350000000000144', sku:'i15128NegroA', es:'15 · 128GB · eSIM · Rosa · A', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: color Rosa · …' }, nuevo:{ imei:'350000000000144', partes:[S('eSIM'), M('color: Rosa')] } },
+  { id:id(), caso:'Otro color y lo tiene un técnico', libro:'350000000000155', sku:'i13128AzulA', es:'13 · 128GB · Rojo · A (reparándose)', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: color Rojo · …' }, nuevo:{ imei:'350000000000155', partes:[M('color: Rojo'), A('reparándose · Juan')] } },
+
+  { grupo:'Rojo: otro móvil o no se vende (hoy se rechaza)' },
+  { id:id(), caso:'Otro modelo', libro:'350000000000211', sku:'i15Plus256NegroA', es:'16 Plus · 256GB · Negro · n/a', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: modelo 16 PLUS · …' }, nuevo:{ imei:'350000000000211', partes:[R('modelo: 16 Plus'), NA] } },
+  { id:id(), caso:'Otra capacidad', libro:'350000000000222', sku:'i16PRO128NegroA', es:'16 Pro · 256GB · Negro · A', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: capacidad 256GB · …' }, nuevo:{ imei:'350000000000222', partes:[R('capacidad: 256GB')] } },
+  { id:id(), caso:'Grado que no se vende', libro:'350000000000233', sku:'i15256NegroA', es:'15 · 256GB · Negro · F · en Devolución', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'no cuadra: no se vende: F · … · en Devolución' }, nuevo:{ imei:'350000000000233', partes:[R('no se vende: F')] } },
+  { id:id(), caso:'No está en NSYS (¿IMEI mal escrito en el libro?)', libro:'350000000000244', sku:'i16e128NegroA', es:'—', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'el IMEI del libro no está en NSYS' }, nuevo:{ imei:'350000000000244', partes:[R('no está en NSYS')], sinValidar:true } },
+  { id:id(), caso:'El libro lo pone también en otro pedido', libro:'350000000000255', sku:'i14256MedianocheA', es:'14 · 256GB · Medianoche · A', cambia:true,
+    hoy:{ imei:null, partes:[], revisar:'el libro pone este IMEI en dos pedidos' }, nuevo:{ imei:'350000000000255', partes:[R('en otro pedido')], sinValidar:true },
+    nota:'Después se pone en los dos pedidos y los dos avisan en rojo «en otro pedido»: un móvil no puede salir en dos pedidos.' },
+
+  { grupo:'El libro corrige un IMEI' },
+  { id:id(), caso:'El pedido ya estaba asociado con X y en el libro lo cambian a Y', libro:'350000000000311 (antes …300)', sku:'i13128AzulA', es:'13 · 128GB · Azul · A', cambia:true,
+    hoy:{ imei:'350000000000300', partes:[], revisar:'sin hueco' }, nuevo:{ imei:'350000000000311', partes:[] },
+    nota:'El IMEI viejo (…300) queda en el historial de la fila («libro»), para la devolución automática.' },
+
+  { grupo:'Imposible de reflejar: sigue en la píldora' },
+  { id:id(), caso:'El pedido está cancelado en el ERP', libro:'350000000000411', sku:'i13128AzulA', es:'13 · 128GB · Azul · A', cancelado:true,
+    hoy:{ imei:null, partes:[], revisar:'solo quedan filas canceladas' }, nuevo:{ imei:null, partes:[], revisar:'solo quedan filas canceladas' } },
+  { id:id(), caso:'El libro pone más móviles que unidades', libro:'350000000000422 (3.º del pedido)', sku:'i13128AzulA', es:'13 · 128GB · Azul · A',
+    hoy:{ imei:null, partes:[], revisar:'sin hueco' }, nuevo:{ imei:null, partes:[], revisar:'sin hueco' }, nota:'El pedido tiene 2 unidades y el libro trae 3 IMEI: la tercera línea no tiene fila.' },
+];
+
+let version = 'nuevo', sel = 3;
+const $ = (x) => document.getElementById(x);
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const filas = CASOS.filter(c => !c.grupo);
+const v = (c) => c[version];
+function nivel(c) {
+  const p = v(c).partes;
+  if (p.some(x => x[1] === 'rojo')) return 'rojo';
+  if (p.some(x => x[1] === 'mal')) return 'mal';
+  if (p.some(x => x[1] === 'na')) return 'aviso';
+  return 'ok';
+}
+function celda(c) {
+  const d = v(c);
+  if (c.cancelado) return '<div class="celda"><span class="vacia">cancelado</span></div>';
+  if (!d.imei) return '<div class="celda"><span class="vacia">sin IMEI</span></div>';
+  let h = `<span>${d.imei}</span>`;
+  d.partes.forEach((x, i) => {
+    if (i > 0) h += '<span class="sepm">·</span>';
+    const cl = x[1] === 'rojo' ? 'rojo' : x[1] === 'sim' || x[1] === 'mal' ? 'mal' : 'aviso';
+    h += `<span class="mot ${cl}">${esc(x[0])}</span>`;
+  });
+  const nv = nivel(c);
+  if ((nv === 'mal' || nv === 'rojo') && !d.sinValidar) h += `<span class="validar ${nv === 'rojo' ? 'rojo' : ''}">Validar SKU</span>`;
+  return `<div class="celda">${h}</div>`;
+}
+function pintar() {
+  $('bHoy').setAttribute('aria-pressed', version === 'hoy');
+  $('bNuevo').setAttribute('aria-pressed', version === 'nuevo');
+  const noCuadran = filas.filter(c => ['mal','rojo'].includes(nivel(c))).length;
+  const sinImei = filas.filter(c => !v(c).imei && !c.cancelado).length;
+  const revisar = filas.filter(c => v(c).revisar);
+  $('contadores').innerHTML = `<span class="cont"><b>${filas.length}</b> filas</span><span class="cont"><b>${sinImei}</b> sin IMEI</span>`
+    + `<span class="cont naranja" data-nocuadran><b>${noCuadran}</b> no cuadran</span>`;
+  $('pildora').textContent = `Asociación Amazon · ${revisar.length} para revisar`;
+  $('pildora').dataset.n = revisar.length;
+  $('revisar').innerHTML = revisar.map(c => `<li><b>${esc(c.libro)}</b> <span class="m">· ${esc(v(c).revisar)}</span></li>`).join('') || '<li class="m">Nada.</li>';
+  $('cuerpo').innerHTML = CASOS.map(c => {
+    if (c.grupo) return `<tr class="grupo"><td colspan="4">${esc(c.grupo)}</td></tr>`;
+    const nv = nivel(c);
+    const fondo = nv === 'aviso' ? 'bg-aviso' : nv === 'mal' ? 'bg-mal' : nv === 'rojo' ? 'bg-rojo' : '';
+    return `<tr data-id="${c.id}" class="${sel === c.id ? 'aqui' : ''}">
+      <td class="caso">${esc(c.caso)}${c.cambia && version === 'nuevo' ? '<span class="cambia">cambia</span>' : ''}</td>
+      <td class="sku">${esc(c.libro)}</td><td class="sku">${c.sku}</td>
+      <td class="imei ${fondo}" data-caso="${c.id}">${celda(c)}</td></tr>`;
+  }).join('');
+  const c = filas.find(x => x.id === sel);
+  const d = v(c), nv = nivel(c);
+  $('panel').innerHTML = `<h2>Detalle de la fila</h2>
+    <dl><dt>Caso</dt><dd>${esc(c.caso)}</dd>
+      <dt>Libro</dt><dd>${esc(c.libro)}</dd>
+      <dt>El móvil es</dt><dd>${esc(c.es)}</dd>
+      <dt>ERP</dt><dd>${d.imei ? esc(d.imei) : 'sin IMEI'}</dd>
+      <dt>Celda</dt><dd>${nv === 'rojo' ? 'roja · cuenta en «no cuadran»' : nv === 'mal' ? 'naranja · cuenta en «no cuadran»' : nv === 'aviso' ? 'amarilla' : 'sin color'}</dd>
+      <dt>Píldora</dt><dd>${d.revisar ? esc(d.revisar) : '—'}</dd></dl>
+    ${c.nota ? `<div class="titulo">${esc(c.nota)}</div>` : ''}`;
+}
+document.addEventListener('click', (e) => {
+  const tr = e.target.closest('tr[data-id]');
+  if (tr) { sel = +tr.dataset.id; pintar(); }
+});
+$('bHoy').onclick = () => { version = 'hoy'; pintar(); };
+$('bNuevo').onclick = () => { version = 'nuevo'; pintar(); };
+pintar();
+</script>
+</body>
+</html>

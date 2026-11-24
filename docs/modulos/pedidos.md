@@ -52,17 +52,18 @@ desde Drive cuando cambian (pedidos de los últimos 30 días) y:
 - lo que no puede resolver va a la lista **«para revisar»** (el pedido no tiene hueco, el móvil ya salió en otro pedido, el pedido
   no está en el ERP, solo quedan filas canceladas).
 - **El libro manda también en pedidos con etiqueta** (desde la 0.9.46). Si el pedido no tiene ninguna fila pendiente (sin etiqueta, sin confirmar y sin cancelar) y sí filas con la
-  etiqueta hecha (impresa o no), el ERP pone el IMEI del libro en la fila cuyo IMEI el libro no reconoce y la confirma, siempre que el
-  móvil cuadre con el pedido (lo mismo que cuenta en «no cuadran» de la celda, con los cambios del taller; la eSIM no cuenta). Si ese
-  IMEI estaba en otro pedido:
+  etiqueta hecha (impresa o no), o el pedido ya estaba asociado con otro IMEI, el ERP pone el IMEI del libro en la fila cuyo IMEI el
+  libro no reconoce y la confirma. **Desde la 0.9.46.2 el libro manda siempre**: aunque el móvil no cuadre con el pedido (la celda
+  avisa en rojo o naranja) y aunque en el libro corrijan un IMEI ya asociado. Con unidades de distinto SKU elige la fila con la que
+  cuadra. Si ese IMEI estaba en otro pedido:
   - con etiqueta y también en el libro: ese otro pedido se queda sin IMEI y sin asociar hasta que llegue su línea del libro;
-  - con la etiqueta **impresa** y fuera del libro: va a «para revisar» (ya salió) y no se toca nada;
+  - asociado, cancelado, o con la etiqueta **impresa** y fuera del libro: el otro pedido lo conserva y las dos celdas avisan «en otro
+    pedido»;
   - con la etiqueta **sin imprimir** (aún no empaquetado) y fuera del libro, o pendiente: se intercambian (el otro pedido recibe el
     IMEI que tenía este); si tenía etiqueta, su historial dice «por el libro: comprobar el móvil».
   El IMEI quitado queda en el historial de la fila («libro»), para la futura devolución automática a stock.
-- Un IMEI que el libro pone en varios pedidos: solo cuentan los que tiene el ERP; si uno ya lo tenía confirmado y solo hay otro nuevo,
-  es un móvil devuelto y revendido (el nuevo se asocia y el viejo lo conserva); con dos o más nuevos, a «para revisar».
-- Van a «para revisar»: el libro pone el IMEI en varios pedidos nuevos; el IMEI no está en NSYS; el móvil no cuadra (con qué móvil es).
+- Un IMEI que el libro pone en varios pedidos (de los que tiene el ERP) se pone en todos; ninguno se lo quita a otro.
+- Solo van a «para revisar» los imposibles: el pedido solo tiene filas canceladas, o no tiene fila libre (más IMEI que unidades).
 
 ### 2.3 La carga del histórico (una vez, en el corte)
 
@@ -96,12 +97,14 @@ modelo o capacidad, N/A, MS y el resto). Al pasar el ratón, una frase larga por
 
 | Pieza | Color del texto | Fondo de la celda | Cuenta en «no cuadran» |
 |---|---|---|---|
-| `color: Rosa`, `grado: B`, `otro color o grado`, `modelo: 14`, `capacidad: 256GB`, `no se vende: F`, `SKU desconocido`, `no está en NSYS`, `en otro pedido` | naranja | naranja | sí |
+| `modelo: 14`, `capacidad: 256GB`, `no se vende: F`, `SKU desconocido`, `no está en NSYS`, `en otro pedido` (otro móvil o no se vende; desde la 0.9.46.2) | rojo | rojo | sí |
+| `color: Rosa`, `grado: B`, `grado: C`, `otro color o grado` (lo arregla el taller) | naranja | naranja | sí |
 | `eSIM` (pide SIM física) / `SIM física` (pide eSIM) | naranja | ninguno | no |
 | `N/A` (grado n/a; si el pedido acepta n/a, cuadra) | ámbar | amarillo claro | no |
 | `MS`, `B por A`, `reparándose · Juan · glass Ana` | ámbar | ninguno | no |
 
-Ejemplo: «eSIM · color: Rosa» (fondo naranja). Si un técnico lo tiene, se mira todo igual y además sale quién lo tiene («color: Rojo · reparándose · Juan»; desde la 0.9.46.1). Un aviso de SKU (los
+Ejemplo: «eSIM · color: Rosa» (fondo naranja). Si un técnico lo tiene, se mira todo igual y además sale quién lo tiene («color: Rojo · reparándose · Juan»; desde la 0.9.46.1). En un pedido ya impreso el
+aviso solo informa de qué móvil salió: no cuenta en «no cuadran» ni se valida (desde la 0.9.46.2). Un aviso de SKU (los rojos y
 naranjas salvo «no está en NSYS» y «en otro pedido») se puede dar por bueno con **«Validar SKU»**; la fila validada conserva
 «eSIM», «N/A» y «MS». La pistola guarda y salta a la siguiente fila vacía.
 
