@@ -86,9 +86,23 @@ mira el periodo: busca en todo el historial.
 | Cancelado | Puesto a mano con «Cancelar móvil» del panel: ese móvil no sale |
 | (gris) | Histórico de la hoja |
 
-**Celda del IMEI:** vacía, verde (cuadra), ámbar (aviso) o naranja (no cuadra: no está en NSYS, ya está en otro pedido, otro
-modelo/capacidad/eSIM, otro color o grado, grado no vendible, SKU desconocido, en el taller…). Un aviso de SKU se puede dar por
-bueno con **«Validar SKU»**. La pistola guarda y salta a la siguiente fila vacía.
+**Celda del IMEI (desde la 0.9.45):** el IMEI y, al lado, en corto, todo lo que pasa con él, separado por «·» (orden: SIM,
+modelo o capacidad, N/A, MS y el resto). Al pasar el ratón, una frase larga por pieza con el SKU del móvil.
+
+| Pieza | Color del texto | Fondo de la celda | Cuenta en «no cuadran» |
+|---|---|---|---|
+| `color: Rosa`, `grado: B`, `otro color o grado`, `modelo: 14`, `capacidad: 256GB`, `no se vende: F`, `SKU desconocido`, `no está en NSYS`, `en otro pedido` | naranja | naranja | sí |
+| `eSIM` (pide SIM física) / `SIM física` (pide eSIM) | naranja | ninguno | no |
+| `N/A` (grado n/a; si el pedido acepta n/a, cuadra) | ámbar | amarillo claro | no |
+| `MS`, `B por A`, `reparándose · Juan · glass Ana` | ámbar | ninguno | no |
+
+Ejemplo: «eSIM · color: Rosa» (fondo naranja). Mientras un técnico lo tiene no se miran color ni grado. Un aviso de SKU (los
+naranjas salvo «no está en NSYS» y «en otro pedido») se puede dar por bueno con **«Validar SKU»**; la fila validada conserva
+«eSIM», «N/A» y «MS». La pistola guarda y salta a la siguiente fila vacía.
+
+**Cajas de NSYS (desde la 0.9.45):** «Caja · Pulir», «Caja · Glass», «Caja · Reparación», «Caja · Pantalla rota» y «Caja · Listos»
+(antes «Taller · …» y «Listos»), en Pedidos, Stock y el rastro del IMEI. Migración `sql/renombrar-cajas-nsys.sql` (vuelta atrás
+`renombrar-cajas-nsys-atras.sql`).
 
 **Marcas de la fila** (una como mucho, con nota): En espera de stock · En revisión · Pendiente de color, en el desplegable de la celda del IMEI y del panel. **Cancelado** va aparte: botón «Cancelar móvil» del panel, con confirmación y nota opcional; se deshace con «Quitar cancelación» (también con confirmación). Una fila cancelada no lleva otra marca ni «Falta por enviar».
 
@@ -164,6 +178,6 @@ plugin, quitando su clave.
 Por orden: `2026-11-04-pieza2-pedidos`, `2026-11-10-pedidos-tabla`, `2026-11-11-pedidos-pantalla-v2`,
 `2026-11-11-pedidos-vendidos-para-el-bot`, `2026-11-13-pedidos-envios-parciales`, `2026-11-13-pedidos-marcas`,
 `2026-11-13-pedidos-amazon-asociacion`, `2026-11-16-pedidos-validar-sku`, `2026-11-18-pedidos-buscar-y-salida` (con el §8 de los
-pedidos juntados) y, para después, `2026-11-20-pedidos-juntar` (en `docs/superpowers/specs/`, con su plan en
+pedidos juntados), `2026-11-24-pedidos-celda-imei-y-cajas` (0.9.45) y, para después, `2026-11-20-pedidos-juntar` (en `docs/superpowers/specs/`, con su plan en
 `docs/superpowers/plans/`). Rutas y DTO: `gestion-reparaciones-servidor/docs/api_contract.md`. Tablas:
 `gestion-reparaciones-servidor/docs/schema.md`.
