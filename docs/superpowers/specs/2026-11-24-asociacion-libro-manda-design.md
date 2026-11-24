@@ -2,8 +2,8 @@
 
 Fecha: 2026-11-24. Estado: aprobado en conversación, pendiente de revisar este texto.
 Versión: la siguiente libre **después** de la de «textos y colores de la celda del IMEI» (`2026-11-24-pedidos-celda-imei-y-cajas-design.md`),
-porque usa su comparación del móvil con el pedido. Prevista 0.9.45; el número se pone al sacarla. Solo servidor (sube igualmente el
-número visible de la web).
+porque usa su comparación del móvil con el pedido. Prevista 0.9.45; el número se pone al sacarla. Servidor + web (solo los textos
+de la lista «para revisar») + migración aditiva (columna `DETALLE` en `Pedido_asociacion_revisar`, para decir qué es el móvil).
 Base: asociación IMEI → pedido de Amazon (`2026-11-13-pedidos-amazon-asociacion-design.md`, `AsociacionAmazon`), «lo que vale»
 (`LoQueVale`), aviso del IMEI (`AvisoImei`).
 
@@ -32,9 +32,10 @@ con comprobaciones que paran los errores del propio libro.
 ### 2. Reglas para cada línea «IMEI X → pedido B»
 
 1. **X ya está en una fila de B:** se confirma (o «ya estaba»), como hoy. Vale aunque la fila tenga etiqueta, como hoy.
-2. **B sin etiqueta** (sus filas no tienen `ENVIO_FECHA`): las reglas 2 y 3 de hoy **sin cambios** (intercambio con la fila de otro
-   pedido sin etiqueta; fila libre; `YA_SALIO`, `CANCELADO`, `SIN_HUECO`).
-3. **B con etiqueta — lo nuevo.** Las filas de B tienen `ENVIO_FECHA` (un envío es del pedido entero), esté la etiqueta impresa o no:
+2. **B tiene alguna fila sin etiqueta y sin confirmar** (no cancelada): las reglas 2 y 3 de hoy **sin cambios** (intercambio con la
+   fila de otro pedido sin etiqueta; fila libre; `YA_SALIO`, `CANCELADO`, `SIN_HUECO`).
+3. **B no tiene ninguna y sí tiene filas con etiqueta sin confirmar** (`ENVIO_FECHA`, impresa o no; en Amazon un envío es del pedido
+   entero) — **lo nuevo**:
    - **Comprobación del móvil X**, con «lo que vale» (NSYS + cambios del taller vigentes) y la misma comparación que el aviso de la
      celda del IMEI (`AvisoImei` tras la versión de la celda). **Regla: va a «para revisar» lo que en la celda cuenta en «no
      cuadran»** (columna «Cuenta en no cuadran = sí» de la tabla de esa spec): **no está en NSYS**, **modelo**, **capacidad**,
