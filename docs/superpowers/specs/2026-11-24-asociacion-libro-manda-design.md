@@ -36,10 +36,12 @@ con comprobaciones que paran los errores del propio libro.
    pedido sin etiqueta; fila libre; `YA_SALIO`, `CANCELADO`, `SIN_HUECO`).
 3. **B con etiqueta — lo nuevo.** Las filas de B tienen `ENVIO_FECHA` (un envío es del pedido entero), esté la etiqueta impresa o no:
    - **Comprobación del móvil X**, con «lo que vale» (NSYS + cambios del taller vigentes) y la misma comparación que el aviso de la
-     celda del IMEI (`AvisoImei` tras la versión de la celda): va a «para revisar» si el motivo es **no está en NSYS**, **modelo**,
-     **capacidad**, **color**, **otro color o grado** (combinación que no existe) o **SKU desconocido**. **No** paran: eSIM / SIM física
-     (en las dos direcciones), n/a, Ms, B por A, otro grado, ni que lo tenga un técnico. Motivos nuevos en «para revisar»:
-     `NO_EN_NSYS`, `OTRO_MODELO` (modelo, capacidad, color o combinación; el texto dice cuál y qué es el móvil, p. ej. «el pedido es
+     celda del IMEI (`AvisoImei` tras la versión de la celda). **Regla: va a «para revisar» lo que en la celda cuenta en «no
+     cuadran»** (columna «Cuenta en no cuadran = sí» de la tabla de esa spec): **no está en NSYS**, **modelo**, **capacidad**,
+     **color**, **grado**, **otro color o grado** (combinación que no existe), **grado que no se vende** y **SKU desconocido**. «En
+     otro pedido» no cuenta aquí: es justo lo que resuelve el libro. **No** paran (no cuentan en «no cuadran»): eSIM / SIM física
+     (en las dos direcciones, aunque su texto sea naranja), n/a, Ms, B por A, ni que lo tenga un técnico. Motivos nuevos en «para
+     revisar»: `NO_EN_NSYS` y `OTRO_MODELO` (cualquiera de los demás; el texto dice cuál y qué es el móvil, p. ej. «el pedido es
      i16PRO128NegroA y el móvil es i16PROeSIM256NegroNA»).
    - **Fila destino de B:** la primera por posición que no esté confirmada, no esté cancelada y cuyo IMEI actual (o ninguno) no sea
      un IMEI que el libro pone en B en esta pasada. Si no hay ninguna, `SIN_HUECO` (como hoy).
