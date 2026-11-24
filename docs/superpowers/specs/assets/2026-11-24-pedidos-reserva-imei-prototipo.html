@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Reserva de IMEI</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6;
+          --aviso-bg:#FFF8E0; --aviso-text:#7A5C00; --mal-bg:#FFE0B2; --mal-text:#B45309;
+          --res-text:#1565C0; --res-bg:#EEF4FF; --ok-text:#2E7D32; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         min-height:100vh; font-variant-numeric:tabular-nums; }
+  button { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; padding:6px 12px; font-size:12px; font-weight:700; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:12px 16px 24px; display:flex; flex-direction:column; gap:16px; }
+  h1 { margin:0; font-size:22px; color:var(--azul-medio); }
+  h2 { margin:0 0 6px; font-size:15px; color:var(--azul-medio); }
+  .contadores { display:flex; gap:8px; flex-wrap:wrap; }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12px; font-weight:600; color:var(--azul-gris); }
+  .cont b { color:var(--azul-noche); }
+  .cont.res b { color:var(--res-text); }
+  .cont.sin b { color:var(--mal-text); }
+  .zona { display:flex; gap:12px; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); }
+  table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; }
+  th { background:var(--cab); text-align:left; padding:6px 10px; font-size:12px; border-bottom:1px solid var(--sep); }
+  td { padding:0 10px; border-right:1px solid var(--fila-brd); border-bottom:1px solid var(--fila-brd); height:34px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td:last-child { border-right:0; }
+  #cuerpo tr { cursor:pointer; }
+  tr.aqui td:not(.imei) { background:#EAF1FF; }
+  td.caso { font-size:11.5px; color:var(--azul-gris); white-space:normal; line-height:1.25; }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  td.imei { padding:0; }
+  .celda { display:flex; align-items:center; gap:8px; min-height:34px; padding:2px 10px; font-family:Consolas,monospace; font-size:12.5px; }
+  .celda .num { flex:none; }
+  .celda.reservada .num { opacity:.45; }
+  .mot { flex:none; font-family:"Segoe UI",sans-serif; font-size:11px; font-weight:700; }
+  .mot.aviso { color:var(--aviso-text); } .mot.mal { color:var(--mal-text); } .mot.res { color:var(--res-text); }
+  .mot.gris { color:var(--azul-gris); font-weight:400; } .mot.ok { color:var(--ok-text); }
+  .sepm { color:#b9a27a; font-family:"Segoe UI",sans-serif; font-size:11px; margin:0 -4px; }
+  .vacia { font-family:"Segoe UI",sans-serif; font-style:italic; color:var(--texto-sub); }
+  .bg-res { background:var(--res-bg); } .bg-mal { background:var(--mal-bg); }
+  aside { width:min(360px,40vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; position:sticky; top:8px; }
+  dl { display:grid; grid-template-columns:84px minmax(0,1fr); gap:6px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  .hist { margin:0; padding-left:18px; font-size:12px; line-height:1.4; }
+  .hist { list-style:none; padding-left:0; }
+  .hist li { margin-bottom:6px; padding:4px 0 4px 10px; border-left:3px solid var(--borde); }
+  .hist li.t-res { border-color:#90CAF9; } .hist li.t-ok { border-color:#A5D6A7; } .hist li.t-dev { border-color:#CE93D8; }
+  .hist li.t-mal { border-color:#FFB74D; } .hist li.t-aviso { border-color:#FFE082; }
+  .tag { display:inline-block; border-radius:10px; padding:0 8px; font-size:11px; font-weight:700; margin-right:2px; }
+  .tag.t-res { background:#E3F2FD; color:#1565C0; } .tag.t-ok { background:#E8F5E9; color:#2E7D32; }
+  .tag.t-gris { background:#E8EAF0; color:var(--azul-gris); } .tag.t-dev { background:#F3E5F5; color:#7B1FA2; }
+  .tag.t-mal { background:var(--mal-bg); color:var(--mal-text); } .tag.t-aviso { background:var(--aviso-bg); color:var(--aviso-text); }
+  .hist .hh { display:block; font-size:11px; color:var(--azul-gris); }
+  .acciones { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+  .acciones button { text-align:left; border:1px solid var(--borde); background:#f6f7f9; border-radius:6px; padding:6px 8px; cursor:pointer; font-size:12px; }
+  .acciones button:hover { background:#eef0f4; }
+  .nota { font-size:11.5px; color:var(--azul-gris); margin:8px 0 0; line-height:1.4; }
+  .bot { background:#fff; border:1px solid var(--borde); border-radius:6px; padding:10px 14px; }
+  .bot ul { margin:4px 0 0; padding-left:18px; font-family:Consolas,monospace; font-size:12px; }
+  .sim { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+  .sim > * { min-width:0; }
+  .sim td { height:28px; font-size:12px; }
+  .sim input { margin:0; }
+  .sim .res td { white-space:normal; height:auto; padding:5px 10px; }
+  .btn { border:0; background:#3b0764; color:#fff; font-weight:700; border-radius:6px; padding:6px 14px; cursor:pointer; }
+  .pill { display:inline-block; border-radius:10px; padding:0 8px; font-size:11px; font-weight:600; }
+  .u-listos { background:#C8E6C9; color:#3A7D44; } .u-rep { background:#E3F2FD; color:#1565C0; } .u-pulir { background:#EDE7F6; color:#5E35B1; }
+  .u-glass { background:#E0F2F1; color:#00796B; } .u-neutro { background:#E8EAF0; color:var(--azul-gris); }
+  @media (max-width: 900px) { .zona { flex-direction:column; align-items:stretch; } aside { width:100%; position:static; } .sim { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="proto">PROTOTIPO · Pedidos: reserva de IMEI (fase 2) · sobre la celda de «Caja · …» de la otra sesión</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados):
+  <ol>
+    <li><b>Pedidos</b> (v2): la celda solo enseña el IMEI; el reservado, <b>tenue</b>. La fila sigue contando como <b>sin IMEI</b>. Sin reserva = celda vacía (cuenta en «sin stock»).</li>
+    <li>Pulsa una fila: el <b>historial</b> del panel dice por qué se reservó y qué pasó después. Prueba las acciones: logística pica el mismo, pica otro, el cliente cancela, no lo encuentran.</li>
+    <li>Mira la caja <b>Devoluciones para el bot</b>: lo que vuelve a stock y a qué caja.</li>
+    <li><b>Simulador del reparto</b> (abajo): quita teléfonos o pedidos y pulsa «Repartir» para ver quién se queda cada teléfono y por qué.</li>
+  </ol>
+</div>
+<header>Fonestore ERP · Pedidos</header>
+<main>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <h1>Pedidos</h1>
+    <div class="contadores" id="contadores"></div>
+  </div>
+  <div class="zona">
+    <div class="hoja">
+      <table>
+        <colgroup><col style="width:190px"><col style="width:62px"><col style="width:150px"><col></colgroup>
+        <thead><tr><th>Caso</th><th>Tienda</th><th>SKU del pedido</th><th>IMEI</th></tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel"></aside>
+  </div>
+  <div class="bot" id="bot"></div>
+
+  <section>
+    <h2>Simulador del reparto (criterios del 24/11)</h2>
+    <div class="sim">
+      <div class="hoja"><table>
+        <colgroup><col style="width:36px"><col style="width:66px"><col><col style="width:92px"><col style="width:44px"></colgroup>
+        <thead><tr><th></th><th>IMEI</th><th>Teléfono</th><th>Caja</th><th>Días</th></tr></thead>
+        <tbody id="simStock"></tbody></table></div>
+      <div class="hoja"><table>
+        <colgroup><col style="width:36px"><col style="width:58px"><col><col style="width:40px"><col style="width:70px"><col style="width:36px"></colgroup>
+        <thead><tr><th></th><th>Canal</th><th>Pide</th><th>País</th><th>Entró</th><th>Ud.</th></tr></thead>
+        <tbody id="simPedidos"></tbody></table></div>
+    </div>
+    <p><button class="btn" id="repartir">Repartir</button></p>
+    <div class="hoja"><table class="res">
+      <colgroup><col style="width:230px"><col style="width:90px"><col></colgroup>
+      <thead><tr><th>Pedido (en el orden en que reservan)</th><th>Reservado</th><th>Por qué</th></tr></thead>
+      <tbody id="simRes"></tbody></table></div>
+  </section>
+</main>
+
+<script>
+const $ = (x) => document.getElementById(x);
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+// ───────────── Parte 1: la celda con la reserva ─────────────
+// estado: RESERVADO | SIN_STOCK | CONFIRMADO | OTRO | CANCELADO | NO_ENCONTRADO | NORMAL
+const FILAS = [
+  { id:1, caso:'Reservado, encaja tal cual', plat:'AMZ', sku:'i13128AzulA', estado:'RESERVADO', imei:'350000000000011', caja:'Caja · Listos', partes:[], porque:'Puesto 1 · A-' },
+  { id:2, caso:'Reservado, en una caja del taller', plat:'AMZ', sku:'i14128NegroA', estado:'RESERVADO', imei:'350000000000022', caja:'Caja · Glass', partes:[], porque:'Puesto 1 · A (no había en Listos)' },
+  { id:3, caso:'Reservado de sustituto: eSIM', plat:'AMZ', sku:'i15128NegroA', estado:'RESERVADO', imei:'350000000000033', caja:'Caja · Listos', partes:[['eSIM','mal']], porque:'Puesto 3 · eSIM del mismo color · no quedaba SIM física' },
+  { id:4, caso:'Reservado un B para el taller', plat:'Web', sku:'i13128RosaA', estado:'RESERVADO', imei:'350000000000044', caja:'Caja · Reparación', partes:[['grado: B → A en el taller','aviso']], porque:'Puesto 2 · B del mismo color y formato · chasis → A' },
+  { id:5, caso:'Sin stock', plat:'Web', sku:'i16128BlancoA', estado:'SIN_STOCK', imei:null, partes:[], porque:'Ningún teléfono cumple los criterios' },
+  { id:6, caso:'Pedido de 3: 2 reservados', plat:'Web', sku:'i12064NegroA', estado:'RESERVADO', imei:'350000000000066', caja:'Caja · Listos', partes:[], porque:'Unidad 1 de 3' },
+  { id:7, caso:'Pedido de 3: 2 reservados', plat:'Web', sku:'i12064NegroA', estado:'RESERVADO', imei:'350000000000077', caja:'Caja · Pulir', partes:[], porque:'Unidad 2 de 3' },
+  { id:8, caso:'Pedido de 3: el que falta', plat:'Web', sku:'i12064NegroA', estado:'SIN_STOCK', imei:null, partes:[], porque:'Unidad 3 de 3: no queda stock' },
+  { id:9, caso:'Ya confirmado', plat:'AMZ', sku:'i13128AzulA', estado:'NORMAL', imei:'350000000000099', caja:'Caja · Listos', partes:[], porque:'' },
+];
+const BOT = [];
+let sel = 1;
+const OTRO = '350000000000555';
+
+// v2 (Imad): la celda solo enseña el IMEI; el reservado, con menos opacidad. Todo lo demás va al historial de la fila.
+// Historial inicial de cada fila.
+// Cada apunte: tipo (la etiqueta de color), texto, caja (píldora con su color) y partes (los avisos de la celda, en su color).
+for (const f of FILAS) {
+  if (f.estado === 'RESERVADO') f.hist = [{ h:'24/11 10:15', quien:'ERP', tipo:'RESERVADO', t:`${f.imei} · ${f.porque}`, caja:f.caja, partes:f.partes }];
+  if (f.estado === 'SIN_STOCK') f.hist = [{ h:'24/11 10:15', quien:'ERP', tipo:'SIN_STOCK', t:`${f.porque}. Lo intenta otra vez en cada lectura (5 min)` }];
+  if (f.estado === 'NORMAL') f.hist = [{ h:'24/11 09:40', quien:'ERP', tipo:'RESERVADO', t:`${f.imei} · Puesto 1`, caja:f.caja },
+                                       { h:'24/11 11:02', quien:'Fati', tipo:'CONFIRMADO', t:`por ${'Fati'} · ${f.imei}` }];
+}
+const TIPOS = { RESERVADO:['Reservado','t-res'], CONFIRMADO:['Confirmado','t-ok'], OTRO:['Picó otro','t-gris'], DEVUELTO:['Vuelve a stock','t-dev'],
+                CANCELADO:['Cancelado','t-mal'], QUITADA:['Reserva quitada','t-aviso'], SIN_STOCK:['Sin stock','t-mal'] };
+const CAJA_PILL = { 'Caja · Listos':'u-listos', 'Caja · Reparación':'u-rep', 'Caja · Pulir':'u-pulir', 'Caja · Glass':'u-glass' };
+function apunte(x) {
+  const [nom, cl] = TIPOS[x.tipo];
+  const caja = x.caja ? ` <span class="pill ${CAJA_PILL[x.caja] ?? 'u-neutro'}">${esc(x.caja)}</span>` : '';
+  const partes = (x.partes ?? []).map(p => ` <span class="mot ${p[1] === 'mal' ? 'mal' : 'aviso'}">${esc(p[0])}</span>`).join('');
+  return `<li class="${cl}"><span class="hh">${x.h} · ${esc(x.quien)}</span><span class="tag ${cl}">${nom}</span> ${esc(x.t)}${caja}${partes}</li>`;
+}
+let reloj = 11;
+const ahora = () => `24/11 ${String(++reloj).padStart(2,'0')}:00`;
+function celda(f) {
+  const conImei = f.imei && !['CANCELADO','NO_ENCONTRADO','SIN_STOCK'].includes(f.estado);
+  if (!conImei) return '<div class="celda"><span class="vacia">pulsa para poner el IMEI…</span></div>';
+  const reservada = f.estado === 'RESERVADO';
+  return `<div class="celda ${reservada ? 'reservada' : ''}"><span class="num">${f.imei}</span></div>`;
+}
+function fondo() { return ''; }
+function pintar() {
+  const vivas = FILAS.filter(f => !['CANCELADO','NO_ENCONTRADO'].includes(f.estado));
+  const sinImei = vivas.filter(f => f.estado === 'RESERVADO' || f.estado === 'SIN_STOCK').length;
+  $('contadores').innerHTML = `<span class="cont"><b>${vivas.length}</b> filas</span>`
+    + `<span class="cont"><b>${sinImei}</b> sin IMEI</span>`
+    + `<span class="cont res" data-res><b>${vivas.filter(f => f.estado === 'RESERVADO').length}</b> de ellas reservadas</span>`
+    + `<span class="cont sin" data-sin><b>${vivas.filter(f => f.estado === 'SIN_STOCK').length}</b> sin stock</span>`;
+  $('cuerpo').innerHTML = FILAS.map(f => `<tr data-id="${f.id}" class="${sel === f.id ? 'aqui' : ''}">
+      <td class="caso">${esc(f.caso)}</td><td>${f.plat}</td><td class="sku">${f.sku}</td>
+      <td class="imei ${fondo(f)}" data-fila="${f.id}">${celda(f)}</td></tr>`).join('');
+  pintarPanel();
+  $('bot').innerHTML = `<h2>Devoluciones para el bot (lista de estado del ERP)</h2>`
+    + (BOT.length ? `<ul id="listaBot">${BOT.map(b => `<li>${b.imei} → ${esc(b.caja)} <span style="font-family:Segoe UI;color:var(--azul-gris)">(${esc(b.motivo)})</span></li>`).join('')}</ul>`
+      : '<p class="nota" id="listaBot">Vacía. Las reservas no se mueven en NSYS hasta que el bot descuenta; lo que deja de estar reservado y el bot ya movió vuelve aquí.</p>');
+}
+function pintarPanel() {
+  const f = FILAS.find(x => x.id === sel);
+  const acc = f.estado === 'RESERVADO' ? `<div class="acciones">
+      <button data-acc="mismo">Logística pica el mismo IMEI</button>
+      <button data-acc="otro">Logística pica otro (${OTRO})</button>
+      <button data-acc="cancela">El cliente cancela (ya no está en ShippyPro)</button>
+      <button data-acc="noesta">No lo encuentran: lo mueven en NSYS a «Pendiente revisar…»</button></div>` : '';
+  const txt = { RESERVADO:'Reservado: cuenta como sin IMEI para el Listado, el plugin y los libros; el bot de vendidos sí lo descuenta.',
+    SIN_STOCK:'Ningún teléfono cumple los criterios. Se vuelve a intentar en cada lectura de ShippyPro (5 min).',
+    CONFIRMADO:'Logística picó el reservado: pasa a ser el IMEI de la fila, como hoy.',
+    OTRO:'Manda lo que pica logística. El reservado vuelve a su caja de antes (lista de devoluciones del bot).',
+    CANCELADO:'Cancelado con solo la reserva: el teléfono vuelve a stock.',
+    NO_ENCONTRADO:'El ERP ve en el espejo que está en «Pendiente revisar…» y quita la reserva. En la lectura siguiente reserva otro si hay.',
+    NORMAL:'Fila con IMEI puesto: no cambia nada respecto a hoy.' }[f.estado];
+  $('panel').innerHTML = `<h2>Detalle de la fila</h2>
+    <dl><dt>Caso</dt><dd>${esc(f.caso)}</dd><dt>SKU</dt><dd>${f.sku}</dd></dl>
+    <h2 style="margin-top:12px">Historial</h2>
+    <ol class="hist" id="historial">${f.hist.map(apunte).join('')}</ol>
+    <p class="nota">${esc(txt)}</p>${acc}`;
+}
+document.addEventListener('click', (e) => {
+  const tr = e.target.closest('#cuerpo tr[data-id]');
+  if (tr) { sel = +tr.dataset.id; pintar(); return; }
+  const b = e.target.closest('button[data-acc]');
+  if (!b) return;
+  const f = FILAS.find(x => x.id === sel);
+  const acc = b.dataset.acc;
+  if (acc === 'mismo') { f.estado = 'CONFIRMADO'; f.hist.push({ h:ahora(), quien:'Fati', tipo:'CONFIRMADO', t:`por ${'Fati'} · ${f.imei}` }); }
+  if (acc === 'otro') { BOT.push({ imei:f.imei, caja:f.caja, motivo:'logística picó otro' });
+    f.hist.push({ h:ahora(), quien:'Fati', tipo:'OTRO', t:`${OTRO} en lugar del reservado ${f.imei}` },
+                { h:ahora(), quien:'ERP', tipo:'DEVUELTO', t:`${f.imei} vuelve a su caja (lista de devoluciones del bot)`, caja:f.caja });
+    f.antes = f.imei; f.imei = OTRO; f.estado = 'OTRO'; }
+  if (acc === 'cancela') { BOT.push({ imei:f.imei, caja:f.caja, motivo:'el cliente canceló' });
+    f.hist.push({ h:ahora(), quien:'ERP', tipo:'CANCELADO', t:'Ya no está en ShippyPro' },
+                { h:ahora(), quien:'ERP', tipo:'DEVUELTO', t:`${f.imei} vuelve a su caja (lista de devoluciones del bot)`, caja:f.caja });
+    f.estado = 'CANCELADO'; }
+  if (acc === 'noesta') { f.hist.push({ h:ahora(), quien:'ERP', tipo:'QUITADA', t:`${f.imei} está en «Pendiente revisar…» en NSYS. Busca otro en la próxima lectura` });
+    f.estado = 'NO_ENCONTRADO'; }
+  pintar();
+});
+
+// ───────────── Parte 2: simulador del reparto ─────────────
+const CAJA_ORDEN = { 'Caja · Listos':1, 'Caja · Reparación':2, 'Caja · Pantalla rota':2, 'Caja · Pulir':3, 'Caja · Glass':4, 'Devolución':5, 'En revisión':5 };
+const CAJA_CL = { 'Caja · Listos':'u-listos', 'Caja · Reparación':'u-rep', 'Caja · Pantalla rota':'u-rep', 'Caja · Pulir':'u-pulir', 'Caja · Glass':'u-glass', 'Devolución':'u-neutro', 'En revisión':'u-neutro' };
+// Teléfonos: todos iPhone 13 128GB. f = SIM física, e = eSIM.
+const STOCK = [
+  { i:'…001', fmt:'f', color:'Azul', grado:'A-',  caja:'Caja · Listos', dias:40 },
+  { i:'…002', fmt:'f', color:'Azul', grado:'A',   caja:'Caja · Listos', dias:60 },
+  { i:'…003', fmt:'f', color:'Azul', grado:'A-100', caja:'Caja · Glass', dias:10 },
+  { i:'…004', fmt:'f', color:'Azul', grado:'MsA', caja:'Caja · Listos', dias:90 },
+  { i:'…005', fmt:'f', color:'Azul', grado:'A',   caja:'En revisión', dias:5 },
+  { i:'…006', fmt:'f', color:'Rosa', grado:'B',   caja:'Caja · Listos', dias:30 },
+  { i:'…007', fmt:'e', color:'Azul', grado:'A',   caja:'Caja · Listos', dias:20 },
+  { i:'…008', fmt:'f', color:'Rosa', grado:'C',   caja:'Caja · Reparación', dias:15 },
+  { i:'…009', fmt:'f', color:'Rojo', grado:'A',   caja:'Caja · Listos', dias:50 },
+  { i:'…010', fmt:'f', color:'Azul', grado:'A',   caja:'Devolución', dias:70 },
+  { i:'…011', fmt:'e', color:'Rosa', grado:'A-',  caja:'Caja · Pulir', dias:12 },
+  { i:'…012', fmt:'f', color:'Azul', grado:'ID',  caja:'Caja · Listos', dias:80 },
+].map(s => ({ ...s, on:true }));
+const PEDIDOS = [
+  { id:'A1', canal:'AMZ',  fmt:'f', color:'Azul', grado:'A',  pais:'DE', entro:'21/11 08:00', ud:1 },
+  { id:'A2', canal:'AMZ',  fmt:'f', color:'Azul', grado:'A',  pais:'ES', entro:'21/11 10:00', ud:2 },
+  { id:'A3', canal:'FNSK', fmt:'f', color:'Rosa', grado:'A',  pais:'FR', entro:'22/11 09:00', ud:1 },
+  { id:'A4', canal:'AMZ',  fmt:'e', color:'Azul', grado:'A',  pais:'IT', entro:'23/11 12:00', ud:1 },
+  { id:'W1', canal:'DIST', fmt:'f', color:'Azul', grado:'A',  pais:'ES', entro:'20/11 17:00', ud:2 },
+  { id:'W2', canal:'PART', fmt:'f', color:'Azul', grado:'A-', pais:'ES', entro:'22/11 11:00', ud:1 },
+  { id:'W3', canal:'BACKI',fmt:'f', color:'Rosa', grado:'A',  pais:'ES', entro:'23/11 16:00', ud:1 },
+].map(p => ({ ...p, on:true }));
+const CANAL_ORDEN = { AMZ:1, FNSK:1, DIST:2, PART:3, BACKI:4 };
+const fmtTxt = (f) => f === 'e' ? 'eSIM' : 'SIM física';
+const fecha = (t) => { const [d, h] = t.split(' '); const [dd, mm] = d.split('/'); return `${mm}${dd}${h}`; };
+
+// Grado que cuenta: Devolución y sin caja (En revisión) cuentan como N/A.
+const gradoCuenta = (s) => (s.caja === 'Devolución' || s.caja === 'En revisión') ? 'N/A' : s.grado;
+const esMs = (g) => g.startsWith('Ms');
+const familiaA = (g) => ['A-','A-100','A','A+','A100','A+100'].includes(g);
+const esBC = (g) => g === 'B' || g === 'C';
+// Orden del grado dentro de una caja.
+const ORDEN_GRADO = { 'A-':1, 'A-100':2, 'A':3, 'A+':3, 'A100':4, 'A+100':4, 'N/A':5, 'B':1, 'C':2 };
+const rangoGrado = (g) => esMs(g) ? 6 + (ORDEN_GRADO[g.slice(2)] ?? 0) / 10 : (ORDEN_GRADO[g] ?? 9);
+
+function puestoAmazon(p, s) {
+  const g = gradoCuenta(s), mismoFmt = s.fmt === p.fmt, mismoColor = s.color === p.color;
+  if (g === 'ID') return null;
+  if (mismoFmt && mismoColor && (familiaA(g) || g === 'N/A')) return 1;
+  if (mismoFmt && esBC(g)) return 2;
+  if (!mismoFmt && mismoColor && (familiaA(g) || g === 'N/A')) return 3;
+  if (!mismoFmt && esBC(g)) return 4;
+  if (mismoFmt && !mismoColor && g === 'N/A') return 5;
+  if (!mismoFmt && !mismoColor && g === 'N/A') return 6;
+  if (mismoFmt && !mismoColor && familiaA(g)) return 7;
+  if (!mismoFmt && !mismoColor && familiaA(g)) return 8;
+  // Ms: último recurso (Imad 24/11), solo a España, mismo formato y color.
+  if (mismoFmt && mismoColor && esMs(g) && p.pais === 'ES') return 9;
+  return null;
+}
+function puestoWeb(p, s) {
+  const g = gradoCuenta(s);
+  if (s.fmt !== p.fmt || s.color !== p.color || g === 'ID' || esMs(g)) return null;
+  if (g === p.grado) return 1;
+  if ((p.grado === 'A' || p.grado === 'A100') && esBC(g)) return 2;
+  return null;
+}
+const amazon = (c) => c === 'AMZ' || c === 'FNSK';
+
+function repartir() {
+  const libres = STOCK.filter(s => s.on);
+  const usados = new Set();
+  const cola = PEDIDOS.filter(p => p.on).sort((a, b) => CANAL_ORDEN[a.canal] - CANAL_ORDEN[b.canal] || fecha(a.entro).localeCompare(fecha(b.entro)));
+  const filas = [];
+  for (const p of cola) {
+    for (let u = 1; u <= p.ud; u++) {
+      const cands = libres.filter(s => !usados.has(s.i))
+        .map(s => ({ s, puesto: amazon(p.canal) ? puestoAmazon(p, s) : puestoWeb(p, s) }))
+        .filter(c => c.puesto != null)
+        .sort((a, b) => a.puesto - b.puesto || CAJA_ORDEN[a.s.caja] - CAJA_ORDEN[b.s.caja]
+          || rangoGrado(gradoCuenta(a.s)) - rangoGrado(gradoCuenta(b.s)) || b.s.dias - a.s.dias);
+      const elegido = cands[0];
+      const nombre = `${p.id} · ${p.canal} · ${fmtTxt(p.fmt)} ${p.color} ${p.grado} · ${p.pais}${p.ud > 1 ? ` · ud. ${u}/${p.ud}` : ''}`;
+      if (!elegido) { filas.push(`<tr data-ped="${p.id}-${u}"><td>${esc(nombre)}</td><td class="mot mal">sin stock</td><td>Ningún teléfono libre cumple los criterios.</td></tr>`); continue; }
+      usados.add(elegido.s.i);
+      const s = elegido.s, g = gradoCuenta(s);
+      const porque = `Puesto ${elegido.puesto} · ${s.caja} · ${fmtTxt(s.fmt)} ${s.color} ${g}${g !== s.grado ? ` (es ${s.grado}, cuenta como N/A)` : ''} · ${s.dias} días en stock`;
+      filas.push(`<tr data-ped="${p.id}-${u}"><td>${esc(nombre)}</td><td class="sku">${s.i}</td><td>${esc(porque)}</td></tr>`);
+    }
+  }
+  $('simRes').innerHTML = filas.join('');
+}
+function pintarSim() {
+  $('simStock').innerHTML = STOCK.map((s, k) => `<tr><td><input type="checkbox" data-s="${k}" ${s.on ? 'checked' : ''} aria-label="Teléfono ${s.i}"></td>
+    <td class="sku">${s.i}</td><td>13 128 · ${fmtTxt(s.fmt)} · ${s.color} · ${s.grado}</td>
+    <td><span class="pill ${CAJA_CL[s.caja]}">${esc(s.caja.replace('Caja · ',''))}</span></td><td>${s.dias}</td></tr>`).join('');
+  $('simPedidos').innerHTML = PEDIDOS.map((p, k) => `<tr><td><input type="checkbox" data-p="${k}" ${p.on ? 'checked' : ''} aria-label="Pedido ${p.id}"></td>
+    <td>${p.canal}</td><td>13 128 · ${fmtTxt(p.fmt)} · ${p.color} · ${p.grado}</td><td>${p.pais}</td><td>${p.entro}</td><td>${p.ud}</td></tr>`).join('');
+}
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.s != null) STOCK[+t.dataset.s].on = t.checked;
+  if (t.dataset.p != null) PEDIDOS[+t.dataset.p].on = t.checked;
+});
+$('repartir').onclick = repartir;
+
+pintar(); pintarSim(); repartir();
+</script>
+</body>
+</html>
