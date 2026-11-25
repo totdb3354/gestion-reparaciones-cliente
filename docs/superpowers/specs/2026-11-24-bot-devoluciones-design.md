@@ -145,6 +145,10 @@ ningún rol de usuario las abre. Vendidos no cambia.
 
 **Revisado 25/11 con Imad** (sustituye al bloqueo y a la marca `NO_VENDIBLE` de la primera versión).
 
+**EN ESPERA (25/11):** nunca se bloquea el input del IMEI. Otra sesión está cambiando cómo funcionan los avisos y la
+validación de la celda; §7 se cierra con sus conclusiones (Imad las pasa al acabar). Hasta entonces, lo de abajo es provisional y
+el plan 2 no incluye esta pieza.
+
 ### 7.1 Aviso rojo validable
 
 No se rechaza ni se marca: NSYS a veces se equivoca (p. ej. la capacidad, 24/11). Da igual quién ponga el IMEI (persona,
