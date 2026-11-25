@@ -95,6 +95,11 @@ Se calcula en cada llamada; no se guarda. Un IMEI entra si cumple todo:
 1. **Estuvo en una fila de Pedidos:** hay un apunte en `Pedido_fila_cambio` en que salió (`IMEI_ANTERIOR` de un `IMEI` o
    un `IMEI_INTERCAMBIADO`). De ahí salen la fila y quién lo cambió. Si salió de varias filas, cuenta la última.
 2. **Hoy no está en ninguna fila de Pedidos** (vender gana a devolver).
+   **Decidido 25/11 (móvil devuelto por el cliente y vendido otra vez):** una fila **cerrada** que aún tiene el IMEI no cuenta
+   si, después de su cierre (`CERRADA_EN`), NSYS registra que el móvil volvió a la empresa (`Nsys_evento` del mismo IMEI, de
+   cualquier lote): `VENTA_DESHECHA` (estaba Released y vuelve), `REENTRADA` (entra como lote nuevo), o `UBICACION` que sale de
+   «Pedidos realizados» (`DE`) o entra «sin localización» (`A_NSYS` vacío). Una devolución entra siempre «sin localización»
+   (Imad). Sin vuelta registrada, la fila cuenta y no se devuelve (en la duda, no). Las filas abiertas cuentan siempre.
 3. **Lo movió el bot:** hay un `DESCONTADO · OK` en `Bot_movimiento`.
 4. **Nadie lo ha tocado después:** el espejo (`Nsys_movil`) lo tiene `DE_PEDIDO` en «Pedidos realizados», y su última
    entrada en esa caja (último `Nsys_evento` UBICACION con `A_NSYS` = «Pedidos realizados») es la primera exportación
