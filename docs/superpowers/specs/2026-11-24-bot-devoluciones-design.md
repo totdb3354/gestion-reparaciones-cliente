@@ -27,7 +27,7 @@ filas con otro motivo, sin cambiar el contrato.
 | 1 | El ERP sabe que «lo movió el bot» porque **el bot se lo informa** (no se deduce). |
 | 2 | El saneamiento abarca lo que **movió el bot** (según `movimientos.csv`), sigue en «Pedidos realizados» sin venta en NSYS, no está en ninguna fila de Pedidos y no está en las ventas del Panel. |
 | 3 | Destino = **la caja donde estaba antes**, y solo si hoy es vendible. **Nunca se inventa una caja.** Sin caja conocida o con caja no vendible: no se devuelve solo. |
-| 4 | Un móvil no vendible no entra en Pedidos: **bloqueo** si lo teclea una persona; si lo escribe el libro o el traspaso, se guarda con marca y el bot no lo descuenta. |
+| 4 | Un móvil no vendible (por grado o por caja) se guarda con **aviso rojo validable**, lo ponga quien lo ponga (NSYS a veces se equivoca). El bot solo lo descuenta cuando alguien ha **validado ese IMEI** (revisado 25/11; antes: bloqueo + marca). |
 | 5 | Si el bot no puede devolver: **3 vueltas seguidas** con error y se deja; `NO_APARECE` se deja a la primera. |
 | 6 | Se ve **solo en el historial de la fila**. Sin avisos en la web por ahora; con los datos del historial se valorará si hace falta (pendiente en el plan maestro). |
 | 7 | El saneamiento **solo produce la lista**; cómo se devuelven se decide después de revisarla. |
@@ -84,9 +84,9 @@ En la fila de la que salió el IMEI, sin usuario, con el IMEI en `IMEI_ANTERIOR`
 
 Se añaden a `CambioImei` y al texto del historial en la web.
 
-### 4.3 Marca nueva `NO_VENDIBLE`
+### 4.3 ~~Marca nueva `NO_VENDIBLE`~~
 
-Marca de fila (§7.2) con el motivo en la nota. La pone el ERP, no una persona.
+Descartada el 25/11: se usa el aviso rojo validable de §7.
 
 ## 5. La lista de devoluciones
 
@@ -143,22 +143,25 @@ ningún rol de usuario las abre. Vendidos no cambia.
 
 ## 7. No vendible en Pedidos
 
-### 7.1 Lo teclea una persona
+**Revisado 25/11 con Imad** (sustituye al bloqueo y a la marca `NO_VENDIBLE` de la primera versión).
 
-Al poner el IMEI en una fila (`FilasDAO.SQL_PONER_IMEI`), si el móvil no es vendible (§3, con la excepción), el ERP lo
-rechaza con el motivo («grado F», «está en Pedidos realizados», «está en <caja>», «vendido en NSYS»…), como hoy rechaza uno
-que está en otra fila. Para estos casos deja de existir la opción de darlo por bueno (`VALIDADA` de `GRADO_NO_VENDIBLE`). Los
-`VALIDADA` que ya existen se quedan como están.
+### 7.1 Aviso rojo validable
 
-### 7.2 Lo escribe el libro o el traspaso
+No se rechaza ni se marca: NSYS a veces se equivoca (p. ej. la capacidad, 24/11). Da igual quién ponga el IMEI (persona,
+libro, traspaso): si el móvil no es vendible (§3, con la excepción), la celda lo dice en **rojo** con un motivo corto, y se
+puede **validar** como hoy el de capacidad (`VALIDADA_IMEI`). Solo dos motivos:
 
-`AsociacionAmazon.SQL_ACTUALIZAR` y `FilasDAO.SQL_TRASPASAR_IMEI` guardan el IMEI y, si no es vendible, el ERP pone en la fila
-la marca `NO_VENDIBLE` con el motivo en la nota (apunte `MARCA` en el historial). Una fila con marca no sale en vendidos. Al
-poner otro IMEI, el ERP quita la marca («al poner el IMEI»), como ya hace con otras. Si el libro tenía razón y el móvil
-salió de verdad, una persona lo mueve a mano en NSYS.
+- **por el grado:** «grado F» / «grado FD» / «grado RMA» (ya existe desde la 0.9.46.2: «no se vende»);
+- **por la caja (nuevo):** «en <caja>» cuando la caja de NSYS no cuenta como stock (Pedidos realizados, revisar, no cuenta,
+  no se trae, desconocida).
 
-**Ojo con «libro manda» (0.9.46):** esa sesión cambia `AsociacionAmazon`. La marca de §7.2 se engancha después de que esté
-en `main`, sobre su código.
+### 7.2 El bot solo descuenta lo validado
+
+En `SQL_VENDIDOS`, una fila cuyo móvil no es vendible solo sale si `VALIDADA_IMEI` = su IMEI. Si se cambia el IMEI, la
+validación deja de valer (como hoy). Afecta también a los pedidos **impresos**: en la 0.9.46.2 sus avisos solo informan y no se
+validan; este aviso tiene que poder validarse también ahí, o el bot no los descontaría nunca.
+
+**Ojo:** el código de la celda y de la asociación es de las versiones 0.9.46.x (en `main`). Esta pieza va encima, en la 0.9.47.
 
 ## 8. El bot
 
@@ -236,8 +239,7 @@ queda corta, la lista lo dice y esa condición solo cubre esos días.
 
 - **Servidor (TDD):** la regla de la lista condición a condición, un test por cada caso que no debe salir (en una fila,
   lo movió una persona, movido después, ya devuelto, intentos agotados, caja no vendible, grado F); agrupación; repetidos del
-  `POST`; apuntes; clave de máquina (403 con roles de usuario); «no vendible»: bloqueo al teclear, excepción de la misma fila,
-  marca en libro y traspaso, quitar la marca al poner otro IMEI. `mvn test` completo, contexto incluido.
+  `POST`; apuntes; clave de máquina (403 con roles de usuario); «no vendible»: aviso por grado y por caja, excepción de la misma fila, la fila no sale en vendidos sin validar y sí validada (también impresa). `mvn test` completo, contexto incluido.
 - **Bot (pytest):** quitar de devolver lo que se descuenta; tope de 5 grupos; página con una fila fuera de «Pedidos
   realizados» no se mueve; `NO_APARECE`; un error en un grupo no corta la vuelta; pendientes del `POST` y reenvío;
   interruptor apagado; los dos pendientes.
@@ -271,8 +273,7 @@ hasta que exista esta lista: añadirá filas con motivo `RESERVA_LIBERADA` (§6)
 
 **Nota (24/11 noche, 0.9.46.2 en prod, servidor 43e85fb / web 61ad299):** el libro manda siempre (pone el IMEI aunque no
 cuadre o esté en otro pedido, y corrige pedidos ya asociados si cambia el libro); cada IMEI quitado sigue quedando como TIPO
-`IMEI` + `DETALLE` «LIBRO». Habrá más IMEI retirados, pero el contrato no cambia. Revisar en el plan 2 si la marca `NO_VENDIBLE`
-de §7 sigue teniendo sentido para el libro (ya no rechaza nada) o se queda solo para el traspaso.
+`IMEI` + `DETALLE` «LIBRO». Habrá más IMEI retirados, pero el contrato no cambia. La marca `NO_VENDIBLE` se descartó (25/11): ver §7.
 
 **Pendiente de decidir (24/11, caso 404-4440823):** los tres móviles retirados se repararon para el pedido DESPUÉS de que el bot
 los descontara (chasis, tapa, batería). La «caja de antes» ya no vale. Propuesta: con una reparación posterior a la entrada en
