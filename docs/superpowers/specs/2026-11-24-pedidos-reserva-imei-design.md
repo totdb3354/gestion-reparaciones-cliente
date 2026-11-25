@@ -92,15 +92,20 @@ falla, la vuelta sigue OK con un aviso. En este orden:
    En los dos se borra la reserva. Si lo pone una persona por la celda, se hace en ese momento y con su usuario (§7); la pasada
    cubre lo que no pasa por la celda.
 2. **Soltar reservas** (`RESERVA_QUITADA`, con el motivo en `DETALLE`):
-   - `CANCELADA`: la fila se cerró sin envío (ya no está en ShippyPro) o tiene una marca;
+   En este orden (el mismo criterio que la 0.9.47 para las cancelaciones; separado el 25/11):
+   - `ENVIADA_SIN_IMEI`: la fila se cerró **con** envío pero sin IMEI (ver abajo);
+   - `CANCELADA`: «Cancelar móvil» (marca `CANCELADO`) sin la etiqueta impresa;
+   - `YA_NO_ESTA`: la fila se cerró sin envío y sin «Cancelar móvil» (ya no está en ShippyPro);
+   - `MARCADA`: otra marca (`ESPERA_STOCK`, `EN_REVISION`, `PENDIENTE_COLOR`) sin la etiqueta impresa;
+   - `CON_ETIQUETA`: con marca y con la etiqueta ya impresa: el teléfono pudo salir con ella;
    - `NO_ENCONTRADO`: el teléfono está en «Pendiente revisar si hay error de inventario» o en la «MV …» (lo movió una persona en
      NSYS porque no lo encuentra);
-   - `NO_DISPONIBLE`: el teléfono ya no está en la empresa o su estado no es STOCK ni «de pedido» (vendido, baja, otra caja que no
-     cuenta);
+   - `NO_DISPONIBLE`: el teléfono ya no está en la empresa o su estado no es STOCK (vendido, baja, otra caja que no cuenta). «De
+     pedido» solo vale con `al-bot` encendido (es el descuento de esta misma reserva); con `al-bot` apagado, un reservado «de
+     pedido» se vendió por otro lado (p. ej. una venta directa del Simulador) y se suelta como `NO_DISPONIBLE`;
    - `PUESTO_EN_OTRA`: el IMEI reservado se ha puesto en otra fila (no es candidato a devolución: se vende por esa fila).
-   - `ENVIADA_SIN_IMEI`: la fila se cerró **con** envío pero sin IMEI. Seguramente salió el reservado sin picarlo: se suelta, pero
-     **no** es candidato a devolución.
-   Un teléfono en «Pedidos realizados» con reserva es lo esperado cuando el bot ya lo descontó: **no** se suelta. Todo se vuelve a
+   - (detalle de `ENVIADA_SIN_IMEI`) seguramente salió el reservado sin picarlo: se suelta, pero **no** es candidato a devolución.
+   Con `al-bot` encendido, un teléfono en «Pedidos realizados» con reserva es lo esperado (el bot ya lo descontó): **no** se suelta. Todo se vuelve a
    comprobar con la fila bloqueada: si una persona acaba de poner el IMEI, no se suelta (la pasada siguiente lo resuelve).
 3. **Reservar** las filas que no tienen (orden §2, teléfono §4). Cada reserva apunta `RESERVADO` con `IMEI_NUEVO` = el reservado y
    `DETALLE` = el porqué («Puesto 1 · Caja · Listos · A-»). Si no hay teléfono, apunta **una sola vez** `SIN_STOCK` (columna
@@ -113,12 +118,22 @@ persona que esté poniendo el IMEI a la vez.
 
 - `GET /api/pedidos/vendidos` sirve también los IMEI **reservados** de filas vivas (fecha: `RESERVADA_EN`), **solo con el ajuste
   `pedidos.reserva.al-bot=true`** (por defecto `false`).
-- **Se enciende cuando exista la lista de devoluciones del bot** (otra sesión). Antes, una reserva soltada después de que el bot la
-  descontara dejaría el teléfono en «Pedidos realizados». Mientras está apagado, la reserva se ve en el ERP y guía a logística, pero
-  no toca NSYS.
-- **Contrato con las devoluciones** (para la otra sesión): una reserva soltada deja en `Pedido_fila_cambio` un apunte
-  `RESERVA_SUSTITUIDA` o `RESERVA_QUITADA` con `IMEI_ANTERIOR` = el reservado. La condición 1 de las devoluciones («estuvo en una
-  fila») cuenta también los `RESERVADO`. Lo que no se devuelve: `NO_ENCONTRADO` (el teléfono está en revisar a propósito), `ENVIADA_SIN_IMEI` (seguramente salió) y `PUESTO_EN_OTRA` (sale por otra fila).
+- **Se enciende a mano** (`PEDIDOS_RESERVA_AL_BOT=true` en el compose) **cuando la devolución del bot lleve unos días funcionando en
+  producción** (Imad 25/11; orden: 0.9.47 → bot informa → bot devuelve → 0.9.48 → encender), a la vez que el ajuste
+  `"informar_vendido_panel"` del bot. Mientras está apagado, la reserva se ve en el ERP y guía a logística, pero no toca NSYS; por eso
+  la 0.9.48 puede subir antes.
+- Con `al-bot` encendido, los reservados salen de «Saldo stock» en NSYS y el ciclo de stock los quita de las webs, de Amazon y de la
+  lista pública (`Public stock & price list EU`, la que usan las ventas directas del Simulador): no hace falta tocar esos ficheros.
+- **Devoluciones (en esta versión, sobre la 0.9.47; `bot/BotDAO`, `bot/Devoluciones`):** una reserva soltada es una «salida» del
+  IMEI y el bot la devuelve a su caja con el motivo de lista **`RESERVA_LIBERADA`** (nota del historial «reserva soltada por …»):
+  - salen: `RESERVA_SUSTITUIDA` (la devolución prioritaria: se picó otro encima), `RESERVA_QUITADA` con `CANCELADA` o `MARCADA`;
+  - `RESERVA_QUITADA` con `YA_NO_ESTA` → «no se devuelve solo» (`SIN_DESTINO`, una persona comprueba si salió), como en la 0.9.47;
+  - no son salida: `ENVIADA_SIN_IMEI`, `CON_ETIQUETA`, `NO_ENCONTRADO`, `PUESTO_EN_OTRA` y `NO_DISPONIBLE` (salió, lo tiene una
+    persona o se vendió por otro lado: devolverlo dejaría un móvil fantasma en NSYS);
+  - `RESERVADO` cuenta como «puesto»; una reserva viva en una fila abierta impide devolver (vender gana a devolver).
+- **Simulador:** si en directo se coge justo la unidad reservada, logística pica otra y la reserva queda sustituida, pero ese móvil ya
+  salió. El bot no devuelve un IMEI vendido en su Panel de Control (Simulador y PEDIDOS 2026) y lo informa con el resultado
+  **`VENDIDO_PANEL`** (final, como `NO_APARECE`; historial «No se pudo devolver · vendido en el Panel: no se devuelve»).
 
 ## 7. Poner el IMEI en una fila reservada
 
@@ -143,7 +158,11 @@ persona que esté poniendo el IMEI a la vez.
 
 - **`Reparto`** (nuevo, puro): `de(filas, stock, vale, trabajos, ocupados)` (cada `Fila` lleva su `Aceptacion`) → reservas y «sin
   stock», con §2-§4.
-  `Recomendador` **no cambia** (lo toca la sesión de la celda); comparten `EstadoMovil`, `LoQueVale` y `Aceptacion`.
+  Comparte con `Recomendador` `EstadoMovil`, `LoQueVale` y `Aceptacion`.
+- **`Recomendador`** (los recomendados del ▾ de la celda, Imad 25/11): el IMEI reservado para la fila sale **el primero** con
+  `reservado = true` («reservado para este pedido»), aunque esté «de pedido» o sea un sustituto que el recomendador no propondría; los
+  reservados para **otras** filas no se proponen (se pueden picar a mano: la reserva de esa otra fila se suelta como `PUESTO_EN_OTRA`
+  y la pasada siguiente le busca otro). Los Ms, siempre al final.
 - **`Reservas`** (nuevo, `@Service`): la pasada de §5 con `FilasDAO`, `NsysDAO` y `TallerNsys`. La llama `LecturaFilas` al final de
   la vuelta.
 - **`FilasDAO`**: leer las columnas nuevas en `FilaPedido`; `reservar`, `soltarReserva`, `apuntarSinStock`, `resolverReservaPuesta`;
@@ -153,13 +172,16 @@ persona que esté poniendo el IMEI a la vez.
 
 ## 10. Web
 
-- **Celda** (`CeldaImei.tsx`): sin IMEI y con reserva → el IMEI reservado con **menos opacidad**, sin texto. Al pulsar, se edita como
-  hoy (vacía); el `title` dice «Reservado: pica este IMEI para confirmarlo o pon otro». Sin reserva → como hoy.
+- **Celda** (`CeldaImei.tsx`, sobre la celda en línea de la 0.9.46.3): sin IMEI y con reserva → el IMEI reservado con **menos
+  opacidad**, sin texto. Al pulsar, el campo se abre vacío como en cualquier fila sin IMEI (sin texto de ayuda: como el prototipo,
+  Imad 25/11); el `title` dice «Reservado: pica este IMEI para confirmarlo o pon otro». El rojo de «IMEI no válido» manda sobre el
+  tenue. Sin reserva → como hoy.
+- **Recomendados** (▾): el reservado de la fila, el primero, con la píldora azul «reservado para este pedido» en vez del nivel.
 - **Contadores** (`filas.ts`, `PedidosPage.tsx`): «N sin IMEI» sigue igual (las reservadas cuentan); dos nuevos pulsables
   **«N reservadas»** y **«N sin stock»** (sin IMEI y sin reserva, editables y sin marca), con su filtro.
 - **Historial** (`historial.ts`, `PanelFila.tsx`): los apuntes nuevos con **etiqueta de color** como el prototipo: Reservado (azul),
   Confirmado (verde, «Confirmado por {usuario}»), Picó otro (gris) y Vuelve a stock (morado) en `RESERVA_SUSTITUIDA`, Reserva quitada
-  (ámbar; naranja si `CANCELADA`), Sin stock (naranja). La caja del `DETALLE` como píldora con su color (`CLASES_UBICACION`).
+  (ámbar; «Cancelado» naranja si `CANCELADA` o `YA_NO_ESTA`), Sin stock (naranja). La caja del `DETALLE` como píldora con su color (`CLASES_UBICACION`).
 - **Ayuda** (`AyudaPedidos.tsx`): qué es una reserva y cómo confirmarla.
 - Tipos regenerados (`openapi.json`, `schema.d.ts`), `fabrica.ts`.
 
@@ -171,16 +193,20 @@ persona que esté poniendo el IMEI a la vez.
   `FilasDAOTest` (columnas nuevas, `ponerImei` sobre reservada, vendidos con y sin el ajuste); `LecturaFilasTest` (la pasada al final;
   si falla, aviso y vuelta OK); `VistaFilasTest`; `OpenApiContractTest`.
 - **Web:** `filas.test.ts` (contadores y filtros), `historial.test.ts` (los tipos nuevos), `CeldaImei` (tenue), `PedidosPage`.
+- **Servidor (devoluciones):** `BotDAOTest` (salidas por apunte, SQL de candidatos, reservas vivas, última salida), `DevolucionesTest`
+  (`RESERVA_LIBERADA`, «ya no está» sin destino, con etiqueta / enviada / puesto en otra no salen, nota «reserva soltada por»,
+  `VENDIDO_PANEL`), `ReglaDevolucionesTest` (`VENDIDO_PANEL` final), `RecomendadorTest` y `VistaFilasTest` (el reservado primero,
+  los de otras filas fuera).
 - **Preprod:** migración, y una pasada real con el ajuste apagado; revisar con Imad las reservas que salen (E2E con datos sintéticos
-  por API y limpieza, nunca en producción).
+  por API y limpieza, nunca en producción). Guion: `Apuntes/preprod/v0948-preprod.md`.
 
 ## 12. Despliegue
 
-Migración aditiva; servidor y web juntos (la web vieja ignora los campos nuevos). `pedidos.reserva.al-bot=false` en el primer
-despliegue: se mira unos días cómo reserva. Se enciende cuando estén las devoluciones del bot.
+Migración aditiva; servidor y web juntos (la web vieja ignora los campos nuevos). `pedidos.reserva.al-bot` por defecto `false`:
+se mira unos días cómo reserva. Se enciende a mano cuando la devolución del bot lleve días bien en producción (§6).
 
 ## Fuera de alcance
 
-- La lista de devoluciones y el cambio del bot (otra sesión).
+- El bot de NSYS (otra sesión; solo se le añaden aquí los casos de la reserva en la lista de devoluciones del ERP).
 - Mover una reserva entre filas o recolocar reservas.
 - «No lo encuentro» dentro del ERP (se hace en NSYS).
