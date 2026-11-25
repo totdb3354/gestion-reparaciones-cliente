@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · IMEI en la celda y vista fija con filtro</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6; --sel:#EAF1FF; --raya:#2f6fe0;
+          --aviso-bg:#FFF8E0; --aviso-text:#7A5C00; --mal-bg:#FFE0B2; --mal-text:#B45309; --error:#C62828; --error-bg:#FDE2E2; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo);
+         font-variant-numeric:tabular-nums; }
+  button, input, select { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:10px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; margin-right:6px; }
+  .seg { display:inline-flex; background:#fff; border-radius:6px; padding:2px; gap:2px; }
+  .seg button { border:0; background:transparent; color:#3b0764; font-weight:700; font-size:12px; padding:4px 10px; border-radius:4px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#3b0764; color:#fff; }
+  .proto .acc { border:1px solid #c4b5fd; background:#4c1d95; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+  .proto .acc:hover { background:#5b21b6; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  .guia ol { margin:2px 0 0; padding-left:20px; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:12px 16px 16px; display:flex; flex-direction:column; gap:10px; }
+  .fila-tit { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  h1 { margin:0; font-size:24px; color:var(--azul-medio); }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12.5px; font-weight:600; color:var(--azul-gris); cursor:pointer; }
+  .cont[aria-pressed="true"] { background:var(--azul-noche); color:#fff; border-color:var(--azul-noche); }
+  .banner { display:flex; align-items:center; gap:10px; background:var(--error-bg); border:1px solid #f3b4b4; color:var(--error); font-weight:700; border-radius:6px; padding:8px 14px; }
+  .banner button { margin-left:auto; border:0; background:transparent; color:var(--error); font-size:16px; cursor:pointer; }
+  .chips { display:flex; gap:6px; align-items:center; flex-wrap:wrap; min-height:26px; font-size:12px; color:var(--azul-gris); }
+  .chip { background:#dbe6fb; color:#1d3a78; border-radius:12px; padding:2px 6px 2px 10px; font-weight:600; }
+  .chip button { border:0; background:transparent; color:#1d3a78; cursor:pointer; font-weight:700; }
+  .zona { display:flex; gap:12px; align-items:flex-start; }
+  .hoja { flex:1; min-width:0; max-height:calc(100vh - 290px); min-height:300px; overflow:auto; background:#fff; border-radius:6px; border:1px solid var(--borde); position:relative; }
+  table { border-collapse:separate; border-spacing:0; width:100%; min-width:880px; table-layout:fixed; }
+  th { position:sticky; top:0; z-index:2; background:var(--cab); text-align:left; padding:7px 10px; font-size:12px; border-bottom:1px solid var(--sep); border-right:1px solid var(--fila-brd); }
+  th.activo { background:#dbe6fb; }
+  th .filtro { margin-left:6px; border:1px solid var(--borde); background:#fff; border-radius:4px; font-size:11px; padding:1px 6px; cursor:pointer; color:var(--azul-medio); font-weight:600; }
+  th .filtro[aria-pressed="true"] { background:var(--azul-medio); color:#fff; border-color:var(--azul-medio); }
+  td { padding:0 10px; border-right:1px solid var(--fila-brd); border-bottom:1px solid var(--fila-brd); height:34px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td:last-child { border-right:0; }
+  tr.aqui td { background:var(--sel); }
+  tr.aqui td:first-child { box-shadow:inset 4px 0 0 var(--raya); }
+  tr.nueva td { animation:entra 1.6s ease-out; }
+  @keyframes entra { from { background:#fff3c4; } to { background:transparent; } }
+  td.sku { font-family:Consolas,monospace; font-size:12px; }
+  td.imei { padding:0; position:relative; cursor:pointer; }
+  td.imei.error { background:var(--error-bg) !important; }
+  td.imei.editando { outline:2px solid var(--raya); outline-offset:-2px; background:#fff !important; cursor:text; }
+  .celda { display:flex; align-items:center; gap:8px; height:33px; padding:0 10px; font-family:Consolas,monospace; font-size:12.5px; }
+  .celda:hover { outline:2px solid #9db8e8; outline-offset:-2px; }
+  .vacia { font-family:"Segoe UI",sans-serif; font-style:italic; color:var(--texto-sub); }
+  .caja { font-family:"Segoe UI",sans-serif; font-size:11px; color:var(--azul-gris); overflow:hidden; text-overflow:ellipsis; }
+  .fallo { font-family:"Segoe UI",sans-serif; font-size:12px; font-weight:700; color:var(--error); overflow:hidden; text-overflow:ellipsis; }
+  .ed { display:flex; align-items:center; height:33px; padding:0 4px 0 8px; gap:4px; }
+  .ed input { flex:1; min-width:0; border:0; outline:0; background:transparent; font-family:Consolas,monospace; font-size:13px; height:30px; }
+  .ed input::placeholder { color:var(--texto-sub); font-style:italic; font-family:"Segoe UI",sans-serif; font-size:12px; }
+  .ed .n { flex:none; font-family:Consolas,monospace; font-size:11px; color:var(--azul-gris); }
+  .ed .n.mal { color:var(--error); font-weight:700; }
+  .ed .guardando { flex:none; font-size:11px; color:var(--azul-gris); font-style:italic; }
+  .ed .gi { flex:none; border:1px solid #e0a0a0; background:#fff; color:var(--error); border-radius:5px; font-size:10.5px; font-weight:700; padding:1px 6px; cursor:pointer; }
+  .ed .rec { flex:none; width:22px; height:22px; border:1px solid var(--borde); background:#fff; border-radius:5px; cursor:pointer; color:var(--azul-medio); font-size:11px; padding:0; }
+  .ed .rec[aria-expanded="true"] { background:var(--azul-medio); color:#fff; }
+  .recs { position:fixed; z-index:20; width:600px; background:#fff; border:1px solid var(--azul-medio); border-radius:8px; box-shadow:0 8px 24px rgba(0,18,50,.25); padding:6px; }
+  .recs .tit { font-size:11px; font-weight:700; color:var(--azul-gris); text-transform:uppercase; letter-spacing:.03em; padding:2px 4px 6px; }
+  .recs button { display:grid; grid-template-columns:150px 130px minmax(0,1fr) auto; gap:10px; align-items:center; width:100%; text-align:left; border:0; background:transparent; border-radius:6px; padding:5px 6px; cursor:pointer; font-size:12px; }
+  .recs button:hover { background:var(--sel); }
+  .recs .cj { background:#eef0f3; border-radius:6px; padding:1px 8px; font-weight:700; justify-self:start; }
+  .recs .im { font-family:Consolas,monospace; font-weight:700; }
+  .recs .es { font-family:Consolas,monospace; font-size:11.5px; color:var(--azul-gris); }
+  .niv { border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; }
+  .n1 { background:#C8E6C9; color:#2f7d3b; } .n2 { background:#E0F2F1; color:#00796B; } .n3 { background:var(--mal-bg); color:var(--mal-text); }
+  .est { display:inline-block; border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; background:#fde2e1; color:#b42318; }
+  .est.man { background:#fff; border:1px dashed #C8CDD5; color:var(--azul-gris); }
+  .est.env { background:#C8E6C9; color:#2f7d3b; }
+  aside { width:min(340px,34vw); flex:none; background:#fff; border:1px solid var(--borde); border-radius:6px; padding:12px 14px; }
+  aside h2 { margin:0 0 8px; font-size:15px; color:var(--azul-medio); }
+  aside h3 { margin:12px 0 6px; padding-top:8px; border-top:1px solid var(--fila-brd); font-size:11px; color:var(--azul-gris); text-transform:uppercase; letter-spacing:.04em; }
+  dl { display:grid; grid-template-columns:90px minmax(0,1fr); gap:5px 8px; margin:0; font-size:12.5px; }
+  dt { color:var(--azul-gris); } dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
+  aside select, aside input { width:100%; height:30px; border:1px solid var(--borde); border-radius:6px; padding:0 8px; margin-top:4px; }
+  aside .btn { margin-top:8px; height:28px; border:1px solid #e0a0a0; color:var(--error); background:#fff; border-radius:6px; padding:0 10px; font-weight:600; cursor:pointer; }
+  .nota { font-size:11.5px; color:var(--azul-gris); }
+  .registro { background:#fff; border:1px solid var(--borde); border-radius:6px; padding:6px 10px; font-size:11.5px; color:var(--azul-gris); max-height:92px; overflow:auto; font-family:Consolas,monospace; }
+  .registro div:first-child { color:var(--azul-noche); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Pedidos: IMEI en la celda + vista fija con filtro</span>
+  <span>Filtro:</span>
+  <span class="seg" role="group" aria-label="Comportamiento del filtro">
+    <button id="mHoy" aria-pressed="false" title="Como hoy: una fila que deja de cumplir el filtro desaparece">Hoy (se van)</button>
+    <button id="mNuevo" aria-pressed="true" title="Como Excel: la vista no cambia hasta cambiar el filtro">Nuevo (se quedan)</button>
+  </span>
+  <span>Lector:</span>
+  <button class="acc" data-leer="bueno" title="Lee un IMEI correcto en la celda abierta">Leer IMEI bueno</button>
+  <button class="acc" data-leer="luhn" title="Lee un IMEI con la cifra de control mal">Leer con Luhn mala</button>
+  <button class="acc" data-leer="doble" title="El código trae 16 cifras">Leer 16 cifras</button>
+  <button class="acc" data-leer="dup" title="El servidor dice que ese IMEI ya está en otra fila">Leer IMEI repetido</button>
+  <span>Otros:</span>
+  <button class="acc" id="companero" title="Otra persona pone el IMEI de una fila de tu vista">Un compañero pica una</button>
+  <button class="acc" id="nuevo" title="Llega un pedido nuevo de Amazon sin IMEI">Llega un pedido</button>
+</div>
+<div class="guia">
+  <b>Qué probar</b> (datos inventados; el «servidor» tarda 0,4 s):
+  <ol>
+    <li>Pon el filtro <b>Sin IMEI</b> (en la cabecera IMEI o el contador). Pulsa una celda: el campo aparece <b>dentro de la celda</b>, sin tapar nada. Pulsa <b>Leer IMEI bueno</b> varias veces: se guarda y el campo baja a la siguiente fila sin IMEI. Las filas hechas <b>se quedan</b> en la vista.</li>
+    <li>Cambia arriba a <b>Hoy (se van)</b> y repite: cada fila picada desaparece y las de abajo suben (lo que pasa hoy en producción).</li>
+    <li><b>Leer con Luhn mala</b> o <b>Leer 16 cifras</b>: NO se guarda y NO frena: la celda queda en rojo «IMEI no válido» y el campo sigue bajando. Al final, pulsa la celda roja: trae la lectura mala; lee otro para sustituirla o (solo si fue la cifra de control) <b>Guardar igual</b>. <b>Leer IMEI repetido</b>: el servidor lo rechaza; celda en rojo y aviso arriba (el campo ya está en la siguiente fila).</li>
+    <li>El botón <b>▾</b> de la celda abierta enseña los recomendados (solo si lo pulsas); elegir uno lo pone.</li>
+    <li>Quitar un IMEI: abre una celda con IMEI, <b>borra todo y pulsa Enter</b>. Escape o clic fuera: cierra sin cambiar.</li>
+    <li><b>Un compañero pica una</b>: también se queda en tu vista filtrada. <b>Llega un pedido</b>: entra al final si cumple el filtro. Los contadores siempre van al día. Cambiar o quitar el filtro recoloca la vista.</li>
+    <li>Para teclear a mano usa IMEIs válidos (15 cifras inventadas fallan la cifra de control 9 de cada 10 veces): <b id="validos" style="font-family:Consolas"></b></li>
+    <li>Pulsa cualquier otra celda de la fila: el panel de la derecha (la marca y cancelar están ahí, ya no en la celda).</li>
+  </ol>
+</div>
+<header>FSGR: Gestión de Stock y Reparaciones</header>
+<main>
+  <div class="fila-tit">
+    <h1>Pedidos</h1>
+    <button class="cont" id="cTodas" aria-pressed="true"></button>
+    <button class="cont" id="cSin" aria-pressed="false"></button>
+  </div>
+  <div class="banner" id="banner" hidden><span id="bannerTxt"></span><button id="bannerX" aria-label="Cerrar aviso">✕</button></div>
+  <div class="zona">
+    <div class="hoja" id="hoja">
+      <table>
+        <colgroup><col style="width:9%"><col style="width:10%"><col style="width:19%"><col style="width:26%"><col style="width:13%"><col style="width:12%"><col style="width:11%"></colgroup>
+        <thead><tr>
+          <th>Fecha</th><th>Plataforma</th><th>SKU</th>
+          <th id="thImei">IMEI <button class="filtro" id="fSin" aria-pressed="false">Sin IMEI</button></th>
+          <th>Pedido</th><th>Enviado</th><th>F. compra</th>
+        </tr></thead>
+        <tbody id="cuerpo"></tbody>
+      </table>
+    </div>
+    <aside id="panel">
+      <h2>Detalle del pedido</h2>
+      <p class="nota" id="panelVacio">Pulsa una fila (fuera de la celda del IMEI) para ver su detalle.</p>
+      <div id="panelDatos" hidden>
+        <dl id="panelDl"></dl>
+        <h3>Marca</h3>
+        <select><option>Sin marca</option><option>En espera de stock</option><option>En revisión</option><option>Pendiente de color</option></select>
+        <input placeholder="Nota (opcional)">
+        <button class="btn" type="button">Cancelar móvil</button>
+        <h3>El móvil</h3>
+        <dl id="panelMovil"></dl>
+        <p class="nota" style="margin-top:8px">«Validar SKU» y el historial siguen aquí, como hoy.</p>
+      </div>
+    </aside>
+  </div>
+  <div class="registro" id="registro"></div>
+</main>
+
+<script>
+// ---------- datos inventados ----------
+function luhnDigito(c14) { let s = 0; for (let i = 0; i < 14; i++) { let d = +c14[13 - i]; if (i % 2 === 0) { d *= 2; if (d > 9) d -= 9 } s += d } return (10 - s % 10) % 10 }
+function luhnOk(c) { return /^\d{15}$/.test(c) && luhnDigito(c.slice(0, 14)) === +c[14] }
+let semilla = 7
+function azar() { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647 }
+function imeiBueno() { let c = '35' + Array.from({ length: 12 }, () => Math.floor(azar() * 10)).join(''); return c + luhnDigito(c) }
+function imeiLuhnMala() { const b = imeiBueno(); return b.slice(0, 14) + ((+b[14] + 3) % 10) }
+const SKUS = ['i14128MedianocheA', 'i13128BlancoA', 'i15128AzulA', 'i14PROMAX256NegroA', 'i13Mini256VerdeA', 'i16eeSIM128NegroA', 'i14eSIM128AzulA', 'i15eSIM256AzulA', 'i12128RojoA-', 'iAir256OroA100']
+const CAJAS = ['Caja A3', 'Caja B1', 'Caja 12', 'Estantería 2', 'Caja C7']
+let sig = 1
+function fila(conImei) {
+  const sku = SKUS[Math.floor(azar() * SKUS.length)]
+  const imei = conImei ? imeiBueno() : null
+  return { id: sig++, fecha: '25/11', plat: azar() < .8 ? 'AMZ' : 'WEB', sku, imei, caja: imei ? CAJAS[Math.floor(azar() * CAJAS.length)] : null,
+           pedido: azar() < .8 ? 'sin asociar' : String(37000 + Math.floor(azar() * 900)), estado: azar() < .85 ? 'Sale hoy' : 'Sale mañana', compra: '23/11' }
+}
+const filas = []
+for (let i = 0; i < 26; i++) filas.push(fila(i % 3 === 0 || i < 4))
+const usados = new Set(filas.filter((f) => f.imei).map((f) => f.imei))
+const duplicado = filas.find((f) => f.imei).imei
+
+// ---------- estado ----------
+const st = { modo: 'nuevo', soloSin: false, vista: null, abierta: null, aqui: null, elegida: null, fallos: {}, guardando: {}, recs: false, aviso: null, nuevas: new Set() }
+const cumple = (f) => !st.soloSin || !f.imei
+// La vista fija: los ids que salieron al poner el filtro (+ los nuevos que cumplen, al final).
+function recalcularVista() { st.vista = filas.filter(cumple).map((f) => f.id) }
+function visibles() {
+  if (st.modo === 'hoy') return filas.filter(cumple)
+  return st.vista.map((id) => filas.find((f) => f.id === id))
+}
+function porId(id) { return filas.find((f) => f.id === id) }
+const registro = []
+function log(t) { const h = new Date().toTimeString().slice(0, 8); registro.unshift(`${h}  ${t}`); document.getElementById('registro').innerHTML = registro.slice(0, 30).map((r) => `<div>${r}</div>`).join('') }
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+// ---------- pintar ----------
+const cuerpo = document.getElementById('cuerpo')
+function pintar() {
+  const sin = filas.filter((f) => !f.imei).length
+  const cT = document.getElementById('cTodas'), cS = document.getElementById('cSin')
+  cT.textContent = `${filas.length} filas`; cS.textContent = `${sin} sin IMEI`
+  cT.setAttribute('aria-pressed', String(!st.soloSin)); cS.setAttribute('aria-pressed', String(st.soloSin))
+  document.getElementById('fSin').setAttribute('aria-pressed', String(st.soloSin))
+  document.getElementById('thImei').classList.toggle('activo', st.soloSin)
+  document.getElementById('mHoy').setAttribute('aria-pressed', String(st.modo === 'hoy'))
+  document.getElementById('mNuevo').setAttribute('aria-pressed', String(st.modo === 'nuevo'))
+  const b = document.getElementById('banner'); b.hidden = !st.aviso; document.getElementById('bannerTxt').textContent = st.aviso ?? ''
+
+  // Conservar el campo abierto (y su foco/valor) si la fila sigue en la vista.
+  const lista = visibles()
+  if (st.abierta !== null && !lista.some((f) => f.id === st.abierta)) { st.abierta = null; st.recs = false }
+  const prev = document.querySelector('td.imei input')
+  const valorPrevio = prev ? prev.value : null
+  const teniaFoco = prev && document.activeElement === prev
+
+  cuerpo.innerHTML = lista.length ? lista.map(filaHtml).join('') : `<tr><td colspan="7" style="padding:14px;color:var(--azul-gris)">Ningún pedido cumple los filtros.</td></tr>`
+  const inp = document.querySelector('td.imei input')
+  if (inp) {
+    if (valorPrevio !== null && inp.dataset.id === String(st.campoDe)) inp.value = valorPrevio
+    st.campoDe = st.abierta
+    actualizarContador(inp)
+    if (teniaFoco || st.enfocar) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length) }
+    st.enfocar = false
+  }
+  pintarRecs(); pintarPanel()
+}
+function filaHtml(f) {
+  const cls = [st.aqui === f.id ? 'aqui' : '', st.nuevas.has(f.id) ? 'nueva' : ''].join(' ')
+  const estado = f.estado === 'Sale hoy' ? '<span class="est">Sale hoy</span>' : `<span class="est man">${f.estado}</span>`
+  return `<tr class="${cls}" data-fila="${f.id}"><td>${f.fecha}</td><td>${f.plat}</td><td class="sku" title="${f.sku}">${f.sku}</td>${celdaHtml(f)}<td>${f.pedido === 'sin asociar' ? '<i style="color:var(--azul-gris)">sin asociar</i>' : f.pedido}</td><td>${estado}</td><td>${f.compra}</td></tr>`
+}
+function celdaHtml(f) {
+  const fallo = st.fallos[f.id]
+  if (st.abierta === f.id) {
+    const g = st.guardando[f.id]
+    return `<td class="imei editando ${fallo && fallo.tipo !== 'dup' ? 'error' : ''}" data-imei="${f.id}" title="${fallo ? esc(fallo.texto) : ''}">
+      <div class="ed">
+        <input data-id="${f.id}" aria-label="IMEI" inputmode="numeric" autocomplete="off" placeholder="${f.imei ? 'Lee otro, o borra y Enter para quitar' : 'Lee o escribe el IMEI'}" ${g ? 'readonly' : ''}>
+        ${g ? '<span class="guardando">guardando…</span>' : ''}
+        ${fallo && fallo.tipo === 'luhn' && st.reabierta === f.id ? '<button class="gi" type="button" data-gi title="Guardar este IMEI aunque la cifra de control no cuadre">Guardar igual</button>' : ''}
+        <span class="n" data-n>0/15</span>
+        <button class="rec" type="button" data-rec aria-expanded="${st.recs}" title="Ver recomendados">▾</button>
+      </div></td>`
+  }
+  if (fallo) return `<td class="imei error" data-imei="${f.id}" title="${esc(fallo.texto)}"><div class="celda"><span class="fallo">${esc(fallo.corto)}</span></div></td>`
+  if (st.guardando[f.id]) return `<td class="imei" data-imei="${f.id}"><div class="celda"><span>${st.guardando[f.id]}</span><span class="caja">guardando…</span></div></td>`
+  if (!f.imei) return `<td class="imei" data-imei="${f.id}"><div class="celda"><span class="vacia">pulsa para poner el IMEI…</span></div></td>`
+  return `<td class="imei" data-imei="${f.id}" title="${f.imei}\n${f.caja}"><div class="celda"><span>${f.imei}</span><span class="caja">${f.caja}</span></div></td>`
+}
+function actualizarContador(inp) {
+  const n = inp.closest('.ed').querySelector('[data-n]'); const len = inp.value.length
+  n.textContent = `${len}/15`; const f = st.fallos[+inp.dataset.id]
+  n.classList.toggle('mal', len > 15 || (!!f && f.tipo !== 'dup'))
+}
+function pintarRecs() {
+  let caja = document.getElementById('recs')
+  if (!st.recs || st.abierta === null) { if (caja) caja.remove(); return }
+  const td = document.querySelector(`td.imei[data-imei="${st.abierta}"]`); if (!td) return
+  if (!caja) { caja = document.createElement('div'); caja.id = 'recs'; caja.className = 'recs'; document.body.appendChild(caja) }
+  const f = porId(st.abierta)
+  const recs = [0, 1, 2, 3].map((i) => ({ caja: CAJAS[i], imei: imeiBueno(), nivel: i < 2 ? 1 : i === 2 ? 2 : 3 }))
+  st.recsLista = recs
+  caja.innerHTML = `<div class="tit">Recomendados para <span style="font-family:Consolas;text-transform:none">${f.sku}</span> · dónde buscarlo</div>` +
+    recs.map((r, i) => `<button type="button" data-elegir="${i}"><span class="cj">${r.caja}</span><span class="im">${r.imei}</span><span class="es">${r.nivel === 3 ? 'es i14128NegroA' : ''}</span><span class="niv n${r.nivel}">${['', 'Exacto', 'Mismo modelo', 'Otro color'][r.nivel]}</span></button>`).join('')
+  const r = td.getBoundingClientRect()
+  const arriba = r.bottom + 260 > innerHeight
+  caja.style.left = Math.max(8, Math.min(r.left, innerWidth - 608)) + 'px'
+  caja.style.top = (arriba ? r.top - caja.offsetHeight - 2 : r.bottom + 2) + 'px'
+}
+function pintarPanel() {
+  const f = st.elegida !== null ? porId(st.elegida) : null
+  document.getElementById('panelVacio').hidden = !!f; document.getElementById('panelDatos').hidden = !f
+  if (!f) return
+  document.getElementById('panelDl').innerHTML = `<dt>Pedido</dt><dd>${f.pedido}</dd><dt>Tienda</dt><dd>${f.plat}</dd><dt>SKU</dt><dd style="font-family:Consolas">${f.sku}</dd><dt>Fecha</dt><dd>${f.fecha}/2026</dd>`
+  document.getElementById('panelMovil').innerHTML = f.imei ? `<dt>IMEI</dt><dd style="font-family:Consolas">${f.imei}</dd><dt>Caja</dt><dd>${f.caja}</dd>` : `<dt>IMEI</dt><dd style="font-weight:400;color:var(--azul-gris)">Sin IMEI todavía.</dd>`
+}
+
+// ---------- abrir / cerrar / guardar ----------
+// Reabrir a mano una celda roja por IMEI no válido: el campo trae esa lectura y, si fue la cifra de control, «Guardar igual».
+function abrir(id) {
+  st.abierta = id; st.aqui = id; st.recs = false; st.enfocar = true; st.campoDe = null
+  const f = st.fallos[id]; st.reabierta = f && (f.tipo === 'luhn' || f.tipo === 'mas') ? id : null
+  pintar()
+  if (st.reabierta) { const inp = document.querySelector('td.imei input'); inp.value = f.imei; actualizarContador(inp) }
+}
+function cerrar() { if (st.abierta === null) return; st.abierta = null; st.recs = false; pintar() }
+function siguienteVacia(desde) {
+  const lista = visibles(); const i = lista.findIndex((f) => f.id === desde)
+  const j = lista.findIndex((f, k) => k > i && !f.imei && !st.guardando[f.id] && !st.fallos[f.id])
+  return j < 0 ? null : lista[j].id
+}
+function guardar(id, imei, { salto }) {
+  const f = porId(id)
+  delete st.fallos[id]
+  st.guardando[id] = imei ?? '(quitando)'
+  const destino = salto ? siguienteVacia(id) : null
+  if (destino !== null) { st.abierta = destino; st.aqui = destino; st.enfocar = true; st.campoDe = null; st.recs = false }
+  else { st.abierta = null; st.recs = false }
+  pintar()
+  log(imei ? `PUT fila ${id} ← ${imei}${destino !== null ? `; salta a la fila ${destino}` : ''}` : `PUT fila ${id} ← quitar IMEI`)
+  setTimeout(() => {
+    delete st.guardando[id]
+    if (imei && (imei === duplicado || (usados.has(imei) && f.imei !== imei))) {
+      const texto = `Pedido ${f.pedido === 'sin asociar' ? 'sin asociar (fila ' + id + ')' : f.pedido}: Este IMEI ya está en una fila de AMZ del 24/11 sin asociar`
+      st.fallos[id] = { tipo: 'dup', texto, corto: 'IMEI repetido · pulsa para ver' }
+      st.aviso = texto; log(`409 fila ${id}: repetido`)
+    } else {
+      if (f.imei) usados.delete(f.imei)
+      f.imei = imei; f.caja = imei ? CAJAS[id % CAJAS.length] : null
+      if (imei) usados.add(imei)
+      log(`200 fila ${id} guardada`)
+    }
+    pintar()
+  }, 400)
+}
+// La lógica de la celda: solo cifras, a las 15 con Luhn buena se guarda (tras un momento quieto), con 16+ rojo.
+let quieto = null
+function alCambiar(inp) {
+  const id = +inp.dataset.id
+  const limpio = inp.value.replace(/\D/g, ''); if (limpio !== inp.value) inp.value = limpio
+  clearTimeout(quieto)
+  const f = st.fallos[id]
+  if (f && f.tipo !== 'dup' && limpio !== f.imei) { delete st.fallos[id]; marcarError(inp) }
+  actualizarContador(inp)
+  // Con 15 (o más: el lector mandó de más) se espera un momento quieto y se comprueba.
+  if (limpio.length >= 15) quieto = setTimeout(() => comprobar(inp), 120)
+}
+// Una lectura que no es un IMEI válido NO se guarda y NO frena: la celda queda en rojo («IMEI no válido») y el campo sigue bajando.
+function noValido(id, v, tipo) {
+  const texto = tipo === 'mas' ? `IMEI no válido: ${v.length} cifras (${v}). No se ha guardado.` : `IMEI no válido: ${v} (la cifra de control no cuadra). No se ha guardado.`
+  st.fallos[id] = { tipo, imei: v, texto, corto: tipo === 'mas' ? `IMEI no válido · ${v.length} cifras` : `IMEI no válido · …${v.slice(-4)}` }
+  st.aviso = `Fila ${id}: ${texto}`
+  log(`fila ${id}: lectura no válida (${tipo === 'mas' ? 'más de 15 cifras' : 'Luhn'}), no se guarda`)
+  const destino = st.reabierta === id ? null : siguienteVacia(id)
+  st.reabierta = null
+  if (destino !== null) { st.abierta = destino; st.aqui = destino; st.enfocar = true; st.campoDe = null; st.recs = false; log(`salta a la fila ${destino}`) }
+  else { st.abierta = null; st.recs = false }
+  pintar()
+}
+function comprobar(inp) {
+  const id = +inp.dataset.id; const v = inp.value
+  if (v.length === 0) { const f = porId(id); if (f.imei) guardar(id, null, { salto: false }); else cerrar(); return }
+  if (v.length < 15) { st.fallos[id] = { tipo: 'corto', texto: 'Un IMEI son 15 cifras', corto: 'Faltan cifras' }; marcarError(inp); return }
+  const f = st.fallos[id]
+  if (f && f.imei === v && st.reabierta === id) return // reabierta a propósito con la lectura mala: decide «Guardar igual» o leer otra
+  if (v.length > 15) { noValido(id, v, 'mas'); return }
+  if (!luhnOk(v)) { noValido(id, v, 'luhn'); return }
+  st.reabierta = null
+  guardar(id, v, { salto: true })
+}
+function marcarError(inp) {
+  const id = +inp.dataset.id; const td = inp.closest('td'); const f = st.fallos[id]
+  td.classList.toggle('error', !!f && f.tipo !== 'dup'); td.title = f ? f.texto : ''
+  actualizarContador(inp)
+}
+// Simular el lector: cifras de golpe + Enter. En error, lo nuevo sustituye a lo que había (otra lectura).
+function leer(tipo) {
+  const inp = document.querySelector('td.imei input')
+  if (!inp) { log('(abre antes una celda: el lector escribe donde está el foco)'); return }
+  const codigo = tipo === 'bueno' ? imeiBueno() : tipo === 'luhn' ? imeiLuhnMala() : tipo === 'doble' ? imeiBueno() + '7' : duplicado
+  const id = +inp.dataset.id
+  if (st.fallos[id] && st.fallos[id].tipo !== 'dup') { inp.value = ''; delete st.fallos[id] }
+  inp.focus(); inp.value += codigo; alCambiar(inp)
+  setTimeout(() => { clearTimeout(quieto); if (document.activeElement === inp || document.body.contains(inp)) comprobar(inp) }, 30)
+}
+
+// ---------- eventos ----------
+cuerpo.addEventListener('mousedown', (e) => {
+  const td = e.target.closest('td.imei')
+  if (td && !td.classList.contains('editando')) { e.preventDefault(); abrir(+td.dataset.imei); return }
+  const tr = e.target.closest('tr[data-fila]')
+  if (tr && !td) { st.elegida = +tr.dataset.fila; st.aqui = st.elegida; if (st.abierta !== null) cerrar(); else pintar() }
+})
+cuerpo.addEventListener('input', (e) => { if (e.target.matches('td.imei input')) alCambiar(e.target) })
+cuerpo.addEventListener('keydown', (e) => {
+  if (!e.target.matches('td.imei input')) return
+  if (e.key === 'Enter') { e.preventDefault(); clearTimeout(quieto); comprobar(e.target) }
+  if (e.key === 'Escape') { e.preventDefault(); const id = +e.target.dataset.id; if (st.fallos[id]?.tipo === 'corto') delete st.fallos[id]; st.reabierta = null; cerrar() }
+})
+cuerpo.addEventListener('click', (e) => {
+  if (e.target.closest('[data-rec]')) { st.recs = !st.recs; st.enfocar = true; pintar() }
+  if (e.target.closest('[data-gi]')) { const id = st.abierta; const v = st.fallos[id].imei; delete st.fallos[id]; st.reabierta = null; guardar(id, v, { salto: false }) }
+})
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#recs [data-elegir]')
+  if (b) { guardar(st.abierta, st.recsLista[+b.dataset.elegir].imei, { salto: false }) }
+})
+document.addEventListener('mousedown', (e) => {
+  if (st.abierta === null || !document.contains(e.target)) return
+  if (e.target.closest('td.imei.editando') || e.target.closest('#recs') || e.target.closest('.proto')) return
+  if (e.target.closest('#cuerpo')) return
+  if (st.fallos[st.abierta]?.tipo === 'corto') delete st.fallos[st.abierta]
+  st.reabierta = null
+  cerrar()
+})
+// Los botones del lector no se llevan el foco del campo.
+document.querySelectorAll('.proto button').forEach((b) => b.addEventListener('mousedown', (e) => e.preventDefault()))
+document.querySelectorAll('[data-leer]').forEach((b) => b.addEventListener('click', () => leer(b.dataset.leer)))
+function ponerFiltro(v) { st.soloSin = v; recalcularVista(); st.nuevas.clear(); if (st.abierta !== null && !visibles().some((f) => f.id === st.abierta)) st.abierta = null; log(v ? 'Filtro «Sin IMEI» puesto: la vista se fija' : 'Filtro quitado: todas las filas'); pintar() }
+document.getElementById('fSin').addEventListener('click', () => ponerFiltro(!st.soloSin))
+document.getElementById('cSin').addEventListener('click', () => ponerFiltro(true))
+document.getElementById('cTodas').addEventListener('click', () => ponerFiltro(false))
+document.getElementById('mHoy').addEventListener('click', () => { st.modo = 'hoy'; recalcularVista(); log('Modo «Hoy»: las que dejan de cumplir el filtro se van'); pintar() })
+document.getElementById('mNuevo').addEventListener('click', () => { st.modo = 'nuevo'; recalcularVista(); log('Modo «Nuevo»: la vista se queda como al poner el filtro'); pintar() })
+document.getElementById('bannerX').addEventListener('click', () => { st.aviso = null; pintar() })
+document.getElementById('companero').addEventListener('click', () => {
+  const lista = visibles().filter((f) => !f.imei && f.id !== st.abierta && !st.guardando[f.id])
+  if (!lista.length) { log('(no queda ninguna fila sin IMEI que pueda picar el compañero)'); return }
+  const f = lista[Math.floor(lista.length / 2)]; f.imei = imeiBueno(); f.caja = CAJAS[f.id % CAJAS.length]; usados.add(f.imei)
+  log(`Sondeo: un compañero puso el IMEI de la fila ${f.id}`); pintar()
+})
+document.getElementById('nuevo').addEventListener('click', () => {
+  const f = fila(false); filas.push(f); st.nuevas.add(f.id)
+  if (cumple(f)) st.vista.push(f.id)
+  log(`Sondeo: llega la fila ${f.id} (${f.sku})`); pintar()
+  const hoja = document.getElementById('hoja'); hoja.scrollTop = hoja.scrollHeight
+  setTimeout(() => st.nuevas.delete(f.id), 1700)
+})
+addEventListener('resize', pintarRecs)
+document.getElementById('hoja').addEventListener('scroll', pintarRecs)
+
+document.getElementById('validos').textContent = ['490154203237518', '356938035643809', '352099001761481', '351756051523999', '358240051111110', '353247104503185'].filter(luhnOk).join(' · ')
+recalcularVista(); pintar(); log('Listo. Pon el filtro «Sin IMEI» y pulsa una celda del IMEI.')
+</script>
+</body>
+</html>
