@@ -56,9 +56,11 @@ o **sin caja** («En revisión») cuentan como **N/A** sea cual sea su grado: es
 | 6 | N/A | eSIM | otro |
 | 7 | A o A- (hay que cambiarle el chasis; es una pena gastarlo) | SIM física | otro |
 | 8 | A o A- | eSIM | otro |
-| 9 | **Ms**, último recurso: solo si el pedido va a **España** (`PAIS = 'ES'`) | SIM física | el del pedido |
-
 **Pedido eSIM:** la misma tabla cambiando SIM física por eSIM y al revés (inverso exacto).
+
+**Ms: nunca se reserva** (Imad, 25/11; sustituye al «puesto 9, último recurso a España» del 24/11). Ninguna plataforma vende un Ms
+como A, B o C: darlo es una decisión excepcional de una persona. Si no hay nada en los puestos 1-8, la fila se queda «sin stock» y quien
+la mira puede picar un Ms a mano. El recomendador de la celda sigue proponiendo los Ms, pero siempre detrás de todos los demás.
 
 ### 4.2 Webs (Distribuidores, Particulares, BackiPhone)
 
@@ -73,8 +75,7 @@ existan, el puesto 1 (SKU exacto) ya los cubre.
 ### 4.3 Dentro de un puesto
 
 1. **La caja:** Caja · Listos → Caja · Reparación = Caja · Pantalla rota → Caja · Pulir → Caja · Glass → Devolución = En revisión.
-2. **El grado:** A- → A-100 → A / A+ → A100 / A+100 → N/A. En los puestos de B o C: B → C. (Ms solo existe en el puesto 9; dentro,
-   el mismo orden sin el «Ms».)
+2. **El grado:** A- → A-100 → A / A+ → A100 / A+100 → N/A. En los puestos de B o C: B → C.
 3. **Más tiempo en stock:** `receivingDate` más antigua primero; después el IMEI.
 
 Principio (Imad): no sobrecargar a los técnicos. De Listos solo se coge lo que encaja tal cual; lo que necesita una reparación que lo
@@ -164,7 +165,7 @@ persona que esté poniendo el IMEI a la vez.
 
 ## 11. Pruebas
 
-- **Servidor:** `RepartoTest` con cada puesto de §4.1 y §4.2 (incluidos: Ms solo a España y el último; ID nunca; Devolución y sin
+- **Servidor:** `RepartoTest` con cada puesto de §4.1 y §4.2 (incluidos: Ms nunca, en ningún país ni caja; ID nunca; Devolución y sin
   caja como N/A; B/C web solo para A; caja antes que grado; antigüedad; prioridad de canal; varias unidades; un ocupado no entra);
   `ReservasTest` (confirmar, sustituir, soltar por cancelada / revisar / no disponible, «de pedido» no suelta, sin stock una vez);
   `FilasDAOTest` (columnas nuevas, `ponerImei` sobre reservada, vendidos con y sin el ajuste); `LecturaFilasTest` (la pasada al final;
