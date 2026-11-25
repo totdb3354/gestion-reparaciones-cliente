@@ -124,7 +124,7 @@ Se calcula en cada llamada; no se guarda. Un IMEI entra si cumple todo:
 **Destino:** el `ORIGEN_NSYS` de ese `DESCONTADO`. Si hoy no es vendible (§3, por caja o por grado del móvil) o está vacío,
 el IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` (una vez).
 
-**Reparado después (decidido 25/11, caso 404-4440823):** si el móvil tiene una reparación (`Reparacion`, cualquier tipo:
+**Reparado después (decidido 25/11, caso de un pedido de Amazon con tres móviles):** si el móvil tiene una reparación (`Reparacion`, cualquier tipo:
 reparación, glass o pulido) con `FECHA_ASIG` posterior al `DESCONTADO` del bot, la caja de antes ya no vale (chasis, tapa,
 batería…). El IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` «reparado después (<ID_REP>)». Lo mueve una persona a
 la caja donde esté de verdad.
@@ -308,4 +308,4 @@ hasta que exista esta lista: añadirá filas con motivo `RESERVA_LIBERADA` (§6)
 cuadre o esté en otro pedido, y corrige pedidos ya asociados si cambia el libro); cada IMEI quitado sigue quedando como TIPO
 `IMEI` + `DETALLE` «LIBRO». Habrá más IMEI retirados, pero el contrato no cambia. La marca `NO_VENDIBLE` se descartó (25/11): ver §7.
 
-**Decidido (25/11, caso 404-4440823):** reparado después → sin devolución automática, lo mueve una persona (§5).
+**Decidido (25/11, caso de un pedido de Amazon con tres móviles):** reparado después → sin devolución automática, lo mueve una persona (§5).
