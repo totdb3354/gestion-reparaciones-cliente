@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo · Aviso de Pedidos sin mover la tabla</title>
+<style>
+  :root { --azul-noche:#001232; --azul-medio:#2C3B54; --azul-gris:#586376; --fondo:#DDE1E7; --borde:#D4D8DE; --sep:#C2C8D0;
+          --cab:#F6F7F9; --fila-brd:#E0E0E0; --texto-sub:#8A94A6; --sel:#EAF1FF; --error:#B42318; --error-bg:#FDE2E2; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; font-size:13px; color:var(--azul-noche); background:var(--fondo); }
+  button { font-family:inherit; }
+  .proto { background:#3b0764; color:#fff; display:flex; align-items:center; gap:10px; padding:6px 12px; font-size:12px; flex-wrap:wrap; }
+  .proto .t { font-weight:700; }
+  .seg { display:inline-flex; background:#fff; border-radius:6px; padding:2px; gap:2px; }
+  .seg button { border:0; background:transparent; color:#3b0764; font-weight:700; font-size:12px; padding:4px 10px; border-radius:4px; cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#3b0764; color:#fff; }
+  .acc { border:1px solid #c4b5fd; background:#4c1d95; color:#fff; border-radius:6px; padding:4px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+  .guia { background:#f4f1fb; border-bottom:1px solid #d9cff3; padding:6px 16px; font-size:12px; line-height:1.55; }
+  .guia b { color:#3b0764; }
+  header { height:40px; background:var(--azul-noche); color:#fff; display:flex; align-items:center; padding:0 20px; font-weight:700; }
+  main { padding:14px 20px; display:flex; flex-direction:column; gap:10px; height:calc(100vh - 40px - 34px - 62px); }
+  .tit { display:flex; align-items:center; gap:8px; }
+  h1 { margin:0 8px 0 0; font-size:24px; color:var(--azul-medio); }
+  .cont { background:#fff; border:1px solid var(--borde); border-radius:14px; padding:3px 12px; font-size:12.5px; font-weight:700; color:var(--azul-gris); }
+  .cont.on { background:var(--azul-noche); color:#fff; }
+  .barra { display:flex; align-items:center; gap:10px; min-height:34px; }
+  .barra select, .barra .buscar { height:32px; border:1px solid var(--borde); border-radius:6px; background:#fff; padding:0 8px; }
+  .barra .buscar { width:420px; display:flex; align-items:center; gap:6px; color:var(--texto-sub); }
+  .chip { background:#dbe6fb; color:#1d3a78; border-radius:12px; padding:1px 8px; font-weight:600; font-size:12px; }
+  .aviso { display:flex; align-items:center; gap:10px; background:var(--error-bg); border:1px solid #f3b4b4; color:var(--error); font-weight:700; border-radius:6px; padding:8px 14px; }
+  .aviso button { margin-left:auto; border:0; background:transparent; color:var(--error); font-size:16px; cursor:pointer; line-height:1; }
+  /* B: hueco fijo */
+  .hueco { height:38px; display:flex; }
+  .hueco .aviso { flex:1; }
+  /* C: en la barra */
+  .barra .aviso { flex:1; min-width:0; padding:5px 10px; font-size:12px; }
+  .barra .aviso span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* A: flotante */
+  .flotante { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:30; max-width:min(900px,calc(100vw - 32px));
+              box-shadow:0 8px 24px rgba(0,18,50,.25); animation:sube .18s ease-out; }
+  @keyframes sube { from { transform:translate(-50%,12px); opacity:0 } to { transform:translateX(-50%); opacity:1 } }
+  .hoja { flex:1; min-height:0; overflow:auto; background:#fff; border:1px solid var(--borde); border-radius:6px; position:relative; }
+  table { border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed; }
+  th { position:sticky; top:0; background:var(--cab); text-align:left; padding:8px 10px; font-size:12px; border-bottom:1px solid var(--sep); border-right:1px solid var(--fila-brd); }
+  td { padding:0 10px; height:33px; border-bottom:1px solid var(--fila-brd); border-right:1px solid var(--fila-brd); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  td.sku, td.imei { font-family:Consolas,monospace; font-size:12px; }
+  td.vacia { font-family:"Segoe UI"; font-style:italic; color:var(--texto-sub); }
+  td.rojo { background:var(--error-bg); color:var(--error); font-weight:700; font-family:"Segoe UI"; }
+  tr.aqui td { background:var(--sel); }
+  td.abierta { outline:2px solid #2f6fe0; outline-offset:-2px; background:#fff !important; font-style:italic; color:var(--texto-sub); }
+  .est { display:inline-block; border:1px dashed #C8CDD5; border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; color:var(--azul-gris); }
+  .mira { position:fixed; right:16px; top:120px; z-index:40; background:#3b0764; color:#fff; border-radius:8px; padding:8px 12px; font-size:12px; line-height:1.5; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  .mira b { font-size:15px; }
+  .raton { position:absolute; width:18px; height:18px; border:2px solid #e11d48; border-radius:50%; pointer-events:none; z-index:5; transform:translate(-50%,-50%); }
+</style>
+</head>
+<body>
+<div class="proto">
+  <span class="t">PROTOTIPO · Dónde sale el aviso sin mover la tabla</span>
+  <span class="seg" role="group" aria-label="Opción">
+    <button data-op="hoy">Hoy (empuja)</button>
+    <button data-op="A" aria-pressed="true">A · Flotante</button>
+    <button data-op="B">B · Hueco fijo</button>
+    <button data-op="C">C · En la barra</button>
+  </span>
+  <button class="acc" id="leer">Leer IMEI no válido</button>
+  <button class="acc" id="largo">Aviso largo (repetido)</button>
+</div>
+<div class="guia">
+  <b>Qué mirar</b> (datos inventados): el círculo rojo marca dónde está el ratón (sobre la fila 6). Pulsa <b>Leer IMEI no válido</b> en cada opción y fíjate en el
+  recuadro morado de la derecha: cuántos píxeles se ha movido la fila 6. <b>Hoy</b> la empuja ~40 px; A, B y C la dejan quieta. Cierra el aviso con la ✕ y repite.
+</div>
+<header>FSGR: Gestión de Stock y Reparaciones</header>
+<main>
+  <div class="tit"><h1>Pedidos</h1><span class="cont">8 filas</span><span class="cont">8 pendientes</span><span class="cont on" id="cSin">6 sin IMEI</span><span class="cont">0 no cuadran</span></div>
+  <div class="barra" id="barra">
+    <span>Periodo:</span><select><option>Todo</option></select>
+    <div class="buscar"><span class="chip">Sin IMEI ✕</span>Buscar en todo el historial…</div>
+  </div>
+  <div id="zonaAviso"></div>
+  <div class="hoja" id="hoja">
+    <table>
+      <colgroup><col style="width:10%"><col style="width:10%"><col style="width:20%"><col style="width:24%"><col style="width:18%"><col style="width:10%"><col style="width:8%"></colgroup>
+      <thead><tr><th>Fecha</th><th>Plataforma</th><th>SKU</th><th>IMEI</th><th>Pedido</th><th>Enviado</th><th>F. compra</th></tr></thead>
+      <tbody id="cuerpo"></tbody>
+    </table>
+    <div class="raton" id="raton"></div>
+  </div>
+</main>
+<div class="mira" id="mira">Fila 6: <b id="dy">0 px</b><br><span id="dyTxt">quieta</span></div>
+<div id="flot"></div>
+
+<script>
+const filas = [
+  ['350000000000113', ''], ['', 'rojo'], ['350000000000337', ''], ['', 'abierta'], ['', ''], ['', ''], ['', ''], ['', ''],
+]
+let op = 'A', aviso = null, n = 0
+const TXT_CORTO = 'Pedido 402-0000000-0000002: IMEI no válido: 350000000000221 (la cifra de control no cuadra). No se ha guardado.'
+const TXT_LARGO = 'Pedido 402-0000000-0000005: Este IMEI ya está en una fila de AMZ del 24/11 sin asociar. Revisa en qué pedido está antes de volver a ponerlo, o quítalo de allí.'
+function pintarTabla() {
+  document.getElementById('cuerpo').innerHTML = filas.map(([imei, c], i) => {
+    const celda = c === 'rojo' ? '<td class="rojo">IMEI no válido · …0221</td>'
+      : c === 'abierta' ? '<td class="abierta">Lee o escribe el IMEI</td>'
+      : imei ? `<td class="imei">${imei}</td>` : '<td class="vacia">pulsa para poner el IMEI…</td>'
+    return `<tr class="${c === 'abierta' ? 'aqui' : ''}" data-i="${i}"><td>09/11/2026</td><td>Web</td><td class="sku">i14128NegroA</td>${celda}<td>402-0000000-000000${i + 1}</td><td><span class="est">Pendiente</span></td><td>09/11</td></tr>`
+  }).join('')
+}
+const fila6 = () => document.querySelector('tr[data-i="5"]')
+let y0 = 0
+function medir() { y0 = fila6().getBoundingClientRect().top }
+function comprobar() {
+  const dy = Math.round(fila6().getBoundingClientRect().top - y0)
+  document.getElementById('dy').textContent = `${dy > 0 ? '+' : ''}${dy} px`
+  document.getElementById('dyTxt').textContent = dy === 0 ? 'quieta ✔' : 'se ha movido ✘'
+  document.getElementById('mira').style.background = dy === 0 ? '#166534' : '#b91c1c'
+}
+function avisoHtml(txt) { return `<div class="aviso" role="alert"><span title="${txt}">${txt}</span><button aria-label="Cerrar aviso" onclick="cerrar()">✕</button></div>` }
+function pintarAviso() {
+  const zona = document.getElementById('zonaAviso'), barra = document.getElementById('barra'), flot = document.getElementById('flot')
+  zona.innerHTML = ''; zona.className = ''; flot.innerHTML = ''
+  barra.querySelector('.aviso')?.remove()
+  if (op === 'B') { zona.className = 'hueco'; if (aviso) zona.innerHTML = avisoHtml(aviso) }
+  if (!aviso) return
+  if (op === 'hoy') zona.innerHTML = avisoHtml(aviso)
+  if (op === 'A') { flot.innerHTML = avisoHtml(aviso); flot.firstChild.classList.add('flotante') }
+  if (op === 'C') barra.insertAdjacentHTML('beforeend', avisoHtml(aviso))
+}
+function cerrar() { medir(); aviso = null; pintarAviso(); comprobar() }
+function lanzar(txt) { medir(); aviso = txt; pintarAviso(); comprobar() }
+document.getElementById('leer').onclick = () => lanzar(TXT_CORTO)
+document.getElementById('largo').onclick = () => lanzar(TXT_LARGO)
+document.querySelectorAll('[data-op]').forEach((b) => b.onclick = () => {
+  op = b.dataset.op
+  document.querySelectorAll('[data-op]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)))
+  aviso = null; pintarAviso(); medir(); comprobar(); ponerRaton()
+})
+function ponerRaton() {
+  const tr = fila6(), hoja = document.getElementById('hoja')
+  const r = tr.children[3].getBoundingClientRect(), h = hoja.getBoundingClientRect()
+  const m = document.getElementById('raton'); m.style.left = (r.left - h.left + 60) + 'px'; m.style.top = (r.top - h.top + hoja.scrollTop + r.height / 2) + 'px'
+}
+pintarTabla(); pintarAviso(); medir(); comprobar(); ponerRaton()
+</script>
+</body>
+</html>

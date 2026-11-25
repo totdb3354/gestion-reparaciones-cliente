@@ -46,8 +46,11 @@ estaba el botón.
 «No válida» = más de 15 cifras, o 15 con la cifra de control (Luhn) mala. Es solo el formato del número; no se consulta nada.
 
 - **No se guarda** (no hay PUT) y **no frena**: la celda queda en rojo con «IMEI no válido · …6537» (las 4 últimas cifras
-  leídas) o «IMEI no válido · 16 cifras», el texto entero en el `title`, el aviso no modal de arriba de la tabla («Fila del pedido
-  X: IMEI no válido: … No se ha guardado.»), y el campo salta a la siguiente celda como con un IMEI bueno.
+  leídas) o «IMEI no válido · 16 cifras», el texto entero en el `title`, el aviso no modal («Pedido X: IMEI no válido: … No se ha
+  guardado.», con el mismo arranque que los demás avisos), y el campo salta a la siguiente celda como con un IMEI bueno.
+- **El aviso no mueve la tabla** (añadido tras probarlo en Chromium: el aviso encima de la tabla la empujaba ~40 px). Todos los
+  avisos de esa zona (no válido, repetido, fallo al guardar) van en la barra del buscador, en el hueco de la derecha, en una línea
+  (cortado con «…» y entero en el `title`), con su ✕. Prototipo: `assets/2026-11-25-pedidos-aviso-sin-mover-prototipo.html` (opción C).
 - **El salto se salta las celdas en rojo por lectura no válida** (son para revisar, no para picar encima).
 - **Al revisar**: pulsar la celda roja la abre con la lectura mala ya en el campo. Si se lee o escribe otro IMEI, sustituye a la
   lectura mala (una entrada tras pausa, como hoy con `SUSTITUIR_MS`) y se guarda; con uno bueno, salta como siempre. **Solo en
