@@ -80,7 +80,7 @@ En la fila de la que salió el IMEI, sin usuario, con el IMEI en `IMEI_ANTERIOR`
 
 - `DEVUELTO` — detalle «de Pedidos realizados a <caja>; IMEI cambiado por <usuario o proceso> el <fecha>».
 - `NO_DEVUELTO` — detalle con el motivo (`NO_APARECE` o «3 errores»).
-- `SIN_DESTINO` — detalle con la caja de origen («<caja> no es vendible») o «sin caja». Una sola vez por IMEI y fila.
+- `SIN_DESTINO` — detalle con la caja de origen («<caja> no es vendible»), «sin caja» o «reparado después (<ID_REP>)». Una sola vez por IMEI y fila.
 
 Se añaden a `CambioImei` y al texto del historial en la web.
 
@@ -107,6 +107,11 @@ Se calcula en cada llamada; no se guarda. Un IMEI entra si cumple todo:
 
 **Destino:** el `ORIGEN_NSYS` de ese `DESCONTADO`. Si hoy no es vendible (§3, por caja o por grado del móvil) o está vacío,
 el IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` (una vez).
+
+**Reparado después (decidido 25/11, caso 404-4440823):** si el móvil tiene una reparación (`Reparacion`, cualquier tipo:
+reparación, glass o pulido) con `FECHA_ASIG` posterior al `DESCONTADO` del bot, la caja de antes ya no vale (chasis, tapa,
+batería…). El IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` «reparado después (<ID_REP>)». Lo mueve una persona a
+la caja donde esté de verdad.
 
 **Apuntes:** el ERP escribe `DEVUELTO` / `NO_DEVUELTO` al recibir el `POST` del bot (§6.2); `SIN_DESTINO` al calcular la lista.
 
@@ -285,6 +290,4 @@ hasta que exista esta lista: añadirá filas con motivo `RESERVA_LIBERADA` (§6)
 cuadre o esté en otro pedido, y corrige pedidos ya asociados si cambia el libro); cada IMEI quitado sigue quedando como TIPO
 `IMEI` + `DETALLE` «LIBRO». Habrá más IMEI retirados, pero el contrato no cambia. La marca `NO_VENDIBLE` se descartó (25/11): ver §7.
 
-**Pendiente de decidir (24/11, caso 404-4440823):** los tres móviles retirados se repararon para el pedido DESPUÉS de que el bot
-los descontara (chasis, tapa, batería). La «caja de antes» ya no vale. Propuesta: con una reparación posterior a la entrada en
-«Pedidos realizados», sin devolución automática (`SIN_DESTINO`, «reparado después»), y columna «Reparado después» en el saneamiento.
+**Decidido (25/11, caso 404-4440823):** reparado después → sin devolución automática, lo mueve una persona (§5).
