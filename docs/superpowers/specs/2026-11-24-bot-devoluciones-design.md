@@ -100,6 +100,17 @@ Se calcula en cada llamada; no se guarda. Un IMEI entra si cumple todo:
    cualquier lote): `VENTA_DESHECHA` (estaba Released y vuelve), `REENTRADA` (entra como lote nuevo), o `UBICACION` que sale de
    «Pedidos realizados» (`DE`) o entra «sin localización» (`A_NSYS` vacío). Una devolución entra siempre «sin localización»
    (Imad). Sin vuelta registrada, la fila cuenta y no se devuelve (en la duda, no). Las filas abiertas cuentan siempre.
+
+   **Decidido 25/11 (cancelaciones), mismo criterio que el aviso de IMEI duplicado (`FilasDAO.SQL_DUPLICADO`):**
+   - Fila con **«Cancelar móvil»** (`MARCA = 'CANCELADO'`) que aún tiene el IMEI: no se está vendiendo; cuenta como **salida**
+     (fecha `MARCA_EN`, quien la canceló) y el móvil se devuelve solo, salvo que la fila tuviera la etiqueta impresa
+     (`IMPRESA_EN`): entonces salió y no se toca.
+   - Fila **«Ya no está en ShippyPro»** (cerrada sin envío, sin cancelar) con un IMEI puesto antes del cierre: puede ser una
+     cancelación o un envío por fuera de ShippyPro (comprobado en prod el 25/11: hay de los dos). **No se devuelve sola**:
+     `SIN_DESTINO` «el pedido ya no está en ShippyPro: comprobar si salió». Si el IMEI se puso después del cierre, el ERP lo da
+     por vendido (como hoy en vendidos) y no se hace nada.
+   - Fila enviada con «Falta por enviar»: se está vendiendo (cuenta).
+   - La salida que vale es la más reciente de: el apunte que quitó el IMEI, la cancelación o el cierre «ya no está».
 3. **Lo movió el bot:** hay un `DESCONTADO · OK` en `Bot_movimiento`.
 4. **Nadie lo ha tocado después:** el espejo (`Nsys_movil`) lo tiene `DE_PEDIDO` en «Pedidos realizados», y su última
    entrada en esa caja (último `Nsys_evento` UBICACION con `A_NSYS` = «Pedidos realizados») es la primera exportación
