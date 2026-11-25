@@ -151,14 +151,22 @@ como `IMEIS_MOVIDOS_RUN`).
   Cualquier excepción a mitad: los que quedaban → `ERROR` (`"error_devolver"`), `[AVISO]` con la etapa, y se devuelve el dict (no
   relanza). Cada resultado va a `MOVIMIENTOS_ERP` como `erp_bot.movimiento(imei, "DEVUELTO", resultado, origen=LOCATION_DESTINO,
   destino=destino, motivo=<el de la lista>)`.
+- **Vendidos del Panel (petición de Imad 25/11):** `obtener_rezagados` ya descarga las ventas del Panel de 14 días (Simulador +
+  PEDIDOS 2026, `accion=verificacion`); guardar también el conjunto completo de esas IMEI en un global `VENDIDOS_PANEL: set[str]`
+  (además de lo que devuelve hoy), sin cambiar su resultado. Si la descarga falla, `VENDIDOS_PANEL = None`.
 - `devolver(page, a_mover)`: si `not devolver_activo()` → 0 (sin pedir la lista). `grupos = erp_bot.devoluciones()`; `None` →
-  `[AVISO]`, 0. Quitar de cada grupo los IMEI de `a_mover` (vender gana); quitar grupos vacíos y grupos cuyo destino esté en
+  `[AVISO]`, 0. **Si `VENDIDOS_PANEL` es `None` (no se pudo saber qué vendió el Panel) → no se devuelve nada en esta vuelta
+  (`[AVISO]`, 0): en la duda, no.** Quitar de cada grupo los IMEI de `a_mover` (vender gana) **y los de `VENDIDOS_PANEL`** (el ERP no ve
+  esas ventas: un reservado que se vendió por el Simulador no debe volver a stock); estos últimos se apuntan en `movimientos.csv`
+  como `vendido_panel_no_devolver` una vez al día por IMEI (mismo lector que `en_revisar`) y **no se informan al ERP** (el contrato
+  de la 0.9.47 solo admite OK / NO_APARECE / ERROR; si el ERP añade un resultado para esto, se informará entonces); quitar grupos vacíos y grupos cuyo destino esté en
   `LOCATIONS_NO_TOCAR` o sea `LOCATION_DESTINO` (defensa: el ERP nunca debería mandarlos). Los primeros `TOPE_GRUPOS_DEVOLVER`
   grupos, uno a uno con `devolver_grupo`. Línea final `DEVUELTOS: n (grupos g de G)`.
 - `main()`: tras `mover_sin_tocar_revisar` y **antes** de `limpiar_filtros` + `exportar_xls`, en try/except propio:
   `etapa("devolver"); devolver(page, a_mover)`. Una excepción → `[AVISO]` y se sigue a exportar.
 - Tests (monkeypatch como `test_bot_revisar.py`, con una `_Tabla` falsa): interruptor apagado → no pide la lista ni filtra; lista
-  `None` → nada; vender gana; tope de 5 grupos; página con una fila fuera de «Pedidos realizados» → no se mueve y ERROR; fila en
+  `None` → nada; vender gana; un IMEI vendido en el Panel no se devuelve ni se informa y queda en el csv una vez al día;
+  `VENDIDOS_PANEL` desconocido → no se devuelve nada; tope de 5 grupos; página con una fila fuera de «Pedidos realizados» → no se mueve y ERROR; fila en
   revisar → no se mueve; NO_APARECE para los que no salen; excepción a mitad → ERROR para los que quedan y el siguiente grupo sigue;
   `mover_pagina_actual` recibe el destino del grupo; los DEVUELTO llegan a `MOVIMIENTOS_ERP` con el motivo; en `test_bot_exportar`,
   una excepción en `devolver` no impide exportar y el orden es mover → devolver → exportar → informar.
