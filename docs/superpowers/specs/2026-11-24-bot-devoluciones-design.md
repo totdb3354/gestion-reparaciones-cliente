@@ -112,6 +112,8 @@ el IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` (una vez).
 reparación, glass o pulido) con `FECHA_ASIG` posterior al `DESCONTADO` del bot, la caja de antes ya no vale (chasis, tapa,
 batería…). El IMEI **no sale** en la lista y la fila recibe `SIN_DESTINO` «reparado después (<ID_REP>)». Lo mueve una persona a
 la caja donde esté de verdad.
+Ojo con la hora: `Reparacion.FECHA_ASIG` se escribe con `NOW()` de MariaDB (UTC) y `Bot_movimiento`/`Nsys_evento` van en hora
+de Madrid; comparar en la misma zona. El saneamiento usa 3 h de margen y lo enseña en la columna «Reparado después».
 
 **Apuntes:** el ERP escribe `DEVUELTO` / `NO_DEVUELTO` al recibir el `POST` del bot (§6.2); `SIN_DESTINO` al calcular la lista.
 
