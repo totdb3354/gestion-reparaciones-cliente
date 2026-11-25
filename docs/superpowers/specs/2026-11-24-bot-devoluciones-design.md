@@ -151,15 +151,17 @@ No se rechaza ni se marca: NSYS a veces se equivoca (p. ej. la capacidad, 24/11)
 libro, traspaso): si el móvil no es vendible (§3, con la excepción), la celda lo dice en **rojo** con un motivo corto, y se
 puede **validar** como hoy el de capacidad (`VALIDADA_IMEI`). Solo dos motivos:
 
-- **por el grado:** «grado F» / «grado FD» / «grado RMA» (ya existe desde la 0.9.46.2: «no se vende»);
-- **por la caja (nuevo):** «en <caja>» cuando la caja de NSYS no cuenta como stock (Pedidos realizados, revisar, no cuenta,
-  no se trae, desconocida).
+- **por el grado:** `no se vende: F` (FD, RMA), como ya está desde la 0.9.46.2;
+- **por la caja (nuevo):** `no se vende: <caja>` cuando la caja de NSYS no cuenta como stock (Pedidos realizados, revisar, no
+  cuenta, no se trae, desconocida). Rojo, fondo rojo, cuenta en «no cuadran» y se da por bueno con «Validar SKU», igual que el
+  de grado (tabla de la celda en `docs/modulos/pedidos.md`).
 
 ### 7.2 El bot solo descuenta lo validado
 
 En `SQL_VENDIDOS`, una fila cuyo móvil no es vendible solo sale si `VALIDADA_IMEI` = su IMEI. Si se cambia el IMEI, la
-validación deja de valer (como hoy). Afecta también a los pedidos **impresos**: en la 0.9.46.2 sus avisos solo informan y no se
-validan; este aviso tiene que poder validarse también ahí, o el bot no los descontaría nunca.
+validación deja de valer (como hoy). En los pedidos **impresos** se respeta la 0.9.46.2: el aviso solo
+informa y no cuenta en «no cuadran»; la única excepción es que el aviso `no se vende` (grado o caja) **sí** se puede validar ahí,
+o el bot no descontaría nunca ese móvil. El resto de avisos de un impreso sigue sin validarse.
 
 **Ojo:** el código de la celda y de la asociación es de las versiones 0.9.46.x (en `main`). Esta pieza va encima, en la 0.9.47.
 
