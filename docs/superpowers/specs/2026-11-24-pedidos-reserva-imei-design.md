@@ -102,7 +102,10 @@ falla, la vuelta sigue OK con un aviso. En este orden:
      NSYS porque no lo encuentra);
    - `NO_DISPONIBLE`: el teléfono ya no está en la empresa o su estado no es STOCK (vendido, baja, otra caja que no cuenta). «De
      pedido» solo vale con `al-bot` encendido (es el descuento de esta misma reserva); con `al-bot` apagado, un reservado «de
-     pedido» se vendió por otro lado (p. ej. una venta directa del Simulador) y se suelta como `NO_DISPONIBLE`;
+     pedido» se vendió por otro lado (p. ej. una venta directa del Simulador) o lo descontó el bot con `al-bot` encendido antes
+     de apagarlo: se suelta como `EN_PEDIDOS_REALIZADOS` y el bot lo deja «sin destino» (una persona comprueba);
+   - lo soltado por `ENVIADA_SIN_IMEI`, `CON_ETIQUETA` o `EN_PEDIDOS_REALIZADOS` no se vuelve a reservar en 30 días (sin `al-bot`,
+     NSYS lo sigue dando como stock aunque seguramente salió); Ms «a secas» tampoco se reserva (revisión final, 25/11);
    - `PUESTO_EN_OTRA`: el IMEI reservado se ha puesto en otra fila (no es candidato a devolución: se vende por esa fila).
    - (detalle de `ENVIADA_SIN_IMEI`) seguramente salió el reservado sin picarlo: se suelta, pero **no** es candidato a devolución.
    Con `al-bot` encendido, un teléfono en «Pedidos realizados» con reserva es lo esperado (el bot ya lo descontó): **no** se suelta. Todo se vuelve a
