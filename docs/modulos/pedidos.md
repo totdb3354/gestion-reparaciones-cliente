@@ -119,6 +119,7 @@ poner igual en cualquier fila de ese SKU.
 
 **Panel de la fila:** datos del pedido, envío, historial de la fila (quién puso o cambió el IMEI, marcas, etiqueta, sincronización),
 previsualizar la etiqueta, marcar «Falta por enviar», «Cancelar móvil / Quitar cancelación».
+Desde la 0.9.47, el historial también recoge los tres apuntes del bot de NSYS al devolver a stock un móvil que salió del pedido: «Devuelto a stock», «No se pudo devolver» y «No se devuelve solo (lo mueve una persona)», cada uno con su motivo (sin caja, caja o grado que no se vende, reparado después).
 
 **Botones flotantes:** «↓ Al final» y «Fila seleccionada».
 
