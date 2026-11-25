@@ -158,8 +158,11 @@ como `IMEIS_MOVIDOS_RUN`).
   `[AVISO]`, 0. **Si `VENDIDOS_PANEL` es `None` (no se pudo saber qué vendió el Panel) → no se devuelve nada en esta vuelta
   (`[AVISO]`, 0): en la duda, no.** Quitar de cada grupo los IMEI de `a_mover` (vender gana) **y los de `VENDIDOS_PANEL`** (el ERP no ve
   esas ventas: un reservado que se vendió por el Simulador no debe volver a stock); estos últimos se apuntan en `movimientos.csv`
-  como `vendido_panel_no_devolver` una vez al día por IMEI (mismo lector que `en_revisar`) y **no se informan al ERP** (el contrato
-  de la 0.9.47 solo admite OK / NO_APARECE / ERROR; si el ERP añade un resultado para esto, se informará entonces); quitar grupos vacíos y grupos cuyo destino esté en
+  como `vendido_panel_no_devolver` una vez al día por IMEI (mismo lector que `en_revisar`) y **no se informan al ERP** mientras el ajuste
+  `"informar_vendido_panel": true` no esté en `stock_config.json` (la 0.9.47 solo admite OK / NO_APARECE / ERROR; la 0.9.48 añade
+  `VENDIDO_PANEL`, final como NO_APARECE). Con el ajuste: `erp_bot.movimiento(imei, "DEVUELTO", "VENDIDO_PANEL", origen=
+  LOCATION_DESTINO, destino=<destino del grupo>, motivo=<el de la lista>)`, y la validación previa de `erp_bot` acepta
+  `VENDIDO_PANEL` solo con ese ajuste (sin él, iría a rechazados). Se enciende cuando la 0.9.48 esté en producción; quitar grupos vacíos y grupos cuyo destino esté en
   `LOCATIONS_NO_TOCAR` o sea `LOCATION_DESTINO` (defensa: el ERP nunca debería mandarlos). Los primeros `TOPE_GRUPOS_DEVOLVER`
   grupos, uno a uno con `devolver_grupo`. Línea final `DEVUELTOS: n (grupos g de G)`.
 - `main()`: tras `mover_sin_tocar_revisar` y **antes** de `limpiar_filtros` + `exportar_xls`, en try/except propio:
