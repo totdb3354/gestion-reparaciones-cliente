@@ -148,6 +148,10 @@ ningún rol de usuario las abre. Vendidos no cambia.
 **EN ESPERA (25/11):** nunca se bloquea el input del IMEI. Otra sesión está cambiando cómo funcionan los avisos y la
 validación de la celda; §7 se cierra con sus conclusiones (Imad las pasa al acabar). Hasta entonces, lo de abajo es provisional y
 el plan 2 no incluye esta pieza.
+Coordinación (25/11): la sesión «IMEI en la celda» (rama web `dev_pedidos_imei_celda`, informe en Apuntes) reescribe
+`CeldaImei.tsx`, `TablaFilas.tsx`, `PedidosPage.tsx`, `estado.ts`, `filas.ts`, `AyudaPedidos.tsx` y sus pruebas; «Validar SKU»
+queda solo en el panel de la derecha y los avisos de SKU nunca frenan. La parte web de §7 (aviso por caja, validar en impresos)
+parte de esa rama una vez mergeada; no tocar esos ficheros en paralelo. El servidor no lo toca esa sesión.
 
 ### 7.1 Aviso rojo validable
 
