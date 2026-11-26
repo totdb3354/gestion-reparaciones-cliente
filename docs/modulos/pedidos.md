@@ -11,8 +11,11 @@ Los datos de este documento son de ejemplo. La operación real (máquinas, clave
 - **Logística** ve los móviles que hay que preparar, descarga el **Listado** de lo que hay que buscar en el almacén, pone el
   IMEI de cada móvil (a mano o con la pistola) y marca las incidencias (falta stock, cancelado…).
 - **Atención al cliente** sincroniza con la web los IMEI de los pedidos de las webs (plugin de WordPress), que van a la factura.
-- **El bot de vendidos** (automatización de stock, fuera del ERP) mueve en NSYS a «Pedidos realizados» los móviles que tienen
-  IMEI en un pedido, para que dejen de contar como stock.
+- **El bot de NSYS** (automatización de stock, fuera del ERP) mueve en NSYS a «Pedidos realizados» los móviles que tienen
+  IMEI en un pedido (y, con el ajuste encendido, los **reservados**), para que dejen de contar como stock; le dice al ERP qué
+  ha movido y **devuelve a su caja** los que el ERP le pide (IMEI corregidos y reservas soltadas). Ver §5.
+- **La reserva de IMEI** (desde la 0.9.48): el ERP aparta un móvil concreto para cada fila que espera, y logística lo ve como
+  sugerencia al picar. Ver §2.4.
 - Pantalla para SUPERTECNICO y ADMIN. El técnico no la ve.
 
 ## 2. De dónde salen los datos
@@ -23,7 +26,9 @@ Libros de ventas de Amazon (Google Drive) ──(cada 10 min, solo lectura)─�
 Hoja PEDIDOS 2026 ──(una vez, a mano)──► ERP: carga del histórico y traspaso de los IMEI ya tecleados
 NSYS (espejo del stock) ──► ERP: avisos de la celda del IMEI (qué es el móvil, dónde está)
 
-ERP ──GET /api/pedidos/vendidos (clave)──► bot de vendidos ──► NSYS («Pedidos realizados»)
+ERP ──GET /api/pedidos/vendidos (clave)──► bot de NSYS ──► NSYS («Pedidos realizados»)
+bot de NSYS ──POST /api/bot/movimientos (clave propia)──► ERP: lo que ha descontado y devuelto (tabla Bot_movimiento)
+ERP ──GET /api/bot/devoluciones (clave propia)──► bot de NSYS ──► NSYS (de «Pedidos realizados» a su caja)
 ERP ──GET (clave)──► plugin de la web ──► factura del pedido de WooCommerce
 plugin de la web ──POST /api/pedidos/sincronizados (clave)──► ERP: «ya sincronizado» y quita «Falta por enviar»
 ```
@@ -70,6 +75,54 @@ desde Drive cuando cambian (pedidos de los últimos 30 días) y:
 `POST /api/pedidos/historico` (ADMIN) lee la hoja entera, borra el histórico anterior y, en una transacción: traspasa a las filas
 pendientes del ERP los IMEI ya tecleados en la hoja (por número de pedido de Amazon; sin número, o en las webs, por SKU entre las
 filas recientes) y carga el resto como **histórico** (filas grises, no editables). Repetirla da el mismo resultado.
+
+### 2.4 La reserva de IMEI (`Reservas` + `Reparto`, desde la 0.9.48)
+
+Al final de cada lectura de ShippyPro (cada 5 minutos), en tres pasos:
+
+1. **Resuelve** las reservas de las filas que ya tienen IMEI: si se picó el reservado, «Confirmado por …»; si se picó otro,
+   «Picó otro» y «Vuelve a stock» (la reserva queda **sustituida**).
+2. **Suelta** las reservas que ya no valen, con su motivo en el historial: cancelada, marcada (en espera de stock, en revisión,
+   pendiente de color), ya no está en ShippyPro, con la etiqueta impresa, enviada sin IMEI, el móvil no se encuentra (cajas de
+   «Pendiente revisar…»), no disponible (vendido, de baja, caja que no cuenta), puesto en otra fila, o ya en «Pedidos realizados»
+   sin el ajuste del bot encendido.
+3. **Reparte** un móvil a cada fila viva sin IMEI ni reserva, y apunta «sin stock» a las que se quedan sin. Nunca reserva un Ms,
+   un móvil puesto o reservado en otra fila, ni lo que una reserva soltada «seguramente salió» (fuera 30 días). Con un trabajo del
+   taller abierto, el móvil solo vale si es exactamente el SKU del pedido.
+
+**Orden del reparto** (el «Puesto N» del historial). Amazon (tabla 4.1 del spec):
+
+| Puesto | Móvil |
+|---|---|
+| 1 | Mismo formato SIM, mismo color, grado del pedido o N/A |
+| 2 | Mismo formato SIM, B o C (cualquier color: el chasis se cambia al subirlo a A) |
+| 3 | El otro formato (eSIM ↔ física), mismo color, grado del pedido o N/A |
+| 4 | El otro formato, B o C |
+| 5 | Mismo formato, otro color, N/A |
+| 6 | El otro formato, otro color, N/A |
+| 7 | Mismo formato, otro color, A/A- (hay que transformarlo) |
+| 8 | El otro formato, otro color, A/A- |
+
+Webs (tabla 4.2): el SKU exacto del pedido (puesto 1) o, si el pedido es A o A100, un B o C (puesto 2), siempre del mismo color y
+formato SIM; nunca un N/A por caja. Dentro de cada puesto: la caja (Listos → Reparación / Pantalla rota → Pulir → Glass →
+Devolución y «En revisión»), el grado, la recepción más antigua y el IMEI. Un móvil en «Funcionalidad pendiente» o sin caja
+(«En revisión») cuenta como N/A. **Una reserva no se cambia por otra mejor** si aparece después: se queda hasta que se suelta.
+
+En la tabla: el IMEI reservado sale tenue en la celda, los contadores «reservadas» y «sin stock» se pueden pulsar, y el desplegable
+de recomendados trae primero el reservado de la fila («reservado para este pedido») y nunca los reservados de otras filas.
+
+**Reservas y NSYS (`PEDIDOS_RESERVA_AL_BOT`).** Apagado, la reserva vive solo en el ERP (el móvil sigue a la venta). Encendido
+(en producción desde el 26/11/2026), `/api/pedidos/vendidos` trae también los reservados de **todas** las filas vivas, sin la
+ventana de días (desde la 0.9.48.1), y el bot los pasa a «Pedidos realizados» en su vuelta siguiente: dejan de venderse en el
+Panel y las webs desde que se reservan. Si la reserva se suelta o se pica otro, el ERP pide devolverlo (§5).
+
+| Versión | Cambio |
+|---|---|
+| 0.9.48 | La reserva, con el ajuste apagado |
+| 0.9.48.1 | Los reservados llegan al bot sin la ventana de días de vendidos |
+| 0.9.48.2 | Solo los reservados con caja en NSYS (los sin caja no se podían devolver) |
+| 0.9.48.3 | Todos otra vez: lo que vino sin caja se devuelve a la localización `--------------` (§5) |
+| 0.9.48.4 | (26/11, en curso) Los puestos 3, 4, 6 y 8 empiezan a funcionar: el reparto no reconocía un eSIM como el mismo modelo que el físico («15 PRO eSIM» frente a «15 PRO» en el maestro) |
 
 ## 3. La tabla
 
@@ -119,7 +172,7 @@ poner igual en cualquier fila de ese SKU.
 
 **Panel de la fila:** datos del pedido, envío, historial de la fila (quién puso o cambió el IMEI, marcas, etiqueta, sincronización),
 previsualizar la etiqueta, marcar «Falta por enviar», «Cancelar móvil / Quitar cancelación».
-Desde la 0.9.47, el historial también recoge los tres apuntes del bot de NSYS al devolver a stock un móvil que salió del pedido: «Devuelto a stock», «No se pudo devolver» y «No se devuelve solo (lo mueve una persona)», cada uno con su motivo (sin caja, caja o grado que no se vende, reparado después).
+Desde la 0.9.47, el historial también recoge los tres apuntes del bot de NSYS al devolver a stock un móvil que salió del pedido: «Devuelto a stock», «No se pudo devolver» y «No se devuelve solo (lo mueve una persona)», cada uno con su motivo (§5). Desde la 0.9.48, los de la reserva: «Reservado» (con su puesto), «Confirmado por …», «Picó otro» + «Vuelve a stock», «Reserva quitada» (con su motivo) y «Sin stock».
 
 **Botones flotantes:** «↓ Al final» y «Fila seleccionada».
 
@@ -133,11 +186,39 @@ Desde la 0.9.47, el historial también recoge los tres apuntes del bot de NSYS a
   pedido X»). Sí si la otra fila está cancelada o ya se envió (un móvil devuelto puede volver a salir). Quitar la cancelación pasa la misma comprobación: si el IMEI ya está en otra fila que cuenta, 409 y la fila sigue cancelada.
 - **Lo que cuenta como vendido** (lista del bot, `GET /api/pedidos/vendidos`): las filas con IMEI puesto en los últimos días, salvo
   las canceladas y las que ya no están en ShippyPro sin envío (pedido anulado con el IMEI ya puesto: ese móvil no salió). Excepción:
-  una fila web así **cuenta si la web la ha sincronizado** (pedidos juntados en una sola caja: el móvil sí salió).
+  una fila web así **cuenta si la web la ha sincronizado** (pedidos juntados en una sola caja: el móvil sí salió). Con
+  `PEDIDOS_RESERVA_AL_BOT` encendido, también los reservados de las filas vivas (§2.4).
 - **Envío parcial (webs).** Con la etiqueta generada, el móvil que no entra en la caja se marca «Falta por enviar»; la marca se quita
   al sincronizar la web o a mano con «Ya ha salido». Cancelar la fila quita «Falta por enviar» (apunte «al cancelar» en el historial) y no se puede marcar en una cancelada (409). En el despliegue de la 0.9.42 la migración sql/migracion-cancelado-sin-falta.sql limpió las filas viejas que tenían las dos (sin apunte).
 
-## 5. El Listado
+## 5. El bot de NSYS: descontar, informar y devolver (desde la 0.9.47)
+
+El bot vive en el repo de automatización (`stock/nsys_bot_completo.py`, PC de stock, cada 10 minutos). Lo que hace con el ERP:
+
+- **Descontar**: pide `/api/pedidos/vendidos` (y las ventas del Panel), los pega en el filtro de IMEI de NSYS **en tandas de 900
+  como mucho** (con 1.000 o más NSYS devuelve la tabla vacía sin error; arreglado el 26/11/2026) y los mueve a «Pedidos
+  realizados». Nunca saca un móvil de las cajas de «Pendiente revisar…».
+- **Informar**: manda al ERP (`POST /api/bot/movimientos`) cada `DESCONTADO` con su caja de origen y cada `DEVUELTO` con su
+  resultado (OK, NO_APARECE, ERROR, VENDIDO_PANEL). Lo que no puede enviar lo guarda y lo reenvía en la vuelta siguiente.
+- **Devolver** (interruptor `"devolver"` del bot, encendido desde el 26/11/2026): pide `/api/bot/devoluciones` y mueve cada móvil
+  de «Pedidos realizados» al destino que le da el ERP.
+
+**Qué pide devolver el ERP** (`ReglaDevoluciones`): un móvil que el bot descontó (DESCONTADO OK), que después salió de su fila
+(otro IMEI encima, «Cancelar móvil» sin etiqueta impresa, reserva soltada o sustituida) y que el espejo de NSYS sigue viendo en
+«Pedidos realizados» desde ese descuento, salvo que otra fila lo esté vendiendo o ya haya salido (vender gana a devolver). Va a
+**la caja de la que lo sacó el bot**, solo si cuenta como stock (Listos, Reparación, Pantalla rota, Pulir, Glass, Funcionalidad
+pendiente). Desde la 0.9.48.3, lo que salió **sin caja** («En revisión») vuelve a la localización `--------------` (NSYS no deja
+mover a «sin localización»; el ERP la trata igual que sin caja), solo si el espejo confirma que entró desde «En revisión».
+
+**No se devuelve solo** (apunte «No se devuelve solo», lo mueve una persona): sin caja de origen sin confirmar, caja que no cuenta
+como stock (CF021, AFaltaRepuestos…), grado F/FD/RMA, reparado después del descuento, «Ya no está en ShippyPro» (mezcla
+cancelados y enviados: comprobar si salió), reserva soltada con la etiqueta impresa o enviada sin IMEI. Tras tres ERROR seguidos
+deja de pedirlo. Si está vendido en el Panel, el bot no lo devuelve (`VENDIDO_PANEL`).
+
+**Vuelta atrás**: en el bot, `"devolver": false`; en el ERP, quitar `PEDIDOS_RESERVA_AL_BOT` del compose (los reservados ya
+descontados se sueltan como «ya en Pedidos realizados» y se devuelven a mano).
+
+## 6. El Listado
 
 Botón «Listado»: un Excel «Listado dd-MM HHhmm.xlsx» con una pestaña por plataforma, cada una para imprimir en A4:
 - **AMZ** y **FNSK**: dos tablas SKU × país con el total, «Para hoy» (salen hoy o ya van tarde) y «Pueden esperar».
@@ -149,7 +230,7 @@ Cuenta las filas **sin IMEI** y sin «Cancelado» que siguen pendientes o con «
 los pendientes de fuera, o la búsqueda), con los filtros de columna y el orden puestos. Columnas: Fecha, Plataforma, SKU, IMEI,
 Pedido, Enviado, Fecha compra, Marca y Nota marca, con los textos de la pantalla. Sin filas a la vista, la opción sale deshabilitada.
 
-## 6. Ajustes del servidor
+## 7. Ajustes del servidor
 
 Variables de entorno (valores fuera del repositorio):
 
@@ -163,11 +244,13 @@ Variables de entorno (valores fuera del repositorio):
 | `PEDIDOS_HISTORICO_HOJA` | Id de la hoja para la carga del histórico |
 | `PEDIDOS_VENDIDOS_CLAVE` | Clave de máquina del bot (`X-API-Key`) |
 | `PEDIDOS_SINCRONIZADOS_CLAVE` | Clave de máquina del plugin de la web |
+| `PEDIDOS_BOT_CLAVE` | Clave propia del bot para `/api/bot/movimientos` y `/api/bot/devoluciones` (la de vendidos no vale ahí) |
+| `PEDIDOS_RESERVA_AL_BOT` | `true`: el bot descuenta también los reservados (§2.4). Por defecto apagado |
 
 La cuenta de servicio de Google (la misma de NSYS) necesita lectura en los libros y en la hoja. Sin clave, las rutas de máquina
 responden 404 (apagadas) o 401.
 
-## 7. Cuando algo falla
+## 8. Cuando algo falla
 
 | Síntoma | Qué mirar |
 |---|---|
@@ -176,17 +259,21 @@ responden 404 (apagadas) o 401.
 | Píldora de los libros en ámbar | Drive no responde o el libro no se comparte; se reintenta cada 10 min |
 | Muchas filas «para revisar» | Pedidos de Amazon con etiqueta sin IMEI en el ERP; IMEI cambiados en el libro y no en el ERP |
 | Fila «Ya no está en ShippyPro» que sí salió | Juntada con otro pedido o etiqueta hecha a mano; el stock lo cubre la sincronización de la web |
-| El bot no mueve un móvil | Que la fila tenga IMEI y no esté cancelada; que el bot tenga la clave; el log del bot (`[AVISO] ERP`) |
+| El bot no mueve un móvil | Que la fila tenga IMEI y no esté cancelada; que el bot tenga la clave; el log del bot (`[AVISO] ERP`); que pegue en tandas («IMEIs en N tandas») |
+| El bot no mueve nada en horas («Tabla vacia» con la lista entera) | La versión del bot: sin las tandas de 900, con 1.000 IMEI o más NSYS devuelve la tabla vacía |
+| Un móvil no vuelve a su caja | El historial de la fila («No se devuelve solo» y su motivo); `Bot_movimiento` (DEVUELTO y su resultado); la vuelta del bot (`DEVUELTOS: N`) |
+| Una reserva rara (otro color, N/A) | El «Puesto N» del historial y el orden de §2.4; la reserva no se mejora sola si aparece después un móvil mejor |
 | La web no recibe un IMEI | La fila debe tener IMEI y ser de esa web; la clave del plugin; «Revisar y sincronizar» |
 
 Cada pieza externa tiene su interruptor (vuelta atrás sin tocar el ERP): la lectura y los libros con su variable; el bot y el
-plugin, quitando su clave.
+plugin, quitando su clave; la devolución, con `"devolver": false` en el bot; la reserva al bot, quitando `PEDIDOS_RESERVA_AL_BOT`.
 
-## 8. Specs y planes
+## 9. Specs y planes
 
 Por orden: `2026-11-04-pieza2-pedidos`, `2026-11-10-pedidos-tabla`, `2026-11-11-pedidos-pantalla-v2`,
 `2026-11-11-pedidos-vendidos-para-el-bot`, `2026-11-13-pedidos-envios-parciales`, `2026-11-13-pedidos-marcas`,
 `2026-11-13-pedidos-amazon-asociacion`, `2026-11-16-pedidos-validar-sku`, `2026-11-18-pedidos-buscar-y-salida` (con el §8 de los
-pedidos juntados), `2026-11-24-pedidos-celda-imei-y-cajas` (0.9.45) y, para después, `2026-11-20-pedidos-juntar` (en `docs/superpowers/specs/`, con su plan en
+pedidos juntados), `2026-11-24-pedidos-celda-imei-y-cajas` (0.9.45), `2026-11-24-bot-devoluciones-design` (0.9.47, con sus planes 1-3),
+`2026-11-24-pedidos-reserva-imei-design` (0.9.48) y, para después, `2026-11-20-pedidos-juntar` (en `docs/superpowers/specs/`, con su plan en
 `docs/superpowers/plans/`). Rutas y DTO: `gestion-reparaciones-servidor/docs/api_contract.md`. Tablas:
 `gestion-reparaciones-servidor/docs/schema.md`.
