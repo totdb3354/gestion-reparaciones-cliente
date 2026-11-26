@@ -67,10 +67,10 @@ la mira puede picar un Ms a mano. El recomendador de la celda sigue proponiendo 
 | Puesto | Teléfono | Formato | Color |
 |---|---|---|---|
 | 1 | El SKU exacto del pedido en la columna del canal (`ac.acepta(skuQueVale)`; grado y «100» incluidos) | el del pedido | el del pedido |
-| 2 | B o C, **solo si el pedido es A o A100** (la batería va con la reparación); para A- no | el del pedido | el del pedido |
+| 2 | N/A, **solo si el pedido es A o A100** (desde la 0.9.49; spec `2026-11-26-pedidos-reserva-web-na-design.md`) | el del pedido | el del pedido |
+| 3 | B o C, **solo si el pedido es A o A100** (la batería va con la reparación); para A- no | el del pedido | el del pedido |
 
-Nunca otro formato, otro color ni Ms en la web: eso lo negocia y lo pone una persona. Los pedidos web de N/A no existen hoy; cuando
-existan, el puesto 1 (SKU exacto) ya los cubre.
+Nunca otro formato, otro color ni Ms en la web: eso lo negocia y lo pone una persona.
 
 ### 4.3 Dentro de un puesto
 
