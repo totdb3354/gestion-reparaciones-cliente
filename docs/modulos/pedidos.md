@@ -103,8 +103,8 @@ Al final de cada lectura de ShippyPro (cada 5 minutos), en tres pasos:
 | 7 | Mismo formato, otro color, A/A- (hay que transformarlo) |
 | 8 | El otro formato, otro color, A/A- |
 
-Webs (tabla 4.2): el SKU exacto del pedido (puesto 1) o, si el pedido es A o A100, un B o C (puesto 2), siempre del mismo color y
-formato SIM; nunca un N/A por caja. Dentro de cada puesto: la caja (Listos → Reparación / Pantalla rota → Pulir → Glass →
+Webs (tabla 4.2): el SKU exacto del pedido (puesto 1) o, si el pedido es A o A100, un N/A (puesto 2, desde la 0.9.49: n/a, sin
+caja o Devolución) o un B o C (puesto 3), siempre del mismo color y formato SIM. Un N/A por caja nunca vale como exacto. Dentro de cada puesto: la caja (Listos → Reparación / Pantalla rota → Pulir → Glass →
 Devolución y «En revisión»), el grado, la recepción más antigua y el IMEI. Un móvil en «Funcionalidad pendiente» o sin caja
 («En revisión») cuenta como N/A. **Una reserva no se cambia por otra mejor** si aparece después: se queda hasta que se suelta.
 
@@ -122,6 +122,7 @@ Panel y las webs desde que se reservan. Si la reserva se suelta o se pica otro, 
 | 0.9.48.1 | Los reservados llegan al bot sin la ventana de días de vendidos |
 | 0.9.48.2 | Solo los reservados con caja en NSYS (los sin caja no se podían devolver) |
 | 0.9.48.3 | Todos otra vez: lo que vino sin caja se devuelve a la localización `--------------` (§5) |
+| 0.9.49 | Reserva web: un N/A (n/a, sin caja o Devolución) del mismo modelo, formato y color vale para un pedido A o A100, delante del B o C; acompaña a la regla «n/a como A» del ciclo de stock |
 | 0.9.48.4 | (26/11 15:45, en producción) Los puestos 3, 4, 6 y 8 empiezan a funcionar: el reparto no reconocía un eSIM como el mismo modelo que el físico («15 PRO eSIM» frente a «15 PRO» en el maestro) |
 
 ## 3. La tabla
