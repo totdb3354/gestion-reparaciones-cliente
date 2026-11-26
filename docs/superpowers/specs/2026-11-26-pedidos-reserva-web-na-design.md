@@ -29,7 +29,8 @@ El recomendador de la celda **ya** propone los n/a (nivel 3, «hay que transform
   sea cual sea su grado (están por revisar). Hoy esos «N/A por caja» se excluyen de la web; pasan a valer en el puesto 2.
 - **Por qué el N/A va delante del B o C** (Imad, 26/11): un n/a puede salir A al revisarlo y ahorrarse la reparación; un B o C
   la necesita siempre. Es el mismo orden que Amazon (su puesto 1 ya es «encaja tal cual o N/A»; el B o C va en el 2).
-- **Pedido A o A100** es lo que ya decide `pedidoA` (A, A+, A100…; nunca A- ni A-100).
+- **Pedido A o A100** es lo que ya decide `pedidoA`: el grado que pide el pedido es exactamente A o A100 (nunca A- ni A-100).
+- **F, FD y RMA** no llegan aquí: no son stock y el reparto ya los quita antes de mirar puestos (también sin caja).
 - **Mismo modelo, capacidad, formato (eSIM o física) y color**, siempre. Nunca Ms, ID, F, FD ni RMA (como hoy).
 - **Con un trabajo del taller abierto:** solo el puesto 1, como hoy (no se le cambia el trabajo al técnico).
 - **Dentro del puesto**, el orden de §4.3 sin cambios: caja (Listos → … → Devolución = En revisión), grado, antigüedad, IMEI.
