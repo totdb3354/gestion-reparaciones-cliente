@@ -122,7 +122,7 @@ Panel y las webs desde que se reservan. Si la reserva se suelta o se pica otro, 
 | 0.9.48.1 | Los reservados llegan al bot sin la ventana de días de vendidos |
 | 0.9.48.2 | Solo los reservados con caja en NSYS (los sin caja no se podían devolver) |
 | 0.9.48.3 | Todos otra vez: lo que vino sin caja se devuelve a la localización `--------------` (§5) |
-| 0.9.48.4 | (26/11, en curso) Los puestos 3, 4, 6 y 8 empiezan a funcionar: el reparto no reconocía un eSIM como el mismo modelo que el físico («15 PRO eSIM» frente a «15 PRO» en el maestro) |
+| 0.9.48.4 | (26/11 15:45, en producción) Los puestos 3, 4, 6 y 8 empiezan a funcionar: el reparto no reconocía un eSIM como el mismo modelo que el físico («15 PRO eSIM» frente a «15 PRO» en el maestro) |
 
 ## 3. La tabla
 
